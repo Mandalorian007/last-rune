@@ -3,7 +3,7 @@
  * spec offline; the game then saturates, adds the room (loop-aware), sets the final peak,
  * trims the inaudible tail and fades the edges of one-shots so nothing clicks.
  */
-import { normalize, renderSound } from '@engine/audio';
+import { normalize, type OfflineContextFactory, renderSound } from '@engine/audio';
 import type { SoundDef } from './bank';
 import { applyReverb, audibleLength, edgeFade, padSeconds, reverbRt60, saturate } from './post';
 
@@ -34,9 +34,6 @@ export function postProcess(
   }
   return chans;
 }
-
-/** Offline context factory (the engine index does not export its type). */
-export type OfflineContextFactory = NonNullable<Parameters<typeof renderSound>[1]>;
 
 /** Render a bank entry. Needs `OfflineAudioContext` (any browser); no user gesture. */
 export async function renderDef(

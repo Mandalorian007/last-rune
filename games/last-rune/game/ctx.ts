@@ -165,7 +165,12 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   };
 
   // ── Input (blocked under modal panels) ─────────────────────────────────
-  const input = new Input<Action>(BINDINGS, { blocked: () => ui.stack.hasModal });
+  // The HUD shortcuts (Codex, Settings, Journal) also work while a button or link has focus,
+  // e.g. the ending's "Back to the hall".
+  const input = new Input<Action>(BINDINGS, {
+    blocked: () => ui.stack.hasModal,
+    globalKeys: ['KeyC', 'KeyO', 'KeyJ'],
+  });
   input.attach({ pointerTarget: surface.canvas });
   input.setPointerTransform((x, y) => surface.clientToLogical(x, y));
 

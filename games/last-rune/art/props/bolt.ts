@@ -414,4 +414,9 @@ export class BoltRibbon {
       frame.sprite(this.material, dp);
     }
   }
+
+  /** Free the GPU material. Only for ribbons that are not reused (the altar caches its own). */
+  destroy(): void {
+    this.material.destroy();
+  }
 }

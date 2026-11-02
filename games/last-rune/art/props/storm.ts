@@ -20,8 +20,8 @@ import type {
   Frame,
   FullscreenPass,
   Material,
+  PingPong,
   Renderer,
-  Texture,
 } from '@engine/render';
 import {
   STORM_MATERIAL_WGSL,
@@ -45,6 +45,9 @@ export interface StormOptions {
   strength?: StormStrength;
 }
 
+/** The sim clears to opaque black each step (its alpha channel is unused). */
+const SIM_STEP = { clear: { r: 0, g: 0, b: 0, a: 1 } } as const;
+
 export class StormCell {
   x: number;
   y: number;
@@ -66,15 +69,14 @@ export class StormCell {
   private readonly seed = Math.random() * 50;
   private readonly flickerLive = { seed: this.seed, speed: 13, amount: 0.35 };
   private readonly flickerCalm = { seed: this.seed, speed: 4, amount: 0.08 };
-  private readonly simA: Texture;
-  private readonly simB: Texture;
+  /** The fluid state: each frame's sim step reads one target and writes the other. */
+  private readonly state: PingPong;
   private readonly sim: FullscreenPass;
   private readonly simU = new Float32Array(STORM_SIM_FLOATS);
   private readonly material: Material;
   private readonly u = new Float32Array(STORM_UNIFORM_FLOATS);
   private readonly dp: DrawParams = { x: 0, y: 0, tint: [1, 1, 1, 1], emissive: 1.3 };
   private simDt = 0;
-  private readonly renderer: Renderer;
   private readonly runSim = (encoder: GPUCommandEncoder): void => {
     const s = this.simU;
     s[0] = this.time;
@@ -84,23 +86,21 @@ export class StormCell {
     s[4] = this.surgeK;
     this.simDt = 0;
     this.sim.setUniforms(s);
-    this.sim.encode(encoder, this.simB.view, { clear: { r: 0, g: 0, b: 0, a: 1 } });
-    encoder.copyTextureToTexture({ texture: this.simB.texture }, { texture: this.simA.texture }, [
-      STORM_SIM_SIZE,
-      STORM_SIM_SIZE,
-    ]);
+    this.state.step(encoder, this.sim, SIM_STEP);
+    this.material.setTexture(0, this.state.read);
   };
 
   constructor(renderer: Renderer, opts: StormOptions) {
-    this.renderer = renderer;
     this.x = opts.x;
     this.y = opts.y;
     this.size = opts.size ?? 400;
     this.strength = opts.strength ?? 1;
     this.rings = this.strength;
-    const desc = { width: STORM_SIM_SIZE, height: STORM_SIM_SIZE, label: 'storm-sim' };
-    this.simA = renderer.createRenderTarget(desc);
-    this.simB = renderer.createRenderTarget(desc);
+    this.state = renderer.createPingPong({
+      width: STORM_SIM_SIZE,
+      height: STORM_SIM_SIZE,
+      label: 'storm-sim',
+    });
     this.sim = renderer.createFullscreenPass({
       label: 'storm-sim',
       wgsl: STORM_SIM_WGSL,
@@ -109,7 +109,6 @@ export class StormCell {
       textures: 1,
       sampler: 'linear-clamp',
     });
-    this.sim.setTexture(0, this.simA);
     this.material = renderer.createMaterial({
       label: 'storm-cell',
       wgsl: STORM_MATERIAL_WGSL,
@@ -118,7 +117,7 @@ export class StormCell {
       textures: 1,
       sampler: 'linear-clamp',
     });
-    this.material.setTexture(0, this.simB);
+    this.material.setTexture(0, this.state.read);
   }
 
   /** A bolt just left the cell: flood it with light for a moment. */
@@ -168,9 +167,8 @@ export class StormCell {
   }
 
   destroy(): void {
-    this.simA.destroy();
-    this.simB.destroy();
+    this.state.destroy();
     this.sim.destroy();
-    void this.renderer;
+    this.material.destroy();
   }
 }
