@@ -75,3 +75,34 @@ export type TextureSource =
   | HTMLCanvasElement
   | OffscreenCanvas
   | HTMLImageElement;
+
+/** Typed data accepted by `renderer.textureFromPixels` / `renderer.writePixels`. */
+export type PixelData =
+  | Uint8Array<ArrayBuffer>
+  | Uint8ClampedArray<ArrayBuffer>
+  | Uint16Array<ArrayBuffer>
+  | Float32Array<ArrayBuffer>;
+
+const TEXEL_BYTES: Partial<Record<GPUTextureFormat, number>> = {
+  r8unorm: 1,
+  r8snorm: 1,
+  rg8unorm: 2,
+  rgba8unorm: 4,
+  'rgba8unorm-srgb': 4,
+  rgba8snorm: 4,
+  bgra8unorm: 4,
+  'bgra8unorm-srgb': 4,
+  r16float: 2,
+  rg16float: 4,
+  rgba16float: 8,
+  r32float: 4,
+  rg32float: 8,
+  rgba32float: 16,
+};
+
+/** Bytes per texel for the uncompressed formats `textureFromPixels` supports. */
+export function bytesPerTexel(format: GPUTextureFormat): number {
+  const n = TEXEL_BYTES[format];
+  if (!n) throw new Error(`bytesPerTexel: unsupported format ${format}`);
+  return n;
+}

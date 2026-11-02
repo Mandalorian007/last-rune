@@ -33,6 +33,13 @@ export interface MaterialDesc extends BindingDesc {
   vertexEntry?: string;
   fragmentEntry?: string;
   sampler?: SamplerKind;
+  /**
+   * Allow a separate uniform block per draw: pass `DrawParams.uniforms` to `frame.sprite` /
+   * `frame.mesh` and that draw reads its own copy of `@group(1) @binding(0)`. Draws without
+   * `uniforms` read the shared block from `setUniforms`. Needs `uniformBytes`. Draws with
+   * their own uniforms don't merge into one instanced call. WGSL is unchanged.
+   */
+  perDrawUniforms?: boolean;
 }
 
 /**
@@ -56,8 +63,13 @@ export class Material {
     this.label = desc.label;
     this.blend = desc.blend ?? 'alpha';
     this.bindings = hasBindings(desc)
-      ? new BindingSet(device, desc, sampler, defaultView, `material:${desc.label}`)
+      ? new BindingSet(device, desc, sampler, defaultView, `material:${desc.label}`, {
+          perDraw: desc.perDrawUniforms,
+        })
       : null;
+    if (desc.perDrawUniforms && !this.bindings) {
+      throw new Error(`material ${desc.label}: perDrawUniforms needs uniformBytes`);
+    }
     const code = `${WGSL_MATERIAL_PRELUDE}\n// ---- material: ${desc.label} ----\n${desc.wgsl}`;
     const module = createShaderModule(device, code, `material:${desc.label}`);
     const layouts = this.bindings ? [globalsLayout, this.bindings.layout] : [globalsLayout];
