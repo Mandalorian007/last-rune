@@ -6,10 +6,14 @@
  *   strike  the bolt is running; input only skips (click, Enter, Esc) or fast-forwards (hold F)
  *   result  the verdict is showing; any edit drops back to `edit`
  *
+ * One input model (turn-clarity, docs/design/altar-ux.md "Controls"):
+ *   - Click / Enter / A picks up and sets down. It never turns anything.
+ *   - R / Q / scroll / RB turns the gem under the pointer (or the cursor): the held gem, drawn
+ *     where it will land, or a placed Bend or Gate. A gem that cannot turn says so with a tag
+ *     at that gem and a deny sound; nothing else turns instead.
  * Pointer: click a tray gem to hold it (stays in hand while the tray has more), click a socket
- * to place. Drag from the tray or drag a placed gem to move it; drop it off the altar to put
- * it back. Click a placed Bend/Gate to turn it; click any other placed gem to pick it up.
- * Right-click removes. Scroll turns. Keyboard/pad: a gold cursor walks the sockets (arrows,
+ * to set it down. Drag from the tray or drag a placed gem to move it; drop it off the altar to
+ * put it back. Right-click removes. Keyboard/pad: a gold cursor walks the sockets (arrows,
  * WASD, d-pad, stick); 1-6 / T / LB pick from the tray; Enter/A acts at the cursor.
  *
  * Flow hooks: `savePlacements` on every change, `recordAttempt` on every strike,
@@ -82,14 +86,42 @@ interface Press {
 }
 
 /** Where a gem on the info card is: hovered in the tray, on the board, fixed, or newly turnable. */
-type InfoHow = 'tray' | 'turnsTray' | 'board' | 'fixed' | 'turns';
+type InfoHow = 'tray' | 'turnsTray' | 'board' | 'boardTurns' | 'fixed' | 'turns';
 const INFO_TAG: Record<InfoHow, string> = {
   tray: '',
   turnsTray: 'Turns: R or scroll',
   board: '',
+  boardTurns: 'Scroll or R turns · click picks up',
   fixed: 'Fixed in place',
   turns: 'Turns: R or scroll',
 };
+
+/**
+ * Why a gem will not turn, shown at that gem (R, Q, scroll or RB over it). Straight-through
+ * gems need no turning; a Split forks whichever side feeds it; a fixed Bend or Gate is part of
+ * the machine.
+ */
+const NO_TURN: Record<GemKind, string> = {
+  channel: "Channels don't turn: the bolt runs straight through",
+  amplify: "Amplifies don't turn: the bolt runs straight through",
+  capacitor: "Capacitors don't turn: the bolt runs straight through",
+  split: "Splits don't turn: feed any side, halves leave by the two beside it",
+  bend: 'Fixed in place: this one stays as the machine set it',
+  gate: 'Fixed in place: this one stays as the machine set it',
+};
+
+/** The board card's line for a Split: what it does whichever way it is fed. */
+const SPLIT_CARD = 'Feed it from any side: half the charge leaves by each side beside it.';
+
+const SIDE_NAME = ['north', 'east', 'south', 'west'] as const;
+
+/** Which sides a Bend or Gate at `rot` uses, for the announcer (rules.md section 4). */
+function sidesText(gem: GemKind, rot: number): string {
+  const s = (k: number) => SIDE_NAME[(((rot + k) % 4) + 4) % 4]!;
+  if (gem === 'bend') return `joins ${s(0)} and ${s(1)}`;
+  if (gem === 'gate') return `takes ${s(3)} and ${s(1)}, out ${s(0)}`;
+  return '';
+}
 
 const GEM_NAME: Record<GemKind, string> = {
   channel: 'Channel',
@@ -229,6 +261,9 @@ export class AltarScene implements GameScene {
   private pinsRev = -1;
   /** Turn arrow on a held Bend or Gate, until the player has turned one here. */
   private turnBadge!: HTMLElement;
+  /** "in" pills at each Split's input side (where the bolt comes in, or would). */
+  private splitIns!: HTMLElement;
+  private splitInsKey = '';
   private turned = false;
   /** Board gem the keyboard cursor last announced. */
   private focusKey = '';
@@ -576,6 +611,8 @@ export class AltarScene implements GameScene {
       this.turnBadge,
       this.hint,
     );
+    this.splitIns = h('div', { class: 'lr-altar-ins', 'aria-hidden': 'true' });
+    this.dom.append(this.splitIns);
     this.dom.toggleAttribute('data-first', !!this.teachCell);
     this.ctx.ui.layers.hud.append(this.dom);
   }
@@ -789,8 +826,6 @@ export class AltarScene implements GameScene {
       const sim = simulate(this.puzzle, placements);
       const pv = previewPath(this.puzzle, placements, sim);
       this.openEnds = pv.openEnds;
-      // Glyphs face the way the bolt will really come in, before any strike.
-      v.faceAlong(pv.hops, true);
       // Linked (and Strike-ready) by what is on the board, never by the gem in hand. A route
       // that reaches a machine only on a later strike (a Capacitor's release) still reaches it.
       const at = (c: Cell, m: Cell) => c.x === m.x && c.y === m.y;
@@ -850,12 +885,23 @@ export class AltarScene implements GameScene {
     const hand = this.hand;
     if (this.mode !== 'edit' || !hand || hand.from) return null;
     const cell = this.keyboard ? this.cursor : this.hoverCell;
-    if (!cell || this.board.at(cell) || !this.board.check(cell, hand.kind).ok) return null;
+    if (!cell || !this.lands(cell, hand.kind)) return null;
     return {
       gem: hand.kind,
       cell: { x: cell.x, y: cell.y },
       rot: (hand.rot & 3) as Placement['rot'],
     };
+  }
+
+  /**
+   * Would the held gem land in `cell`? An empty socket it fits, or a placed gem of the
+   * player's it would replace (that one goes back to the tray). Never a fixed gem or stone.
+   */
+  private lands(cell: Cell, kind: GemKind): boolean {
+    if (this.board.fixedAt(cell) || this.board.isBlocked(cell) || !this.inBounds(cell))
+      return false;
+    if (this.board.at(cell)) return true;
+    return this.board.check(cell, kind).ok;
   }
 
   private updateGhost(ghost: Placement | null, key: string): void {
@@ -865,10 +911,14 @@ export class AltarScene implements GameScene {
     let hops = this.realPreview.hops;
     let sim = this.realPreview.sim;
     if (ghost) {
-      const placements = [...this.board.serialise(), ghost];
+      const at = (q: Placement) => q.cell.x === ghost.cell.x && q.cell.y === ghost.cell.y;
+      const placements = [...this.board.serialise().filter((q) => !at(q)), ghost];
       sim = simulate(this.puzzle, placements);
       hops = previewPath(this.puzzle, placements, sim).hops;
     }
+    // Glyphs face the way the bolt will really come in, with the held gem where it would land:
+    // a fixed Split swings to show its real input and outputs as the player aims at it.
+    v.faceAlong(hops, true);
     v.preview = hops;
     v.previewTarget = PREVIEW_PATH ? 1 : 0;
     this.previewSim = sim;
@@ -1003,12 +1053,19 @@ export class AltarScene implements GameScene {
 
   /** One gem's card text: what it does, and whether it is fixed or turns. */
   private infoText(r: { gem: GemKind; how: InfoHow }): string {
-    const tag = INFO_TAG[r.how];
+    const tag = this.tagOf(r.how);
     return `${GEM_NAME[r.gem]}${tag ? ` (${tag})` : ''}: ${this.infoRule(r)}`;
+  }
+
+  /** The card's tag; a placed Bend or Gate names the keys in use (mouse or keyboard). */
+  private tagOf(how: InfoHow): string {
+    if (how === 'boardTurns' && this.keyboard) return 'R or Q turns · Enter picks up';
+    return INFO_TAG[how];
   }
 
   private infoRule(r: { gem: GemKind; how: InfoHow }): string {
     if (r.how === 'turns') return 'Yours to place now. Turn it in hand to choose its two sides.';
+    if (r.gem === 'split' && (r.how === 'board' || r.how === 'fixed')) return SPLIT_CARD;
     const rule = this.rules[r.gem] ?? '';
     return r.how === 'tray' || r.how === 'turnsTray' ? rule : firstSentence(rule);
   }
@@ -1071,7 +1128,7 @@ export class AltarScene implements GameScene {
     const rot = keepRot && this.hand?.kind === kind ? this.hand.rot : 0;
     this.hand = { kind, rot, from: null };
     this.teachTray.delete(kind);
-    const turns = isRotational(kind) ? ' Turn it with R or Q.' : '';
+    const turns = isRotational(kind) ? ' R or Q turns it where it will land.' : '';
     this.announce(`${GEM_NAME[kind]} in hand. ${this.rules[kind] ?? ''}${turns}`);
     this.ctx.sound.sfx.play('gemPick', { gem: kind });
     this.refreshHud();
@@ -1120,6 +1177,12 @@ export class AltarScene implements GameScene {
           return;
         }
       }
+      // Turned while dragged: it lands as it was shown.
+      const moved = this.board.at(cell);
+      if (moved && moved.gem === hand.kind && isRotational(hand.kind)) {
+        const by = ((hand.rot & 3) - moved.rot + 4) & 3;
+        if (by) this.board.rotate(cell, by);
+      }
       this.ctx.sound.sfx.play('gemPlace', {
         gem: this.board.at(cell)?.gem ?? hand.kind,
         pan: this.panOf(cell),
@@ -1154,21 +1217,18 @@ export class AltarScene implements GameScene {
   }
 
   /**
-   * Click / Enter / pad A on a placed gem with an empty hand. A click turns a Bend or Gate (the
-   * mouse has no R key to hand); Enter and A always pick the gem up, keeping its turn, so the
-   * keyboard has one rule: Enter picks up and puts down, R and Q turn.
+   * Click / Enter / pad A at a socket with an empty hand: a placed gem is picked up, keeping
+   * its turn. One rule for every gem and every input: clicking never turns (R, Q, scroll do).
    */
-  private actOnGem(cell: Cell, byKey = false): void {
+  private actOnGem(cell: Cell): void {
     const p = this.board.at(cell);
     if (p) {
-      if (isRotational(p.gem) && !byKey) this.rotateAt(cell, 1);
-      else {
-        this.board.remove(cell);
-        this.hand = { kind: p.gem, rot: p.rot, from: null };
-        this.ctx.sound.sfx.play('gemPick', { gem: p.gem });
-        this.logRemove(p.gem, cell);
-        this.changed();
-      }
+      this.board.remove(cell);
+      this.hand = { kind: p.gem, rot: p.rot, from: null };
+      this.ctx.sound.sfx.play('gemPick', { gem: p.gem, pan: this.panOf(cell) });
+      this.announce(`${GEM_NAME[p.gem]} in hand.${this.turnNote(p.gem, p.rot)}`);
+      this.logRemove(p.gem, cell);
+      this.changed();
       return;
     }
     if (this.board.fixedAt(cell)) {
@@ -1181,13 +1241,76 @@ export class AltarScene implements GameScene {
     }
   }
 
-  private rotateAt(cell: Cell, by: number): void {
-    const p = this.board.at(cell);
-    if (!p) {
-      if (this.board.fixedAt(cell)) this.denyAt(cell, 'fixed');
+  /** " Joins north and east. R or Q turns it." for a Bend or Gate; nothing for other gems. */
+  private turnNote(gem: GemKind, rot: number): string {
+    if (!isRotational(gem)) return '';
+    const s = sidesText(gem, rot);
+    return ` ${s.charAt(0).toUpperCase()}${s.slice(1)}. R or Q turns it.`;
+  }
+
+  /**
+   * R / Q / scroll / RB: turn the gem under the pointer (or the keyboard cursor).
+   *   - A gem in hand is drawn where it will land, so it is the gem under the pointer, unless
+   *     the pointer is on a fixed gem: that gem is what the player is looking at, and it says
+   *     why it will not turn. The hand never turns in its place.
+   *   - With an empty hand, a placed Bend or Gate turns; any other gem says why it does not.
+   * Nothing under the pointer (an empty socket, no hand): nothing happens.
+   */
+  private turnAt(cell: Cell | null, by: number): void {
+    const hand = this.hand;
+    const fixed = cell ? this.board.fixedAt(cell) : undefined;
+    if (fixed && cell) {
+      this.denyTurn(cell, fixed.gem, true);
       return;
     }
-    if (!isRotational(p.gem)) return;
+    if (hand) {
+      if (!isRotational(hand.kind)) {
+        this.denyTurn(null, hand.kind, false);
+        return;
+      }
+      hand.rot = (hand.rot + by + 4) & 3;
+      this.turned = true;
+      this.ctx.sound.sfx.play('gemRotate', { pan: this.panOf(cell) });
+      this.announce(`${GEM_NAME[hand.kind]} in hand ${sidesText(hand.kind, hand.rot)}.`);
+      return;
+    }
+    if (!cell) return;
+    const p = this.board.at(cell);
+    if (!p) return;
+    if (!isRotational(p.gem)) {
+      this.denyTurn(cell, p.gem, false);
+      return;
+    }
+    this.rotateAt(cell, by);
+    const q = this.board.at(cell);
+    if (q) this.announce(`${GEM_NAME[q.gem]} ${sidesText(q.gem, q.rot)}.`);
+  }
+
+  /**
+   * A gem that will not turn says why, at that gem (or at the held gem), with the deny sound.
+   * A fixed Split names what it does instead; other fixed gems say they are part of the machine.
+   */
+  private denyTurn(cell: Cell | null, gem: GemKind, fixed: boolean): void {
+    const text = fixed && isRotational(gem) ? NO_TURN.bend : NO_TURN[gem];
+    if (cell) {
+      this.denyAt(cell, text);
+    } else {
+      // The held gem: tag it where it is drawn.
+      this.ctx.sound.sfx.play('socketBlocked');
+      const held = this.view.held;
+      if (held) {
+        this.clearTags();
+        if (this.mode === 'result') this.backToEdit();
+        this.addTag(held.x, held.y - this.view.layout.pitch * 0.42, text, 'info');
+        this.tagTimer = 1.6;
+      }
+    }
+    this.announce(text);
+  }
+
+  private rotateAt(cell: Cell, by: number): void {
+    const p = this.board.at(cell);
+    if (!p || !isRotational(p.gem)) return;
     this.board.rotate(cell, by);
     this.ctx.sound.sfx.play('gemRotate', { pan: this.panOf(cell) });
     this.logRotate(cell);
@@ -1728,7 +1851,11 @@ export class AltarScene implements GameScene {
 
     if (this.tagTimer > 0) {
       this.tagTimer -= dt;
-      if (this.tagTimer <= 0 && this.mode === 'edit') this.clearTags();
+      if (this.tagTimer <= 0 && this.mode === 'edit') {
+        this.clearTags();
+        // A refusal still under the pointer shows again.
+        this.refusedKey = '';
+      }
     }
     if (this.deny) {
       this.deny.t -= dt;
@@ -1753,6 +1880,7 @@ export class AltarScene implements GameScene {
     this.updateInfo();
     this.updatePins();
     this.updateTurnBadge();
+    this.updateSplitIns();
     // The keyboard cursor, for tests and tools (the gold ring is drawn on the GPU).
     const ck = `${this.cursor.x},${this.cursor.y}`;
     if (ck !== this.cursorKey) {
@@ -1792,6 +1920,7 @@ export class AltarScene implements GameScene {
         const cell = this.hoverCell;
         if (this.hand) this.placeHand(cell);
         else if (this.board.at(cell)) {
+          // A click picks it up (on release); a drag moves it.
           this.press = { origin: 'board', cell, x: p.x, y: p.y, dragging: false };
         } else this.actOnGem(cell);
       } else if (this.hand) {
@@ -1878,18 +2007,12 @@ export class AltarScene implements GameScene {
         if (this.hand) {
           this.placeHand(at);
           this.keyPlaced = this.keyboard && this.board.at(at) ? { x: at.x, y: at.y } : null;
-        } else this.actOnGem(at, true);
+        } else this.actOnGem(at);
       }
     }
     const target = this.keyboard ? this.cursor : this.hoverCell;
     const turn = (input.pressed('rotate') ? 1 : 0) - (input.pressed('rotateBack') ? 1 : 0);
-    if (turn !== 0) {
-      if (this.hand && isRotational(this.hand.kind)) {
-        this.hand.rot = (this.hand.rot + turn + 4) & 3;
-        this.turned = true;
-        this.ctx.sound.sfx.play('gemRotate');
-      } else if (!this.hand && target) this.rotateAt(target, turn);
-    }
+    if (turn !== 0) this.turnAt(target, turn);
     if (input.pressed('remove')) {
       if (this.hand) this.dropHand();
       else if (target) this.removeAt(target);
@@ -2046,8 +2169,9 @@ export class AltarScene implements GameScene {
       key = `t${slot}`;
     } else if (focus && onBoard) {
       const fixed = !!fixedHere;
-      rows = [{ gem: onBoard.gem, how: fixed ? 'fixed' : 'board' }];
-      key = `b${focus.x},${focus.y}${fixed ? 'f' : ''}`;
+      const how: InfoHow = fixed ? 'fixed' : isRotational(onBoard.gem) ? 'boardTurns' : 'board';
+      rows = [{ gem: onBoard.gem, how }];
+      key = `b${focus.x},${focus.y}${fixed ? 'f' : ''}${this.keyboard ? 'k' : ''}`;
     } else if (this.introLeft > 0 && !strike) {
       rows = this.introRows();
       key = 'intro';
@@ -2072,7 +2196,7 @@ export class AltarScene implements GameScene {
     this.tip.dataset.source = key === 'intro' ? 'intro' : key[0] === 't' ? 'tray' : 'board';
     this.tip.replaceChildren(
       ...rows.map((r) => {
-        const tag = INFO_TAG[r.how];
+        const tag = this.tagOf(r.how);
         return h(
           'div',
           { class: 'lr-info-row', 'data-how': r.how },
@@ -2144,6 +2268,8 @@ export class AltarScene implements GameScene {
       !!this.hand &&
       !!held &&
       !this.turned &&
+      // Over a fixed gem R would not turn the hand, so the badge does not promise it.
+      !this.refusedKey &&
       this.turnTeach.has(this.hand.kind);
     if (this.turnBadge.hidden === show) this.turnBadge.hidden = !show;
     if (!show || !held) return;
@@ -2158,6 +2284,38 @@ export class AltarScene implements GameScene {
         h('span', { class: 'lr-turn-keys' }, keys),
       );
     }
+  }
+
+  /**
+   * A Split reads without turning it: a small "in" sits on the side its bolt comes in by (the
+   * real feed, the held gem's would-be feed, or the storm's way when nothing reaches it yet).
+   * Its glyph's two arms point at the sides the halves leave by.
+   */
+  private updateSplitIns(): void {
+    const L = this.view.layout;
+    const parts: string[] = [];
+    const at: { x: number; y: number }[] = [];
+    if (this.mode === 'edit') {
+      for (const b of this.view.board) {
+        if (b.g.kind !== 'split' || b.hidden) continue;
+        const q = (((Math.round(b.rotTarget) + 2) % 4) + 4) % 4;
+        const pt = { x: 0, y: 0 };
+        cellCenter(L, b.cell, pt);
+        const d = L.pitch * 0.5;
+        pt.x += q === 1 ? d : q === 3 ? -d : 0;
+        pt.y += q === 0 ? -d : q === 2 ? d : 0;
+        at.push(pt);
+        parts.push(`${Math.round(pt.x)},${Math.round(pt.y)}`);
+      }
+    }
+    const key = parts.join(';');
+    if (key === this.splitInsKey) return;
+    this.splitInsKey = key;
+    this.splitIns.replaceChildren(
+      ...at.map((pt) =>
+        h('div', { class: 'lr-altar-in', style: { left: `${pt.x}px`, top: `${pt.y}px` } }, 'in'),
+      ),
+    );
   }
 
   /**
@@ -2255,18 +2413,25 @@ export class AltarScene implements GameScene {
     const showHeld = hand && (hand.from ? this.press?.dragging : true);
     if (!hand || !showHeld) {
       this.view.held = null;
+      this.showRefusal(null, null);
       return;
     }
     const pt = { x: 0, y: 0 };
     let snapped = false;
     const p = this.ctx.input.pointer;
     const cell = this.keyboard ? this.cursor : this.hoverCell;
+    let refused: string | null = null;
     if (cell) {
       cellCenter(L, cell, pt);
-      snapped = this.board.check(cell, hand.kind).ok || !!hand.from || !!this.board.at(cell);
-      if (!snapped && !this.keyboard) {
-        pt.x = p.x;
-        pt.y = p.y;
+      snapped =
+        this.lands(cell, hand.kind) ||
+        (!!hand.from && hand.from.x === cell.x && hand.from.y === cell.y);
+      if (!snapped) {
+        // It will not land here: hold it off to the side so the gem or stone underneath stays
+        // in plain sight (the reason sits above that socket).
+        refused = this.refusal(cell, hand.kind);
+        pt.x += L.pitch * 0.62;
+        pt.y += L.pitch * 0.12;
       }
     } else {
       pt.x = p.x;
@@ -2278,6 +2443,7 @@ export class AltarScene implements GameScene {
         pt.y = s.y - 70;
       }
     }
+    this.showRefusal(refused ? cell : null, refused);
     const h0 = this.view.held;
     if (h0) {
       h0.kind = hand.kind;
@@ -2286,6 +2452,29 @@ export class AltarScene implements GameScene {
       h0.y = pt.y;
       h0.snapped = snapped;
     } else this.view.held = { kind: hand.kind, rot: hand.rot, x: pt.x, y: pt.y, snapped };
+  }
+
+  /** Why the held gem will not land in `cell` (fixed gem, carved stone, off the altar). */
+  private refusal(cell: Cell, kind: GemKind): string {
+    if (this.board.fixedAt(cell)) return 'fixed';
+    if (this.board.isBlocked(cell)) return 'blocked';
+    const r = this.board.check(cell, kind);
+    return r.ok ? 'occupied' : r.reason;
+  }
+
+  /** The socket the held gem is refused at (its tag stays while the gem hovers there). */
+  private refusedKey = '';
+
+  private showRefusal(cell: Cell | null, reason: string | null): void {
+    const key = cell && reason ? `${cell.x},${cell.y}` : '';
+    if (key === this.refusedKey) return;
+    // A deny tag still showing (a click just refused) keeps its place.
+    if (this.refusedKey && this.tagTimer <= 0) this.clearTags();
+    this.refusedKey = key;
+    if (!cell || !reason || this.tagTimer > 0) return;
+    const pt = { x: 0, y: 0 };
+    cellCenter(this.view.layout, cell, pt);
+    this.addTag(pt.x, pt.y - this.view.layout.pitch * 0.42, DENY_REASON[reason] ?? reason, 'info');
   }
 
   private buildMarks(): void {
@@ -2380,11 +2569,11 @@ function hintLine(mode: HintMode): (Node | string)[] {
     case 'mouse':
       return [
         b('Click'),
-        ' a gem, then a socket · ',
+        ' picks up / sets down · ',
         b('Scroll'),
         ' or ',
         b('R'),
-        ' turns · ',
+        ' turns the gem under it · ',
         b('Right-click'),
         ' removes',
       ];
@@ -2397,9 +2586,9 @@ function hintLine(mode: HintMode): (Node | string)[] {
         b('G'),
         " wire's end · ",
         b('Enter'),
-        ' place / pick up · ',
+        ' pick up / set down · ',
         b('R'),
-        ' turn',
+        ' turns the gem there',
       ];
     case 'strike':
       return ['Hold ', b('F'), ' to fast-forward · ', b('Click'), ' or ', b('Enter'), ' skips'];

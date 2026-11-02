@@ -71,9 +71,10 @@ async function buildSolution(page: Page, machine: MachineId) {
   const placed: Placement[] = [];
   for (const g of p.design.intended) {
     await press(page, `Digit${tray.indexOf(g.gem) + 1}`);
-    if (isRotational(g.gem)) await press(page, 'KeyR', g.rot);
     // The altar moves the cursor on to the route's open end after each Enter; plan from there.
     for (const k of cursorKeys(p, placed, await altarCursor(page), g.cell)) await press(page, k);
+    // R turns the gem under the cursor: the held gem, over the socket it will land in.
+    if (isRotational(g.gem)) await press(page, 'KeyR', g.rot);
     await press(page, 'Enter');
     placed.push({ gem: g.gem, cell: g.cell, rot: g.rot });
   }
