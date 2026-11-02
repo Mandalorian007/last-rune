@@ -9,7 +9,7 @@ import { h } from '@engine/ui';
 import { beatLine } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { hasProgress } from '../../game/save';
-import type { TitleView } from '../views';
+import type { TitleView, TitleViewFrame } from '../views';
 
 const KNOCK_DELAY = 1.6;
 
@@ -30,7 +30,10 @@ export class TitleScene implements GameScene {
     this.knockPending = !data.flags.titleKnock;
     this.dom = this.buildDom();
     ctx.ui.layers.hud.append(this.dom);
-    ctx.post.set({ godRays: { intensity: 0.35 }, fog: { density: 0.5 } });
+    ctx.post.set({
+      godRays: { x: 960, y: 210, intensity: 0.28, sourceIntensity: 0 },
+      fog: { density: 0.4 },
+    });
     ctx.setMood('title');
   }
 
@@ -61,12 +64,23 @@ export class TitleScene implements GameScene {
     this.view.render(frame, this.frameState());
   }
 
-  private frameState() {
-    return {
-      time: this.time,
-      reducedMotion: this.ctx.settings.reducedMotion,
-      returning: this.returning,
-    };
+  /** One reused snapshot (no per-frame allocation). */
+  private readonly snap = {
+    time: 0,
+    reducedMotion: false,
+    reduceFlashes: false,
+    speaking: false,
+    returning: false,
+  };
+
+  private frameState(): TitleViewFrame {
+    const s = this.snap;
+    s.time = this.time;
+    s.reducedMotion = this.ctx.settings.reducedMotion;
+    s.reduceFlashes = this.ctx.settings.reduceFlashes;
+    s.speaking = this.ctx.fuse.speaking;
+    s.returning = this.returning;
+    return s;
   }
 
   private primary(): void {
@@ -121,7 +135,7 @@ export class TitleScene implements GameScene {
       { class: 'lr-title-screen' },
       h(
         'div',
-        { class: 'lr-title' },
+        { class: 'lr-title', dataset: this.view.drawsTitle ? { canvas: '' } : {} },
         h('h1', null, 'The Last Rune'),
         h('p', null, 'A gem-circuit puzzle'),
       ),
