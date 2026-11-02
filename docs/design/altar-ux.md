@@ -9,7 +9,7 @@ attention. Text is short, sits around the board, and never covers it.
 
 | Where | What |
 |---|---|
-| Top centre | Machine name; subtitle `Storm ×N · K strikes` (hidden while a verdict shows). If a north gauge would sit under it, the title and verdict move to the widest clear gap (`layout.titleX`). |
+| Top centre | Machine name; subtitle `Storm ×N gives 4N · K strikes` (the storm states its charge in the same units as `Needs`) (hidden while a verdict shows). If a north gauge would sit under it, the title and verdict move to the widest clear gap (`layout.titleX`). |
 | Top right | `Undo Z` · `Clear Del` · `Back Esc` · **`Strike F`** (gold, the largest control) |
 | Below the title | Verdict after a strike (`Not enough: needs 2, got 0`). On exact it is FUSE's `exactLine(tier)`. The numbers match a need label, so multi-machine verdicts carry no ordinal. In a narrow title gap (finale) it drops to 24 px. |
 | Next to each machine | A large `Needs N` (40 px number), then `got M` after a strike, plus `Strike k: r` pips on multi-strike altars. Border and numbers are cyan for exact, amber for under and red for over. North and south machines put the label beside the cabinet (a south label sits level with the cabinet's top half); east and west machines put it below. A notch on the label points at its machine. Machines are 180–230 px and sit against the exit socket. |

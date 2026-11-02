@@ -3,7 +3,7 @@ import { PUZZLES, puzzleFor } from '../../content/puzzles';
 import { type Placement, simulate } from '../../rules';
 import { altarDims } from '../../rules/model';
 import type { MachineId } from '../../rules/types';
-import { chargeChips, liveSockets, previewPath } from './circuit-model';
+import { chargeChips, guideHops, liveSockets, previewPath } from './circuit-model';
 import { CAPTION_LANE, computeLayout, FUSE_LANE, traySlotAt, trayTipX } from './layout';
 import { firstSentence, newGems, nudgeGems } from './teach';
 
@@ -177,5 +177,53 @@ describe('caption and FUSE lanes', () => {
         expect(gap, p.id).toBeGreaterThan(-4);
       }
     }
+  });
+});
+
+describe('guide stubs (first meeting a fixed gem)', () => {
+  it('shows the intake desk Bend joining south and west (rot 2), as rules.md says', () => {
+    const p = puzzleFor('intake-desk');
+    const bend = p.fixed.find((f) => f.gem === 'bend')!;
+    expect(bend.rot).toBe(2);
+    const { x, y } = bend.cell;
+    expect(guideHops(p, [bend.cell])).toEqual([
+      { from: { x, y: y + 1 }, to: { x, y } },
+      { from: { x, y }, to: { x: x - 1, y } },
+    ]);
+  });
+
+  it('agrees with the simulator: the solved route enters and leaves the Bend by its stubs', () => {
+    const p = puzzleFor('intake-desk');
+    const bend = p.fixed.find((f) => f.gem === 'bend')!;
+    const pl = p.design.intended;
+    const hops = previewPath(p, pl, simulate(p, pl)).hops;
+    const at = (c: { x: number; y: number }) => c.x === bend.cell.x && c.y === bend.cell.y;
+    const ends = (hs: { from: { x: number; y: number }; to: { x: number; y: number } }[]) =>
+      new Set(
+        hs
+          .filter((h) => at(h.from) || at(h.to))
+          .map((h) => (at(h.from) ? h.to : h.from))
+          .map((c) => `${c.x},${c.y}`),
+      );
+    expect(ends(hops)).toEqual(ends(guideHops(p, [bend.cell])));
+  });
+
+  it('gives a Gate two inputs and one output, a Bend two sides, other gems none', () => {
+    for (const p of Object.values(PUZZLES)) {
+      for (const f of p.fixed) {
+        const n = f.gem === 'bend' ? 2 : f.gem === 'gate' ? 3 : 0;
+        expect(guideHops(p, [f.cell]).length, `${p.id} ${f.gem}`).toBe(n);
+      }
+    }
+  });
+});
+
+describe('storm "Gives" label (first altar)', () => {
+  it('sits on the canvas, above the tray and out of the caption lane', () => {
+    const L = computeLayout(puzzleFor('intake-desk'));
+    const s = L.storm.label;
+    expect(s.x).toBeGreaterThan(80);
+    expect(s.y).toBeLessThan(L.trayY - 120);
+    expect(s.x > CAPTION_LANE.x && s.y > CAPTION_LANE.y).toBe(false);
   });
 });

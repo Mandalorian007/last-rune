@@ -82,6 +82,18 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-need[data-state="under"] .lr-need-got b { color: #ffc46a; }
 .tc-overlay .lr-altar-need[data-state="over"] { border-color: #ff5a3c; box-shadow: 0 0 22px rgba(255,90,60,0.55); }
 .tc-overlay .lr-altar-need[data-state="over"] .lr-need-got b { color: #ff8a6e; }
+/* First altar: the storm's "Gives N", the same card in the storm's blue. */
+.tc-overlay .lr-altar-need.lr-altar-storm { border-color: rgba(120,200,255,0.75); box-shadow: 0 0 18px rgba(80,180,255,0.35); }
+.tc-overlay .lr-altar-need.lr-altar-storm b { color: #bfefff; }
+/* First altar: Strike glows once the route reaches the machine. */
+.tc-overlay .lr-altar-actions .lr-gold-button[data-ready] { animation: lr-strike-ready 1.6s ease-in-out infinite; }
+@keyframes lr-strike-ready {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,214,120,0.35); }
+  50% { box-shadow: 0 0 34px 6px rgba(255,214,120,0.85); }
+}
+[data-reduced-motion] .tc-overlay .lr-altar-actions .lr-gold-button[data-ready] {
+  animation: none; box-shadow: 0 0 28px 4px rgba(255,214,120,0.75);
+}
 .tc-overlay .lr-need-strikes { display: flex; gap: 8px; margin-top: 4px; font-family: var(--tc-font-body, serif); font-size: 16px; }
 .tc-overlay .lr-need-strikes span { padding: 1px 6px; border-radius: 6px; border: 1px solid rgba(232,192,106,0.4); }
 .tc-overlay .lr-need-strikes [data-state="exact"] { border-color: #3fe0ff; color: #bff6ff; }

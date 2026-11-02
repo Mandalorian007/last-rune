@@ -110,7 +110,7 @@ test('keyboard path title → settings → hall → altar, with axe and the stri
   const announce = page.locator('.lr-altar-announce');
   await expect(announce).toHaveAttribute('aria-live', 'polite');
   await expect(announce).toHaveText(
-    `Intake Desk altar. Storm ×1. The machine needs exactly ${need}.`,
+    `Intake Desk altar. Storm ×1 gives 4. The machine needs exactly ${need}.`,
   );
   await page.waitForTimeout(500);
   await expectNoAxeViolations(page, 'altar');
