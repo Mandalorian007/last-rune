@@ -46,6 +46,7 @@ export interface FakeTexture {
   width: number;
   height: number;
   format: GPUTextureFormat;
+  mipLevelCount: number;
   usage: number;
   destroyed: boolean;
   createView(desc?: { label?: string }): FakeView;
@@ -150,6 +151,7 @@ export function createFakeDevice(limits: Partial<Record<string, number>> = {}): 
         width: size[0]!,
         height: size[1] ?? 1,
         format: desc.format,
+        mipLevelCount: desc.mipLevelCount ?? 1,
         usage: desc.usage,
         destroyed: false,
         createView: (d) => ({ texture: t, label: d?.label }),
@@ -231,6 +233,7 @@ export function createFakeDevice(limits: Partial<Record<string, number>> = {}): 
       },
       copyExternalImageToTexture() {},
       submit() {},
+      onSubmittedWorkDone: () => Promise.resolve(),
     },
   };
 

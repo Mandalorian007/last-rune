@@ -73,6 +73,11 @@ When bloom is disabled the bloom chain is skipped. It still runs if god rays nee
 - `defaultPostSettings()` is tuned for a dark, jewel-toned scene: a strong emissive glow, a
   cool mist on the floor, and pale storm rays from above.
 - Output is encoded to sRGB in the shader because the swapchain is `bgra8unorm`.
-- All intermediate textures are reallocated only on resize.
+- All intermediate textures are reallocated only on resize (or a bloom level cap change).
+- **Quality caps** are separate from the look: `post.setQuality({ maxBloomLevels,
+  raySamples, fogOctaves })` (defaults 8, 64, 5). Fewer ray samples rescale decay and weight
+  per step so the shafts keep their reach; fewer fog octaves add back the dropped octaves'
+  mean so the mist keeps its density. Bloom and rays run at half the scene resolution; the
+  composite runs at output resolution and samples the scene by UV.
 - Write your own processor by implementing `PostProcessor { resize(w, h); encode(encoder,
   inputs, outputView) }` and assigning it to `renderer.post`.

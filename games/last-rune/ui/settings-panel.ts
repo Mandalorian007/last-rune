@@ -7,6 +7,7 @@ import { button, h, type Overlay, slider } from '@engine/ui';
 import type { GameSave } from '../game/save';
 import type {
   CaptionSpeed,
+  GraphicsPref,
   ReducedMotionPref,
   ReduceFlashesPref,
   SettingsController,
@@ -84,6 +85,16 @@ export function openSettings(deps: SettingsPanelDeps): void {
     ],
     (v) => settings.set({ captionSpeed: v }),
   );
+  const graphics = select<GraphicsPref>(
+    'Graphics quality',
+    settings.stored.graphics ?? 'auto',
+    [
+      ['auto', 'Auto'],
+      ['high', 'High'],
+      ['low', 'Low'],
+    ],
+    (v) => settings.set({ graphics: v }),
+  );
 
   const area = h('textarea', {
     'aria-label': 'Save code',
@@ -152,6 +163,7 @@ export function openSettings(deps: SettingsPanelDeps): void {
     { class: 'lr-settings' },
     h('section', null, h('h3', null, 'Sound'), ...volumes),
     h('section', null, h('h3', null, 'Comfort'), motion, flashes, speed),
+    h('section', null, h('h3', null, 'Graphics'), graphics),
     h(
       'section',
       null,

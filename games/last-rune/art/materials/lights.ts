@@ -8,6 +8,13 @@ import { LINEAR } from './palette';
 
 export { LIGHT_SET_FLOATS, MAX_LIGHTS };
 
+/**
+ * Quality hook (game/graphics.ts): the most lights any `LightSet` or `PropLightRig` takes per
+ * frame. Lower tiers cap it below MAX_LIGHTS; scenes add their key lights first, so the cap
+ * trims the faint fill lights at the end of the list.
+ */
+export const lightBudget = { max: MAX_LIGHTS };
+
 /** Default height above the surface (px) for each light family. */
 export const LIGHT_HEIGHT = { candle: 140, gem: 55, storm: 400 } as const;
 
@@ -58,7 +65,7 @@ export class LightSet {
     intensity: number,
     height: number = LIGHT_HEIGHT.gem,
   ): boolean {
-    if (this.n >= MAX_LIGHTS || intensity <= 0) return false;
+    if (this.n >= lightBudget.max || this.n >= MAX_LIGHTS || intensity <= 0) return false;
     const d = this.data;
     const p = 8 + this.n * 4;
     const c = 8 + MAX_LIGHTS * 4 + this.n * 4;

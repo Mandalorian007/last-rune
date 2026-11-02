@@ -174,3 +174,27 @@ textures every frame, as ping-pong does, builds no new bind groups after the fir
   collect in `gpuDiagnostics.errors` and `gpuDiagnostics.errorCount`, which headless tests
   can check.
 - `renderer.stats` reports `{ drawCalls, instances, drawables }` for the last frame.
+
+## Resolution and timing
+
+The HDR scene targets can be smaller than the output (the canvas backbuffer). The post
+processor upscales by UV while compositing at full output resolution, so edges stay sharp
+enough and the DOM overlay is untouched.
+
+```ts
+renderer.setResolution({ maxPixels: 1280 * 720 }); // pixel budget for the scene targets
+renderer.setResolution({ scale: 0.8 });            // extra scale on top (0.25..1)
+renderer.resolutionScale;                          // scene width / output width
+```
+
+- `sceneSize(outW, outH, opts)` is the pure helper behind it (even sizes, full size when the
+  scale rounds to 1). `onResize` listeners get the **scene** size.
+- `renderer.timingEvery = N` samples GPU time every N frames, measured from submit to
+  `queue.onSubmittedWorkDone()` (no timestamp-query feature needed; one sample in flight).
+  Subscribe with `renderer.onGpuTime(ms => ...)`; `renderer.timing` holds the last value.
+  Off (0) by default.
+- `DynamicResolution` turns GPU-time samples into a scale. It drops after 1 s over budget
+  (smoothed), raises only after 3 s with the predicted cost under 85% of budget, waits
+  1.5 s after any change, and blocks a level for 20 s when raising to it was followed by a
+  drop. That stops it pumping at the edge. `saturated` says it is at the floor and still
+  over budget.

@@ -8,6 +8,7 @@ import type { GameSave, GameSettings } from './save';
 export type CaptionSpeed = GameSettings['captionSpeed'];
 export type ReducedMotionPref = GameSettings['reducedMotion'];
 export type ReduceFlashesPref = NonNullable<GameSettings['reduceFlashes']>;
+export type GraphicsPref = NonNullable<GameSettings['graphics']>;
 
 export function resolveReducedMotion(pref: ReducedMotionPref, system: boolean): boolean {
   return pref === 'system' ? system : pref === 'reduce';
@@ -34,6 +35,8 @@ export interface EffectiveSettings {
    * flashes the whole frame (bolt over-charge, breaker, storm lightning) must honour it.
    */
   readonly reduceFlashes: boolean;
+  /** Graphics quality preference (missing in old saves = `auto`). See game/graphics.ts. */
+  readonly graphics: GraphicsPref;
 }
 
 export interface SettingsTargets {
@@ -92,7 +95,8 @@ export class SettingsController {
     if (
       next.reducedMotion === this._effective.reducedMotion &&
       next.captionCps === this._effective.captionCps &&
-      next.reduceFlashes === this._effective.reduceFlashes
+      next.reduceFlashes === this._effective.reduceFlashes &&
+      next.graphics === this._effective.graphics
     ) {
       return;
     }
@@ -113,6 +117,7 @@ export class SettingsController {
       reducedMotion,
       captionCps: captionCps(s.captionSpeed),
       reduceFlashes: resolveReduceFlashes(s.reduceFlashes, reducedMotion),
+      graphics: s.graphics ?? 'auto',
     };
   }
 }

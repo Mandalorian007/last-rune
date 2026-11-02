@@ -5,6 +5,10 @@ export { blendState } from './blend';
 export type { RGBA } from './color';
 export { hex, linearToSrgb, rgba, scaleRgb, srgbToLinear } from './color';
 export { gpuDiagnostics, installGpuErrorLogging, onGpuError, reportGpuError } from './diagnostics';
+export {
+  DynamicResolution,
+  type DynamicResolutionOptions,
+} from './dynamic-resolution';
 export type { Drawable, DrawParams } from './frame';
 export { Frame } from './frame';
 export type { FullscreenEncodeOptions, FullscreenPassDesc } from './fullscreen';
@@ -23,13 +27,15 @@ export type { PingPongStepOptions } from './ping-pong';
 export { PingPong } from './ping-pong';
 export type {
   Camera,
+  FrameTiming,
   PostInputs,
   PostProcessor,
   RendererGpu,
   RendererOptions,
   RenderStats,
+  ResolutionOptions,
 } from './renderer';
-export { Renderer, SCENE_FORMAT } from './renderer';
+export { MIN_RESOLUTION_SCALE, Renderer, SCENE_FORMAT, sceneSize } from './renderer';
 export type { PixelData, SamplerKind, TextureDesc, TextureLike, TextureSource } from './texture';
 export { bytesPerTexel, createSamplers, Texture } from './texture';
 export {

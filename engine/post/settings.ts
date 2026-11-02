@@ -154,6 +154,23 @@ export function applyPostPatch(target: PostSettings, patch: PostSettingsPatch): 
   return target;
 }
 
+/**
+ * Cost caps, separate from the look settings so presets and `blendTo` never undo them.
+ * Defaults are full quality. See `PostStack.quality`.
+ */
+export interface PostQuality {
+  /** Upper bound on `bloom.levels` (2..8). Fewer levels = less wide halo, fewer passes. */
+  maxBloomLevels: number;
+  /** God-ray march samples (8..64). Fewer samples are re-weighted to keep the same reach. */
+  raySamples: number;
+  /** Floor-mist fbm octaves for the main layer (2..5); the second layer uses one fewer. */
+  fogOctaves: number;
+}
+
+export function defaultPostQuality(): PostQuality {
+  return { maxBloomLevels: 8, raySamples: 64, fogOctaves: 5 };
+}
+
 /** Uniform layout shared by all post shaders: 18 × vec4f. */
 export const POST_UNIFORM_FLOATS = 72;
 
@@ -176,7 +193,7 @@ struct PostUniforms {
   gamma: vec4f,
   gain: vec4f,
   grade: vec4f,      // saturation, contrast, -, -
-  _pad: vec4f,
+  quality: vec4f,    // ray samples, fog octaves, -, -
 };
 @group(0) @binding(0) var<uniform> P: PostUniforms;
 `;
@@ -192,6 +209,7 @@ export function packPostUniforms(
   height: number,
   logicalWidth: number,
   logicalHeight: number,
+  quality: PostQuality = DEFAULT_QUALITY,
 ): void {
   const b = s.bloom;
   const f = s.fog;
@@ -216,8 +234,17 @@ export function packPostUniforms(
   o = put(out, o, g.gamma[0], g.gamma[1], g.gamma[2], 0);
   o = put(out, o, g.gain[0], g.gain[1], g.gain[2], 0);
   o = put(out, o, g.saturation, g.contrast, 0, 0);
-  put(out, o, 0, 0, 0, 0);
+  put(
+    out,
+    o,
+    Math.round(Math.min(64, Math.max(8, quality.raySamples))),
+    Math.round(Math.min(5, Math.max(2, quality.fogOctaves))),
+    0,
+    0,
+  );
 }
+
+const DEFAULT_QUALITY = defaultPostQuality();
 
 function put(out: Float32Array, o: number, x: number, y: number, z: number, w: number): number {
   out[o] = x;
