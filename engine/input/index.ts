@@ -2,6 +2,7 @@ export {
   type AttachOptions,
   Input,
   type InputOptions,
+  isButtonTarget,
   isInteractiveTarget,
   isTextEntryTarget,
 } from './input';

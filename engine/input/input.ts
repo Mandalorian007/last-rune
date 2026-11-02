@@ -23,6 +23,13 @@ export interface InputOptions {
    */
   globalKeys?: Iterable<string>;
   /**
+   * Key codes that still register while a plain button or link has focus (`isButtonTarget`),
+   * but not on form controls that use them (sliders, checkboxes, selects, text). For keys
+   * like Escape and the arrows: a clicked button shouldn't swallow "back" or navigation.
+   * Like global keys they are not preventDefaulted there. See `setButtonKeys`.
+   */
+  buttonKeys?: Iterable<string>;
+  /**
    * Queue repeat taps: when a key or mouse button goes down again before the tick that saw
    * its first press, each extra tap fires `pressed` on a following tick instead of merging
    * into one. Default true; pass false for the old one-press-per-tick behaviour.
@@ -70,6 +77,27 @@ export function isTextEntryTarget(target: EventTarget | null): boolean {
   }
   const role = el.getAttribute?.('role');
   return role === 'textbox' || role === 'searchbox' || role === 'combobox';
+}
+
+const BUTTON_INPUTS = new Set(['button', 'submit', 'reset', 'image']);
+
+/**
+ * True for plain activatable controls (buttons, links, `summary`, button-type inputs,
+ * `role=button|link|menuitem`) whose own keys are only Enter and Space.
+ */
+export function isButtonTarget(target: EventTarget | null): boolean {
+  const el = target as (HTMLElement & { type?: string }) | null;
+  if (!el || typeof el.tagName !== 'string') return false;
+  switch (el.tagName) {
+    case 'BUTTON':
+    case 'A':
+    case 'SUMMARY':
+      return true;
+    case 'INPUT':
+      return BUTTON_INPUTS.has((el.type ?? '').toLowerCase());
+  }
+  const role = el.getAttribute?.('role');
+  return role === 'button' || role === 'link' || role === 'menuitem';
 }
 
 function defaultGamepads(): readonly (GamepadLike | null)[] {
@@ -144,6 +172,7 @@ export class Input<A extends string> {
   private readonly buttonRepeats = new Map<number, number>();
   private readonly queueTaps: boolean;
   private globalKeys = new Set<string>();
+  private buttonKeys = new Set<string>();
   private wheelAccX = 0;
   private wheelAccY = 0;
   private prevX = 0;
@@ -160,6 +189,7 @@ export class Input<A extends string> {
     this.blocked = opts.blocked ?? (() => false);
     this.queueTaps = opts.queueTaps ?? true;
     if (opts.globalKeys) this.setGlobalKeys(opts.globalKeys);
+    if (opts.buttonKeys) this.setButtonKeys(opts.buttonKeys);
     this.setBindings(bindings);
   }
 
@@ -191,6 +221,11 @@ export class Input<A extends string> {
   /** Replace the global keys (see `InputOptions.globalKeys`). */
   setGlobalKeys(codes: Iterable<string>): void {
     this.globalKeys = new Set(codes);
+  }
+
+  /** Replace the button keys (see `InputOptions.buttonKeys`). */
+  setButtonKeys(codes: Iterable<string>): void {
+    this.buttonKeys = new Set(codes);
   }
 
   getBindings(): Bindings<A> {
@@ -424,9 +459,10 @@ export class Input<A extends string> {
       if (isInteractiveTarget(e.target)) {
         // Global keys still count on buttons/links (never in text entry); the control keeps
         // the default action.
-        if (!e.repeat && this.globalKeys.has(e.code) && !isTextEntryTarget(e.target)) {
-          this.keyDown(e.code);
-        }
+        const passes =
+          (this.globalKeys.has(e.code) && !isTextEntryTarget(e.target)) ||
+          (this.buttonKeys.has(e.code) && isButtonTarget(e.target));
+        if (!e.repeat && passes) this.keyDown(e.code);
         return;
       }
       if (!e.repeat) this.keyDown(e.code);
