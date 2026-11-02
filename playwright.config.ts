@@ -2,14 +2,20 @@ import { defineConfig, devices } from '@playwright/test';
 
 // E2E smoke for the production build. Run with `pnpm test:e2e` (see tests/e2e/README.md).
 //
-// Two servers:
+// Servers (ports from tests/e2e/ports.ts; worktrees get their own offset):
 //   - vite preview of dist/ at http://localhost:4173 (top-level page)
+//   - vite dev at http://127.0.0.1:5175 (DEV-only handles for story e2e)
 //   - itch-sim (scripts/itch-sim) at http://localhost:8790, which embeds the same dist/ in a
 //     cross-site iframe from http://127.0.0.1:8791 with itch.io's exact iframe attributes.
 
-// Keep in sync with tests/e2e/helpers.ts.
-const PREVIEW_URL = 'http://localhost:4173';
-const ITCH_SIM_URL = 'http://localhost:8790';
+import {
+  DEV_PORT,
+  DEV_URL,
+  ITCH_SIM_PORT,
+  ITCH_SIM_URL,
+  PREVIEW_PORT,
+  PREVIEW_URL,
+} from './tests/e2e/ports';
 
 const isCI = !!process.env.CI;
 
@@ -43,8 +49,8 @@ function webgpuArgs(): string[] {
 
 // E2E_SKIP_BUILD=1 reuses an existing dist/ (e.g. after `pnpm build` in CI).
 const previewCommand = process.env.E2E_SKIP_BUILD
-  ? 'pnpm exec vite preview --port 4173 --strictPort'
-  : 'pnpm build && pnpm exec vite preview --port 4173 --strictPort';
+  ? `pnpm exec vite preview --port ${PREVIEW_PORT} --strictPort`
+  : `pnpm build && pnpm exec vite preview --port ${PREVIEW_PORT} --strictPort`;
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -77,14 +83,14 @@ export default defineConfig({
     },
     {
       // Vite dev server: story e2e (ending) needs the DEV-only `window.__game` handle.
-      command: 'pnpm exec vite --port 5175 --strictPort --host 127.0.0.1',
-      url: 'http://127.0.0.1:5175/',
+      command: `pnpm exec vite --port ${DEV_PORT} --strictPort --host 127.0.0.1`,
+      url: DEV_URL,
       reuseExistingServer: !isCI,
       timeout: 60_000,
     },
     {
       // Serves dist/ lazily, so it is fine that the build above may still be running.
-      command: 'node scripts/itch-sim/serve.mjs --port 8790',
+      command: `node scripts/itch-sim/serve.mjs --port ${ITCH_SIM_PORT}`,
       url: `${ITCH_SIM_URL}/`,
       reuseExistingServer: !isCI,
       timeout: 30_000,

@@ -1,12 +1,12 @@
 /// <reference types="@webgpu/types" />
 import { expect, test } from '@playwright/test';
 import { trackProblems } from './helpers';
+import { DEV_URL } from './ports';
 
 // The ending, end to end, on the dev server (the `window.__game` handle is DEV-only).
 // Seeds a save one machine short of complete, solves the Last Rune through the flow,
 // and lets the whole ending play to the end card. Reduced motion and instant captions
 // keep it to a couple of minutes.
-const DEV_URL = 'http://127.0.0.1:5175/';
 
 interface GameHandle {
   flow: {

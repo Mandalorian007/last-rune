@@ -15,7 +15,7 @@ pnpm dev            # local dev server
 pnpm check          # typecheck + lint + unit tests  ← must pass before any merge
 pnpm fix            # format + safe lint fixes + organize imports, whole repo
 pnpm build          # typecheck + production build to dist/
-pnpm test:e2e       # Playwright
+pnpm test:e2e       # Playwright (ports in tests/e2e/ports.ts; worktrees auto-offset, or E2E_PORT_OFFSET)
 pnpm package:itch   # build + zip for itch upload
 ```
 

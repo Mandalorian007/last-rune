@@ -1,10 +1,9 @@
 /// <reference types="@webgpu/types" />
 import type { Frame, Page } from '@playwright/test';
 
-// Keep in sync with playwright.config.ts.
-export const PREVIEW_URL = 'http://localhost:4173';
-export const ITCH_SIM_URL = 'http://localhost:8790';
-export const ITCH_GAME_ORIGIN = 'http://127.0.0.1:8791';
+import { ITCH_GAME_ORIGIN } from './ports';
+
+export { DEV_URL, ITCH_GAME_ORIGIN, ITCH_SIM_URL, PREVIEW_URL } from './ports';
 
 /** Console noise that is not ours: Chromium warns about itch's non-standard allow tokens. */
 const IGNORED_CONSOLE = [/Unrecognized feature: '(monetization|xr|web-share)'/];

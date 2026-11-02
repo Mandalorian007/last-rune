@@ -11,6 +11,8 @@ pnpm exec playwright test --headed      # watch it
 
 | URL | What |
 |---|---|
+Ports come from `tests/e2e/ports.ts`. Inside a `.claude/worktrees/` checkout they shift by a stable per-worktree offset (or set `E2E_PORT_OFFSET`), so parallel agents never reuse each other's servers.
+
 | `http://localhost:4173` | `vite preview` of `dist/` (top-level page) |
 | `http://localhost:8790` | `scripts/itch-sim`: itch-like page embedding `dist/` in a cross-site iframe from `http://127.0.0.1:8791/html/0000000/` with itch.io's exact `allow` attribute |
 
