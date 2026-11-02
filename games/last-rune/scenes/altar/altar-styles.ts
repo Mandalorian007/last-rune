@@ -39,15 +39,56 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-tip b { color: var(--lr-gold); font-weight: 600; margin-right: 4px; }
 
 .tc-overlay .lr-altar-need {
-  position: absolute; transform: translate(-50%, -100%); padding: 4px 14px; border-radius: 10px; white-space: nowrap;
-  font-family: var(--tc-font-display); font-size: 24px; color: #f4e6c4;
-  background: linear-gradient(180deg, rgba(40,32,22,0.92), rgba(20,16,12,0.92));
-  border: 2px solid rgba(232,192,106,0.5); box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+  position: absolute; display: flex; flex-direction: column; align-items: center; gap: 0;
+  padding: 6px 18px 8px; border-radius: 12px; white-space: nowrap; line-height: 1.1;
+  font-family: var(--tc-font-display); font-size: 24px; color: rgba(244,230,196,0.85);
+  background: linear-gradient(180deg, rgba(40,32,22,0.94), rgba(20,16,12,0.94));
+  border: 2px solid rgba(232,192,106,0.55); box-shadow: 0 6px 16px rgba(0,0,0,0.6);
   transition: border-color 200ms, color 200ms;
 }
-.tc-overlay .lr-altar-need[data-state="exact"] { border-color: #3fe0ff; color: #dff9ff; box-shadow: 0 0 22px rgba(63,224,255,0.55); }
+.tc-overlay .lr-altar-need[data-align="below"] { transform: translate(-50%, 0); }
+.tc-overlay .lr-altar-need[data-align="right"] { transform: translate(10px, -50%); }
+.tc-overlay .lr-altar-need b { font-size: 40px; color: #ffe2a0; font-weight: 600; margin-left: 4px; }
+.tc-overlay .lr-altar-need .lr-need-got { font-size: 22px; }
+.tc-overlay .lr-altar-need .lr-need-got b { font-size: 32px; color: #f4e6c4; }
+.tc-overlay .lr-altar-need[data-state="exact"] { border-color: #3fe0ff; box-shadow: 0 0 22px rgba(63,224,255,0.55); }
+.tc-overlay .lr-altar-need[data-state="exact"] .lr-need-got b { color: #7ff0ff; }
 .tc-overlay .lr-altar-need[data-state="under"] { border-color: #ffb03f; }
-.tc-overlay .lr-altar-need[data-state="over"] { border-color: #ff5a3c; color: #ffd7cc; box-shadow: 0 0 22px rgba(255,90,60,0.55); }
+.tc-overlay .lr-altar-need[data-state="under"] .lr-need-got b { color: #ffc46a; }
+.tc-overlay .lr-altar-need[data-state="over"] { border-color: #ff5a3c; box-shadow: 0 0 22px rgba(255,90,60,0.55); }
+.tc-overlay .lr-altar-need[data-state="over"] .lr-need-got b { color: #ff8a6e; }
+.tc-overlay .lr-need-strikes { display: flex; gap: 8px; margin-top: 4px; font-family: var(--tc-font-body, serif); font-size: 16px; }
+.tc-overlay .lr-need-strikes span { padding: 1px 6px; border-radius: 6px; border: 1px solid rgba(232,192,106,0.4); }
+.tc-overlay .lr-need-strikes [data-state="exact"] { border-color: #3fe0ff; color: #bff6ff; }
+.tc-overlay .lr-need-strikes [data-state="under"] { border-color: #ffb03f; color: #ffd9a0; }
+.tc-overlay .lr-need-strikes [data-state="over"] { border-color: #ff5a3c; color: #ffc0b0; }
+
+/* Charge chips: the bolt's charge where it changes, and what lands at each machine. */
+.tc-overlay .lr-altar-chip {
+  position: absolute; transform: translate(-50%, -50%); min-width: 34px; padding: 1px 9px; border-radius: 999px;
+  font-family: var(--tc-font-display); font-size: 24px; line-height: 30px; text-align: center; color: #eaf8ff;
+  background: rgba(10,18,26,0.88); border: 2px solid rgba(120,200,255,0.75);
+  box-shadow: 0 0 12px rgba(80,180,255,0.45); pointer-events: none;
+  animation: lr-chip-in 180ms var(--tc-easing) both;
+}
+.tc-overlay .lr-altar-chip[hidden] { display: none; }
+.tc-overlay .lr-altar-chip[data-state="exact"] { border-color: #3fe0ff; color: #dff9ff; }
+.tc-overlay .lr-altar-chip[data-state="under"] { border-color: #ffb03f; color: #ffe1b0; box-shadow: 0 0 12px rgba(255,176,63,0.5); }
+.tc-overlay .lr-altar-chip[data-state="over"] { border-color: #ff5a3c; color: #ffd7cc; box-shadow: 0 0 14px rgba(255,90,60,0.6); }
+@keyframes lr-chip-in { from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } to { opacity: 1; } }
+
+/* First appearance of a gem: its rule, pinned above it until the first strike. */
+.tc-overlay .lr-altar-teach {
+  position: absolute; transform: translate(-50%, -100%); max-width: 300px; width: max-content; padding: 5px 12px;
+  border-radius: 10px; font-family: var(--tc-font-body, serif); font-size: 19px; line-height: 1.25; text-align: center;
+  color: #f4e6c4; background: rgba(20,16,12,0.9); border: 1px solid rgba(232,192,106,0.6);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6); pointer-events: none; animation: lr-altar-pop 260ms var(--tc-easing) both;
+}
+.tc-overlay .lr-altar-teach b { color: var(--lr-gold); font-weight: 600; margin-right: 4px; }
+.tc-overlay .lr-altar-teach::after {
+  content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -6px;
+  border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(232,192,106,0.6);
+}
 
 .tc-overlay .lr-altar-verdict {
   position: absolute; left: 50%; top: 96px; transform: translateX(-50%); padding: 10px 30px; border-radius: 12px;
@@ -77,7 +118,8 @@ const CSS = /* css */ `
   font-size: 19px; color: rgba(232,220,192,0.62); text-shadow: 0 1px 4px #000;
 }
 .tc-overlay .lr-altar-hint b { color: rgba(232,192,106,0.85); font-weight: 600; }
-[data-reduced-motion] .tc-overlay .lr-altar-verdict, [data-reduced-motion] .tc-overlay .lr-altar-tag { animation: none; }
+[data-reduced-motion] .tc-overlay .lr-altar-verdict, [data-reduced-motion] .tc-overlay .lr-altar-tag,
+[data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-altar-teach { animation: none; }
 
 @keyframes lr-altar-pop { from { opacity: 0; transform: translate(-50%, -80%) scale(0.92); } to { opacity: 1; } }
 .tc-overlay .lr-altar-verdict { animation-name: lr-altar-drop; }
