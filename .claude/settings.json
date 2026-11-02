@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_response.filePath // .tool_input.file_path // empty'); [ -n \"$f\" ] && [ -f \"$f\" ] && r=$(git -C \"$(dirname \"$f\")\" rev-parse --show-toplevel 2>/dev/null) && cd \"$r\" && pnpm exec biome check --write --no-errors-on-unmatched \"$f\" >/dev/null 2>&1; exit 0",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
