@@ -101,7 +101,7 @@ const DEFS: Def[] = [
     beat: 'first-entry',
     tier: 1,
     source: P,
-    text: 'Welcome to the facility. Please do not touch anything. Please touch that. Only that.',
+    text: 'Welcome to the facility. Start with the intake desk: the gold doorway. Mistakes cost nothing here. Management made sure. Management made a lot of them.',
   },
   {
     kind: 'hall',
@@ -136,7 +136,7 @@ const DEFS: Def[] = [
   ...machineLines(
     'intake-desk',
     1,
-    "Day 14,610. A visitor. There's a form for that. There's a form for everything. Please touch only that.",
+    "Day 14,610. A visitor. There's a form for that. Take a rune from the tray, set it on a lit socket. You can't break anything. Others have tried.",
     "Regulation 1: the hallway rune. Regulation 2: this unit does not do a victory noise. Bzzt. That wasn't one.",
   ),
   ...machineLines(
@@ -547,7 +547,7 @@ const DEFS: Def[] = [
     nudge: 'teach',
     tier: 1,
     source: N,
-    text: 'Gem from the tray. Into the glowing socket. The form is very clear on this.',
+    text: 'Gem from the tray. Onto a bright socket. Wrong spot? Pick it up again. The form allows this.',
   },
   {
     kind: 'nudge',

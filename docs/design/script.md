@@ -80,7 +80,7 @@ screen (`safetyRecordLine`) closes it.
 
 *first-entry*
 
-> Welcome to the facility. Please do not touch anything. Please touch that. Only that.  
+> Welcome to the facility. Start with the intake desk: the gold doorway. Mistakes cost nothing here. Management made sure. Management made a lot of them.  
 > <sub>`hall.first-entry.t1.1` · 14w</sub>
 
 *ambient*
@@ -119,7 +119,7 @@ screen (`safetyRecordLine`) closes it.
 
 *Arrive*
 
-> Day 14,610. A visitor. There's a form for that. There's a form for everything. Please touch only that.  
+> Day 14,610. A visitor. There's a form for that. Take a rune from the tray, set it on a lit socket. You can't break anything. Others have tried.  
 > <sub>`intake-desk.arrive` · 18w</sub>
 
 *Solve*
@@ -670,7 +670,7 @@ Heard at the altar itself, not in the hall. Written for the altar in the same vo
 
 **Teach nudge** (idle on Intake Desk, `TEACH_NUDGE`)
 
-> Gem from the tray. Into the glowing socket. The form is very clear on this. **[NEW]**  
+> Gem from the tray. Onto a bright socket. Wrong spot? Pick it up again. The form allows this. **[NEW]**  
 > <sub>`nudge.teach` · 15w</sub>
 
 **New-gem nudges** (idle, the first puzzle that offers the gem, `gemNudge(gem)`)

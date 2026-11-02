@@ -87,7 +87,7 @@ Dry, procedural, quietly thrilled to have company.
 Running gags
 Counts the days. Files incident reports on you. Hates drawers.
 Sample lines
-"Welcome to the facility. Please do not touch anything. Please touch that. Only that."
+"Welcome to the facility. Start with the intake desk: the gold doorway. Mistakes cost nothing here. Management made sure. Management made a lot of them."
 "Press Unit 4 wants a magenta and an amber. Regulation 12. I wrote Regulation 12. I was having a day."
 "Incident report #4,211: visitor set a Bend facing a wall. Outcome: wall remains unpowered. Visitor remains hopeful."
 "Storm's coming. Good. We're a lightning factory. Rain would be awkward."
@@ -113,7 +113,7 @@ Comedy. Zero "I".
 TITLE · the door is knocked on
 "Oh. Someone's at the door. Nobody's at the door. Nobody's been at the door for forty years."
 INTAKE DESK · grants Bend
-Arrive: "Day 14,610. A visitor. There's a form for that. There's a form for everything. Please touch only that."
+Arrive: "Day 14,610. A visitor. There's a form for that. Take a rune from the tray, set it on a lit socket. You can't break anything. Others have tried."
 Solve: "Regulation 1: the hallway rune. Regulation 2: this unit does not do a victory noise. Bzzt. That wasn't one."
 FURNACE · grants Amplify
 Arrive: "The furnace. Went cold the week Management left. Everything did. Unrelated."
