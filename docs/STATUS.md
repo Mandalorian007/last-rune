@@ -23,7 +23,7 @@ _Last updated: 2026-11-02 by PM_
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
-- GitHub Pages enabled (source: GitHub Actions). Deploys are manual: `gh workflow run pages.yml -f label=alpha-1`. Nothing has been deployed yet. At M3α, show `VITE_RELEASE_LABEL` on the title screen.
+- GitHub Pages enabled (source: GitHub Actions). Every push to main deploys to https://mandalorian007.github.io/last-rune/ (D-023); `gh workflow run pages.yml -f label=alpha-1` stamps a release label. At M3α, show `VITE_RELEASE_LABEL` on the title screen.
 
 ## Risks
 - Audio is only objectively checked (levels, clicks, loops). Needs a human listen; 52 MiB decoded audio may matter on low-memory devices.

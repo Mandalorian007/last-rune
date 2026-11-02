@@ -1,9 +1,11 @@
 # Deploy the production build to GitHub Pages (D-010).
-# Manual only: run it from the Actions tab (or `gh workflow run pages.yml`) when a release is cut.
+# Runs on every push to main (user direction), and manually to stamp a release label.
 # No secrets; uses the built-in Pages OIDC deploy.
 name: Pages
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       label:
@@ -35,7 +37,7 @@ jobs:
       - run: pnpm check
       - run: pnpm build
         env:
-          VITE_RELEASE_LABEL: ${{ inputs.label }}
+          VITE_RELEASE_LABEL: ${{ inputs.label || format('main-{0}', github.sha) }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
