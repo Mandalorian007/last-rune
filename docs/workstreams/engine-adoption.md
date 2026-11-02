@@ -25,3 +25,35 @@ Before/after checks:
 `pnpm check`, `pnpm build` and `pnpm test:e2e` must pass.
 
 ## Log
+
+### 2026-11-02: engine-adoption pass (agent)
+1. **Ending, done.**
+   - Every post change after arrival is a `post.blendTo`: door 3.8 s, through 4.5 s, chat 1.6 s, flood 3 s (5 s with Reduce flashes).
+   - Arrival stays a hard `set` because the view itself cuts from the solve scene.
+   - The white-out (through) and the white-to-dark chat wash stay because the story calls for them.
+   - `skip()` calls `finishBlend()` and then sets the flood look. `exit()` calls `finishBlend()` and `fuse.destroy()`. The ending's `Fuse` was previously leaked on every run.
+   - Door: the shader cuts the mark out of the disc core and the aperture light, which is also dimmer. The door body thins over the disc centre, and `DOOR_POST` eases bloom, god rays and fog down. The mark now reads at the door and edge beats.
+   - Credits and the end-card footer get a radial dark backing that fades in.
+2. **`storm.ts`, done.** It uses `createPingPong` instead of two targets plus a `copyTextureToTexture` per frame. `destroy()` now frees the material too.
+3. **Shared `perDrawUniforms` material, skipped.** Measured draws are 6 (props demo), 12 (hall) and 16–17 (ending), so there is nothing to win:
+   - Bolt is additive while storm and fuse are premultiplied, and the three use different WGSL. One material would need an uber-shader and a blend mode none of them wants.
+   - Storm also needs its own sim texture per instance.
+   - A per-draw block breaks batching, so a bolt's segments would go from shared-material sprites to one draw each.
+   - Fuse and storm have one instance per scene, so sharing saves no pipelines.
+   - Added `BoltRibbon.destroy()` so owners can free ribbons.
+4. **Textures, done.** The emboss mask uses `textureFromPixels` (linear `rgba8unorm`). The stone normal map was already linear (`textureFromShader`, `rgba8unorm`). No other data textures came up from `getImageData` or `textureFromSource`.
+5. **Input, partly done.** `globalKeys: ['KeyC','KeyO','KeyJ']` is set in ctx.ts (J added because the Journal button is there too). The HUD blur stays, with its comment rewritten. `ui.stack` hands focus back to the opener on close, so without the blur a closed Codex would leave the HUD button focused. Input then ignores arrows, Enter and Space, and Enter/Space would click the button again: a keyboard regression in the hall and the altar.
+6. **`audio/render.ts`, done.** It imports `OfflineContextFactory` from `@engine/audio`. Nothing imported the local alias.
+7. **Cleanup.** The ending now destroys its fuse. Hall and altar fuses and bolts live in per-renderer caches and are reused, so they are not leaks. For their owners:
+   - `scenes/altar/solve-scene.ts:147` and `altar-scene.ts:247` still say `particles.clear()` is broken; it can be called now.
+   - The altar asset cache could call `BoltRibbon.destroy()` if it ever drops the cache.
+
+Perf (Chromium, 1280×720, 300 frames). Every page holds 60 fps with p95 at 16.7–16.8 ms, before and after:
+
+| Page | Draws before | Draws after |
+|---|---|---|
+| `?demo=art` | 10 | 10 |
+| `?demo=props` | 6 | 6 |
+| hall | 12 | 12 |
+| ending door | 17 | 17 |
+| ending flood | 16 | 16 |

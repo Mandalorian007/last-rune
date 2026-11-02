@@ -1,7 +1,9 @@
 /**
  * Always-there corner buttons (Codex, Settings; Journal in the hall) plus the hall's name plate.
- * Buttons drop focus after a click so the game's keyboard shortcuts keep
- * working (engine/input ignores keys while a button is focused).
+ * C, O and J are Input `globalKeys` (game/ctx.ts), so they work while a button has focus. The
+ * buttons still drop focus after a click: the panel they open hands focus back to whatever
+ * was focused when it opened, and a focused button would take the arrows, Enter and Space
+ * (Enter/Space would click it again) instead of the hall and the altar.
  */
 import { h } from '@engine/ui';
 

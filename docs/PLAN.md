@@ -33,7 +33,7 @@ A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 t
 | 1 Foundations | engine-render, engine-systems, rules-puzzles, progression-content, ship-ops | ✅ merged |
 | 2 Playable vertical | game-shell, art-materials, audio-design, difficulty-fun (phase 1), art-props | ✅ merged |
 | 3 Content complete | altar-scene, hall-art, story-scenes | ✅ merged |
-| 4 Alpha + verify | hall-floor ✅, altar-clarity ✅, full-run ✅ (keyboard e2e through all 16 + playtest report), engine-cleanup ✅, engine-adoption 🟡, then the playtest fixes before alpha: caption-layout 🟡, altar-polish 🟡; then release label and M3α pre-release | 🟡 running |
+| 4 Alpha + verify | hall-floor ✅, altar-clarity ✅, full-run ✅ (keyboard e2e through all 16 + playtest report), engine-cleanup ✅, engine-adoption ✅, then the playtest fixes before alpha: caption-layout 🟡, altar-polish 🟡; then release label and M3α pre-release | 🟡 running |
 | 5 Polish | fixes from the playtest report, perf on integrated GPU, a11y, difficulty-fun phase 2 from alpha feedback, bug bash | ⏳ |
 | 6 Ship | v1.0.0 release, tags, itch kit | ⏳ |
 
@@ -66,15 +66,16 @@ Each item stays here until it is verified in a merged build. The owning workstre
 
 ## Polish backlog (wave 5 unless picked up earlier)
 - Hall: capacitor-bay washes out under its own glow when available; puddles subtle; optional vignette lift. 16 light slots: two are used by the wing lamps.
-- Ending credits backing, door bloom, eased post: engine-adoption (wave 4).
+- ✅ Ending credits backing, door bloom, eased post (engine-adoption).
+- HUD buttons still blur after panels close: the panel stack returns focus to the opener, which would swallow arrows/Enter. Fix needs an engine option (no focus restore for HUD openers) or Input treating arrows/Enter/Space as global on non-text buttons. Low priority; the workaround is documented in `ui/hud.ts`.
 - Ending UI copy (credits, chat names) pending user confirmation.
 
-## Engine adoption (engine-adoption workstream, wave 4; altar and hall items go to their owners)
+## Engine adoption (✅ engine-adoption merged; remaining: altar item 7 → altar-polish)
 1. Ending: use `post.blendTo` instead of washes hiding preset swaps.
 2. `art/props/storm.ts`: use `createPingPong`, and destroy its material in `destroy()`.
-3. bolt/storm/fuse: share one `perDrawUniforms` material.
+3. ~~bolt/storm/fuse: share one `perDrawUniforms` material~~ skipped: different shaders and blend modes, one instance each, and per-draw uniforms stop bolt batching.
 4. Emboss and mask textures: use `textureFromPixels` / `{ linear: true }`.
-5. game-shell: use `globalKeys: ['KeyC','KeyO']` instead of blurring HUD buttons.
+5. game-shell: `globalKeys: ['KeyC','KeyO','KeyJ']` ✅; the HUD blur stays (see polish backlog).
 6. `audio/render.ts`: import `OfflineContextFactory` from `@engine/audio`.
 7. Altar: use `particles.clear()` and the default bolt timing where it looks right (altar-polish).
 8. Scenes that create a Fuse should call `fuse.destroy()` on exit.

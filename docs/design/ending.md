@@ -38,10 +38,11 @@ The Discord link is a plain `<a href target="_blank" rel="noopener noreferrer">`
 - **Palette:** cool dusk over the hall; gold (1.0, 0.72, 0.3) for the rune, the door and the flood; storm blue (0.45, 0.7, 1.0) for the funnel. The chat is deliberately "a very different kind of screen": flat dark UI in system type. Everything after it returns to gold.
 - **Post:** `POST_PRESETS.ending` is too hot for the lit rune and door, so it is patched three ways:
   - `DUSK_POST` (bloom 0.7 / threshold 1.4, exposure 0.92) while the rune and door play.
-  - `CHAT_POST` (flat) for the chat.
-  - `FLOOD_POST` (bloom 0.9 / threshold 1.3) for the flood and end card.
-  
-  Post switches are instant (see engine gaps), so each one happens behind a full-screen wash.
+  - `DOOR_POST` (bloom 0.5 / threshold 1.75, light god rays and fog, exposure 0.88) eases in over 3.8 s as the door opens, so its light doesn't bury the Builder's mark.
+  - `THROUGH_POST` eases back up under the white-out; `CHAT_POST` (flat) eases in as the white drains to the chat.
+  - `FLOOD_POST` (bloom 0.75 / threshold 1.4) for the flood and end card. It eases in over 3 s (5 s with Reduce flashes) from fog and god rays at zero.
+
+  Every change after arrival is a `post.blendTo`. The arrival is a hard set because the view itself cuts from the solve scene. The white-out and the white-to-dark chat wash stay because the story calls for them, not to hide a preset swap.
 - **Shaders:** one WGSL (`ending-wgsl.ts`) with four modes: disc, funnel, wash and door. FUSE and the clipboard reuse `Fuse`/`PropLightRig` and the journal's `DeskArt`.
 - **Text:** the title uses the display font, with dark drop shadows so it reads on gold. The safety slip uses the journal's hand font. All fonts are local stacks.
 
@@ -100,8 +101,11 @@ The Discord link is a plain `<a href target="_blank" rel="noopener noreferrer">`
    - Lowered the flood wash (0.5 → 0.34, emissive 0.35 → 0.14), its glow (0.22 → 0.12) and the `FLOOD_POST` bloom (0.9/1.3 → 0.75/1.4). The alcoves now read through the gold.
    - Added Reduce flashes support (see Accessibility).
 
+6. **Pass 6 (engine adoption):**
+   - Post changes ease with `post.blendTo` instead of hiding behind washes.
+   - Door: the mark is cut out of the disc's inner light and aperture, and the door body thins over the disc centre. Together with `DOOR_POST`, the triangle, stave and dots now read through the door light.
+   - The credits and the end-card footer have a soft dark backing over the gold.
+
 ## Open issues
 
-- At the door beat (`ending-door.png`) the door still blooms hot over the disc centre. It reads as light, but a little more restraint (or a bloom-threshold tween) would keep the mark visible behind it.
-- The end-card background is the flooded hall at low contrast. It is readable but busy behind the title; a soft dark vignette behind the text could help.
 - The ending runs about 2 minutes 20 seconds with normal captions. There is no pacing tune per caption speed beyond `fuse.say`.

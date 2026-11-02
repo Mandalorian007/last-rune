@@ -88,11 +88,14 @@ fn tri_sd(p: vec2f, r: f32) -> f32 {
     // Edge shading so it sits in the floor.
     col *= mix(0.55, 1.0, 1.0 - smoothstep(0.6, 1.0, r) * 0.5);
     // Inner light: rises from the centre as it ignites; the aperture opens to white-gold.
-    let core = exp(-r * r * mix(14.0, 9.0, ign)) * ign;
-    let open = (1.0 - smoothstep(ap * 0.9 - 0.08, ap * 0.9, r)) * step(0.001, ap);
+    // The mark is cut out of the inner light, so it stays a readable silhouette as the
+    // aperture opens behind it (instead of melting into one white-gold blob).
+    let cut = 1.0 - sig * 0.9;
+    let core = exp(-r * r * mix(14.0, 9.0, ign)) * ign * cut;
+    let open = (1.0 - smoothstep(ap * 0.9 - 0.08, ap * 0.9, r)) * step(0.001, ap) * cut;
     let pulse = 0.85 + 0.15 * sin(t * 2.4 - r * 9.0);
-    emi = hot * (lines * ign * 0.7 * pulse + core * 0.35) + vec3f(1.0, 0.86, 0.6) * open * 0.9;
-    col += hot * (lines * ign * 0.3 + core * 0.15) + vec3f(1.0, 0.9, 0.7) * open * 0.6;
+    emi = hot * (lines * ign * 0.7 * pulse + core * 0.35) + vec3f(1.0, 0.86, 0.6) * open * 0.28;
+    col += hot * (lines * ign * 0.3 + core * 0.15) + vec3f(1.0, 0.9, 0.7) * open * 0.32;
   } else if (mode == 1) {
     // ── Storm funnel: spiral streaks pulled into the rune.
     let d = in.world - vec2f(960.0, 540.0);
@@ -146,8 +149,10 @@ fn tri_sd(p: vec2f, r: f32) -> f32 {
     let core = vec3f(1.0, 0.93, 0.78);
     let edge = vec3f(1.0, 0.68, 0.28);
     let rim = 1.0 - smoothstep(0.0, 14.0, abs(dd));
-    col = (core * inside * rays * 0.62 + edge * (halo + rim * 0.7)) * bright * (0.5 + 0.5 * fadeTop);
-    emi = col * 0.55;
+    // Thin the door's body over the disc centre so the Builder's mark reads through it.
+    let veil = mix(0.28, 1.0, smoothstep(50.0, 210.0, length(in.world - vec2f(960.0, 540.0))));
+    col = (core * inside * rays * 0.62 * veil + edge * (halo + rim * 0.7)) * bright * (0.5 + 0.5 * fadeTop);
+    emi = col * 0.55 * veil;
     a = 1.0;
   }
 
