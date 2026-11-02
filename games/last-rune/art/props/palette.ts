@@ -44,7 +44,7 @@ export const PROP = {
   ironDark: '#23252c',
   rust: '#7a3a1c',
   /** FUSE's live eye: deeper and warmer than candle so it reads as "his". */
-  eye: '#ffa22e',
+  eye: '#ff8a1c',
   /** Clipboard hardboard. */
   board: '#6b4526',
   /** Gauge dial face. */
@@ -57,6 +57,16 @@ export type PitchColour = keyof typeof PITCH;
 /** Gem colour order used by props that take a gem index (alcove sockets, bolt helpers). */
 export const GEM_ORDER = ['cyan', 'amethyst', 'magenta', 'amber', 'emerald', 'ice'] as const;
 export type GemColourName = (typeof GEM_ORDER)[number];
+
+/** Gem kind (rules/types `GemKind`) → pitch colour: Channel cyan, Bend amethyst, ... */
+export const GEM_COLOUR = {
+  channel: 'cyan',
+  bend: 'amethyst',
+  split: 'magenta',
+  amplify: 'amber',
+  gate: 'emerald',
+  capacitor: 'ice',
+} as const satisfies Record<string, GemColourName>;
 
 export function pitch(name: PitchColour, intensity = 1): RGBA {
   return hex(PITCH[name], intensity);

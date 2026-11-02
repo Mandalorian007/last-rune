@@ -33,7 +33,9 @@ import {
 import { PROP_LIGHT_FLOATS, type PropLightRig } from './lighting';
 import { pitch } from './palette';
 
-export type StormStrength = 1 | 2 | 4;
+export type { StormStrength } from '../../rules/types';
+
+import type { StormStrength } from '../../rules/types';
 
 export interface StormOptions {
   x: number;
