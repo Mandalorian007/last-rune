@@ -151,9 +151,9 @@ describe('caption card', () => {
     const card = new CaptionCard(host, { reducedMotion: false, cps: 100 });
     const chars: string[] = [];
     const done = vi.fn();
-    card.say('Hi you', { speaker: 'FUSE', hold: 500, onChar: (c) => chars.push(c) }).then(done);
+    card.say('Hi you', { speaker: 'NARRATOR', hold: 500, onChar: (c) => chars.push(c) }).then(done);
     const live = host.querySelector('[aria-live]')!;
-    expect(live.textContent).toBe('FUSE: Hi you');
+    expect(live.textContent).toBe('NARRATOR: Hi you');
     expect(card.element.hidden).toBe(false);
     const text = card.element.querySelector('.tc-caption-text')!;
     expect(text.textContent).toBe('Hi you'); // layout reserved

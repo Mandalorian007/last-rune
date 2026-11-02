@@ -23,14 +23,15 @@ _Last updated: 2026-11-02 by PM_
 | hall-floor | ws/hall-floor | 🟡 in progress | wave 4: floor dressing, locked alcoves readable, available machine most inviting |
 | altar-clarity | ws/altar-clarity | 🟡 in progress | wave 4: less board noise, output visibly feeds the machine, readable strikes, onboarding for the first 3 gems |
 | full-run | ws/full-run | 🟡 in progress | wave 4: real-input e2e through all 16 puzzles + player-eye playtest report |
-| engine-cleanup | ws/engine-cleanup | 🟡 in progress | wave 4: engine bugs/gaps (particles clear, bolt timing, per-draw uniforms, limiter, …), additive only |
+| engine-cleanup | ws/engine-cleanup | ✅ merged | particles clear, bolt timing from trace, Fuse.destroy, per-draw uniforms, texture uploads, PingPong, global keys, queued taps, master limiter + reverb, post.blendTo. 60fps, no new churn |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
 - GitHub Pages enabled (source: GitHub Actions). Every push to main deploys to https://mandalorian007.github.io/last-rune/ (D-023); `gh workflow run pages.yml -f label=alpha-1` stamps a release label. At M3α, show `VITE_RELEASE_LABEL` on the title screen.
 
 ## Risks
-- e2e flake (fixed): under GPU load, repeat key taps inside one tick merged. Tests now wait on frames; engine-cleanup decides whether Input should queue taps.
+- e2e flake (fixed twice over): repeat taps now queue in Input, and each worktree runs e2e on its own ports (tests/e2e/ports.ts).
+- The master limiter is now on by default (above −1 dBFS only). Needs a human listen along with the rest of the audio.
 - FUSE altar lines exist (`exactLine`, `TEACH_NUDGE`, `gemNudge`); altar-clarity wires `exactLine`/`gemNudge` (verdict still hard-coded).
 - Invented UI copy in the ending (credits, chat server/channel, 6 reactor handles, labels) awaits user confirmation: `docs/design/ending.md`.
 - Audio is only objectively checked (levels, clicks, loops). Needs a human listen; 52 MiB decoded audio may matter on low-memory devices.

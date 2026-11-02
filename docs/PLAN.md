@@ -51,5 +51,15 @@ Each item stays here until it is verified in a merged build. The owning workstre
 - Ending: darker backing behind credits over the gold flood (fading lines are faint); the door blooms hot over the disc centre; ease post settings once `post.blendTo` exists.
 - Ending UI copy (credits, chat names) pending user confirmation.
 
-## Known engine gaps (engine-cleanup, wave 4)
-Per-draw uniforms; linear texture upload; ping-pong render-target helper; global keys in Input; master limiter/reverb; export `OfflineContextFactory`. Bugs: `ParticleSystem.clear()` lacks COPY_DST; `boltSegmentsFromTrace` timing differs from the sim trace; `Fuse` has no `destroy()`. `post.set` can't ease (wanted: `post.blendTo(patch, seconds)`).
+## Engine adoption (callers to migrate onto engine-cleanup's APIs, wave 5)
+1. Ending: use `post.blendTo` instead of washes hiding preset swaps.
+2. `art/props/storm.ts`: use `createPingPong`, and destroy its material in `destroy()`.
+3. bolt/storm/fuse: share one `perDrawUniforms` material.
+4. Emboss and mask textures: use `textureFromPixels` / `{ linear: true }`.
+5. game-shell: use `globalKeys: ['KeyC','KeyO']` instead of blurring HUD buttons.
+6. `audio/render.ts`: import `OfflineContextFactory` from `@engine/audio`.
+7. Altar: use `particles.clear()` and the default bolt timing where it looks right.
+8. Scenes that create a Fuse should call `fuse.destroy()` on exit.
+9. e2e `press()` helpers can drop their frame waits (optional).
+
+Engine gaps from waves 1–3: all closed by engine-cleanup (2026-11-02).
