@@ -1,0 +1,282 @@
+/**
+ * Gem material: a faceted crystal seen from above, glowing from inside.
+ *
+ * Per instance:
+ * - tint     = gem colour (linear)
+ * - params.x = kind (0 channel, 1 bend, 2 split, 3 amplify, 4 gate, 5 capacitor)
+ * - params.y = state (0 idle, 1 hover, 2 placed, 3 energised, 4 dim-locked)
+ * - params.z = rotation in radians, clockwise (rotates cut + glyph; lighting stays fixed)
+ * - params.w = seed (inclusions, facet sparkle phase)
+ * - emissive = glow multiplier (1 = default for the state)
+ *
+ * Rotation 0: the glyph's input is at the bottom (south), its main output at the top (north).
+ *
+ * Look: flat table + two rows of crown facets per side, a dark girdle. The inner glyph is lit
+ * from inside and seen through each facet with a different refraction offset (per-channel,
+ * so edges split into RGB), cloudy inclusions drift slowly, and specular glints come from
+ * the scene's lights (warm candles land on cool stones).
+ */
+import { LIGHTS_WGSL } from './lights-wgsl';
+
+export const GEM_WGSL = /* wgsl */ `${LIGHTS_WGSL}
+const TAU = 6.2831853;
+
+fn g_rot(p: vec2f, a: f32) -> vec2f {
+  let c = cos(a);
+  let s = sin(a);
+  return vec2f(c * p.x - s * p.y, s * p.x + c * p.y);
+}
+
+fn g_seg(p: vec2f, a: vec2f, b: vec2f) -> f32 {
+  let pa = p - a;
+  let ba = b - a;
+  let h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  return length(pa - ba * h);
+}
+
+fn g_ring(p: vec2f, c: vec2f, r: f32) -> f32 {
+  return abs(length(p - c) - r);
+}
+
+/** Glyph distance (gem space, -1..1, y down; flow enters at +y, leaves at -y). */
+fn g_glyph(p: vec2f, kind: i32) -> f32 {
+  var d = 1e3;
+  if (kind == 0) {
+    // Channel: a straight conduit with a diamond node and end ticks.
+    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.2));
+    d = min(d, g_seg(p, vec2f(0.0, -0.2), vec2f(0.0, -0.56)));
+    d = min(d, abs(abs(p.x) + abs(p.y) - 0.2));
+    d = min(d, g_seg(p, vec2f(-0.12, 0.44), vec2f(0.12, 0.44)));
+    d = min(d, g_seg(p, vec2f(-0.12, -0.44), vec2f(0.12, -0.44)));
+  } else if (kind == 1) {
+    // Bend: in from the south, a quarter arc, out to the east with an arrowhead.
+    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.2));
+    let c = vec2f(0.2, 0.2);
+    let q = p - c;
+    if (q.x < 0.0 && q.y < 0.0) { d = min(d, abs(length(q) - 0.2)); }
+    d = min(d, g_seg(p, vec2f(0.2, 0.0), vec2f(0.54, 0.0)));
+    d = min(d, g_seg(p, vec2f(0.56, 0.0), vec2f(0.4, -0.14)));
+    d = min(d, g_seg(p, vec2f(0.56, 0.0), vec2f(0.4, 0.14)));
+  } else if (kind == 2) {
+    // Split: a stem that forks into two arms, node at the fork.
+    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.08));
+    d = min(d, g_seg(p, vec2f(0.0, 0.08), vec2f(-0.3, -0.18)));
+    d = min(d, g_seg(p, vec2f(-0.3, -0.18), vec2f(-0.5, -0.18)));
+    d = min(d, g_seg(p, vec2f(0.0, 0.08), vec2f(0.3, -0.18)));
+    d = min(d, g_seg(p, vec2f(0.3, -0.18), vec2f(0.5, -0.18)));
+    d = min(d, max(length(p - vec2f(0.0, 0.08)) - 0.09, 0.0));
+  } else if (kind == 3) {
+    // Amplify: two stacked chevrons over a short stem.
+    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.3));
+    for (var i = 0; i < 2; i++) {
+      let o = f32(i) * -0.28;
+      d = min(d, g_seg(p, vec2f(-0.34, 0.16 + o), vec2f(0.0, -0.14 + o)));
+      d = min(d, g_seg(p, vec2f(0.34, 0.16 + o), vec2f(0.0, -0.14 + o)));
+    }
+  } else if (kind == 4) {
+    // Gate: two inputs meet in a ring; one output leaves.
+    d = g_seg(p, vec2f(-0.5, 0.4), vec2f(-0.12, 0.13));
+    d = min(d, g_seg(p, vec2f(0.5, 0.4), vec2f(0.12, 0.13)));
+    d = min(d, g_ring(p, vec2f(0.0, 0.03), 0.15));
+    d = min(d, g_seg(p, vec2f(0.0, -0.12), vec2f(0.0, -0.56)));
+    d = min(d, g_seg(p, vec2f(-0.1, -0.44), vec2f(0.1, -0.44)));
+  } else {
+    // Capacitor: two plates with leads.
+    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.12));
+    d = min(d, g_seg(p, vec2f(0.0, -0.12), vec2f(0.0, -0.56)));
+    d = min(d, g_seg(p, vec2f(-0.34, 0.12), vec2f(0.34, 0.12)) - 0.015);
+    d = min(d, g_seg(p, vec2f(-0.34, -0.12), vec2f(0.34, -0.12)) - 0.015);
+  }
+  return d;
+}
+
+struct Cut {
+  sides: f32,
+  phase: f32,     // angle of the first vertex
+  scale: vec2f,   // anisotropic stretch (gem space → unit polygon)
+  offset: vec2f,  // centroid shift
+};
+
+fn g_cut(kind: i32) -> Cut {
+  var c: Cut;
+  c.offset = vec2f(0.0);
+  c.scale = vec2f(0.98);
+  if (kind == 0) {          // long hexagon, points along the flow
+    c.sides = 6.0; c.phase = -TAU / 4.0; c.scale = vec2f(0.66, 1.0);
+  } else if (kind == 1) {   // square cushion
+    c.sides = 4.0; c.phase = TAU / 8.0; c.scale = vec2f(1.08);
+  } else if (kind == 2) {   // trillion
+    c.sides = 3.0; c.phase = -TAU / 4.0; c.scale = vec2f(1.12); c.offset = vec2f(0.0, 0.2);
+  } else if (kind == 3) {   // round brilliant
+    c.sides = 12.0; c.phase = 0.0; c.scale = vec2f(0.97);
+  } else if (kind == 4) {   // shield
+    c.sides = 5.0; c.phase = -TAU / 4.0; c.scale = vec2f(1.0); c.offset = vec2f(0.0, 0.06);
+  } else {                  // flat hexagon
+    c.sides = 6.0; c.phase = 0.0; c.scale = vec2f(1.0, 0.9);
+  }
+  return c;
+}
+
+struct Facet {
+  sdf: f32,       // polygon distance (unit polygon space, <0 inside)
+  rho: f32,       // 0 centre .. 1 girdle
+  n: vec3f,       // facet normal (gem space)
+  id: f32,
+  edge: f32,      // distance to the nearest facet boundary (unit polygon space)
+  refr: f32,      // refraction strength through this facet
+};
+
+fn g_facet(q: vec2f, cut: Cut) -> Facet {
+  var f: Facet;
+  let N = cut.sides;
+  let T = TAU / N;
+  let A = cos(T * 0.5);
+  let halfEdge = A * tan(T * 0.5);
+  let a = atan2(q.y, q.x) - cut.phase - T * 0.5;
+  let k = round(a / T);
+  let th = cut.phase + T * 0.5 + k * T;
+  let dir = vec2f(cos(th), sin(th));
+  let perp = vec2f(-dir.y, dir.x);
+  let d = dot(q, dir);
+  let rho = d / A;
+  let t = clamp(dot(q, perp) / max(halfEdge * max(rho, 0.05), 1e-3), -1.0, 1.0);
+  f.sdf = d - A;
+  f.rho = rho;
+  let table = 0.5;
+  var n = vec3f(0.0, 0.0, 1.0);
+  var id = 0.0;
+  var edge = abs(rho - table) * A;
+  f.refr = 0.0;
+  if (rho > table) {
+    let u = (rho - table) / (1.0 - table);
+    let star = u < 0.55 * (1.0 - abs(t));
+    // Distance to the sector boundary (t = ±1) and the star/girdle boundary.
+    edge = min(edge, (1.0 - abs(t)) * halfEdge * rho);
+    edge = min(edge, abs(u - 0.55 * (1.0 - abs(t))) * (1.0 - table) * A * 0.7);
+    if (star) {
+      n = normalize(vec3f(dir * 0.42, 1.0));
+      id = k * 4.0 + 1.0;
+      f.refr = 0.22;
+    } else {
+      let side = select(-1.0, 1.0, t > 0.0);
+      edge = min(edge, abs(t) * halfEdge * rho);
+      n = normalize(vec3f(dir * 0.85 + perp * side * 0.32, 1.0));
+      id = k * 4.0 + 2.0 + max(side, 0.0);
+      f.refr = 0.38;
+    }
+  }
+  f.n = vec3f(n.xy / cut.scale, n.z);
+  f.n = normalize(f.n);
+  f.id = id;
+  f.edge = edge;
+  return f;
+}
+
+fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
+  let d = g_glyph(p, kind);
+  return smoothstep(w, w * 0.25, d) + exp(-d * 14.0) * 0.45;
+}
+
+@fragment fn fs_main(in: VSOut) -> FragOut {
+  let kind = i32(in.params.x + 0.5);
+  let state = i32(in.params.y + 0.5);
+  let rot = in.params.z;
+  let seed = in.params.w;
+  let t = globals.time;
+  var base = in.color.rgb;
+
+  let p = in.local * 2.0 - 1.0;              // screen-aligned -1..1 (y down)
+  let q0 = g_rot(p, -rot);                   // gem space
+  let cut = g_cut(kind);
+  let q = (q0 + cut.offset) / cut.scale;     // unit polygon space
+  let f = g_facet(q, cut);
+  let pxUnit = 2.0 / in.size.x;              // gem-space units per px
+  let alpha = clamp(0.5 - f.sdf / (pxUnit * 1.2), 0.0, 1.0);
+
+  // State knobs.
+  var glow = 0.6;
+  var glyphK = 0.85;
+  var rimK = 0.0;
+  var energy = 0.0;
+  if (state == 1) { glow = 0.95; glyphK = 1.25; rimK = 1.0; }
+  else if (state == 2) { glow = 0.6; glyphK = 0.9; }
+  else if (state == 3) { glow = 1.15; glyphK = 1.6; energy = 1.0; }
+  let dim = state == 4;
+
+  // Dim-locked gems are dead stone: desaturated, dark, glyph engraved rather than lit.
+  if (dim) {
+    let l = engine_luma(base);
+    base = mix(vec3f(l) * vec3f(0.55, 0.6, 0.8), base, 0.25) * 0.28;
+    glow = 0.0;
+    glyphK = 0.0;
+  }
+
+  // World-space facet normal (rotation applied back) for lighting.
+  let nw = vec3f(g_rot(f.n.xy, rot), f.n.z);
+  let lit = lights_shade(in.world, 28.0, nw, 70.0);
+  // A fixed cool key from the upper left so every gem has one crisp glint.
+  let key = normalize(vec3f(-0.5, -0.7, 0.9));
+  let keySpec = pow(max(dot(nw, normalize(key + vec3f(0.0, 0.0, 1.0))), 0.0), 60.0);
+
+  // Refraction: each facet sees the inner glyph from a different offset, split per channel.
+  let off = f.n.xy * f.refr;
+  let gp = q0 * 1.08 - off * 1.0;
+  let lw = 0.07;
+  let disp = off * 0.16 + vec2f(0.012, 0.0);
+  var gl = vec3f(
+    g_glyph_light(gp + disp, kind, lw),
+    g_glyph_light(gp, kind, lw),
+    g_glyph_light(gp - disp, kind, lw),
+  );
+  // Energised: a pulse runs along the glyph from input to output.
+  let flow = exp(-pow((fract(q0.y * 0.6 + t * 1.1) - 0.5) * 5.0, 2.0));
+  gl *= 1.0 + energy * (1.6 * flow);
+
+  // Body: deep and saturated at the girdle, clearer toward the centre.
+  let r2 = f.rho * f.rho;
+  let fh = engine_hash21(vec2f(f.id, seed * 17.0 + f32(kind)));
+  let shimmer = mix(1.0, 0.65 + 0.7 * (0.5 + 0.5 * sin(t * 2.6 + fh * 40.0)), energy);
+  let facetVar = (0.3 + 1.05 * fh * fh) * shimmer;
+  let cloud = engine_fbm(q0 * 2.3 + vec2f(seed * 9.0 + t * 0.04, t * 0.025), 4);
+  let veil = smoothstep(0.45, 0.85, cloud);
+  let inner = exp(-r2 * 1.6);
+  var body = base * (0.07 + 0.55 * inner) * facetVar * (0.7 + 0.6 * cloud);
+  body = mix(body, base * 0.05, smoothstep(0.82, 1.0, f.rho) * 0.75);   // dark girdle band
+  // Capacitor is frosted ice: milkier body, softer glyph.
+  if (kind == 5) {
+    body = mix(body, vec3f(engine_luma(body)) * 1.3 + base * 0.08, 0.35 * veil + 0.15);
+  }
+
+  // Facet edges catch the light; the girdle has a thin bright rim.
+  let edgeW = pxUnit * 1.1;
+  let edgeLine = 1.0 - smoothstep(0.0, edgeW, f.edge);
+  let girdle = exp(-pow((f.sdf / pxUnit + 1.6) / 1.2, 2.0));
+
+  let glyphCol = mix(base, vec3f(1.0), 0.22 + 0.2 * energy) * glyphK;
+  var col = body;
+  col += gl * glyphCol * 0.55;
+  col += base * edgeLine * (0.35 + 0.25 * fh) * select(1.0, 0.5, dim);
+  col += vec3f(1.0, 0.95, 0.9) * girdle * (0.18 + 0.5 * rimK);
+  // Neighbour light glints, pulled toward white so a gem doesn't turn rainbow.
+  let specW = mix(lit.spec, vec3f(engine_luma(lit.spec)), 0.5) * select(0.55, 0.18, dim);
+  col += specW * (0.6 + 0.8 * fh);
+  col += vec3f(0.75, 0.85, 1.0) * keySpec * 0.55;
+  col += lit.diffuse * base * 0.08;
+  // Hot white core when energised.
+  col += mix(base, vec3f(1.0, 0.97, 0.92), 0.5) * exp(-r2 * 12.0) * energy * 0.35;
+  if (dim) {
+    // Engraved glyph: a dark groove with a faint lit lower lip.
+    let dg = g_glyph(q0 * 1.08, kind);
+    col *= 1.0 - (1.0 - smoothstep(0.03, 0.06, dg)) * 0.6;
+  }
+
+  var o: FragOut;
+  o.color = vec4f(col, alpha);
+  let em = base * (inner * 0.32 + veil * 0.1) * glow + gl * glyphCol * glow * 0.55 +
+    mix(base, vec3f(1.0), 0.3) * exp(-r2 * 14.0) * energy * 0.6 + specW * 0.2;
+  // Normalise by brightness so pale gems (capacitor) don't out-bloom saturated ones.
+  let lumK = 0.35 / max(engine_luma(base), 0.35);
+  o.emissive = vec4f(em * in.emissive * alpha * lumK, alpha);
+  return o;
+}
+`;

@@ -39,6 +39,11 @@ async function main(): Promise<void> {
     startRenderDemo(res.surface, res.gpu);
     return;
   }
+  if (import.meta.env.DEV && qs.get('demo') === 'art') {
+    const { startArtDemo } = await import('./scenes/_demo/art-demo');
+    startArtDemo(res.surface, res.gpu);
+    return;
+  }
 
   const ctx = createGameCtx(res.surface, res.gpu, SCENES);
   if (!ctx.save.persistent) {
