@@ -54,6 +54,7 @@ export class HallScene implements GameScene {
     this.view = ctx.views.hall(ctx.viewContext);
     this.refresh();
     ctx.post.set({ godRays: { intensity: 0.25 }, fog: { density: 0.55 } });
+    ctx.setMood('hall');
     if (!ctx.save.get().flags.hallIntro) {
       const first = hallLines('first-entry', 1)[0];
       if (first) void ctx.fuse.say(first);
@@ -77,6 +78,7 @@ export class HallScene implements GameScene {
   resume(): void {
     const before = this.progress;
     this.refresh();
+    this.ctx.setMood('hall');
     const restored = this.progress.solved.filter((id) => !before.solved.includes(id));
     for (const id of restored) this.view.onRestored?.(id, newlyUnlocked(before, this.progress));
     this.hover = null;

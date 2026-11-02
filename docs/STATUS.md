@@ -14,7 +14,7 @@ _Last updated: 2026-11-02 by PM_
 | ship-ops | ws/ship-ops | ✅ merged | WebGPU works in the itch iframe (D-016); CI, itch zip packager, itch-sim, Playwright e2e (2 tests pending the Title scene) |
 | game-shell | ws/game-shell | ✅ merged | GameCtx, save v1, settings, Title → Hall → puzzle stub → solve stub loop, codex shell. e2e 7/7 strict |
 | art-materials | ws/art-materials | ✅ merged | light set, 6 gem cuts × 5 states, baked stone, altar slab, candles, gold emboss, post presets; `?demo=art` 60fps (stress 9 draws). Screens in docs/design/screens/ |
-| audio-design | ws/audio-design | 🟡 in progress | procedural sound bank, moods by tier |
+| audio-design | ws/audio-design | ✅ merged | 59 procedural sounds (0 problems, peak −1.5 dBFS), 13 moods by tier, FUSE voice; ~0.9 s pre-render after first click. PM wired `ctx.sound`, `ctx.setMood`, FUSE voice, codex/UI sounds |
 | difficulty-fun | ws/difficulty-fun | 🟡 in progress | difficulty model, novice bot, target curve, puzzle retunes (D-021) |
 | altar-scene | ws/altar-scene | 🟡 in progress | wave 3: playable altar puzzle + solve moment |
 | art-props | ws/art-props | ✅ merged | FUSE (rig + caption portrait), storm cell (fluid sim), bolt ribbon (trace adapter, exact/over/under), machine gauge + breaker, alcove lock/unlock/restore; `?demo=props` |
@@ -25,6 +25,7 @@ _Last updated: 2026-11-02 by PM_
 - (Planned) Enable GitHub Pages "Source: GitHub Actions" in repo settings at M3α. PM can do it via `gh api`.
 
 ## Risks
+- Audio is only objectively checked (levels, clicks, loops). Needs a human listen; 52 MiB decoded audio may matter on low-memory devices.
 - Photosensitivity: the breaker flash whites out most of the frame for ~0.3 s. hall-art adds a "Reduce flashes" setting (on with reduced motion).
 - Perf not yet measured on an integrated PC GPU (only Apple M-series). Lights are the first knob.
 - Puzzle difficulty may be too low (small altars, 1–4 gem minimum through Tier 2; the finale has 72 solutions). Tune in M4 from playtest data.

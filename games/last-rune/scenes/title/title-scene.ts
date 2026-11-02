@@ -31,6 +31,7 @@ export class TitleScene implements GameScene {
     this.dom = this.buildDom();
     ctx.ui.layers.hud.append(this.dom);
     ctx.post.set({ godRays: { intensity: 0.35 }, fog: { density: 0.5 } });
+    ctx.setMood('title');
   }
 
   exit(): void {
