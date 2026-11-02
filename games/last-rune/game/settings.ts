@@ -7,9 +7,18 @@ import type { GameSave, GameSettings } from './save';
 
 export type CaptionSpeed = GameSettings['captionSpeed'];
 export type ReducedMotionPref = GameSettings['reducedMotion'];
+export type ReduceFlashesPref = NonNullable<GameSettings['reduceFlashes']>;
 
 export function resolveReducedMotion(pref: ReducedMotionPref, system: boolean): boolean {
   return pref === 'system' ? system : pref === 'reduce';
+}
+
+/** `auto` (or missing, in saves from before the setting) follows reduced motion. */
+export function resolveReduceFlashes(
+  pref: ReduceFlashesPref | undefined,
+  reducedMotion: boolean,
+): boolean {
+  return pref === 'on' ? true : pref === 'off' ? false : reducedMotion;
 }
 
 /** Characters per second for FUSE's typewriter (0 = instant). */
@@ -20,6 +29,11 @@ export function captionCps(speed: CaptionSpeed): number {
 export interface EffectiveSettings {
   readonly reducedMotion: boolean;
   readonly captionCps: number;
+  /**
+   * Photosensitivity: no full-screen whiteouts, lightning dimmed and slowed. Anything that
+   * flashes the whole frame (bolt over-charge, breaker, storm lightning) must honour it.
+   */
+  readonly reduceFlashes: boolean;
 }
 
 export interface SettingsTargets {
@@ -54,6 +68,10 @@ export class SettingsController {
     return this._effective.reducedMotion;
   }
 
+  get reduceFlashes(): boolean {
+    return this._effective.reduceFlashes;
+  }
+
   set(patch: Partial<GameSettings>): void {
     this.save.update((d) => {
       Object.assign(d.settings, patch);
@@ -73,7 +91,8 @@ export class SettingsController {
     const next = this.compute();
     if (
       next.reducedMotion === this._effective.reducedMotion &&
-      next.captionCps === this._effective.captionCps
+      next.captionCps === this._effective.captionCps &&
+      next.reduceFlashes === this._effective.reduceFlashes
     ) {
       return;
     }
@@ -89,9 +108,11 @@ export class SettingsController {
 
   private compute(): EffectiveSettings {
     const s = this.save.get().settings;
+    const reducedMotion = resolveReducedMotion(s.reducedMotion, this.system);
     return {
-      reducedMotion: resolveReducedMotion(s.reducedMotion, this.system),
+      reducedMotion,
       captionCps: captionCps(s.captionSpeed),
+      reduceFlashes: resolveReduceFlashes(s.reduceFlashes, reducedMotion),
     };
   }
 }

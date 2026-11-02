@@ -32,10 +32,10 @@ fn rivet_row(p: vec2f, a: vec2f, b: vec2f, n: f32, r: f32) -> vec3f {
 }
 
 /** Lit surface + spill from his own eye (warm, falls off fast, faces-the-eye weighted). */
-fn fuse_lit(L: PropLights, world: vec2f, p: vec2f, nl: vec3f, alb: vec3f, metal: f32, gloss: f32,
+fn fuse_lit(world: vec2f, p: vec2f, nl: vec3f, alb: vec3f, metal: f32, gloss: f32,
             s: FuseState, eyeP: vec2f) -> vec3f {
   let n = to_world_n(nl, s.d.x, 0.0);
-  var c = prop_light(L, world, n, alb, metal, gloss);
+  var c = prop_light(world, n, alb, metal, gloss);
   let dv = vec3f(eyeP - p, 0.12);
   let dist = length(dv.xy);
   let ld = normalize(dv);
@@ -44,14 +44,14 @@ fn fuse_lit(L: PropLights, world: vec2f, p: vec2f, nl: vec3f, alb: vec3f, metal:
   return c;
 }
 
-fn paint_rivets(acc: ptr<function, Acc>, sd: vec3f, aa: f32, L: PropLights, world: vec2f,
+fn paint_rivets(acc: ptr<function, Acc>, sd: vec3f, aa: f32, world: vec2f,
                 p: vec2f, s: FuseState, eyeP: vec2f) {
   put_shadow(acc, sd.x - 0.006, 0.012, 0.45);
-  let c = fuse_lit(L, world, p, dome(sd, 0.025), C_BRASS * 1.1, 0.9, 0.75, s, eyeP);
+  let c = fuse_lit(world, p, dome(sd, 0.025), C_BRASS * 1.1, 0.9, 0.75, s, eyeP);
   put(acc, sd.x, aa, c, vec3f(0.0), 0.6);
 }
 
-fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -> Acc {
+fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, s: FuseState) -> Acc {
   var acc: Acc;
   acc.col = vec4f(0.0);
   acc.emi = vec3f(0.0);
@@ -84,7 +84,7 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   // ---- Tread (iron), with rolling lugs.
   let tread = sdg_box(p - vec2f(0.0, 0.17), vec2f(0.5, 0.15), 0.145);
   let tAlb = iron_albedo(p, 1.0) * 0.8;
-  put(&acc, tread.x, aa, fuse_lit(L, world, p, pillow(tread, 0.07), tAlb, 0.6, 0.45, s, eyeP),
+  put(&acc, tread.x, aa, fuse_lit(world, p, pillow(tread, 0.07), tAlb, 0.6, 0.45, s, eyeP),
       vec3f(0.0), 1.2);
   // Lugs: stripes that slide around the tread outline.
   let lugPhase = fract((p.x * 14.0 - wheel * 1.6) + select(0.0, 0.5, p.y > 0.17));
@@ -96,7 +96,7 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
     let q = p - wc;
     let wd = sdg_circle(q, 0.095);
     let wAlb = brass_albedo(q * 3.0, 1.0, f32(i));
-    put(&acc, wd.x, aa, fuse_lit(L, world, p, pillow(wd, 0.04), wAlb, 0.85, 0.6, s, eyeP),
+    put(&acc, wd.x, aa, fuse_lit(world, p, pillow(wd, 0.04), wAlb, 0.85, 0.6, s, eyeP),
         vec3f(0.0), 0.8);
     // Spokes rotate with the roll.
     let qr = rot2(wheel) * q;
@@ -106,13 +106,13 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
     let holeD = max(max(lq - 0.07, 0.034 - lq), 0.013 - spoke);
     shade_under(&acc, cover(holeD, aa) * 0.7);
     let hub = sdg_circle(q, 0.026);
-    put(&acc, hub.x, aa, fuse_lit(L, world, p, dome(hub, 0.026), C_IRON, 0.7, 0.6, s, eyeP),
+    put(&acc, hub.x, aa, fuse_lit(world, p, dome(hub, 0.026), C_IRON, 0.7, 0.6, s, eyeP),
         vec3f(0.0), 0.5);
   }
 
   // ---- Neck piston.
   let neck = sdg_box(pb - vec2f(0.0, 0.36), vec2f(0.15, 0.1), 0.03);
-  put(&acc, neck.x, aa, fuse_lit(L, world, p, pillow(neck, 0.05), C_IRON * 1.2, 0.8, 0.7, s, eyeP),
+  put(&acc, neck.x, aa, fuse_lit(world, p, pillow(neck, 0.05), C_IRON * 1.2, 0.8, 0.7, s, eyeP),
       vec3f(0.0), 1.0);
 
   // ---- Upper arms (behind the body).
@@ -125,10 +125,10 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   let uaL = sdg_segment(pb, shL, elL, 0.062);
   let uaR = sdg_segment(pb, shR, elR, 0.062);
   let ua = sdg_union(uaL, uaR);
-  put(&acc, ua.x, aa, fuse_lit(L, world, p, pillow(ua, 0.05), C_IRON * 1.1, 0.75, 0.55, s, eyeP),
+  put(&acc, ua.x, aa, fuse_lit(world, p, pillow(ua, 0.05), C_IRON * 1.1, 0.75, 0.55, s, eyeP),
       vec3f(0.0), 1.0);
   let faR = sdg_segment(pb, elR, wrR, 0.055);
-  put(&acc, faR.x, aa, fuse_lit(L, world, p, pillow(faR, 0.045), C_IRON * 1.1, 0.75, 0.55, s, eyeP),
+  put(&acc, faR.x, aa, fuse_lit(world, p, pillow(faR, 0.045), C_IRON * 1.1, 0.75, 0.55, s, eyeP),
       vec3f(0.0), 1.0);
 
   // ---- Body: brass barrel.
@@ -136,21 +136,21 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   let body = sdg_box(bq * vec2f(1.0 - bq.y * 0.12, 1.0), vec2f(0.53, 0.4), 0.22);
   put_shadow(&acc, body.x - 0.03, 0.05, 0.35);
   let bAlb = brass_albedo(pb, smoothstep(0.0, 0.08, -body.x), 2.0);
-  put(&acc, body.x, aa, fuse_lit(L, world, p, pillow(body, 0.16), bAlb, 0.85, 0.55, s, eyeP),
+  put(&acc, body.x, aa, fuse_lit(world, p, pillow(body, 0.16), bAlb, 0.85, 0.55, s, eyeP),
       vec3f(0.0), 1.6);
   // Panel seam (a soft inset line).
   let seam = abs(sdg_box(bq - vec2f(0.0, -0.02), vec2f(0.4, 0.29), 0.12).x) - 0.006;
   shade_under(&acc, cover(seam, aa) * 0.45);
   // Iron belly band with rivets.
   let band = sdg_intersect(sdg_box(bq - vec2f(0.0, 0.14), vec2f(0.7, 0.06), 0.01), body);
-  put(&acc, band.x, aa, fuse_lit(L, world, p, pillow(band, 0.03), iron_albedo(pb, 3.0), 0.7, 0.5, s, eyeP),
+  put(&acc, band.x, aa, fuse_lit(world, p, pillow(band, 0.03), iron_albedo(pb, 3.0), 0.7, 0.5, s, eyeP),
       vec3f(0.0), 1.0);
   let rv = rivet_row(bq, vec2f(-0.42, 0.14), vec2f(0.42, 0.14), 7.0, 0.022);
-  paint_rivets(&acc, rv, aa, L, world, p, s, eyeP);
+  paint_rivets(&acc, rv, aa, world, p, s, eyeP);
   let rv2 = sdg_union(
     rivet_row(bq, vec2f(-0.38, -0.3), vec2f(0.38, -0.3), 2.0, 0.02),
     rivet_row(bq, vec2f(-0.38, 0.32), vec2f(0.38, 0.32), 2.0, 0.02));
-  paint_rivets(&acc, rv2, aa, L, world, p, s, eyeP);
+  paint_rivets(&acc, rv2, aa, world, p, s, eyeP);
   // Speaker grille: three slots that glow when he talks.
   let gq = bq - vec2f(0.12, -0.14);
   let slotY = clamp(round(gq.y / 0.055), -1.0, 1.0);
@@ -160,7 +160,7 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   // Day-count plate with tally marks (he counts the days).
   let pq = bq - vec2f(-0.22, -0.14);
   let plate = sdg_box(pq, vec2f(0.12, 0.07), 0.02);
-  put(&acc, plate.x, aa, fuse_lit(L, world, p, pillow(plate, 0.02), C_IRON_DARK * 1.6, 0.5, 0.7, s, eyeP),
+  put(&acc, plate.x, aa, fuse_lit(world, p, pillow(plate, 0.02), C_IRON_DARK * 1.6, 0.5, 0.7, s, eyeP),
       vec3f(0.0), 0.8);
   let tx = clamp(round((pq.x + 0.065) / 0.026), 0.0, 5.0);
   let tally = sdg_box(pq - vec2f(-0.065 + tx * 0.026, 0.0), vec2f(0.004, 0.038), 0.002);
@@ -174,18 +174,18 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   let a1 = vec2f(0.2, 2.0 - droop);
   let a2 = vec2f(0.3 + droop * 0.6, 2.07 - droop * 2.0);
   let ant = sdg_union(sdg_segment(ph, a0, a1, 0.014), sdg_segment(ph, a1, a2, 0.012));
-  put(&acc, ant.x, aa, fuse_lit(L, world, p, pillow(ant, 0.012), C_IRON * 1.3, 0.8, 0.7, s, eyeP),
+  put(&acc, ant.x, aa, fuse_lit(world, p, pillow(ant, 0.012), C_IRON * 1.3, 0.8, 0.7, s, eyeP),
       vec3f(0.0), 0.6);
   let bulb = sdg_circle(ph - a2, 0.036);
   let bulbOn = (0.12 + 0.9 * talk * step(0.4, fract(t * 3.1))) * (1.0 - quiet * 0.8);
-  put(&acc, bulb.x, aa, fuse_lit(L, world, p, dome(bulb, 0.036), C_BRASS_DARK, 0.5, 0.8, s, eyeP)
+  put(&acc, bulb.x, aa, fuse_lit(world, p, dome(bulb, 0.036), C_BRASS_DARK, 0.5, 0.8, s, eyeP)
       + C_EYE * bulbOn * 0.9, C_EYE * bulbOn, 0.6);
 
   // ---- Upper neck: ribbed iron collar.
   let nq = ph - vec2f(0.0, 1.22);
   let collar = sdg_box(nq, vec2f(0.17, 0.08), 0.03);
   let rib = 0.75 + 0.25 * smoothstep(0.2, 0.5, abs(fract(nq.y * 30.0) - 0.5));
-  put(&acc, collar.x, aa, fuse_lit(L, world, p, pillow(collar, 0.06), C_IRON * rib, 0.8, 0.6, s, eyeP),
+  put(&acc, collar.x, aa, fuse_lit(world, p, pillow(collar, 0.06), C_IRON * rib, 0.8, 0.6, s, eyeP),
       vec3f(0.0), 1.0);
 
   // ---- Head: domed brass can.
@@ -195,19 +195,19 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   let head = sdg_smin(headBox, headDome, 0.06);
   put_shadow(&acc, head.x - 0.02, 0.05, 0.4);
   let hAlb = brass_albedo(ph + 3.0, smoothstep(0.0, 0.08, -head.x), 4.0) * 1.08;
-  put(&acc, head.x, aa, fuse_lit(L, world, p, pillow(head, 0.18), hAlb, 0.85, 0.6, s, eyeP),
+  put(&acc, head.x, aa, fuse_lit(world, p, pillow(head, 0.18), hAlb, 0.85, 0.6, s, eyeP),
       vec3f(0.0), 1.6);
   // Ear bolts.
   let ear = sdg_circle(vec2f(abs(hq.x) - 0.47, hq.y + 0.02), 0.065);
-  put(&acc, ear.x, aa, fuse_lit(L, world, p, dome(ear, 0.065), C_IRON * 1.2, 0.8, 0.65, s, eyeP),
+  put(&acc, ear.x, aa, fuse_lit(world, p, dome(ear, 0.065), C_IRON * 1.2, 0.8, 0.65, s, eyeP),
       vec3f(0.0), 1.0);
   // Brow rivets.
   let rv3 = rivet_row(hq, vec2f(-0.26, 0.22), vec2f(0.26, 0.22), 5.0, 0.018);
-  paint_rivets(&acc, rv3, aa, L, world, p, s, eyeP);
+  paint_rivets(&acc, rv3, aa, world, p, s, eyeP);
   // Iron visor band.
   let visor = sdg_box(hq - vec2f(0.0, 0.01), vec2f(0.43, 0.13), 0.11);
   put_shadow(&acc, visor.x - 0.012, 0.03, 0.5);
-  put(&acc, visor.x, aa, fuse_lit(L, world, p, pillow(visor, 0.05), iron_albedo(ph, 5.0) * 0.9, 0.75, 0.55, s, eyeP),
+  put(&acc, visor.x, aa, fuse_lit(world, p, pillow(visor, 0.05), iron_albedo(ph, 5.0) * 0.9, 0.75, 0.55, s, eyeP),
       vec3f(0.0), 1.2);
   // Mouth: a small riveted vent under the visor.
   let mouth = sdg_box(hq - vec2f(0.0, -0.18), vec2f(0.12, 0.02 + talk * 0.012 * (0.5 + 0.5 * sin(t * 23.0))), 0.015);
@@ -218,7 +218,7 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   let qL = ph - EYE_L;
   let qD = ph - EYE_D;
   let bez = sdg_union(sdg_circle(qL, eyeR + 0.03), sdg_circle(qD, eyeR + 0.03));
-  put(&acc, bez.x, aa, fuse_lit(L, world, p, dome(bez, 0.05), C_BRASS * 1.2, 0.9, 0.8, s, eyeP),
+  put(&acc, bez.x, aa, fuse_lit(world, p, dome(bez, 0.05), C_BRASS * 1.2, 0.9, 0.8, s, eyeP),
       vec3f(0.0), 1.0);
 
   // ---- Dead eye: dusty cracked glass.
@@ -258,7 +258,7 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   let lidD = max(le.x, -(qL.y - lidEdge));
   let lidSd = vec3f(lidD, 0.0, -1.0);
   let lidN = normalize(vec3f(0.0, -smoothstep(0.03, 0.0, abs(qL.y - lidEdge)) * 1.2, 1.0));
-  put(&acc, lidSd.x, aa, fuse_lit(L, world, p, lidN, C_BRASS * 0.9, 0.9, 0.7, s, eyeP), vec3f(0.0), 0.0);
+  put(&acc, lidSd.x, aa, fuse_lit(world, p, lidN, C_BRASS * 0.9, 0.9, 0.7, s, eyeP), vec3f(0.0), 0.0);
   // Halo from the live eye (additive, also feeds bloom).
   let halo = exp(-length(qL) * length(qL) * 60.0) * g * (1.0 - lid * 0.6);
   add_glow(&acc, C_EYE * halo * 0.2, 1.2);
@@ -267,18 +267,18 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   let faL = sdg_segment(pb, elL, wrL, 0.055);
   let joints = sdg_union(sdg_union(sdg_circle(pb - elL, 0.066), sdg_circle(pb - elR, 0.066)),
                          sdg_union(sdg_circle(pb - shL, 0.075), sdg_circle(pb - shR, 0.075)));
-  put(&acc, joints.x, aa, fuse_lit(L, world, p, dome(joints, 0.07), C_BRASS * 1.1, 0.9, 0.7, s, eyeP),
+  put(&acc, joints.x, aa, fuse_lit(world, p, dome(joints, 0.07), C_BRASS * 1.1, 0.9, 0.7, s, eyeP),
       vec3f(0.0), 1.0);
   let cbc = vec2f(-0.36, 0.64 + raise * 0.12);
   let cq = rot2(0.14 - raise * 0.1) * (pb - cbc);
   let board = sdg_box(cq, vec2f(0.2, 0.27), 0.025);
   put_shadow(&acc, board.x - 0.02, 0.04, 0.5);
   let wood = 0.75 + 0.35 * engine_fbm(cq * vec2f(4.0, 40.0), 3);
-  put(&acc, board.x, aa, fuse_lit(L, world, p, pillow(board, 0.015), C_BOARD * wood, 0.0, 0.3, s, eyeP),
+  put(&acc, board.x, aa, fuse_lit(world, p, pillow(board, 0.015), C_BOARD * wood, 0.0, 0.3, s, eyeP),
       vec3f(0.0), 1.2);
   let paper = sdg_box(cq - vec2f(0.0, -0.025), vec2f(0.165, 0.215), 0.006);
   let paperTone = C_PARCHMENT * (0.82 + 0.18 * engine_fbm(cq * 18.0, 3));
-  put(&acc, paper.x, aa, fuse_lit(L, world, p, vec3f(0.0, 0.0, 1.0), paperTone, 0.0, 0.2, s, eyeP),
+  put(&acc, paper.x, aa, fuse_lit(world, p, vec3f(0.0, 0.0, 1.0), paperTone, 0.0, 0.2, s, eyeP),
       vec3f(0.0), 0.0);
   // Ink: a form with lines and a checkbox column.
   let ly = clamp(round((cq.y + 0.02) / 0.042), -4.0, 3.0);
@@ -288,9 +288,9 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   let ink = min(line.x, box);
   put(&acc, ink, aa, C_INK * 1.5 + vec3f(0.03, 0.02, 0.05), vec3f(0.0), 0.0);
   let clip = sdg_box(cq - vec2f(0.0, 0.25), vec2f(0.075, 0.035), 0.02);
-  put(&acc, clip.x, aa, fuse_lit(L, world, p, pillow(clip, 0.025), C_IRON * 1.6, 0.9, 0.85, s, eyeP),
+  put(&acc, clip.x, aa, fuse_lit(world, p, pillow(clip, 0.025), C_IRON * 1.6, 0.9, 0.85, s, eyeP),
       vec3f(0.0), 0.8);
-  put(&acc, faL.x, aa, fuse_lit(L, world, p, pillow(faL, 0.045), C_IRON * 1.1, 0.75, 0.55, s, eyeP),
+  put(&acc, faL.x, aa, fuse_lit(world, p, pillow(faL, 0.045), C_IRON * 1.1, 0.75, 0.55, s, eyeP),
       vec3f(0.0), 1.0);
 
   // ---- Clamps (C-shaped jaws) at both wrists.
@@ -304,7 +304,7 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
     let jaw = vec3f(max(jawRing.x, -wedge * 0.06), jawRing.yz);
     let knuckle = sdg_circle(qc, 0.045);
     let cl = sdg_union(jaw, knuckle);
-    put(&acc, cl.x, aa, fuse_lit(L, world, p, pillow(cl, 0.03), C_IRON * 1.35, 0.85, 0.7, s, eyeP),
+    put(&acc, cl.x, aa, fuse_lit(world, p, pillow(cl, 0.03), C_IRON * 1.35, 0.85, 0.7, s, eyeP),
         vec3f(0.0), 1.0);
   }
   return acc;
@@ -322,7 +322,7 @@ struct FuseU { L: PropLights, s: FuseState };
   var p = vec2f((in.local.x - 0.5) * 2.2, (1.0 - in.local.y) * 2.5 - 0.12);
   p.x *= U.s.d.x;
   let aa = max(fwidth(p.x), fwidth(p.y)) * 1.0;
-  let acc = fuse_paint(p, aa, in.world, U.L, U.s);
+  let acc = fuse_paint(p, aa, in.world, U.s);
   var o: FragOut;
   o.color = vec4f(acc.col.rgb * in.color.a, acc.col.a * in.color.a);
   o.emissive = vec4f(acc.emi * in.emissive * in.color.a, acc.col.a * in.color.a);
@@ -351,7 +351,7 @@ fn to_srgb(c: vec3f) -> vec3f {
   let aa = max(fwidth(p.x), fwidth(p.y));
   // Synthetic "world" px for the lights: 100 px per unit, y down.
   let world = vec2f(p.x * U.s.d.x, -p.y) * 100.0;
-  let acc = fuse_paint(p, aa, world, U.L, U.s);
+  let acc = fuse_paint(p, aa, world, U.s);
   // Plate: ink with a warm bloom behind his eye and a cool rim, inside a gold bezel.
   let q = uv - 0.5;
   let r = length(q);

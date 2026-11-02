@@ -25,6 +25,8 @@ import {
   newlyUnlocked,
 } from './hall-state';
 
+type Mutable<T> = { -readonly [K in keyof T]: T[K] };
+
 const DWELL = 0.35;
 const AMBIENT_EVERY = 75;
 
@@ -53,7 +55,10 @@ export class HallScene implements GameScene {
     this.ctx = ctx;
     this.view = ctx.views.hall(ctx.viewContext);
     this.refresh();
-    ctx.post.set({ godRays: { intensity: 0.25 }, fog: { density: 0.55 } });
+    ctx.post.set({
+      godRays: { x: 960, y: 540, intensity: 0.12, sourceIntensity: 0 },
+      fog: { density: 0.4 },
+    });
     ctx.setMood('hall');
     if (!ctx.save.get().flags.hallIntro) {
       const first = hallLines('first-entry', 1)[0];
@@ -144,14 +149,27 @@ export class HallScene implements GameScene {
 
   // ── internals ───────────────────────────────────────────────────────────
 
+  /** One reused snapshot (no per-frame allocation). */
+  private readonly snap: Mutable<HallViewFrame> = {
+    time: 0,
+    reducedMotion: false,
+    reduceFlashes: false,
+    speaking: false,
+    model: { alcoves: [], conduits: [] },
+    hover: null,
+    focus: null,
+  };
+
   private frameState(): HallViewFrame {
-    return {
-      time: this.time,
-      reducedMotion: this.ctx.settings.reducedMotion,
-      model: this.model,
-      hover: this.hover,
-      focus: this.focus,
-    };
+    const s = this.snap;
+    s.time = this.time;
+    s.reducedMotion = this.ctx.settings.reducedMotion;
+    s.reduceFlashes = this.ctx.settings.reduceFlashes;
+    s.speaking = this.ctx.fuse.speaking;
+    s.model = this.model;
+    s.hover = this.hover;
+    s.focus = this.focus;
+    return s;
   }
 
   private refresh(): void {

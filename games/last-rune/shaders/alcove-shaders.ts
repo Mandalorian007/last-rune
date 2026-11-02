@@ -74,7 +74,7 @@ fn stone_albedo(p: vec2f, seed: f32) -> vec3f {
     let blockId = floor(atan2(p.y - 0.18, p.x) / 3.14159 * 7.0) + floor((p.y + 0.74) / 0.23) * 3.0;
     var alb = stone_albedo(p, seed) * (0.85 + 0.3 * engine_hash21(vec2f(blockId, seed)));
     let n = to_world_n(pillow(frame, 0.05), 1.0, 0.0);
-    var c = prop_light(U.L, world, n, alb, 0.0, 0.15);
+    var c = prop_light(world, n, alb, 0.0, 0.15);
     c *= mix(0.35, 1.0, joint);
     // Open/restored: warm light from inside rakes the inner edge.
     let rake = exp(-max(inner.x, 0.0) * 14.0);
@@ -83,7 +83,7 @@ fn stone_albedo(p: vec2f, seed: f32) -> vec3f {
   }
   // Keystone.
   let ks = sdg_box(p - vec2f(0.0, 0.8), vec2f(0.09, 0.12), 0.015);
-  put(&acc, ks.x, aa, prop_light(U.L, world, to_world_n(pillow(ks, 0.05), 1.0, 0.0),
+  put(&acc, ks.x, aa, prop_light(world, to_world_n(pillow(ks, 0.05), 1.0, 0.0),
       stone_albedo(p + 3.0, seed) * 1.15, 0.0, 0.2), vec3f(0.0), 1.0);
   // Carved rune on the keystone, glows gold when restored.
   {
@@ -126,7 +126,7 @@ fn stone_albedo(p: vec2f, seed: f32) -> vec3f {
     var g = sdg_union(sdg_union(bars, cross1), cross2);
     g = sdg_intersect(g, inner);
     put_shadow(&acc, sdg_intersect(sdg_union(sdg_union(sdg_box(vec2f(bx - 0.02, gp.y + 0.13), vec2f(0.018, 0.85), 0.01), cross1), cross2), inner).x, 0.03, 0.5);
-    put(&acc, g.x, aa, prop_light(U.L, world, to_world_n(pillow(g, 0.015), 1.0, 0.0),
+    put(&acc, g.x, aa, prop_light(world, to_world_n(pillow(g, 0.015), 1.0, 0.0),
         iron_albedo(gp * 2.0, seed) * 1.3, 0.6, 0.5), vec3f(0.0), 0.6);
   }
 
@@ -141,11 +141,11 @@ fn stone_albedo(p: vec2f, seed: f32) -> vec3f {
       let shackle = sdg_intersect(sdg_ring(tilt - vec2f(0.0, 0.06 + drop * 0.05), 0.065, 0.018), vec3f(-(tilt.y - 0.04), 0.0, 1.0));
       let shL = sdg_box(vec2f(abs(tilt.x) - 0.065, tilt.y - 0.05), vec2f(0.018, 0.04), 0.0);
       let sh = sdg_union(shackle, shL);
-      put(&acc, sh.x, aa, prop_light(U.L, world, to_world_n(pillow(sh, 0.015), 1.0, 0.0), C_IRON * 1.4, 0.8, 0.8) * lockA,
+      put(&acc, sh.x, aa, prop_light(world, to_world_n(pillow(sh, 0.015), 1.0, 0.0), C_IRON * 1.4, 0.8, 0.8) * lockA,
           vec3f(0.0), 0.6);
       let bodyL = sdg_box(tilt - vec2f(0.0, -0.06), vec2f(0.1, 0.085), 0.025);
       put_shadow(&acc, sdg_box(tilt - vec2f(0.02, -0.08), vec2f(0.1, 0.085), 0.025).x, 0.03, 0.45 * lockA);
-      put(&acc, bodyL.x, aa, prop_light(U.L, world, to_world_n(pillow(bodyL, 0.04), 1.0, 0.0),
+      put(&acc, bodyL.x, aa, prop_light(world, to_world_n(pillow(bodyL, 0.04), 1.0, 0.0),
           brass_albedo(tilt * 3.0, 0.8, seed + 1.0) * 1.2, 0.9, 0.7) * lockA, vec3f(0.0), 1.0);
       // Keyhole.
       let kh = sdg_union(sdg_circle(tilt - vec2f(0.0, -0.04), 0.018), sdg_box(tilt - vec2f(0.0, -0.08), vec2f(0.008, 0.03), 0.0));
@@ -155,7 +155,7 @@ fn stone_albedo(p: vec2f, seed: f32) -> vec3f {
 
   // Sill.
   let sill = sdg_box(p - vec2f(0.0, -0.6), vec2f(0.82, 0.08), 0.02);
-  put(&acc, sill.x, aa, prop_light(U.L, world, to_world_n(pillow(sill, 0.04), 1.0, 0.0),
+  put(&acc, sill.x, aa, prop_light(world, to_world_n(pillow(sill, 0.04), 1.0, 0.0),
       stone_albedo(p * 1.3 + 7.0, seed) * 1.1, 0.0, 0.2), vec3f(0.0), 1.2);
 
   // Socket plate (brass) with dotted sockets.
@@ -163,10 +163,10 @@ fn stone_albedo(p: vec2f, seed: f32) -> vec3f {
   if (n > 0.5) {
     let pw = 0.1 + n * 0.13;
     let plate = sdg_box(p - vec2f(0.0, -0.82), vec2f(pw, 0.12), 0.04);
-    put(&acc, plate.x, aa, prop_light(U.L, world, to_world_n(pillow(plate, 0.04), 1.0, 0.0),
+    put(&acc, plate.x, aa, prop_light(world, to_world_n(pillow(plate, 0.04), 1.0, 0.0),
         brass_albedo(p * 2.0, 0.6, seed + 3.0), 0.85, 0.65), vec3f(0.0), 1.0);
     let rv = sdg_circle(vec2f(abs(p.x) - pw + 0.04, p.y + 0.82), 0.015);
-    put(&acc, rv.x, aa, prop_light(U.L, world, to_world_n(dome(rv, 0.015), 1.0, 0.0), C_BRASS * 1.3, 0.9, 0.8),
+    put(&acc, rv.x, aa, prop_light(world, to_world_n(dome(rv, 0.015), 1.0, 0.0), C_BRASS * 1.3, 0.9, 0.8),
         vec3f(0.0), 0.4);
     for (var i = 0; i < 4; i++) {
       let fi = f32(i);

@@ -21,7 +21,7 @@ import {
   MACHINE_MATERIAL_WGSL,
   MACHINE_UNIFORM_FLOATS,
 } from '../../shaders/machine-shaders';
-import { PROP_LIGHT_FLOATS, type PropLightRig } from './lighting';
+import { PROP_LIGHT_FLOATS, type PropLightSource } from './lighting';
 import { pitch } from './palette';
 
 export interface MachineOptions {
@@ -37,6 +37,9 @@ interface Shared {
   u: Float32Array<ArrayBuffer>;
 }
 const shared = new WeakMap<Renderer, Shared>();
+/** Preconverted light colours (update() swaps between them without allocating). */
+const LIGHT_AWAKE = pitch('cyan');
+const LIGHT_BREAKER = pitch('magenta');
 
 export class Machine {
   x: number;
@@ -157,11 +160,11 @@ export class Machine {
     const f = flicker(this.time, { seed: this.seed, speed: 6, amount: 0.15 });
     this.light.x = this.x;
     this.light.y = this.y;
-    this.light.color = this.breakerK > 0.5 ? pitch('magenta') : pitch('cyan');
+    this.light.color = this.breakerK > 0.5 ? LIGHT_BREAKER : LIGHT_AWAKE;
     this.light.intensity = Math.max(this.awakeK * f, this.breakerK * 0.6);
   }
 
-  draw(frame: Frame, lights: PropLightRig): void {
+  draw(frame: Frame, lights: PropLightSource): void {
     const s = this.sh;
     // Upload shared uniforms once per frame (time + the caller's lights).
     const u = s.u;

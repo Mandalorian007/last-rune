@@ -1,22 +1,34 @@
 /**
- * Small local lighting helper for props (stand-in until art-materials' lighting helper lands;
- * same idea: an ambient term plus a short list of coloured 2D point lights in logical px).
+ * Prop lighting: the same point-light set as the materials kit (`LightSet` in
+ * `art/materials/lights.ts`, layout `LightSet` in `shaders/lights-wgsl.ts`), so one rig lights
+ * stone, gems, candles and props alike.
  *
- * Every prop material starts its uniform block with `PropLights` (PROP_LIGHT_FLOATS floats),
- * so a scene fills one `PropLightRig` per frame and every prop copies it in.
+ * Every prop material starts its uniform block with `PropLights` (PROP_LIGHT_FLOATS floats,
+ * the LightSet layout). A scene fills one `LightSet` (or a `PropLightRig`, the chainable
+ * prop-side writer of the same layout) per frame and passes it to each prop's `draw`.
  */
 import { hex } from '@engine/render';
+import { LIGHT_SET_FLOATS, MAX_LIGHTS } from '../../shaders/lights-wgsl';
 import { PITCH, PROP } from './palette';
 
-export const PROP_MAX_LIGHTS = 6;
-/** ambient vec4 + 2 vec4 per light. */
-export const PROP_LIGHT_FLOATS = 4 + PROP_MAX_LIGHTS * 8;
+export const PROP_MAX_LIGHTS = MAX_LIGHTS;
+/** Same layout as `LightSet`: ambient vec4 + info vec4 + MAX_LIGHTS x (pos vec4 + col vec4). */
+export const PROP_LIGHT_FLOATS = LIGHT_SET_FLOATS;
 
-export class PropLightRig {
+/** Anything holding packed LightSet data: `LightSet` (materials) or `PropLightRig`. */
+export interface PropLightSource {
+  readonly data: Float32Array;
+}
+
+/**
+ * Chainable writer of the shared LightSet layout (kept for the props API; `LightSet` is the
+ * scene-side equivalent and either can be passed to a prop's `draw`).
+ */
+export class PropLightRig implements PropLightSource {
   readonly data = new Float32Array(PROP_LIGHT_FLOATS);
   private count = 0;
 
-  /** Reset to an ambient colour (linear rgb). `w` is unused (kept for alignment). */
+  /** Reset to an ambient colour (linear rgb). No floor darkening on props. */
   begin(r: number, g: number, b: number): this {
     this.data.fill(0);
     this.data[0] = r;
@@ -28,7 +40,7 @@ export class PropLightRig {
 
   /**
    * Add a point light. `height` is the light's distance above the picture plane in px
-   * (low = raking light that picks out rivets; default radius × 0.35).
+   * (low = raking light that picks out rivets; default radius x 0.35).
    */
   add(
     x: number,
@@ -38,17 +50,19 @@ export class PropLightRig {
     intensity: number,
     height = radius * 0.35,
   ): this {
-    if (this.count >= PROP_MAX_LIGHTS) return this;
-    const o = 4 + this.count++ * 8;
+    if (this.count >= PROP_MAX_LIGHTS || intensity <= 0) return this;
     const d = this.data;
-    d[o] = x;
-    d[o + 1] = y;
-    d[o + 2] = radius;
-    d[o + 3] = height;
-    d[o + 4] = rgb[0]!;
-    d[o + 5] = rgb[1]!;
-    d[o + 6] = rgb[2]!;
-    d[o + 7] = intensity;
+    const p = 8 + this.count * 4;
+    const c = 8 + PROP_MAX_LIGHTS * 4 + this.count * 4;
+    d[p] = x;
+    d[p + 1] = y;
+    d[p + 2] = height;
+    d[p + 3] = radius;
+    d[c] = rgb[0]! * intensity;
+    d[c + 1] = rgb[1]! * intensity;
+    d[c + 2] = rgb[2]! * intensity;
+    this.count++;
+    d[4] = this.count;
     return this;
   }
 
@@ -102,9 +116,12 @@ ${PROP_PALETTE_WGSL}
 const PI = 3.14159265;
 const TAU = 6.2831853;
 
+// Same layout as LightSet (shaders/lights-wgsl.ts).
 struct PropLights {
   ambient: vec4f,
-  lights: array<vec4f, ${PROP_MAX_LIGHTS * 2}>,
+  info: vec4f,
+  pos: array<vec4f, ${PROP_MAX_LIGHTS}>,
+  col: array<vec4f, ${PROP_MAX_LIGHTS}>,
 };
 
 fn rot2(a: f32) -> mat2x2f {
@@ -232,29 +249,34 @@ fn put_shadow(acc: ptr<function, Acc>, d: f32, soft: f32, k: f32) {
 }
 
 /**
- * Painted-metal lighting. 'world' = logical px, 'n' = world normal, 'metal' 0..1,
- * 'gloss' 0..1. Returns lit linear colour.
+ * Painted-metal lighting from the shared light set. Every prop shader must declare its
+ * uniform as 'U' with the lights in 'U.L' (read in place: passing the 544-byte struct by
+ * value cost 4x frame time on Metal). 'world' = logical px, 'n' = world normal,
+ * 'metal' 0..1, 'gloss' 0..1. Returns lit linear colour.
  */
-fn prop_light(L: PropLights, world: vec2f, n: vec3f, albedo: vec3f, metal: f32, gloss: f32) -> vec3f {
+fn prop_light(world: vec2f, n: vec3f, albedo: vec3f, metal: f32, gloss: f32) -> vec3f {
   // Hemisphere ambient: cool from above, warm bounce from below.
   let hemi = mix(vec3f(0.55, 0.5, 0.45), vec3f(0.8, 0.9, 1.1), 0.5 - 0.5 * n.y);
-  var c = L.ambient.rgb * albedo * hemi * (0.55 + 0.45 * n.z);
+  var c = U.L.ambient.rgb * albedo * hemi * (0.55 + 0.45 * n.z);
   let shin = mix(6.0, 90.0, gloss);
   let specCol = mix(vec3f(0.04), albedo * 1.6 + 0.05, metal);
+  let count = i32(U.L.info.x);
   for (var i = 0; i < ${PROP_MAX_LIGHTS}; i++) {
-    let lp = L.lights[i * 2];
-    let lc = L.lights[i * 2 + 1];
-    if (lc.w <= 0.0) { continue; }
-    let dv = vec3f(lp.xy - world, lp.w);
+    if (i >= count) { break; }
+    let lp = U.L.pos[i];
+    let dv = vec3f(lp.xy - world, lp.z);
     let dist = length(dv.xy);
-    let att = (1.0 - smoothstep(0.0, lp.z, dist)) / (1.0 + dist * dist / (lp.z * lp.z) * 6.0);
+    if (dist >= lp.w) { continue; }
+    // Same falloff as the materials kit (light_atten in lights-wgsl).
+    let ax = 1.0 - dist / lp.w;
+    let att = ax * ax;
     let ld = normalize(dv);
     let ndl = max(dot(n, ld), 0.0);
     let wrap = max((dot(n, ld) + 0.35) / 1.35, 0.0);
     let hv = normalize(ld + vec3f(0.0, 0.0, 1.0));
     let sp = pow(max(dot(n, hv), 0.0), shin) * (shin + 8.0) / 32.0;
     let diff = albedo * mix(wrap, ndl, 0.6) * (1.0 - metal * 0.75);
-    c += lc.rgb * lc.w * att * (diff + specCol * sp * ndl);
+    c += U.L.col[i].rgb * att * (diff + specCol * sp * ndl);
   }
   return c;
 }

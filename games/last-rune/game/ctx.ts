@@ -20,6 +20,9 @@ import {
 import { PostStack } from '@engine/post';
 import { type Frame, Renderer } from '@engine/render';
 import { createOverlay, type Overlay } from '@engine/ui';
+import { cathedralHallView } from '../art/hall/hall-view';
+import { stormTitleView } from '../art/hall/title-view';
+import { createFusePortrait } from '../art/props/fuse-portrait';
 import {
   createGameAudio,
   fuseModeForTier,
@@ -30,9 +33,7 @@ import {
 } from '../audio';
 import { storyTier } from '../rules/progression';
 import type { MachineId } from '../rules/types';
-import { placeholderHallView } from '../scenes/placeholder/hall-view';
-import { placeholderTitleView } from '../scenes/placeholder/title-view';
-import type { ViewContext, ViewFactories } from '../scenes/views';
+import type { ViewContext, ViewCue, ViewFactories } from '../scenes/views';
 import { Codex } from '../ui/codex';
 import { Fuse } from '../ui/fuse';
 import { Hud } from '../ui/hud';
@@ -182,6 +183,10 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   const fuse = new Fuse(ui.caption, {
     voice: (text) => sound.fuse.onChar(fuseModeForTier(tier()), text),
   });
+  // Animated FUSE portrait in the caption card (one canvas, reused for every line).
+  const portrait = createFusePortrait(renderer, { size: 96, zoom: 0.46 });
+  fuse.setPortrait(() => portrait.canvas);
+  let portraitTalking = true;
   const codex = new Codex({
     panels: ui.stack,
     save,
@@ -229,8 +234,18 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     hud.plate(null);
   });
 
-  const views: ViewFactories = { hall: placeholderHallView, title: placeholderTitleView };
-  const viewContext: ViewContext = { renderer, particles, width: DESIGN_W, height: DESIGN_H };
+  const views: ViewFactories = { hall: cathedralHallView, title: stormTitleView };
+  const viewCue = (name: ViewCue) => {
+    if (name === 'doorUnlock') sound.sfx.play('doorUnlock');
+    else sound.sfx.play('thunder', { near: name === 'thunderNear' });
+  };
+  const viewContext: ViewContext = {
+    renderer,
+    particles,
+    width: DESIGN_W,
+    height: DESIGN_H,
+    cue: viewCue,
+  };
 
   // ── Loop ───────────────────────────────────────────────────────────────
   const loop = new GameLoop({
@@ -255,6 +270,11 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
       const frame = renderer.beginFrame(time.realTime, time.frameDt);
       stack.render(frame, alpha);
       renderer.endFrame();
+      // The caption portrait animates while FUSE talks, then rests on one idle frame.
+      if (fuse.speaking || portraitTalking) {
+        portraitTalking = fuse.speaking;
+        portrait.render(undefined, portraitTalking);
+      }
     },
   });
   watchVisibility((visible) => {

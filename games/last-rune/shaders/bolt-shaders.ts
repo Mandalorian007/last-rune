@@ -13,7 +13,7 @@ export const BOLT_MATERIAL_WGSL = /* wgsl */ `
 struct BoltU { a: vec4f, b: vec4f, c: vec4f };
 // a: time, mode (0 exact, 1 over, 2 under), tEnd, intensity
 // b: width px, jitter px, seed, flash
-// c: fade, -, -, -
+// c: fade, reduce flashes (0/1), -, -
 @group(1) @binding(0) var<uniform> U: BoltU;
 
 fn jit(x: f32, tick: f32, seed: f32) -> f32 {
@@ -27,7 +27,9 @@ fn jit(x: f32, tick: f32, seed: f32) -> f32 {
   let tEnd = U.a.z;
   let k = U.a.w;
   let seed = U.b.z;
-  let flash = U.b.w;
+  // Reduce flashes: the solve flash and breaker blowout stay local and never white out.
+  let calm = U.c.y;
+  let flash = U.b.w * mix(1.0, 0.3, calm);
   let t0 = in.params.x;
   let t1 = in.params.y;
   let charge = in.params.z;
@@ -49,7 +51,7 @@ fn jit(x: f32, tick: f32, seed: f32) -> f32 {
   // Width from charge; the breaker blows it out, a weak bolt is thin.
   let ch = clamp(charge, 0.0, 6.0);
   var W = U.b.x * (0.55 + 0.3 * sqrt(ch));
-  let blow = isOver * ended * exp(-after * 3.5);
+  let blow = isOver * ended * exp(-after * 3.5) * mix(1.0, 0.2, calm);
   W *= 1.0 + blow * 1.6;
 
   // Crackle: re-rolled ~24 times a second, envelope pins the ends.
@@ -83,7 +85,8 @@ fn jit(x: f32, tick: f32, seed: f32) -> f32 {
 
   // Mode tails.
   // over: violent flash, then the breaker sputters out.
-  let sputterOn = step(0.45, engine_noise(vec2f(T * 26.0, seed)));
+  // 26 Hz strobe, or a steady dim when flashes are reduced.
+  let sputterOn = mix(step(0.45, engine_noise(vec2f(T * 26.0, seed))), 0.6, calm);
   let sputter = mix(1.0, sputterOn * exp(-(after - 0.4) * 1.6), smoothstep(0.35, 0.45, after));
   b *= mix(1.0, (1.0 + blow * 4.0) * sputter, isOver * ended);
   // under: weakens as it goes, breaks into dashes, gutters out.

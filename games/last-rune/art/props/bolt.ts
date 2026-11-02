@@ -132,6 +132,11 @@ interface Seg extends BoltSegment {
 export class BoltRibbon {
   /** Master brightness. */
   intensity = 1;
+  /**
+   * Photosensitivity (settings `reduceFlashes`): the over-charge blowout and solve flash stay
+   * local (no whiteout through bloom) and the breaker sputter stops strobing.
+   */
+  reduceFlashes = false;
   readonly particles?: ParticleSystem;
   mode: BoltMode = 'exact';
   /** Seconds since play(). */
@@ -326,7 +331,7 @@ export class BoltRibbon {
         (1 - 0.65 * Math.min(T / Math.max(this.tEnd, 1e-3), 1)) *
         (after > 0 ? Math.exp(-after * 2.2) : 1);
     }
-    this.glow = g * this.fade * this.intensity * (1 + this.flashK * 2);
+    this.glow = g * this.fade * this.intensity * (1 + this.flashK * (this.reduceFlashes ? 0.6 : 2));
     if (
       (this.mode === 'over' && after > 3.2) ||
       (this.mode === 'under' && after > 2.5) ||
@@ -348,6 +353,7 @@ export class BoltRibbon {
     u[6] = this.seed;
     u[7] = this.flashK;
     u[8] = this.fade;
+    u[9] = this.reduceFlashes ? 1 : 0;
     this.material.setUniforms(u);
     const dp = this.dp;
     const pad = this.width * 3 + this.jitter * 2.5;

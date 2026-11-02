@@ -1,11 +1,16 @@
 /**
  * Settings panel: volumes (engine/audio mixer, persisted in its own slot),
- * reduced motion, caption speed, save export/import, reset progress (confirm).
+ * reduced motion, reduce flashes, caption speed, save export/import, reset progress (confirm).
  */
 import type { AudioEngine, BusName } from '@engine/audio';
 import { button, h, type Overlay, slider } from '@engine/ui';
 import type { GameSave } from '../game/save';
-import type { CaptionSpeed, ReducedMotionPref, SettingsController } from '../game/settings';
+import type {
+  CaptionSpeed,
+  ReducedMotionPref,
+  ReduceFlashesPref,
+  SettingsController,
+} from '../game/settings';
 
 export interface SettingsPanelDeps {
   readonly ui: Overlay;
@@ -58,6 +63,16 @@ export function openSettings(deps: SettingsPanelDeps): void {
       ['full', 'Off'],
     ],
     (v) => settings.set({ reducedMotion: v }),
+  );
+  const flashes = select<ReduceFlashesPref>(
+    'Reduce flashes',
+    settings.stored.reduceFlashes ?? 'auto',
+    [
+      ['auto', 'With reduced motion'],
+      ['on', 'On'],
+      ['off', 'Off'],
+    ],
+    (v) => settings.set({ reduceFlashes: v }),
   );
   const speed = select<CaptionSpeed>(
     'FUSE text speed',
@@ -136,7 +151,7 @@ export function openSettings(deps: SettingsPanelDeps): void {
     'div',
     { class: 'lr-settings' },
     h('section', null, h('h3', null, 'Sound'), ...volumes),
-    h('section', null, h('h3', null, 'Comfort'), motion, speed),
+    h('section', null, h('h3', null, 'Comfort'), motion, flashes, speed),
     h(
       'section',
       null,
