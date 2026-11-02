@@ -1,8 +1,8 @@
 /**
  * The machine hall (pitch screen 2), drawn with the real art kits.
  *
- * A tall storm-lit wall: three tiers of `Alcove` niches (each with its `Machine` inside once the
- * grate is up), two lancet windows with lightning flanking the Last Rune's great round seal, a
+ * A tall storm-lit wall: three tiers of `Alcove` niches, each holding its own machine (a furnace,
+ * a relay mast, a crane...: see `hall-machine-shaders.ts`), two lancet windows with lightning flanking the Last Rune's great round seal, a
  * flagstone floor with candles, cyan conduits carved between what you've woken, and FUSE rolling
  * along the floor to whatever you're looking at.
  *
@@ -25,6 +25,13 @@ import type { MachineId } from '../../rules/types';
 import type { AlcoveModel, AlcoveStatus, HallModel } from '../../scenes/hall/hall-state';
 import type { HallView, HallViewFrame, ViewContext } from '../../scenes/views';
 import {
+  HALL_MACHINE_KINDS,
+  HALL_MACHINE_LIFT,
+  HALL_MACHINE_QUAD,
+  HALL_MACHINE_UNIFORM_FLOATS,
+  HALL_MACHINE_WGSL,
+} from '../../shaders/hall-machine-shaders';
+import {
   HALL_FX_WGSL,
   HALL_SEAL_SOCKETS,
   HALL_SEAL_UNIFORM_FLOATS,
@@ -38,7 +45,6 @@ import { createStoneFloor, createStoneWall, type StoneSurface } from '../materia
 import { Alcove, socketKindOf } from '../props/alcove';
 import { Fuse } from '../props/fuse';
 import { PROP_LIGHT_FLOATS } from '../props/lighting';
-import { Machine } from '../props/machine';
 import { type PitchColour, pitch } from '../props/palette';
 import { Lightning } from './lightning';
 
@@ -50,7 +56,6 @@ export const HALL_FLOOR_Y = 800;
 const FUSE_GROUND = 866;
 const FUSE_SCALE = 62;
 const ALCOVE_SIZE = 250;
-const MACHINE_SIZE = 116;
 const SEAL_SIZE = 372;
 const WINDOWS = [
   { x: 676, y: 470, w: 104, h: 340 },
@@ -84,7 +89,13 @@ const STATE: Record<AlcoveStatus, 0 | 1 | 2> = { locked: 0, unlocked: 1, solved:
 interface Slot {
   readonly def: MachineDef;
   readonly alcove: Alcove;
-  readonly machine: Machine;
+  /** The machine silhouette inside (one instance of the shared machine material). */
+  readonly machine: DrawParams;
+  readonly machineParams: Float32Array;
+  /** 0..1 eased "restored" amount (fires lit, gears turning). */
+  alive: number;
+  /** Seconds of machine animation (advances only while alive, so parts start where they stopped). */
+  anim: number;
   status: AlcoveStatus | null;
   /** 0..1 how far the grate is up (machine fades in with it). */
   open: number;
@@ -113,6 +124,7 @@ export interface HallKit {
   readonly windowMat: Material;
   readonly sealMat: Material;
   readonly fxMat: Material;
+  readonly machineMat: Material;
   readonly fuse: Fuse;
 }
 const kits = new WeakMap<Renderer, HallKit>();
@@ -137,6 +149,12 @@ export function hallKit(r: Renderer): HallKit {
         uniformBytes: HALL_SEAL_UNIFORM_FLOATS * 4,
       }),
       fxMat: r.createMaterial({ label: 'hall-fx', wgsl: HALL_FX_WGSL, blend: 'premultiplied' }),
+      machineMat: r.createMaterial({
+        label: 'hall-machine',
+        wgsl: HALL_MACHINE_WGSL,
+        blend: 'premultiplied',
+        uniformBytes: HALL_MACHINE_UNIFORM_FLOATS * 4,
+      }),
       fuse: new Fuse(r, { x: 300, y: FUSE_GROUND, scale: FUSE_SCALE }),
     };
     kits.set(r, k);
@@ -188,6 +206,7 @@ export class CathedralHallView implements HallView {
   private readonly windowU = new Float32Array(HALL_WINDOW_UNIFORM_FLOATS);
   private readonly windowDp: { dp: DrawParams; params: Float32Array }[];
   private readonly sealU = new Float32Array(HALL_SEAL_UNIFORM_FLOATS);
+  private readonly machineU = new Float32Array(HALL_MACHINE_UNIFORM_FLOATS);
   private readonly sealDp: DrawParams = { x: 960, y: 520, w: SEAL_SIZE, h: SEAL_SIZE, emissive: 1 };
   private readonly sealX: number;
   private readonly sealY: number;
@@ -206,14 +225,24 @@ export class CathedralHallView implements HallView {
       if (def.id === 'the-last-rune') continue;
       const tint = new Float32Array([1, 1, 1, 1]);
       const params = new Float32Array([3, 0, 0, 2]);
+      const kind = (HALL_MACHINE_KINDS as readonly string[]).indexOf(def.id);
+      const machineParams = new Float32Array([kind < 0 ? 14 : kind, 0, 0, 0]);
+      const accent = def.grants ? SOCKET_RGB[socketColour(def.grants)] : GOLD;
       const slot: Slot = {
         def,
         alcove: new Alcove(r, { x: def.alcove.x, y: def.alcove.y, size: ALCOVE_SIZE }),
-        machine: new Machine(r, {
-          x: def.alcove.x + 2,
-          y: def.alcove.y - 4,
-          size: MACHINE_SIZE,
-        }),
+        machine: {
+          x: def.alcove.x,
+          y: def.alcove.y - HALL_MACHINE_LIFT,
+          w: HALL_MACHINE_QUAD[0],
+          h: HALL_MACHINE_QUAD[1],
+          tint: [accent[0]!, accent[1]!, accent[2]!, 1],
+          params: machineParams,
+          emissive: 1,
+        },
+        machineParams,
+        alive: 0,
+        anim: 0,
         status: null,
         open: 0,
         openTarget: 0,
@@ -272,8 +301,14 @@ export class CathedralHallView implements HallView {
       if (slot.open < slot.openTarget) slot.open = Math.min(slot.openTarget, slot.open + dt / 1.6);
       else if (slot.open > slot.openTarget) slot.open = slot.openTarget;
       slot.alcove.update(dt);
-      slot.machine.opacity = smooth(0.35, 1, slot.open);
-      slot.machine.update(dt);
+      const aliveTarget = slot.status === 'solved' ? 1 : 0;
+      if (slot.alive < aliveTarget) slot.alive = Math.min(1, slot.alive + dt / 1.4);
+      else if (slot.alive > aliveTarget) slot.alive = 0;
+      if (!s.reducedMotion) slot.anim += dt * slot.alive;
+      const mp = slot.machineParams;
+      mp[1] = smooth(0, 1, slot.open);
+      mp[2] = smooth(0, 1, slot.alive);
+      mp[3] = slot.anim;
     }
 
     // Storm.
@@ -328,7 +363,11 @@ export class CathedralHallView implements HallView {
 
     // Alcoves (one batch), then the machines inside them (one batch).
     for (const slot of this.slotList) slot.alcove.draw(frame, L);
-    for (const slot of this.slotList) if (slot.open > 0.02) slot.machine.draw(frame, L);
+    const mu = this.machineU;
+    mu.set(L.data, 0);
+    mu[PROP_LIGHT_FLOATS] = this.time;
+    kit.machineMat.setUniforms(mu);
+    for (const slot of this.slotList) frame.sprite(kit.machineMat, slot.machine);
 
     this.drawFx(frame, s);
 
@@ -371,7 +410,6 @@ export class CathedralHallView implements HallView {
     const prev = slot.status;
     slot.status = a.status;
     const al = slot.alcove;
-    const m = slot.machine;
     if (a.status === 'locked') al.setNeeds(a.missing.map((s) => capabilityFromKey(s.capability)));
     else if (a.status === 'solved' && slot.def.grants)
       al.setSockets([socketKindOf(slot.def.grants)]);
@@ -380,15 +418,15 @@ export class CathedralHallView implements HallView {
     if (this.first || prev === null) {
       al.set(STATE[a.status]);
       slot.open = slot.openTarget = a.status === 'locked' ? 0 : 1;
-      if (a.status === 'solved') m.solve();
-      else m.reset();
+      slot.alive = a.status === 'solved' ? 1 : 0;
+      slot.anim = slot.def.alcove.x * 0.013;
       if (a.status === 'solved') this.warmOrder.push(slot);
       return;
     }
     if (prev === a.status) return;
     if (a.status === 'locked') {
       al.lock();
-      m.reset();
+      slot.alive = 0;
       slot.open = slot.openTarget = 0;
       slot.unlockIn = -1;
       const i = this.warmOrder.indexOf(slot);
@@ -399,7 +437,6 @@ export class CathedralHallView implements HallView {
     } else {
       slot.openTarget = 1;
       al.restore();
-      m.solve();
       if (slot.restoredAt < 0) slot.restoredAt = this.time;
       const i = this.warmOrder.indexOf(slot);
       if (i >= 0) this.warmOrder.splice(i, 1);
@@ -550,7 +587,7 @@ export class CathedralHallView implements HallView {
         k = 1.4 * (1 - since / 2.5);
         rgb = slot.def.grants ? SOCKET_RGB[socketColour(slot.def.grants)] : GOLD;
       } else if (slot.status === 'unlocked' && slot.open > 0.5) {
-        k = 0.05 + 0.035 * Math.sin((t / 2.4) * Math.PI * 2 + slot.def.alcove.x * 0.01);
+        k = 0.06 + 0.04 * Math.sin((t / 2.4) * Math.PI * 2 + slot.def.alcove.x * 0.01);
       }
       if (k <= 0.001) continue;
       const tint = slot.poolTint;
