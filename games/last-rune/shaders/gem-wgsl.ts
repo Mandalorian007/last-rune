@@ -39,55 +39,64 @@ fn g_ring(p: vec2f, c: vec2f, r: f32) -> f32 {
   return abs(length(p - c) - r);
 }
 
-/** Glyph distance (gem space, -1..1, y down; flow enters at +y, leaves at -y). */
+/**
+ * Glyph distance (gem space, -1..1, y down; flow enters at +y, leaves at -y).
+ * Every glyph is drawn edge to edge so it reads at 1280x720: the stroke reaches the sides the
+ * bolt uses, with a short "door" bar on each, so the glyph is the wiring (rules.md section 4).
+ */
 fn g_glyph(p: vec2f, kind: i32) -> f32 {
   var d = 1e3;
   if (kind == 0) {
-    // Channel: a straight conduit with a diamond node and end ticks.
-    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.2));
-    d = min(d, g_seg(p, vec2f(0.0, -0.2), vec2f(0.0, -0.56)));
+    // Channel: a straight conduit S to N with a diamond node and a door at each end.
+    d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.2));
+    d = min(d, g_seg(p, vec2f(0.0, -0.2), vec2f(0.0, -0.72)));
     d = min(d, abs(abs(p.x) + abs(p.y) - 0.2));
-    d = min(d, g_seg(p, vec2f(-0.12, 0.44), vec2f(0.12, 0.44)));
-    d = min(d, g_seg(p, vec2f(-0.12, -0.44), vec2f(0.12, -0.44)));
+    d = min(d, g_seg(p, vec2f(-0.16, 0.72), vec2f(0.16, 0.72)));
+    d = min(d, g_seg(p, vec2f(-0.16, -0.72), vec2f(0.16, -0.72)));
   } else if (kind == 1) {
-    // Bend: an elbow joining north and east (rules: rot 0 joins N–E). Two-way, so no
-    // arrowhead: an end tick on each joined side, like the Channel.
-    d = g_seg(p, vec2f(0.0, -0.56), vec2f(0.0, -0.2));
-    let c = vec2f(0.2, -0.2);
-    let q = p - c;
-    if (q.x < 0.0 && q.y > 0.0) { d = min(d, abs(length(q) - 0.2)); }
-    d = min(d, g_seg(p, vec2f(0.2, 0.0), vec2f(0.56, 0.0)));
-    d = min(d, g_seg(p, vec2f(-0.12, -0.44), vec2f(0.12, -0.44)));
-    d = min(d, g_seg(p, vec2f(0.44, -0.12), vec2f(0.44, 0.12)));
+    // Bend: an L through the centre, north door to east door (rules: rot 0 joins N-E), with a
+    // rounded corner. Both legs run edge to centre, so the turn reads at a glance even small;
+    // no arrowhead (it is two-way).
+    let e = 0.72;
+    let r = 0.26;
+    d = g_seg(p, vec2f(0.0, -e), vec2f(0.0, -r));
+    d = min(d, g_seg(p, vec2f(r, 0.0), vec2f(e, 0.0)));
+    let q = p - vec2f(r, -r);
+    if (q.x <= 0.0 && q.y >= 0.0) { d = min(d, abs(length(q) - r)); }
+    d = min(d, g_seg(p, vec2f(-0.16, -e), vec2f(0.16, -e)));
+    d = min(d, g_seg(p, vec2f(e, -0.16), vec2f(e, 0.16)));
   } else if (kind == 2) {
-    // Split: a stem that forks into two arms, node at the fork.
-    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.08));
-    d = min(d, g_seg(p, vec2f(0.0, 0.08), vec2f(-0.3, -0.18)));
-    d = min(d, g_seg(p, vec2f(-0.3, -0.18), vec2f(-0.5, -0.18)));
-    d = min(d, g_seg(p, vec2f(0.0, 0.08), vec2f(0.3, -0.18)));
-    d = min(d, g_seg(p, vec2f(0.3, -0.18), vec2f(0.5, -0.18)));
-    d = min(d, max(length(p - vec2f(0.0, 0.08)) - 0.09, 0.0));
+    // Split: in from the south, out both sides (west and east), never straight on. A T with a
+    // node at the fork and a door on each of the three sides it uses.
+    let y = -0.16;
+    d = g_seg(p, vec2f(0.0, 0.7), vec2f(0.0, y));
+    d = min(d, g_seg(p, vec2f(-0.56, y), vec2f(0.56, y)));
+    d = min(d, max(length(p - vec2f(0.0, y)) - 0.1, 0.0));
+    d = min(d, g_seg(p, vec2f(-0.14, 0.7), vec2f(0.14, 0.7)));
+    d = min(d, g_seg(p, vec2f(-0.56, y - 0.14), vec2f(-0.56, y + 0.14)));
+    d = min(d, g_seg(p, vec2f(0.56, y - 0.14), vec2f(0.56, y + 0.14)));
   } else if (kind == 3) {
-    // Amplify: two stacked chevrons over a short stem.
-    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.3));
+    // Amplify: straight through, two stacked chevrons pointing the way out.
+    d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.3));
     for (var i = 0; i < 2; i++) {
-      let o = f32(i) * -0.28;
-      d = min(d, g_seg(p, vec2f(-0.34, 0.16 + o), vec2f(0.0, -0.14 + o)));
-      d = min(d, g_seg(p, vec2f(0.34, 0.16 + o), vec2f(0.0, -0.14 + o)));
+      let o = f32(i) * -0.3;
+      d = min(d, g_seg(p, vec2f(-0.36, 0.18 + o), vec2f(0.0, -0.14 + o)));
+      d = min(d, g_seg(p, vec2f(0.36, 0.18 + o), vec2f(0.0, -0.14 + o)));
     }
   } else if (kind == 4) {
     // Gate: inputs from west and east meet in a ring; one output leaves north (rules rot 0).
-    d = g_seg(p, vec2f(-0.56, 0.0), vec2f(-0.15, 0.0));
-    d = min(d, g_seg(p, vec2f(0.56, 0.0), vec2f(0.15, 0.0)));
-    d = min(d, g_ring(p, vec2f(0.0, 0.0), 0.15));
-    d = min(d, g_seg(p, vec2f(0.0, -0.12), vec2f(0.0, -0.56)));
-    d = min(d, g_seg(p, vec2f(-0.1, -0.44), vec2f(0.1, -0.44)));
+    d = g_seg(p, vec2f(-0.66, 0.0), vec2f(-0.17, 0.0));
+    d = min(d, g_seg(p, vec2f(0.66, 0.0), vec2f(0.17, 0.0)));
+    d = min(d, g_ring(p, vec2f(0.0, 0.0), 0.17));
+    d = min(d, g_seg(p, vec2f(0.0, -0.17), vec2f(0.0, -0.66)));
+    d = min(d, g_seg(p, vec2f(-0.14, -0.52), vec2f(0.0, -0.66)));
+    d = min(d, g_seg(p, vec2f(0.14, -0.52), vec2f(0.0, -0.66)));
   } else {
-    // Capacitor: two plates with leads.
-    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.12));
-    d = min(d, g_seg(p, vec2f(0.0, -0.12), vec2f(0.0, -0.56)));
-    d = min(d, g_seg(p, vec2f(-0.34, 0.12), vec2f(0.34, 0.12)) - 0.015);
-    d = min(d, g_seg(p, vec2f(-0.34, -0.12), vec2f(0.34, -0.12)) - 0.015);
+    // Capacitor: two plates with leads, straight through.
+    d = g_seg(p, vec2f(0.0, 0.66), vec2f(0.0, 0.14));
+    d = min(d, g_seg(p, vec2f(0.0, -0.14), vec2f(0.0, -0.66)));
+    d = min(d, g_seg(p, vec2f(-0.38, 0.14), vec2f(0.38, 0.14)) - 0.015);
+    d = min(d, g_seg(p, vec2f(-0.38, -0.14), vec2f(0.38, -0.14)) - 0.015);
   }
   return d;
 }
@@ -107,8 +116,8 @@ fn g_cut(kind: i32) -> Cut {
     c.sides = 6.0; c.phase = -TAU / 4.0; c.scale = vec2f(0.66, 1.0);
   } else if (kind == 1) {   // square cushion
     c.sides = 4.0; c.phase = TAU / 8.0; c.scale = vec2f(1.08);
-  } else if (kind == 2) {   // trillion
-    c.sides = 3.0; c.phase = -TAU / 4.0; c.scale = vec2f(1.12); c.offset = vec2f(0.0, 0.2);
+  } else if (kind == 2) {   // trillion: apex at the input (south), flat side across the outputs
+    c.sides = 3.0; c.phase = TAU / 4.0; c.scale = vec2f(1.12); c.offset = vec2f(0.0, 0.28);
   } else if (kind == 3) {   // round brilliant
     c.sides = 12.0; c.phase = 0.0; c.scale = vec2f(0.97);
   } else if (kind == 4) {   // shield
@@ -176,7 +185,7 @@ fn g_facet(q: vec2f, cut: Cut) -> Facet {
 
 fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
   let d = g_glyph(p, kind);
-  return smoothstep(w, w * 0.25, d) + exp(-d * 14.0) * 0.45;
+  return smoothstep(w, w * 0.4, d) + exp(-d * 20.0) * 0.3;
 }
 
 @fragment fn fs_main(in: VSOut) -> FragOut {
@@ -220,11 +229,12 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
   let key = normalize(vec3f(-0.5, -0.7, 0.9));
   let keySpec = pow(max(dot(nw, normalize(key + vec3f(0.0, 0.0, 1.0))), 0.0), 60.0);
 
-  // Refraction: each facet sees the inner glyph from a different offset, split per channel.
+  // Refraction: each facet sees the inner glyph from a slightly different offset, split per
+  // channel. Kept small: the glyph is the wiring and must read cleanly at 1280x720.
   let off = f.n.xy * f.refr;
-  let gp = q0 * 1.08 - off * 1.0;
-  let lw = 0.07;
-  let disp = off * 0.16 + vec2f(0.012, 0.0);
+  let gp = q0 * 1.08 - off * 0.3;
+  let lw = 0.13;
+  let disp = off * 0.08 + vec2f(0.008, 0.0);
   var gl = vec3f(
     g_glyph_light(gp + disp, kind, lw),
     g_glyph_light(gp, kind, lw),
@@ -254,10 +264,13 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
   let edgeLine = 1.0 - smoothstep(0.0, edgeW, f.edge);
   let girdle = exp(-pow((f.sdf / pxUnit + 1.6) / 1.2, 2.0));
 
-  let glyphCol = mix(base, vec3f(1.0), 0.22 + 0.2 * energy) * glyphK;
-  var col = body;
-  col += gl * glyphCol * 0.55;
-  col += base * edgeLine * (0.35 + 0.25 * fh) * select(1.0, 0.5, dim);
+  let glyphCol = mix(base, vec3f(1.0), 0.5 + 0.2 * energy) * glyphK;
+  // A dark halo behind the stroke so the glyph stands off the coloured body.
+  let halo = 1.0 - smoothstep(lw * 1.2, lw * 3.0, g_glyph(gp, kind));
+  var col = body * (1.0 - halo * select(0.65, 0.0, dim));
+  col += gl * glyphCol * 0.9;
+  // Facet edges stay out of the glyph's way (a cut line must not read as part of the wiring).
+  col += base * edgeLine * (0.3 + 0.2 * fh) * select(1.0 - halo, 0.5, dim);
   col += vec3f(1.0, 0.95, 0.9) * girdle * (0.18 + 0.5 * rimK);
   // Neighbour light glints, pulled toward white so a gem doesn't turn rainbow.
   let specW = mix(lit.spec, vec3f(engine_luma(lit.spec)), 0.5) * select(0.55, 0.18, dim);
