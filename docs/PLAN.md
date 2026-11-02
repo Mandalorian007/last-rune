@@ -4,6 +4,7 @@
 **Target:** no fixed date (user direction, D-011). Milestones are sequential gates, finished when their exit criteria are met. Quality over speed.
 
 ## Hard constraints
+- **Intuitiveness matters (D-027).** A new player must understand what to do, what the target is and what each piece does without a manual. Every visual must tell the truth about the rules. Any confusion in a playtest is a bug, and it goes to the top of the queue.
 - **WebGPU only.** Unsupported browsers get a styled "use Chrome / Edge / Safari" screen (D-002).
 - **Procedural art.** All visuals come from code (shaders, SDF, generated textures); no external art (D-001). Audio is procedural too (WebAudio synthesis).
 - **Browser-only storage.** Saves use `localStorage`. No backend, no Fly.io (D-004).
