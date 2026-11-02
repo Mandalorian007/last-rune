@@ -17,6 +17,9 @@ export interface CodexOptions {
   readonly save: GameSave;
   /** Page-turn / open sound hook. */
   readonly onTurn?: () => void;
+  /** Book open / close sound hooks. */
+  readonly onOpen?: () => void;
+  readonly onClose?: () => void;
 }
 
 export class Codex {
@@ -41,6 +44,7 @@ export class Codex {
     const target = gem ? pages.findIndex((p) => p.gem === gem) : pages.findIndex((p) => p.fresh);
     this.spread = Math.max(0, Math.floor(Math.max(0, target) / 2));
     const book = h('div', { class: 'lr-codex' });
+    this.opts.onOpen?.();
     this.handle = this.opts.panels.push({
       content: book,
       label: 'Codex',
@@ -51,6 +55,7 @@ export class Codex {
       closeOnBackdrop: true,
       onClose: () => {
         this.handle = null;
+        this.opts.onClose?.();
       },
     });
     book.addEventListener('keydown', (e) => {

@@ -16,6 +16,11 @@ export type PortraitFactory = () => Node;
 export interface FuseOptions {
   /** Called per revealed character (e.g. a quiet blip); throttled to every 3rd. */
   onChar?: () => void;
+  /**
+   * FUSE's voice: given a card's text, returns a per-character handler (the game audio's
+   * `fuse.onChar`, which throttles and pitches itself). Takes precedence over `onChar`.
+   */
+  voice?: (text: string) => ((ch: string, index: number) => void) | undefined;
 }
 
 export function placeholderPortrait(): Node {
@@ -62,7 +67,7 @@ export class Fuse {
     if (opts.interrupt) this.caption.clear();
     this.lastId = typeof line === 'string' ? line : line.id;
     let n = 0;
-    const onChar = this.opts.onChar
+    const blip = this.opts.onChar
       ? () => {
           if (n++ % 3 === 0) this.opts.onChar!();
         }
@@ -71,7 +76,12 @@ export class Fuse {
     const portrait = this.portraitFactory();
     await Promise.all(
       cards.map((card) =>
-        this.caption.say(card, { speaker: 'FUSE', portrait, onChar, hold: opts.hold }),
+        this.caption.say(card, {
+          speaker: 'FUSE',
+          portrait,
+          onChar: this.opts.voice?.(card) ?? blip,
+          hold: opts.hold,
+        }),
       ),
     );
   }

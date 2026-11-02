@@ -20,6 +20,15 @@ import {
 import { PostStack } from '@engine/post';
 import { type Frame, Renderer } from '@engine/render';
 import { createOverlay, type Overlay } from '@engine/ui';
+import {
+  createGameAudio,
+  fuseModeForTier,
+  type GameAudio,
+  type MoodId,
+  moodFor,
+  type SceneName,
+} from '../audio';
+import { storyTier } from '../rules/progression';
 import type { MachineId } from '../rules/types';
 import { placeholderHallView } from '../scenes/placeholder/hall-view';
 import { placeholderTitleView } from '../scenes/placeholder/title-view';
@@ -31,7 +40,7 @@ import { openSettings } from '../ui/settings-panel';
 import { ensureGameStyles } from '../ui/styles';
 import { type Action, BINDINGS } from './actions';
 import { GameFlow, type SolveMoment } from './flow';
-import { createGameSave, type GameSave, repairSave, SAVE_GAME_ID } from './save';
+import { createGameSave, type GameSave, progressOf, repairSave, SAVE_GAME_ID } from './save';
 import { SettingsController } from './settings';
 
 export const DESIGN_W = 1920;
@@ -59,6 +68,8 @@ export interface GameCtx {
   readonly particles: ParticleSystem;
   readonly input: Input<Action>;
   readonly audio: AudioEngine;
+  /** Game sound bank, music moods and FUSE's voice (games/last-rune/audio). */
+  readonly sound: GameAudio;
   readonly ui: Overlay;
   readonly save: GameSave;
   readonly settings: SettingsController;
@@ -72,6 +83,10 @@ export interface GameCtx {
   readonly viewContext: ViewContext;
   readonly loop: GameLoop;
   sfx(name: UiSound, gain?: number): void;
+  /** Story tier from the save (1..4, see rules/progression `storyTier`). */
+  tier(): number;
+  /** Crossfade music to a scene's mood at the current story tier. */
+  setMood(scene: SceneName | MoodId): void;
   openSettings(): void;
 }
 
@@ -116,8 +131,32 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   audio.attach();
   persistMixer(audio, { game: SAVE_GAME_ID });
   defineUiSounds(audio);
+  const sound = createGameAudio(audio);
+  // UI sounds route to the game sound bank; recipes above remain as the fallback names.
   const sfx = (name: UiSound, gain = 1) => {
-    audio.play(name, { bus: 'ui', gain });
+    switch (name) {
+      case 'ui.click':
+        sound.sfx.play('uiClick', { gain });
+        return;
+      case 'ui.hover':
+        sound.sfx.play('uiHover', { gain });
+        return;
+      case 'ui.deny':
+        sound.sfx.play('socketBlocked', { gain });
+        return;
+      case 'solve.chime':
+        sound.sfx.play('machineExact', { gain });
+        return;
+      default:
+        audio.play(name, { bus: 'ui', gain });
+    }
+  };
+  const tier = () => storyTier(progressOf(save.get()));
+  const setMood = (scene: SceneName | MoodId) => {
+    const t = tier();
+    sound.music.setMood(
+      scene === 'hall' || scene === 'altar' ? moodFor(scene, Math.min(3, t)) : (scene as MoodId),
+    );
   };
 
   // ── Input (blocked under modal panels) ─────────────────────────────────
@@ -140,8 +179,16 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   );
   watchReducedMotion((r) => settings.setSystemReducedMotion(r));
 
-  const fuse = new Fuse(ui.caption, { onChar: () => sfx('ui.blip') });
-  const codex = new Codex({ panels: ui.stack, save, onTurn: () => sfx('ui.page') });
+  const fuse = new Fuse(ui.caption, {
+    voice: (text) => sound.fuse.onChar(fuseModeForTier(tier()), text),
+  });
+  const codex = new Codex({
+    panels: ui.stack,
+    save,
+    onTurn: () => sfx('ui.page'),
+    onOpen: () => sound.sfx.play('codexOpen'),
+    onClose: () => sound.sfx.play('codexClose'),
+  });
 
   // The stack hands scenes this object on enter; it is filled in below, before the first scene.
   const ctx = {} as GameCtx;
@@ -242,6 +289,9 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     viewContext,
     loop,
     sfx,
+    sound,
+    tier,
+    setMood,
     openSettings: doOpenSettings,
   } satisfies GameCtx);
   return ctx;
