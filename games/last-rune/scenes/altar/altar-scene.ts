@@ -21,7 +21,7 @@ import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
 import type { BoltHandle, StormCellHandle } from '../../audio';
-import { machineLine, reactionLine, TEACH_NUDGE } from '../../content/lines';
+import { exactLine, gemNudge, machineLine, reactionLine, TEACH_NUDGE } from '../../content/lines';
 import { puzzleFor } from '../../content/puzzles';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { BoltOutcome } from '../../game/flow';
@@ -39,6 +39,7 @@ import { codexPages } from '../../ui/codex-data';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, DANGER, GOLD } from './altar-view';
 import { BoardState } from './board';
+import { type ChargeChip, chargeChips, liveSockets, previewPath } from './circuit-model';
 import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
 import { setHintTarget } from './hints';
 import { anchorOf, cellAt, cellCenter, traySlotAt } from './layout';
@@ -51,6 +52,7 @@ import {
   gemsUsed,
   type StrikeTimeline,
 } from './strike';
+import { firstSentence, type NewGems, newGems, nudgeGems } from './teach';
 
 type Mode = 'edit' | 'strike' | 'result';
 
@@ -87,9 +89,12 @@ const DENY_REASON: Record<string, string> = {
 };
 
 /**
- * First-altar idle nudge. PROVISIONAL instruction copy, not story text: content/lines.ts has no
- * teaching line yet (reported as a line gap). Replace with a FUSE line when one lands.
+ * Edit-time route preview: while editing, the route strike 1 would take through the gems
+ * already set lies faintly in grooves, and the empty socket it would reach next glows softly.
+ * It shows direction only, never charge. Off = the board shows only the storm and machine
+ * conduits. PM decision (difficulty): see docs/workstreams/altar-clarity.md.
  */
+const PREVIEW_PATH = true;
 /** Seconds without a board change before the first altar nudges. */
 const TEACH_IDLE = 9;
 const TEACH_MACHINE: MachineId = 'intake-desk';
@@ -98,6 +103,14 @@ const SLOT_ACTIONS = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6'] as c
 const CYAN: RGBA = [0.25, 1.3, 1.8, 1];
 const FIXED_RING: RGBA = [GOLD[0] * 0.8, GOLD[1] * 0.8, GOLD[2] * 0.8, 1];
 const WHITE_HOT: RGBA = [2, 2, 2, 1];
+const OPEN_END: RGBA = [1.5, 1.05, 0.5, 1];
+/** Conduit colours by outcome (match the need label's CSS colours). */
+const OUT_GLOW: Record<'exact' | 'under' | 'over' | 'flow', RGBA> = {
+  exact: [0.35, 1.6, 2.2, 1],
+  under: [2.0, 1.0, 0.25, 1],
+  over: [2.4, 0.4, 0.25, 1],
+  flow: [0.9, 1.2, 1.8, 1],
+};
 /** Socket hum colour per gem (the socket glows in the held gem's colour when it fits). */
 const HUM = Object.fromEntries(
   (Object.keys(GEM_COLOUR) as GemKind[]).map((k) => [k, pitch(GEM_COLOUR[k], 1.3)]),
@@ -181,6 +194,25 @@ export class AltarScene implements GameScene {
   private needs: HTMLElement[] = [];
   private tags: HTMLElement[] = [];
 
+  // Circuit read-out (altar-clarity)
+  private circuitRev = -1;
+  private circuitMode: Mode | null = null;
+  private liveMask: Uint8Array = new Uint8Array(0);
+  private openEnds: Cell[] = [];
+  private chips: ChargeChip[] = [];
+  private chipEls: HTMLElement[] = [];
+  /** Per machine, per strike: what arrived. */
+  private strikeReadings: number[][] = [];
+
+  // First-appearance teaching
+  private news: NewGems = { fixed: [], tray: [] };
+  /** New fixed gems still pulsing (until hovered, turned, or the first strike). */
+  private teachFixed: { gem: GemKind; cell: Cell }[] = [];
+  /** New tray kinds not yet picked up. */
+  private teachTray = new Set<GemKind>();
+  private teachTags: HTMLElement[] = [];
+  private spoken = new Set<GemKind>();
+
   constructor(readonly machine: MachineId) {}
 
   // ── Lifecycle ───────────────────────────────────────────────────────────
@@ -210,6 +242,12 @@ export class AltarScene implements GameScene {
     if (this.machine === TEACH_MACHINE && !save.progress.solved.includes(this.machine)) {
       this.teachCell = this.firstSocket();
     }
+    if (!save.progress.solved.includes(this.machine)) {
+      const solved = save.progress.solved.map((id) => puzzleFor(id as MachineId));
+      this.news = newGems(this.puzzle, solved);
+      this.teachFixed = this.news.fixed.map((f) => ({ gem: f.gem, cell: f.cell }));
+      this.teachTray = new Set(this.news.tray);
+    }
 
     ensureAltarStyles(ctx.ui.root.ownerDocument);
     this.buildDom();
@@ -219,7 +257,10 @@ export class AltarScene implements GameScene {
     if (!saved || saved.attempts === 0) {
       const arrive = machineLine(this.machine, 'arrive');
       if (arrive) void ctx.fuse.say(arrive, { interrupt: true });
+      // New fixed gems: one hint each, queued after the arrive line.
+      for (const g of nudgeGems({ fixed: this.news.fixed, tray: [] })) this.speak(g);
     }
+    this.buildTeachTags();
     setHintTarget({
       machine: this.machine,
       highlight: (cell) => this.hintHighlight(cell),
@@ -243,6 +284,8 @@ export class AltarScene implements GameScene {
     this.hum = null;
     this.view.dispose();
     this.dom.remove();
+    this.chipEls.length = 0;
+    this.teachTags.length = 0;
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
     // particles.clear() is broken in engine (buffer lacks COPY_DST); particles die on their own.
     emitPuzzleEvent({
@@ -300,27 +343,20 @@ export class AltarScene implements GameScene {
       hidden: true,
       style: { left: `${L.titleX}px`, maxWidth: `${L.titleMax}px` },
     });
+    if (L.titleMax < 600) this.verdict.dataset.narrow = '';
     this.tip = h('div', { class: 'lr-altar-tip', role: 'tooltip', hidden: true });
     this.counts = L.tray.map((s) =>
       h('div', { class: 'lr-altar-count', style: { left: `${s.x}px`, top: `${s.y + 40}px` } }),
     );
-    this.needs = L.machines.map((m) => {
-      const k = m.size / 2;
-      // North machines sit under the title, so their label goes beside the cabinet; everywhere
-      // else it hangs below, clear of the storm cell and the board.
-      if (m.side === 0) {
-        return h('div', {
-          class: 'lr-altar-need',
-          style: {
-            left: `${m.x + 0.95 * k}px`,
-            top: `${m.y + 17}px`,
-            transform: 'translate(0, -50%)',
-          },
-        });
-      }
-      const y = m.y + 0.62 * k + 34;
-      return h('div', { class: 'lr-altar-need', style: { left: `${m.x}px`, top: `${y}px` } });
-    });
+    // Need labels sit against their machine: beside it for N/S machines (below would hit the
+    // board or the tray), under the cabinet for E/W.
+    this.needs = L.machines.map((m) =>
+      h('div', {
+        class: 'lr-altar-need',
+        'data-align': m.label.align,
+        style: { left: `${m.label.x}px`, top: `${m.label.y}px` },
+      }),
+    );
     const hint = h(
       'div',
       { class: 'lr-altar-hint' },
@@ -367,7 +403,7 @@ export class AltarScene implements GameScene {
     this.puzzle.machines.forEach((m, i) => {
       const el = this.needs[i]!;
       if (this.mode === 'edit' || !this.result) {
-        el.textContent = `Needs ${m.need}`;
+        this.setNeed(i, m.need, null);
         el.removeAttribute('data-state');
       }
     });
@@ -402,6 +438,179 @@ export class AltarScene implements GameScene {
   private clearTags(): void {
     for (const t of this.tags) t.remove();
     this.tags.length = 0;
+  }
+
+  /** "Needs N" and, once charge has landed, "got M" plus one entry per strike on multi-strike. */
+  private setNeed(i: number, need: number, got: number | null): void {
+    const el = this.needs[i]!;
+    const kids: (HTMLElement | string)[] = [
+      h('span', { class: 'lr-need-row' }, 'Needs ', h('b', null, String(need))),
+    ];
+    if (got !== null) {
+      kids.push(h('span', { class: 'lr-need-got' }, 'got ', h('b', null, String(got))));
+      const rs = this.strikeReadings[i];
+      if (this.puzzle.pulses > 1 && rs && rs.length > 0) {
+        kids.push(
+          h(
+            'span',
+            { class: 'lr-need-strikes' },
+            ...rs.map((r, k) =>
+              h(
+                'span',
+                { 'data-state': r === need ? 'exact' : r > need ? 'over' : 'under' },
+                `Strike ${k + 1}: ${r}`,
+              ),
+            ),
+          ),
+        );
+      }
+    }
+    el.replaceChildren(...kids);
+  }
+
+  // ── Circuit read-out ────────────────────────────────────────────────────
+
+  /** Live sockets and the route preview, recomputed when the board or mode changes. */
+  private updateCircuit(): void {
+    const rev = this.board.revision;
+    if (rev === this.circuitRev && this.mode === this.circuitMode) return;
+    const first = this.circuitRev < 0;
+    this.circuitRev = rev;
+    this.circuitMode = this.mode;
+    const v = this.view;
+    const placements = this.board.serialise();
+    if (this.mode === 'edit') {
+      const pv = previewPath(this.puzzle, placements, simulate(this.puzzle, placements));
+      this.openEnds = pv.openEnds;
+      v.preview = pv.hops;
+      v.previewTarget = PREVIEW_PATH ? 1 : 0;
+      this.puzzle.machines.forEach((m, i) => {
+        v.machineLinked[i] = pv.hops.some((q) => q.to.x === m.at.x && q.to.y === m.at.y);
+      });
+    } else {
+      v.previewTarget = 0;
+    }
+    this.liveMask = liveSockets(this.puzzle, placements, this.openEnds, this.liveMask);
+    v.setLive(
+      this.liveMask,
+      (x, y) => {
+        const c = { x, y };
+        return !!this.board.at(c) || !!this.board.fixedAt(c) || this.board.isBlocked(c);
+      },
+      first,
+    );
+  }
+
+  private isLive(c: Cell): boolean {
+    return this.liveMask[c.y * this.view.layout.cols + c.x] === 1;
+  }
+
+  /** Chips for this strike's charge changes (and every hop into a machine). */
+  private buildChips(res: SimResult): void {
+    this.clearChips();
+    const chips = chargeChips(res);
+    const have = new Set(chips.map((c) => c.seg));
+    res.trace.forEach((seg, i) => {
+      if (seg.end === 'machine' && !have.has(i))
+        chips.push({ seg: i, pulse: seg.pulse, from: seg.from, to: seg.to, charge: seg.charge });
+    });
+    this.chips = chips;
+    const L = this.view.layout;
+    const a = { x: 0, y: 0 };
+    const b = { x: 0, y: 0 };
+    const chipPx = Math.max(16, Math.min(24, Math.round(L.pitch * 0.3)));
+    for (const c of chips) {
+      anchorOf(L, c.from, a);
+      anchorOf(L, c.to, b);
+      // Chips into a machine sit near the port, where the reading is decided.
+      const t = res.trace[c.seg]!.end === 'machine' ? 0.62 : 0.5;
+      const el = h(
+        'div',
+        {
+          class: 'lr-altar-chip',
+          hidden: true,
+          style: {
+            left: `${a.x + (b.x - a.x) * t}px`,
+            top: `${a.y + (b.y - a.y) * t}px`,
+            // Chips scale with the board so a 10-wide altar's run of changes stays legible.
+            fontSize: `${chipPx}px`,
+            lineHeight: `${chipPx + 6}px`,
+          },
+        },
+        String(c.charge),
+      );
+      this.dom.append(el);
+      this.chipEls.push(el);
+    }
+  }
+
+  private clearChips(): void {
+    for (const el of this.chipEls) el.remove();
+    this.chipEls.length = 0;
+    this.chips = [];
+  }
+
+  /** Show the chips of the strike now playing whose hop has started. */
+  private updateChips(): void {
+    const tl = this.timeline;
+    if (!tl) return;
+    for (let i = 0; i < this.chips.length; i++) {
+      const c = this.chips[i]!;
+      const seg = tl.segments[c.seg]!;
+      const show = c.pulse === this.pulse && this.st >= seg.t0;
+      const el = this.chipEls[i]!;
+      if (el.hidden === show) el.hidden = !show;
+    }
+  }
+
+  /** Colour the machine chips of strike `i` by what the machine made of them. */
+  private settleChips(i: number, m: number, state: string): void {
+    const at = this.puzzle.machines[m]!.at;
+    for (let k = 0; k < this.chips.length; k++) {
+      const c = this.chips[k]!;
+      if (c.pulse === i && c.to.x === at.x && c.to.y === at.y)
+        this.chipEls[k]!.dataset.state = state;
+    }
+  }
+
+  // ── First-appearance teaching ───────────────────────────────────────────
+
+  /** FUSE's nudge for a gem's first appearance (queued, never interrupting). */
+  private speak(gem: GemKind): void {
+    if (this.spoken.has(gem)) return;
+    this.spoken.add(gem);
+    const line = gemNudge(gem);
+    if (line) void this.ctx.fuse.say(line);
+  }
+
+  /** Rule cards pinned above new fixed gems until the first strike. */
+  private buildTeachTags(): void {
+    for (const t of this.teachTags) t.remove();
+    this.teachTags.length = 0;
+    const L = this.view.layout;
+    const pt = { x: 0, y: 0 };
+    for (const f of this.teachFixed) {
+      cellCenter(L, f.cell, pt);
+      const el = h(
+        'div',
+        {
+          class: 'lr-altar-teach',
+          style: { left: `${pt.x}px`, top: `${pt.y - L.pitch * 0.5}px` },
+        },
+        h('b', null, GEM_NAME[f.gem]),
+        ` ${firstSentence(this.rules[f.gem] ?? '')}`,
+      );
+      el.dataset.gem = f.gem;
+      this.dom.append(el);
+      this.teachTags.push(el);
+    }
+  }
+
+  /** New fixed gems have been struck through: stop pulsing them and drop their cards. */
+  private learnFixed(): void {
+    if (this.teachFixed.length === 0) return;
+    this.teachFixed = [];
+    this.buildTeachTags();
   }
 
   // ── Edits ───────────────────────────────────────────────────────────────
@@ -452,6 +661,9 @@ export class AltarScene implements GameScene {
     }
     const rot = keepRot && this.hand?.kind === kind ? this.hand.rot : 0;
     this.hand = { kind, rot, from: null };
+    if (this.teachTray.delete(kind)) {
+      for (const g of nudgeGems({ fixed: [], tray: [kind] })) this.speak(g);
+    }
     this.ctx.sound.sfx.play('gemPick', { gem: kind });
     this.refreshHud();
   }
@@ -750,6 +962,10 @@ export class AltarScene implements GameScene {
     this.view.deenergise();
     for (const m of this.view.machines) m.reset();
     this.readings = this.puzzle.machines.map(() => 0);
+    this.strikeReadings = this.puzzle.machines.map(() => []);
+    this.buildChips(result);
+    for (let m = 0; m < this.view.machineGlow.length; m++) this.view.machineGlow[m] = 0;
+    this.learnFixed();
     this.st = 0;
     this.pulse = -1;
     this.pulseEnded = -1;
@@ -810,6 +1026,7 @@ export class AltarScene implements GameScene {
     bolt.play(this.pulseSegs[i]!, mode);
     this.view.setActiveBolts(i + 1);
     this.view.storm.surge(1);
+    this.view.stormGlow = 1;
     this.view.shake = Math.max(this.view.shake, 0.25 + 0.1 * this.puzzle.storm.strength);
     const sx = (this.view.layout.storm.x - 960) / 960;
     if (!this.skipping) this.ctx.sound.sfx.play('thunder', { near: true, pan: sx });
@@ -860,8 +1077,10 @@ export class AltarScene implements GameScene {
         this.readings[m] = (this.readings[m] ?? 0) + a.charge;
         const need = this.puzzle.machines[m]!.need;
         this.view.machines[m]!.gauge = Math.min(1.25, this.readings[m]! / need);
-        const el = this.needs[m]!;
-        el.textContent = `Needs ${need} · got ${this.readings[m]}`;
+        this.setNeed(m, need, this.readings[m]!);
+        this.view.machineGlow[m] = 1;
+        const col = this.view.machineColor[m]!;
+        for (let k = 0; k < 4; k++) col[k] = OUT_GLOW.flow[k]!;
         break;
       }
       case 'fizzle':
@@ -900,7 +1119,15 @@ export class AltarScene implements GameScene {
       const need = mr.need;
       const prop = this.view.machines[m]!;
       const el = this.needs[m]!;
-      el.textContent = `Needs ${need} · got ${got}`;
+      this.strikeReadings[m]![i] = got;
+      this.setNeed(m, need, got);
+      const state = got === need && mr.wokeOn === i ? 'exact' : got > need ? 'over' : 'under';
+      this.settleChips(i, m, state);
+      if (got > 0) {
+        this.view.machineGlow[m] = 1;
+        const col = this.view.machineColor[m]!;
+        for (let k = 0; k < 4; k++) col[k] = OUT_GLOW[state][k]!;
+      }
       if (got === need && mr.wokeOn === i) {
         prop.solve();
         el.dataset.state = 'exact';
@@ -939,12 +1166,12 @@ export class AltarScene implements GameScene {
     const L = this.view.layout;
     const o = res.outcome;
     const ms = res.machines;
-    const say = (i: number, text: string) =>
-      ms.length > 1
-        ? `${['First', 'Second', 'Third', 'Fourth'][i] ?? 'A'} machine: ${text[0]!.toLowerCase()}${text.slice(1)}`
-        : text;
+    // The numbers name the machine: its need label shows the same "Needs N · got M", lit in
+    // the outcome colour, so a multi-machine verdict needs no "second machine" ordinal.
+    const say = (_i: number, text: string) => text;
     if (o === 'exact') {
-      this.showVerdict('Exactly right. It wakes.', 'exact');
+      // The solve moment's FUSE line follows at once, so the exact line rides in the verdict.
+      this.showVerdict(exactLine(Math.min(4, this.ctx.tier()) as 1 | 2 | 3 | 4).text, 'exact');
       this.wakeTimer = this.ctx.settings.reducedMotion ? 0.9 : 1.5;
       this.solved = true;
       this.ctx.sound.music.duck(0.5, 1.6);
@@ -954,13 +1181,13 @@ export class AltarScene implements GameScene {
       if (o === 'over') {
         const m = ms[over]!;
         this.showVerdict(
-          say(over, `Breaker tripped (needs ${m.need}, got ${this.lastReading(m)})`),
+          say(over, `Breaker tripped: needs ${m.need}, got ${this.lastReading(m)}`),
           'over',
         );
       } else if (o === 'under') {
         const m = ms[under] ?? ms[0]!;
         this.showVerdict(
-          say(under, `Not enough (needs ${m.need}, got ${this.lastReading(m)})`),
+          say(under, `Not enough: needs ${m.need}, got ${this.lastReading(m)}`),
           'under',
         );
       } else {
@@ -968,6 +1195,7 @@ export class AltarScene implements GameScene {
       }
       // Teaching: name where it went wrong (first few fizzles, last strike first).
       const shown = new Set<string>();
+      const placedTags: { x: number; y: number }[] = [];
       let count = 0;
       const pt = { x: 0, y: 0 };
       for (let i = this.fizzleList.length - 1; i >= 0 && count < 3; i--) {
@@ -976,7 +1204,12 @@ export class AltarScene implements GameScene {
         if (shown.has(k)) continue;
         shown.add(k);
         anchorOf(L, f.cell, pt);
-        this.addTag(pt.x, pt.y - L.pitch * 0.38, causeText(f.cause));
+        let ty = pt.y - L.pitch * 0.38;
+        // Keep tags from stacking on each other (big boards fizzle in clusters).
+        for (const q of placedTags)
+          if (Math.abs(q.x - pt.x) < 230 && Math.abs(q.y - ty) < 40) ty = q.y - 40;
+        placedTags.push({ x: pt.x, y: ty });
+        this.addTag(pt.x, ty, causeText(f.cause));
         count++;
       }
       const line = reactionLine(
@@ -1004,6 +1237,8 @@ export class AltarScene implements GameScene {
     this.verdict.hidden = true;
     this.subtitle.style.visibility = '';
     this.clearTags();
+    this.clearChips();
+    for (let m = 0; m < this.view.machineGlow.length; m++) this.view.machineGlow[m] = 0;
     this.view.deenergise();
     for (const b of this.view.bolts) b.fadeOut(0.35);
     for (const m of this.view.machines) m.reset();
@@ -1039,6 +1274,7 @@ export class AltarScene implements GameScene {
     while (this.pulseEnded < this.pulse && this.st >= tl.pulses[this.pulseEnded + 1]!.end) {
       this.endPulse(++this.pulseEnded);
     }
+    this.updateChips();
     if (this.st >= tl.verdictAt && !this.verdictShown) {
       this.view.boltRate = 1;
       this.showResult();
@@ -1089,6 +1325,7 @@ export class AltarScene implements GameScene {
     ctx.post.settings.bloom.intensity =
       this.bloomBase * (1 + this.bloomBoost + 0.6 * this.view.wake);
 
+    this.updateCircuit();
     this.updateTeach(dt);
     this.updateFuse();
     this.updateTray();
@@ -1338,9 +1575,10 @@ export class AltarScene implements GameScene {
       const held = this.hand && !this.hand.from && this.hand.kind === s.gem;
       t.state = n === 0 ? 'dim' : held || i === this.hoverSlot ? 'hover' : 'idle';
       const lift = this.view.trayLift[i]!;
+      const fresh = (i === 0 && this.teaching) || this.teachTray.has(s.gem);
       const bob =
-        i === 0 && !this.hand && this.teaching && !this.view.reducedMotion
-          ? 0.35 + 0.35 * Math.sin(this.time * 4)
+        fresh && !this.hand && n > 0 && !this.view.reducedMotion
+          ? 0.35 + 0.35 * Math.sin(this.time * 4 + i)
           : 0;
       this.view.trayLift[i] =
         lift < 0 ? Math.min(0, lift + 0.05) : held ? 1 : i === this.hoverSlot ? 0.6 : bob;
@@ -1403,8 +1641,19 @@ export class AltarScene implements GameScene {
     }
     if (this.mode === 'edit' && this.hand && !this.hand.from) {
       // Every socket the held gem would go in hums quietly, so legal moves read at a glance.
+      // Sockets near the circuit hum clearly; the rest only whisper (they still take the gem).
       const kind = this.hand.kind;
-      for (const c of this.validFor(kind)) v.mark(c.x, c.y, 'highlighted', HUM[kind], 0.4, 0);
+      for (const c of this.validFor(kind))
+        v.mark(c.x, c.y, 'highlighted', HUM[kind], this.isLive(c) ? 0.45 : 0.1, 0);
+    }
+    if (this.mode === 'edit' && PREVIEW_PATH && !this.teaching) {
+      // Where the wire goes next: the socket the bolt would reach and fizzle in.
+      for (const c of this.openEnds) v.mark(c.x, c.y, 'highlighted', OPEN_END, 0.4, 2.2);
+    }
+    if (this.mode !== 'strike') {
+      // A gem seen for the first time pulses in its own colour until the first strike.
+      for (const f of this.teachFixed)
+        v.mark(f.cell.x, f.cell.y, 'highlighted', HUM[f.gem], 1.1, 3);
     }
     if (this.teaching) {
       const c = this.teachCell!;

@@ -15,6 +15,7 @@ import {
 } from '../../art/materials/stone';
 import { BoltRibbon } from '../../art/props/bolt';
 import { Fuse } from '../../art/props/fuse';
+import { CircuitOverlay } from './circuit-overlay';
 
 export interface AltarAssets {
   wall: StoneSurface;
@@ -22,6 +23,8 @@ export interface AltarAssets {
   gems: GemRenderer;
   candles: CandleRenderer;
   fuse: Fuse;
+  /** Socket veils and carved conduits (altar-clarity). */
+  circuit: CircuitOverlay;
   /** One ribbon per strike (grown on demand). */
   bolts: BoltRibbon[];
   slab(cols: number, rows: number, pitch: number): AltarSlab;
@@ -40,6 +43,7 @@ export function altarAssets(renderer: Renderer, particles: ParticleSystem): Alta
     gems: new GemRenderer(renderer),
     candles: new CandleRenderer(renderer),
     fuse: new Fuse(renderer, { x: 300, y: 1046, scale: 112 }),
+    circuit: new CircuitOverlay(renderer),
     bolts,
     slab(cols, rows, pitch) {
       const key = `${cols}x${rows}@${pitch}`;

@@ -11,8 +11,8 @@ attention. Text is short, sits around the board, and never covers it.
 |---|---|
 | Top centre | Machine name; subtitle `Storm ×N · K strikes` (hidden while a verdict shows). If a north gauge would sit under it, the title and verdict move to the widest clear gap (`layout.titleX`). |
 | Top right | `Undo Z` · `Clear Del` · `Back Esc` · **`Strike F`** (gold, the largest control) |
-| Below the title | Verdict after a strike (`Second machine: not enough (needs 2, got 0)`) |
-| Next to each machine | `Needs N`, then `Needs N · got M` after a strike (cyan exact, amber under, red over). North machines put it beside the cabinet so it clears the title; east, west and south machines put it below. |
+| Below the title | Verdict after a strike (`Not enough: needs 2, got 0`). On exact it is FUSE's `exactLine(tier)`. The numbers match a need label, so multi-machine verdicts carry no ordinal. In a narrow title gap (finale) it drops to 24 px. |
+| Next to each machine | A large `Needs N` (40 px number), then `got M` after a strike, plus `Strike k: r` pips on multi-strike altars. Border and numbers are cyan for exact, amber for under and red for over. North and south machines put the label beside the cabinet; east and west machines put it below. Machines are 180–230 px and sit against the exit socket. |
 | Bottom row, left of centre | Tray: one gem per kind, with `slot ×count`. Hover or hold a gem to see a one-line rule (`Bend Turns the bolt 90°.`) |
 | Bottom right | FUSE caption card. Layout keeps every board 830 px or more above it (`TRAY_BAND`). |
 | Bottom line | One line of controls in small type. |
@@ -36,18 +36,37 @@ sides. It fits every puzzle from 4×4 up to the 10×8 finale.
 
 `Enter` acts where the player is looking: the hovered socket, otherwise the cursor.
 
+## Board as a circuit (altar-clarity)
+
+- **Quiet sockets.** Only sockets that matter right now stay bright: the storm entry, each
+  machine's exit socket, fixed and placed gems with their four neighbours, and the route's open
+  end. Every other empty socket gets a dark stone skim (`CircuitOverlay.veil`) and recedes. It
+  still accepts a gem, and it brightens as soon as a gem lands next to it. The rules do not
+  change (`circuit-model.ts: liveSockets`).
+- **Conduits.** Brass-wired grooves run from the storm to its entry socket and from each exit
+  socket to its machine's port. The storm conduit glows when a strike starts. A machine's
+  conduit glows in the bolt colour as charge arrives, then settles cyan, amber or red.
+- **Route preview** (`PREVIEW_PATH`, on by default; PM decision). While editing, the route
+  strike 1 would take through gems already set lies faintly in the grooves, and the empty socket
+  it reaches next glows amber. It shows direction only, never charge.
+
 ## Affordances
 
-- **While a gem is held, every socket it can go in hums** quietly in that gem's colour. The
+- **While a gem is held, the live sockets it can go in hum** in that gem's colour. Quiet
+  (veiled) legal sockets hum faintly, so the circuit stays the loudest thing on the board. The
   socket under the pointer or cursor hums brighter. An illegal socket glows red and gets a
   short tag explaining why (`Carved stone: nothing fits here`, `Part of the machine: it stays`,
   `None left in the tray`).
 - Fixed gems and hint-locked gems wear a gold ring.
 - **First altar (`intake-desk`, until it is solved):** the socket next to the storm pulses gold
   and the first tray gem bobs, until a gem goes into that socket. After 9 s with no board change
-  on an empty board, FUSE nudges once ("Take a gem from the tray. Put it in the glowing
-  socket."). This text is provisional instruction copy, not a FUSE line; it is reported as a line
-  gap.
+  on an empty board, FUSE nudges once (`TEACH_NUDGE`, `nudge.teach`).
+- **First appearance of a gem** (any altar, `teach.ts`). A kind is new when no solved altar had
+  it. A new fixed gem pulses and wears a card with its rule's first sentence (`Bend Turns the
+  bolt 90° between its two joined sides.`) until the first strike. A new tray gem bobs until
+  it is first picked up. FUSE says `gemNudge(gem)` (`nudge.<gem>`) once, queued after the
+  arrival line, for fixed gems on arrival and for tray gems on first pickup. Channel has no
+  nudge line.
 
 ## Strike
 
@@ -58,9 +77,14 @@ reading update per strike. Hold `F` to fast-forward at 3×; click, `Enter` or `E
 | Outcome | What the player sees |
 |---|---|
 | exact | Gauges settle cyan, the board flares white-hot, the machine wakes; solve moment |
-| under | Amber needle short of the mark; verdict names the machine and both numbers |
+| under | Amber needle short of the mark; the machine's conduit and label turn amber; verdict gives both numbers |
 | over | Breaker trips: red flash (softened by `reduceFlashes`), shake (off in reduced motion), spark burst. Funny, never punishing: nothing is lost. |
 | dead | Fizzle ring and tag at the cell where the bolt stopped (`Empty socket: the bolt fizzled`) |
+
+**Charge chips** (`chargeChips`) label the bolt on the board as it plays: the storm's charge as
+it enters, every place the charge changes (Amplify, Split, Gate, Capacitor), and what lands at
+each machine, in the outcome colour. Channels and Bends get no chip, so a long route stays clean.
+Chips scale with the board pitch (16–24 px).
 
 FUSE reacts through `reactionLine(outcome, gems)`. Any edit returns the altar to edit mode.
 
@@ -83,9 +107,11 @@ There are no events in production and nothing goes over the network.
 
 ## Screens
 
-- `altar-board.png`: first altar (intake-desk), with the teach socket pulsing.
-- `altar-intake-held.png`: a gem in hand, every legal socket humming, the rule tooltip.
-- `altar-strike.png`, `altar-exact.png` and `altar-solve.png`: furnace, solved.
-- `altar-under.png`: splitter-mill, with a socket left empty.
-- `altar-over.png`: capacitor-bay, with the breaker tripped.
-- `altar-multistrike.png`: the-last-rune, strike 1 of 2.
+- `altar-board.png`: furnace on arrival. The quiet board, the storm and machine conduits, and the new Amplify's rule card.
+- `altar-intake-held.png`: first altar with a Channel in hand. Live sockets hum, the Bend card shows, and the tray tooltip is visible.
+- `altar-strike.png`: the finale mid-strike, with charge chips.
+- `altar-exact.png`: intake-desk exact, showing the `exactLine` verdict and the label lit cyan.
+- `altar-solve.png`: capacitor-bay solve moment.
+- `altar-under.png`: furnace with both Amplifies skipped (needs 8, got 4). The chips show the 4 all the way.
+- `altar-over.png`: conveyor-a doubled past its need (needs 4, got 8). The chips show 4, then 8 at the Amplify.
+- `altar-multistrike.png`: the finale one gem short, with per-strike pips on each label.

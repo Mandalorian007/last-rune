@@ -3,8 +3,8 @@
  * The scene owns the rules state and tells the view what to show; the view owns animation
  * (gem lift/settle, rotation easing, energise glow) and lighting.
  *
- * Render order (submission order = draw order): wall, floor, candle bodies, slab, socket
- * overlays, props (storm, machines), gem shadows/pools, gems, held gem, bolts, candle flames,
+ * Render order (submission order = draw order): wall, floor, candle bodies, slab, circuit
+ * (conduits, socket veils), socket overlays, props (storm, machines), gem shadows/pools, gems, held gem, bolts, candle flames,
  * FUSE, particles.
  */
 import type { Frame, RGBA } from '@engine/render';
@@ -23,6 +23,7 @@ import type { Placement, PuzzleDef } from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
 import { type AltarAssets, altarAssets, ensureBolts } from './assets';
 import type { BoardState } from './board';
+import type { PathHop } from './circuit-model';
 import { type AltarLayout, anchorOf, cellCenter, computeLayout, DESIGN_W } from './layout';
 import type { StrikeTimeline } from './strike';
 
@@ -30,6 +31,12 @@ const W = DESIGN_W;
 const GOLD: RGBA = [LINEAR.gold[0] * 1.4, LINEAR.gold[1] * 1.4, LINEAR.gold[2] * 1.4, 1];
 const DANGER: RGBA = [2.2, 0.35, 0.22, 1];
 const ROOF: RGBA = [0.5, 0.62, 0.95, 1];
+/** Storm conduit glow colour (the storm's own blue-white). */
+const STORM_GLOW: RGBA = [0.7, 1.1, 1.8, 1];
+/** Route preview glow: a faint warm trace in the groove. */
+const PREVIEW_GLOW: RGBA = [1.2, 0.85, 0.4, 1];
+/** How far a socket out of play recedes (veil opacity). */
+const VEIL_AMOUNT = 0.75;
 
 const CANDLES: CandleInstance[] = [
   { x: 96, y: 1012, height: 200, seed: 1, melt: 0.6, radius: 820 },
@@ -101,6 +108,23 @@ export class AltarView {
   boltRate = 1;
   private readonly markPool: SocketMark[] = [];
 
+  // ── Circuit (altar-clarity) ──
+  /** Per-socket veil, eased toward `veilTarget` (row-major). */
+  private readonly veilK: Float32Array;
+  private readonly veilTarget: Float32Array;
+  /** Edit-time route through placed gems (strike 1), and how strongly to show it (0..1). */
+  preview: PathHop[] = [];
+  previewTarget = 0;
+  private previewK = 0;
+  /** Storm conduit glow 0..1 (decays). */
+  stormGlow = 0;
+  /** Per-machine conduit glow 0..1 and colour (outcome colour once charge lands). */
+  readonly machineGlow: number[];
+  readonly machineColor: RGBA[];
+  /** Per-machine: does the edit-time route reach it? */
+  readonly machineLinked: boolean[];
+  private readonly machineLinkK: number[];
+
   private readonly lights = new LightSet();
   private readonly rig = new PropLightRig();
   private readonly heldInst: GemInstance = {
@@ -133,6 +157,12 @@ export class AltarView {
       strength: puzzle.storm.strength,
     });
     this.machines = L.machines.map((m) => new Machine(r, { x: m.x, y: m.y, size: m.size }));
+    this.veilK = new Float32Array(L.cols * L.rows);
+    this.veilTarget = new Float32Array(L.cols * L.rows);
+    this.machineGlow = L.machines.map(() => 0);
+    this.machineColor = L.machines.map(() => [...STORM_GLOW] as RGBA);
+    this.machineLinked = L.machines.map(() => false);
+    this.machineLinkK = L.machines.map(() => 0);
     this.tray = L.tray.map((s, i) => ({
       kind: s.gem,
       x: s.x,
@@ -195,6 +225,22 @@ export class AltarView {
     m.intensity = intensity;
     m.pulse = pulse;
     this.marks.push(m);
+  }
+
+  /**
+   * Which empty sockets are in play (`1`) and which recede (`0`), row-major. Occupied and
+   * blocked sockets never get a veil (the gem or rubble covers them). `instant` skips easing.
+   */
+  setLive(mask: Uint8Array, occupied: (x: number, y: number) => boolean, instant = false): void {
+    const L = this.layout;
+    for (let y = 0; y < L.rows; y++) {
+      for (let x = 0; x < L.cols; x++) {
+        const i = y * L.cols + x;
+        const t = mask[i] || occupied(x, y) ? 0 : VEIL_AMOUNT;
+        this.veilTarget[i] = t;
+        if (instant) this.veilK[i] = t;
+      }
+    }
   }
 
   // ── Board gems ──────────────────────────────────────────────────────────
@@ -339,6 +385,15 @@ export class AltarView {
       const t = this.tray[i]!;
       t.lift = (t.lift ?? 0) + (this.trayLift[i]! - (t.lift ?? 0)) * k;
     }
+    const kv = 1 - Math.exp(-8 * dt);
+    for (let i = 0; i < this.veilK.length; i++)
+      this.veilK[i]! += (this.veilTarget[i]! - this.veilK[i]!) * kv;
+    this.previewK += (this.previewTarget - this.previewK) * kv;
+    for (let i = 0; i < this.machineLinkK.length; i++) {
+      const t = this.machineLinked[i] ? this.previewTarget : 0;
+      this.machineLinkK[i]! += (t - this.machineLinkK[i]!) * kv;
+    }
+    this.stormGlow = Math.max(0, this.stormGlow - dt * 1.2);
     this.storm.update(dt);
     for (const m of this.machines) m.update(dt);
     for (let i = 0; i < this.activeBolts; i++) this.assets.bolts[i]!.update(dt * this.boltRate);
@@ -346,6 +401,83 @@ export class AltarView {
     this.assets.candles.update(CANDLES, this.time);
     this.fuse.update(dt);
     this.shake = Math.max(0, this.shake - dt * 2.4);
+  }
+
+  /**
+   * Conduits and veils. The storm and every machine are wired into the slab by a carved
+   * groove to their socket; the edit-time route lies faintly in grooves between gems; sockets
+   * out of play are skimmed over so the circuit, not the grid, is what reads.
+   */
+  private drawCircuit(frame: Frame): void {
+    const c = this.assets.circuit;
+    const L = this.layout;
+    const r = this.slab.socketRadius;
+    const wide = Math.max(8, L.pitch * 0.15);
+    const a = this.pt;
+    const trim = (ax: number, ay: number, bx: number, by: number, ta: number, tb: number) => {
+      const dx = bx - ax;
+      const dy = by - ay;
+      const len = Math.hypot(dx, dy) || 1;
+      return [
+        ax + (dx / len) * ta,
+        ay + (dy / len) * ta,
+        bx - (dx / len) * tb,
+        by - (dy / len) * tb,
+      ] as const;
+    };
+    // Storm → entry socket.
+    cellCenter(L, L.storm.inner, a);
+    {
+      const [x0, y0, x1, y1] = trim(
+        L.storm.port.x,
+        L.storm.port.y,
+        a.x,
+        a.y,
+        L.storm.size * 0.2,
+        r * 0.95,
+      );
+      const g = Math.max(this.stormGlow, this.previewK * 0.35);
+      c.conduit(frame, x0, y0, x1, y1, wide, 0.9, g, STORM_GLOW);
+    }
+    // Exit socket → each machine's terminal.
+    for (let i = 0; i < L.machines.length; i++) {
+      const m = L.machines[i]!;
+      cellCenter(L, m.inner, a);
+      const [x0, y0, x1, y1] = trim(a.x, a.y, m.port.x, m.port.y, r * 0.95, 0);
+      const g = Math.max(this.machineGlow[i]!, this.machineLinkK[i]! * 0.5);
+      const col = this.machineGlow[i]! > 0.01 ? this.machineColor[i]! : PREVIEW_GLOW;
+      c.conduit(frame, x0, y0, x1, y1, wide, 0.9, g, col);
+    }
+    // Route preview between sockets.
+    if (this.previewK > 0.01) {
+      const b = { x: 0, y: 0 };
+      for (const h of this.preview) {
+        if (!inside(L, h.from) || !inside(L, h.to)) continue;
+        cellCenter(L, h.from, a);
+        cellCenter(L, h.to, b);
+        const [x0, y0, x1, y1] = trim(a.x, a.y, b.x, b.y, r * 0.9, r * 0.9);
+        c.conduit(
+          frame,
+          x0,
+          y0,
+          x1,
+          y1,
+          wide * 0.85,
+          0.75 * this.previewK,
+          0.3 * this.previewK,
+          PREVIEW_GLOW,
+        );
+      }
+    }
+    // Veils.
+    for (let y = 0; y < L.rows; y++) {
+      for (let x = 0; x < L.cols; x++) {
+        const k = this.veilK[y * L.cols + x]!;
+        if (k <= 0.01) continue;
+        this.slab.socketCenter(x, y, a);
+        c.veil(frame, a.x, a.y, r, k);
+      }
+    }
   }
 
   render(frame: Frame): void {
@@ -415,6 +547,7 @@ export class AltarView {
     a.floor.draw(frame, W / 2, 1080 - 150, W, 300, undefined, 1, 0.18);
     a.candles.drawBodies(frame, CANDLES);
     this.slab.draw(frame);
+    this.drawCircuit(frame);
     for (const m of this.marks) {
       const pulse = m.pulse > 0 ? 0.72 + 0.28 * Math.sin(this.time * m.pulse + m.col * 0.7) : 1;
       this.slab.drawSocket(frame, m.col, m.row, m.state, m.color, m.intensity * pulse);
@@ -458,3 +591,7 @@ export class AltarView {
 }
 
 export { DANGER, GOLD };
+
+function inside(L: AltarLayout, c: Cell): boolean {
+  return c.x >= 0 && c.y >= 0 && c.x < L.cols && c.y < L.rows;
+}

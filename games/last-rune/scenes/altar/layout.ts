@@ -22,6 +22,9 @@ const TRAY_BAND = 250;
 /** Tray row centre, left of the caption card. */
 const TRAY_X = 800;
 const MAX_PITCH = 118;
+/** Machines never shrink below this (design px), so the gauge stays readable on big boards. */
+const MACHINE_MIN = 180;
+const MACHINE_MAX = 230;
 /** How far a prop on N/S sticks out past the slab, in pitches. */
 const PROP_OUT_V = 0.95;
 /** How far a prop on E/W sticks out past the slab, in pitches. */
@@ -41,6 +44,10 @@ export interface PropSpot {
   port: { x: number; y: number };
   /** The outside cell it occupies. */
   cell: Cell;
+  /** The socket it is wired to: where the storm's bolt enters, or where charge exits. */
+  inner: Cell;
+  /** Where its "Needs N" label goes (machines): `x, y` is the anchor, `align` the side. */
+  label: { x: number; y: number; align: 'below' | 'right' };
 }
 
 export interface TraySlot {
@@ -87,30 +94,53 @@ export function computeLayout(p: PuzzleDef): AltarLayout {
   const { w: cols, h: rows } = altarDims(p.altar);
   const outside = [p.storm.at, ...p.machines.map((m) => m.at)];
   const has = [false, false, false, false];
+  const hasMachine = [false, false, false, false];
   for (const c of outside) has[sideOf(c, cols, rows)] = true;
+  for (const m of p.machines) hasMachine[sideOf(m.at, cols, rows)] = true;
+  const machineFactor = p.machines.length > 2 ? 1.6 : 1.85;
+  const machineSizeAt = (pitch: number) =>
+    Math.round(Math.min(MACHINE_MAX, Math.max(MACHINE_MIN, pitch * machineFactor)));
 
-  // Fit: slab (cols + 1.6 margin) plus props on each occupied side.
-  const unitsW = cols + 1.6 + (has[1] ? PROP_OUT_H : 0.3) + (has[3] ? PROP_OUT_H : 0.3);
-  const unitsH = rows + 1.6 + 0.42 + (has[0] ? PROP_OUT_V : 0.1) + (has[2] ? PROP_OUT_V : 0.1);
+  // How far the props on each side reach past the slab, in px, for a given pitch. Machines
+  // keep a minimum size (MACHINE_MIN) however small the sockets get, so their reach is in px.
+  const reach = (pitch: number): [number, number, number, number] => {
+    const m = machineSizeAt(pitch);
+    const out: [number, number, number, number] = [0, 0, 0, 0];
+    for (const s of [0, 1, 2, 3] as Side[]) {
+      const vertical = s === 0 || s === 2;
+      let r = (vertical ? 0.1 : 0.3) * pitch;
+      if (has[s]) r = Math.max(r, (vertical ? PROP_OUT_V : PROP_OUT_H) * pitch);
+      if (hasMachine[s]) r = Math.max(r, vertical ? 0.6 * m : 0.1 * pitch + 0.95 * m + 8);
+      out[s] = r;
+    }
+    return out;
+  };
   const availW = DESIGN_W - 120;
   const availH = DESIGN_H - TOP - TRAY_BAND;
-  const pitch = Math.floor(Math.min(MAX_PITCH, availW / unitsW, availH / unitsH));
+  const fits = (pitch: number) => {
+    const r = reach(pitch);
+    return (
+      (cols + 1.6) * pitch + r[1] + r[3] <= availW &&
+      (rows + 1.6 + 0.42) * pitch + r[0] + r[2] <= availH
+    );
+  };
+  let pitch = MAX_PITCH;
+  while (pitch > 24 && !fits(pitch)) pitch--;
   const margin = Math.round(pitch * 0.8);
   const width = cols * pitch + margin * 2;
   const topH = rows * pitch + margin * 2;
   const front = Math.round(pitch * 0.42);
+  const ext = reach(pitch);
 
   // Centre vertically in the band; keep room for N/S props.
-  const above = (has[0] ? PROP_OUT_V : 0.1) * pitch;
-  const below = (has[2] ? PROP_OUT_V : 0.1) * pitch;
+  const above = ext[0];
+  const below = ext[2];
   const blockH = above + topH + front + below;
   const blockTop = TOP + (availH - blockH) / 2;
   const top = Math.round(blockTop + above);
   const cy = top + topH / 2;
   // Centre horizontally, nudged away from the heavier side.
-  const lw = has[3] ? PROP_OUT_H : 0.3;
-  const rw = has[1] ? PROP_OUT_H : 0.3;
-  const cx = Math.round(DESIGN_W / 2 + ((lw - rw) * pitch) / 2);
+  const cx = Math.round(DESIGN_W / 2 + (ext[3] - ext[1]) / 2);
   const left = cx - width / 2;
   const right = cx + width / 2;
   const bottom = top + topH;
@@ -164,11 +194,21 @@ export function computeLayout(p: PuzzleDef): AltarLayout {
         port = { x, y: y - 0.6 * k };
       }
     }
-    return { x, y, size, side, port, cell: { x: c.x, y: c.y } };
+    const inner = {
+      x: Math.max(0, Math.min(cols - 1, c.x)),
+      y: Math.max(0, Math.min(rows - 1, c.y)),
+    };
+    // Label: below the cabinet on E/W; beside it on N/S, where below would hit the board or
+    // the tray.
+    const label =
+      side === 0 || side === 2
+        ? { x: Math.round(x + 0.5 * size), y: Math.round(y + 0.04 * size), align: 'right' as const }
+        : { x: Math.round(x), y: Math.round(y + 0.34 * size), align: 'below' as const };
+    return { x, y, size, side, port, cell: { x: c.x, y: c.y }, inner, label };
   };
 
   const storm = spot(p.storm.at, Math.round(pitch * 2.1), 'storm');
-  const machineSize = Math.round(pitch * (p.machines.length > 2 ? 1.45 : 1.65));
+  const machineSize = machineSizeAt(pitch);
   const machines = p.machines.map((m) => spot(m.at, machineSize, 'machine'));
 
   // Tray: canonical gem order, only what this puzzle offers.
@@ -209,6 +249,8 @@ export function computeLayout(p: PuzzleDef): AltarLayout {
 /** Clear band for the title between the Codex/Settings buttons and the action buttons. */
 const TITLE_BAND = [220, 1180] as const;
 const TITLE_HALF = 210;
+/** Widest a need label gets ("Needs 20 · got 20"). */
+const LABEL_W = 300;
 /** Lowest y the title block and verdict reach. */
 const TITLE_BOTTOM = 160;
 
@@ -222,7 +264,7 @@ function placeTitle(props: PropSpot[]): { titleX: number; titleMax: number } {
   for (const s of props) {
     if (s.side !== 0 || s.y - s.size * 0.5 > TITLE_BOTTOM) continue;
     const k = s.size / 2;
-    blocks.push([s.x - 0.6 * k, s.x + 0.95 * k + 150]);
+    blocks.push([s.x - 0.6 * k, s.label.x + LABEL_W]);
   }
   if (!blocks.some(([a, b]) => a < mid + TITLE_HALF && b > mid - TITLE_HALF)) {
     return { titleX: mid, titleMax: 900 };
