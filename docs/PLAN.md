@@ -35,7 +35,7 @@ A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 t
 | 2 Playable vertical | game-shell, art-materials, audio-design, difficulty-fun (phase 1), art-props | ✅ merged |
 | 3 Content complete | altar-scene, hall-art, story-scenes | ✅ merged |
 | 4 Alpha + verify | hall-floor ✅, altar-clarity ✅, full-run ✅ (keyboard e2e through all 16 + playtest report), engine-cleanup ✅, engine-adoption ✅, then the playtest fixes before alpha: caption-layout ✅, altar-polish ✅; release label on title ✅; then the M3α pre-release | ✅ merged |
-| 5 Polish | perf-tiers ✅, a11y ✅, polish-1 ✅, first-altar ✅, onboarding-2 🟡; then difficulty-fun phase 2 from alpha-1 feedback, polish backlog, bug bash | 🟡 running |
+| 5 Polish | perf-tiers ✅, a11y ✅, polish-1 ✅, first-altar ✅, onboarding-2 ✅, title-fuse ✅; then difficulty-fun phase 2 from alpha-1 feedback, polish backlog, bug bash | 🟡 running |
 | 6 Ship | v1.0.0 release, tags, itch kit | ⏳ |
 
 ## User feedback backlog
@@ -44,7 +44,7 @@ Each item stays here until it is verified in a merged build. The owning workstre
 | Date | Feedback | Owner | State |
 |---|---|---|---|
 | 2026-11-02 | "Make our cute robot on the home page wander around a bit and say random stuff just for immersion" | title-fuse | ✅ merged; awaiting user check |
-| 2026-11-02 | Re-check after first-altar: gem helper cards ("new item") block the grid; they should fade and be hover/focus pop-ups. "Is the bend a fixed direction? Should it be rotated?" (fixed vs rotatable gems not readable) | onboarding-2 | 🟡 |
+| 2026-11-02 | Re-check after first-altar: gem helper cards ("new item") block the grid; they should fade and be hover/focus pop-ups. "Is the bend a fixed direction? Should it be rotated?" (fixed vs rotatable gems not readable) | onboarding-2 | ✅ merged; awaiting user check |
 | 2026-11-02 | alpha-1 playtest, intake desk: "didn't know what the target was, how to place, and the purple indicator had a shape I followed but the lightning went the other way. Confusing for a new user; address this first." | PM (glyph) + first-altar | ✅ Bend/Gate glyphs match rules (811f25c); ✅ first-time flow (first-altar); awaiting user re-check |
 | 2026-11-02 | Get the real puzzles in (the live build still has stubs) | altar-scene | ✅ all 16 playable (cebe8a7) |
 | 2026-11-02 | Machines are plain boxes; make them machines/buildings with more flavour on the factory floor | hall-art ✅ silhouettes; hall-floor ✅ pipes, cables, lamps, crates, puddles; readable alcove states | ✅ (4a0b76b) |
