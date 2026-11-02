@@ -22,10 +22,15 @@ async function main(): Promise<void> {
     startRenderDemo(res.surface, res.gpu);
     return;
   }
+  if (import.meta.env.DEV && qs.get('demo') === 'props') {
+    const { startPropsDemo } = await import('./scenes/_demo/props-demo');
+    startPropsDemo(res.surface, res.gpu);
+    return;
+  }
 
   // Placeholder until the wave-2 game scenes land.
   const note = document.createElement('p');
-  note.textContent = `${TITLE}: engine up.${import.meta.env.DEV ? ' Try ?demo=render' : ''}`;
+  note.textContent = `${TITLE}: engine up.${import.meta.env.DEV ? ' Try ?demo=render or ?demo=props' : ''}`;
   note.style.cssText =
     'position:fixed;left:0;right:0;bottom:16px;text-align:center;color:#8a93a6;font:14px serif';
   root.appendChild(note);
