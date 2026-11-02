@@ -369,6 +369,27 @@ export class AltarScene implements GameScene {
         height: hint.offsetHeight,
       });
     }
+    // Machine need labels, and the button rows, so the card never moves over them either
+    // (bigger text makes the card taller, and it can reach a label beside an east machine).
+    if (this.dom.isConnected) {
+      const ui = this.ctx.ui;
+      const o = ui.root.getBoundingClientRect();
+      const els = [
+        ...this.needs,
+        this.actionsEl,
+        ...ui.root.querySelectorAll<HTMLElement>('.lr-hud'),
+      ];
+      for (const el of els) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0) continue;
+        regions.push({
+          x: (r.left - o.left) / ui.scale,
+          y: (r.top - o.top) / ui.scale,
+          width: r.width / ui.scale,
+          height: r.height / ui.scale,
+        });
+      }
+    }
     this.ctx.fuse.avoid(regions);
   }
 
@@ -543,6 +564,10 @@ export class AltarScene implements GameScene {
     this.verdict.toggleAttribute('data-narrow', verdictW < 600);
     if (!this.verdict.hidden) place(this.verdict, verdictW);
     for (const el of this.needs) this.clearOfActions(el);
+    // The verdict sits under the title, however many lines the title took.
+    const titleBottom = this.titleEl.offsetTop + this.titleEl.offsetHeight;
+    this.verdict.style.top = `${Math.max(96, titleBottom + 6)}px`;
+    this.avoidTray();
   }
 
   private showVerdict(text: string, outcome: BoltOutcome): void {

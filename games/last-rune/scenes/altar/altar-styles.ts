@@ -173,7 +173,7 @@ const CSS = /* css */ `
   align-items: stretch; gap: 26px; pointer-events: none;
 }
 /* Bigger text: a wider, tighter column so card, page and Continue still fit above the floor. */
-.tc-overlay[data-text-scale] .lr-solve { width: 620px; gap: 14px; }
+.tc-overlay[data-text-scale] .lr-solve { width: 580px; gap: 14px; }
 .tc-overlay[data-text-scale] .lr-solve-card { padding: 18px 28px 22px; }
 .tc-overlay .lr-solve-card {
   padding: 24px 34px 28px; border-radius: 18px; text-align: left;

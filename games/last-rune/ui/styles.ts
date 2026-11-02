@@ -281,7 +281,7 @@ const CSS = /* css */ `
   background: var(--tc-color-surface-alt); border: 2px solid var(--tc-color-border);
 }
 .tc-overlay .lr-settings textarea {
-  width: 100%; box-sizing: border-box; height: 64px; font-family: var(--tc-font-mono); font-size: 18px;
+  width: 100%; box-sizing: border-box; height: calc(64px + (var(--lr-text-scale, 1) - 1) * 72px); font-family: var(--tc-font-mono); font-size: 18px;
   color: var(--tc-color-text); background: rgba(0,0,0,0.35); border: 2px solid var(--tc-color-border); border-radius: 8px; padding: 10px;
 }
 .tc-overlay .lr-settings .lr-row { display: flex; flex-wrap: wrap; gap: 14px; }

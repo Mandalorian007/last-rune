@@ -1,9 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
-import { isRotational } from '../../games/last-rune/rules';
+import { isRotational, type Placement } from '../../games/last-rune/rules';
 import { initialState } from '../../games/last-rune/rules/progression';
 import { GEM_KINDS, type MachineId } from '../../games/last-rune/rules/types';
 import { deriveHall, focusOrder } from '../../games/last-rune/scenes/hall/hall-state';
+import { cursorKeys } from './altar-keys';
 import { PREVIEW_URL, trackProblems, waitForBoot } from './helpers';
 
 // Plays the first two altars of the production build by keyboard only, the way a pad or
@@ -63,20 +64,18 @@ async function altarCursor(page: Page): Promise<{ x: number; y: number }> {
   return { x: x!, y: y! };
 }
 
-/** Build the intended solution with the keyboard cursor: 1-6 picks, R turns, arrows, Enter. */
+/** Build the intended solution with the keyboard: 1-6 picks, R turns, arrows and G move, Enter. */
 async function buildSolution(page: Page, machine: MachineId) {
   const p = puzzleFor(machine);
   const tray = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
+  const placed: Placement[] = [];
   for (const g of p.design.intended) {
     await press(page, `Digit${tray.indexOf(g.gem) + 1}`);
     if (isRotational(g.gem)) await press(page, 'KeyR', g.rot);
-    // The altar moves the cursor on to the route's open end after each Enter; read where.
-    const cursor = await altarCursor(page);
-    const dx = g.cell.x - cursor.x;
-    const dy = g.cell.y - cursor.y;
-    await press(page, dx > 0 ? 'ArrowRight' : 'ArrowLeft', Math.abs(dx));
-    await press(page, dy > 0 ? 'ArrowDown' : 'ArrowUp', Math.abs(dy));
+    // The altar moves the cursor on to the route's open end after each Enter; plan from there.
+    for (const k of cursorKeys(p, placed, await altarCursor(page), g.cell)) await press(page, k);
     await press(page, 'Enter');
+    placed.push({ gem: g.gem, cell: g.cell, rot: g.rot });
   }
 }
 
