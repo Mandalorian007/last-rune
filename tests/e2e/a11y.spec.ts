@@ -105,13 +105,15 @@ test('keyboard path title → settings → hall → altar, with axe and the stri
   await pressKey(page, 'Enter');
   await expect(page.locator('.lr-altar')).toBeVisible();
 
-  // The live region briefs the altar: name, storm, and what the machine needs.
+  // The live region briefs the altar: name, storm, what the machine needs, then the gems this
+  // altar introduces (the same text as the arrival card).
   const need = puzzleFor('intake-desk').machines[0]!.need;
   const announce = page.locator('.lr-altar-announce');
   await expect(announce).toHaveAttribute('aria-live', 'polite');
-  await expect(announce).toHaveText(
-    `Intake Desk altar. Storm ×1 gives 4. The machine needs exactly ${need}.`,
+  await expect(announce).toContainText(
+    `Intake Desk altar. Storm ×1 gives 4. The machine needs exactly ${need}. New: Bend (Fixed in place):`,
   );
+  await expect(announce).toContainText('New: Channel:');
   await page.waitForTimeout(500);
   await expectNoAxeViolations(page, 'altar');
 

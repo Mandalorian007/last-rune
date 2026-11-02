@@ -32,6 +32,8 @@ const TRAY_MIN_X = 470;
 const TRAY_MAX_X = 1070;
 /** Tray row centre. */
 const TRAY_X = (TRAY_MIN_X + TRAY_MAX_X) / 2;
+/** Tray row centre, where the gem info card sits when it points at no slot. */
+export const TRAY_CENTER_X = TRAY_X;
 const TRAY_SPACING = 140;
 const MAX_PITCH = 118;
 /** Machines never shrink below this (design px), so the gauge stays readable on big boards. */

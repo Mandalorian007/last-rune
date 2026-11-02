@@ -97,7 +97,19 @@ describe('new gems', () => {
 
   it('is quiet when replaying a solved altar', () => {
     const all = Object.values(PUZZLES);
-    expect(newGems(puzzleFor('furnace'), all)).toEqual({ fixed: [], tray: [] });
+    expect(newGems(puzzleFor('furnace'), all)).toEqual({ fixed: [], tray: [], turns: [] });
+  });
+
+  it('teaches turning on the first altar that puts a Bend (or Gate) in the hand', () => {
+    const furnace = newGems(puzzleFor('furnace'), solvedOf(['intake-desk']));
+    // Bend was met fixed at intake; furnace's tray Bend is the first one the player can turn.
+    expect(furnace.turns).toEqual(['bend']);
+    const later = newGems(puzzleFor('splitter-mill'), solvedOf(['intake-desk', 'furnace']));
+    expect(later.turns).toEqual([]);
+    // Turning is never taught for kinds that do not turn.
+    for (const p of Object.values(PUZZLES)) {
+      for (const g of newGems(p, []).turns) expect(['bend', 'gate']).toContain(g);
+    }
   });
 
   it('has a FUSE nudge for every new gem, Channel included', () => {
@@ -218,12 +230,14 @@ describe('guide stubs (first meeting a fixed gem)', () => {
   });
 });
 
-describe('storm "Gives" label (first altar)', () => {
+describe('storm "Gives" label (every altar)', () => {
   it('sits on the canvas, above the tray and out of the caption lane', () => {
-    const L = computeLayout(puzzleFor('intake-desk'));
-    const s = L.storm.label;
-    expect(s.x).toBeGreaterThan(80);
-    expect(s.y).toBeLessThan(L.trayY - 120);
-    expect(s.x > CAPTION_LANE.x && s.y > CAPTION_LANE.y).toBe(false);
+    for (const p of Object.values(PUZZLES)) {
+      const L = computeLayout(p);
+      const s = L.storm.label;
+      expect(s.x, p.id).toBeGreaterThan(80);
+      expect(s.y, p.id).toBeLessThan(L.trayY - 120);
+      expect(s.x > CAPTION_LANE.x && s.y > CAPTION_LANE.y, p.id).toBe(false);
+    }
   });
 });

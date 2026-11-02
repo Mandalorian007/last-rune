@@ -69,7 +69,6 @@ async function audit(page: Page, shot: string) {
       '.lr-altar-need',
       '.lr-altar-verdict',
       '.lr-altar-tip',
-      '.lr-altar-teach',
       '.tc-caption',
       '.lr-hud',
       '.lr-nameplate',

@@ -16,3 +16,14 @@
 `pnpm check`, `pnpm build` and `pnpm test:e2e` must pass, including `full-run`, `a11y` and `altar`. Report with fresh-eyes screenshot sequences.
 
 ## Log
+
+**2026-11-02, onboarding-2 agent.** All six items plus the two PM playtest items (D-027).
+
+- **PM-1, gem helper cards.** The rule cards pinned over new fixed gems (`.lr-altar-teach`) are gone. There is one gem info card (`updateInfo` in `altar-scene.ts`), always over the tray band, never over sockets. It shows for a hovered or held tray gem, for a board gem under the pointer or keyboard cursor, and on arrival for this altar's new gems (7 s, cut to a 0.5 s fade by the first placement; no fade under reduced motion). The briefing and keyboard focus read the same text through the announcer; taking a gem announces its rule.
+- **PM-2, fixed vs turning.** Fixed and hint-locked gems wear iron corner brackets with a hex bolt head (DOM, procedural CSS) and a cold iron ring instead of gold. Their card is tagged "Fixed in place". On the altar that first puts a Bend (furnace) or Gate (foundry) in the tray, the held gem wears a turn arrow with "R / Scroll" until the first turn, and its card is tagged "Turns: R or scroll". Held over a socket it fits, the gem is tried in the route preview, so the preview swings as it turns (linking and Strike-ready ignore it). `teach.ts` gained `NewGems.turns`.
+- **1.** "Gives N" on every altar, kept clear of the buttons like the needs. New playtest `scripts/playtest/altars.spec.ts` screenshots and audits all 16 altars at 1280/1920 × 100/150%: zero overlaps. New e2e guard `tests/e2e/altar-labels.spec.ts` (all 16 at 1280×720, 150%, about 30 s) using `tests/e2e/altar-audit.ts`.
+- **2.** Strike-ready on every altar when the route reaches every machine over all strikes (so a Capacitor altar counts its release). Still not "exact".
+- **3.** Nudges no longer fire on pickup. They queue on arrival and play one at a time when FUSE is free, skipped if the gem is already in use (route reaches the new fixed gem, or the tray gem is on the board). The five nudges now say "on the altar", not "in the tray" (same word counts; `script.md` synced; `pitch-v0.3.md` has no nudges).
+- **4.** Tray gems rest as they will sit: Channel, Split, Amplify and Capacitor face the storm; Bend and Gate show rot 0, as they are held.
+- **5.** Until the first strike, the route preview carries dashed charge chips into and out of each new gem it reaches (furnace reads `4 → Amplify → 8`). Fresh-eyes sequences: `scripts/playtest/new-gems.spec.ts` (intake-desk, furnace, conveyor-a, relay-tower, foundry, capacitor-bay).
+- **6.** Not promoted. `glyphs.spec.ts` places gems and writes screenshots and crop boxes for a human to compare against `rules.md`; it asserts nothing about glyph shape, and a pixel check of bloomed GPU output would be flaky across Metal and SwiftShader. The cheap, stable guard is the label audit above, which is promoted.
