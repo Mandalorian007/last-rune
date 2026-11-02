@@ -29,7 +29,7 @@ tray, the storm strength and the altar size never use anything the puzzle doesn'
 | boiler-room | Bend, Split, storm 2× | Bend, Split, storm 2× | yes |
 | archive | Bend, Gate, altar 8×6 | Bend, Gate, altar 8×6 | yes |
 | foundry | Bend, Amplify, Gate | Bend, Amplify, Gate | yes |
-| capacitor-bay | Bend, Split, Gate, storm 2×, altar 8×6 | Bend, Split, Gate, storm 2× (6×4 altar) | yes |
+| capacitor-bay | Bend, Split, Gate, storm 2×, altar 8×6 | Bend, Split, Gate, storm 2×, altar 8×6 | yes |
 | lift-shaft | + Capacitor | Bend, Split, Gate, Capacitor, storm 2×, altar 8×6 | yes |
 | roof-array | + Capacitor | Bend, Split, Gate, Capacitor, storm 2×, altar 8×6 | yes |
 | control-booth | Bend, Amplify, Split, Gate, Capacitor, storm 2×, storm 4×, altar 8×6 | all of these | yes |
@@ -39,13 +39,17 @@ When a puzzle teaches a gem the player doesn't own yet, the gem is **pre-set** (
 altar. The suite checks that each of these pre-set gems is essential: take it away and the puzzle
 can't be solved.
 
-- furnace: two pre-set Amplifies (the second one shows that stacking does nothing).
+- furnace: two pre-set Amplifies, both off the shortest road (the first try reads under).
 - splitter-mill, conveyor-a: a pre-set Split.
 - relay-tower: a pre-set Split and a pre-set Gate. The player owns neither Split nor Amplify, so
   the Gate's two inputs come from the fixed Split.
 - crane, archive, foundry: Split isn't guaranteed there, so each has a pre-set Split.
 - capacitor-bay: a pre-set Capacitor (it grants Capacitor, so the player doesn't own one yet).
-- the-last-rune: a fixed frame (Split, Gate, four Bends) that keeps the 10×8 search small. The
+- control-booth, lift-shaft: pre-set rails (Channels) so the work is the idea, not laying
+  channel; control-booth also has a pre-set amber lure on the straight road (not essential:
+  it must be routed around).
+- the-last-rune: a fixed frame (Split, Gate, four Bends, and the Channel rails of both arms)
+  that keeps the 10×8 search small and the solution space tight. The
   Gate is the only one the puzzle can't do without, but the test doesn't assert that: the
   player's tray has no Gate, yet proving the puzzle unsolvable without the fixed Gate takes the
   solver about 13 s.
@@ -60,7 +64,7 @@ Channel and Bend are left out of that column unless the puzzle is about them.
 | # | Machine | Altar | Storm | Machines (need) | Essential | Gems | Solutions | Min | Insight |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | intake-desk | 6×4 | 1× | 1 (4) | channel | 5 | 1 | 1 | Channels carry the bolt straight; the pre-set amethyst turns it. |
-| 2 | furnace | 6×4 | 1× | 1 (8) | bend | 7 | 4 | 2 | Amber doubles a bolt once. A second amber on the same path does nothing. |
+| 2 | furnace | 6×4 | 1× | 1 (8) | bend | 8 | 3 | 2 | Amber doubles a bolt: the short road reads half, so bend through one amber. |
 | 3 | splitter-mill | 6×4 | 1× | 2 (2, 2) | bend | 8 | 2 | A split sends halves out of its sides, never straight on: feed it from above. |
 | 4 | relay-tower | 6×4 | 1× | 1 (4) | bend | 9 | 2 | The emerald fires only when both sides are live: bring both halves of the split home. |
 | 5 | conveyor-a | 6×4 | 1× | 1 (4) | bend | 6 | 2 | The stuck amber doubles the bolt; route it through the old magenta to halve it again. |
@@ -70,13 +74,13 @@ Channel and Bend are left out of that column unless the puzzle is about them.
 | 9 | boiler-room | 6×4 | 2× | 4 (2 each) | split | 13 | 4 | A double bolt feeds four boilers: a tree of three splits. |
 | 10 | archive | 8×6 | 1× | 2 (3, 1) | gate | 20 | 3 | 5 | Every spark has a drawer: two and one for the big cabinet, one for the small. |
 | 11 | foundry | 6×4 | 1× | 1 (6) | amplify, gate | 10 | 4 | Six: amplify only one half of the split, then merge them. |
-| 12 | capacitor-bay | 6×4 | 2×, 2 strikes | 2 (4, 8) | split (+ fixed capacitor) | 7 | 4 | The ice keeps a half from the first strike and adds it to the second. |
-| 13 | lift-shaft | 8×6 | 2×, 2 strikes | 1 (12) | split, gate, capacitor | 19 | 12 | 6 | Twelve from eight: bank one half, and on the second strike merge the release with the other. |
+| 12 | capacitor-bay | 8×6 | 2×, 2 strikes | 2 (2, 8) | split (+ fixed capacitor) | 13 | 11 | 5 | The ice hands its whole first strike to the second: give it half, and it gives the machine double. |
+| 13 | lift-shaft | 8×6 | 2×, 2 strikes | 1 (12) | split, gate, capacitor | 10 | 3 | 6 | Twelve from eight: bank one half, and on the second strike merge the release with the other. |
 | 14 | roof-array | 8×6 | 2×, 2 strikes | 2 (2, 10) | split, gate, capacitor | 18 | 5 | 6 | The emerald waits for the ice: alone on the first strike, it adds to the release on the second. |
-| 15 | control-booth | 8×6 | 4× | 2 (4, 20) | split, amplify, gate | 19 | 6 | 7 | Twenty from sixteen: amplify one half, split the other, and merge. |
-| 16 | the-last-rune | 10×8 | 4×, 2 strikes | 3 (4, 2, 20) | split, amplify, capacitor (+ fixed gate) | 22 | 72 | 8 | Amplify the bolt you bank: the ice keeps the amber's work, and the emerald adds it to the rest. |
+| 15 | control-booth | 8×6 | 4× | 2 (4, 20) | split, amplify, gate | 16 | 1 | 7 | Twenty from sixteen: amplify one half, split the other, and merge. |
+| 16 | the-last-rune | 10×8 | 4×, 2 strikes | 3 (4, 2, 20) | split, amplify, capacitor (+ fixed gate) | 15 | 4 | 8 | Amplify the bolt you bank: the ice keeps the amber's work, and the emerald adds it to the rest. |
 
-Total estimated play time is about 63 minutes. The early puzzles are on 6×4 altars with one or
+Total estimated play time is about 64 minutes (design scale; see difficulty-curve.md). The early puzzles are on 6×4 altars with one or
 two decisions each. The 8×6 puzzles have mazes of blocked sockets, so routing is a real part of
 the work without the search blowing up.
 
@@ -92,10 +96,14 @@ the work without the search blowing up.
   essential: take it away and the puzzle can't be solved.
 - **control-booth** has a Capacitor in the tray as a red herring. There is only one strike, so
   anything banked never comes out. The solver confirms Capacitor isn't essential.
-- **the-last-rune** has 72 canonical solutions. Most of them are variations in how the long
-  routes are drawn; the core idea (amplify, bank, merge) is the same in all of them. Its full
-  count takes about 10 s, so the default suite only checks that it's solvable and which gems it
-  needs. Run `FULL=1 pnpm test` to count it.
+- **the-last-rune** has 4 canonical solutions (was 72, which were variations of where the
+  amber and ice sat on long runs). The upper arm's two open sockets must hold the amber and the
+  ice together; the 4 are their order × the small machine's last turn. Its full count takes
+  about 3 s, so the default suite only checks that it's solvable and which gems it needs. Run
+  `FULL=1 pnpm test` to count it.
+- **Difficulty** per puzzle (score, bot, required ideas) and the target curve are in
+  `docs/design/difficulty-curve.md`; `pnpm puzzle <machineId>` shows any puzzle with its
+  metrics and a solution.
 
 ## Solver figures
 
@@ -104,9 +112,10 @@ Measured with `solve()` on an M-series laptop. All are uncapped (exhaustive).
 | Machine | Nodes | Time |
 |---|---|---|
 | everything up to foundry | < 30 k | < 130 ms each |
-| lift-shaft | 34 k | 125 ms |
-| roof-array | 78 k | 240 ms |
-| control-booth | 384 k | 0.8 s |
-| the-last-rune | 2.4 M | 9.8 s (essentials 2.4 s) |
+| capacitor-bay | 74 k | 200 ms |
+| lift-shaft | 4 k | 12 ms |
+| roof-array | 78 k | 210 ms |
+| control-booth | 60 k | 120 ms |
+| the-last-rune | 0.72 M | 2.7 s (essentials 0.9 s) |
 
-The default suite runs in about 3.5 s.
+The default suite runs in about 2 s.
