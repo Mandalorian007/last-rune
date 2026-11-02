@@ -45,6 +45,23 @@ interface Entry {
 let idCounter = 0;
 
 /**
+ * Put this attribute on an opener (or any ancestor, e.g. a HUD bar) whose buttons double as
+ * keyboard shortcuts. When a panel it opened closes, focus does not go back to it, because a
+ * focused button would swallow the game's keys. Focus goes to the next panel down, else to
+ * the stack's focus home.
+ */
+export const NO_RESTORE_FOCUS_ATTR = 'data-tc-no-restore-focus';
+
+export interface PanelStackFocusOptions {
+  /**
+   * Where focus goes when a panel closes and there is nowhere better: the opener is gone,
+   * inert, marked `NO_RESTORE_FOCUS_ATTR` or was nothing (`<body>`), and no panel is left
+   * to focus. Typically the game canvas, so key handling keeps working.
+   */
+  home?: () => HTMLElement | null;
+}
+
+/**
  * A stack of panels inside one container. The top panel gets keyboard focus; Esc closes it
  * (if dismissible); Tab cycles inside the top modal; lower panels and `inertWhenModal`
  * elements are made `inert` while a modal is on top.
@@ -58,10 +75,12 @@ export class PanelStack {
   /**
    * @param container where panel hosts are appended (the overlay's `panels` layer).
    * @param inertWhenModal other elements to make inert while a modal is open (e.g. the HUD layer).
+   * @param focus where focus goes on close when the opener shouldn't (or can't) get it back.
    */
   constructor(
     private readonly container: HTMLElement,
     private readonly inertWhenModal: readonly HTMLElement[] = [],
+    private readonly focus: PanelStackFocusOptions = {},
   ) {
     this.doc = container.ownerDocument;
     this.doc.addEventListener('keydown', this.onKey);
@@ -140,6 +159,23 @@ export class PanelStack {
     return entry.handle;
   }
 
+  /**
+   * What Esc does, for other input devices (e.g. a gamepad's back button): close the top
+   * panel if it is dismissible. Returns true if one closed.
+   */
+  dismissTop(): boolean {
+    const top = this.entries.at(-1);
+    if (!top || top.opts.dismissible === false) return false;
+    top.handle.close('escape');
+    return true;
+  }
+
+  /** The top panel's element if it is modal (the one keyboard focus is trapped in). */
+  get topModalElement(): HTMLElement | null {
+    const top = this.entries.at(-1);
+    return top && top.opts.modal !== false ? top.panel : null;
+  }
+
   /** Close the top panel. Returns false if the stack was empty. */
   pop(reason: CloseReason = 'programmatic'): boolean {
     const top = this.entries.at(-1);
@@ -177,14 +213,23 @@ export class PanelStack {
     if (restore && wasTop) {
       const back = entry.restoreFocus as HTMLElement | null;
       const top = this.entries.at(-1);
-      if (back?.isConnected && typeof back.focus === 'function' && !back.closest('[inert]')) {
+      if (this.canRestore(back)) {
         back.focus();
       } else if (top) {
         this.focusInitial(top);
+      } else {
+        this.focus.home?.()?.focus({ preventScroll: true });
       }
     }
     entry.opts.onClose?.(reason);
     this.emit();
+  }
+
+  private canRestore(el: HTMLElement | null): el is HTMLElement {
+    if (!el?.isConnected || typeof el.focus !== 'function' || el.closest('[inert]')) return false;
+    // With a focus home, "nothing was focused" restores to home rather than to <body>.
+    if (this.focus.home && (el === this.doc.body || el === this.doc.documentElement)) return false;
+    return !el.closest(`[${NO_RESTORE_FOCUS_ATTR}]`);
   }
 
   /** Inert everything below the topmost modal. */

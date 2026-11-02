@@ -24,6 +24,11 @@ export interface OverlayOptions {
   caption?: CaptionOptions;
   /** Max simultaneous toasts. Default 3. */
   maxToasts?: number;
+  /**
+   * Where focus goes when the last panel closes and its opener can't or shouldn't get it
+   * back (typically the canvas). See `PanelStackFocusOptions.home` and `NO_RESTORE_FOCUS_ATTR`.
+   */
+  focusHome?: () => HTMLElement | null;
 }
 
 export interface Overlay {
@@ -82,7 +87,9 @@ export function createOverlay(opts: OverlayOptions): Overlay {
   opts.parent.append(root);
 
   // Captions and HUD go inert under a modal; toasts stay readable.
-  const stack = new PanelStack(layers.panels, [layers.hud, layers.captions]);
+  const stack = new PanelStack(layers.panels, [layers.hud, layers.captions], {
+    home: opts.focusHome,
+  });
   const toasts = new Toaster(layers.toasts, opts.maxToasts ?? 3);
   const caption = new CaptionCard(layers.captions, opts.caption);
   // A modal hides the caption and pauses it, so a line is never read through (or lost under) a
