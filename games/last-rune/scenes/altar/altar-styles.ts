@@ -97,6 +97,7 @@ const CSS = /* css */ `
   animation: lr-altar-pop 260ms var(--tc-easing) both;
 }
 .tc-overlay .lr-altar-verdict[hidden] { display: none; }
+.tc-overlay .lr-altar-verdict[data-narrow] { font-size: 24px; letter-spacing: 0; padding: 8px 18px; }
 .tc-overlay .lr-altar-verdict[data-outcome="over"] { border-color: #ff5a3c; }
 .tc-overlay .lr-altar-verdict[data-outcome="under"] { border-color: #ffb03f; }
 .tc-overlay .lr-altar-verdict[data-outcome="exact"] { border-color: #3fe0ff; color: #dff9ff; }

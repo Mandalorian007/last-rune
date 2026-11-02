@@ -5,7 +5,7 @@ import { altarDims } from '../../rules/model';
 import type { MachineId } from '../../rules/types';
 import { chargeChips, liveSockets, previewPath } from './circuit-model';
 import { computeLayout } from './layout';
-import { newGems, nudgeGems } from './teach';
+import { firstSentence, newGems, nudgeGems } from './teach';
 
 const P = (gem: Placement['gem'], x: number, y: number, rot: Placement['rot'] = 0): Placement => ({
   gem,
@@ -108,6 +108,16 @@ describe('new gems', () => {
       const kinds = [...news.fixed.map((f) => f.gem), ...news.tray].filter((g) => g !== 'channel');
       expect(nudgeGems(news).sort()).toEqual([...new Set(kinds)].sort());
     }
+  });
+});
+
+describe('teach card', () => {
+  it('pins only the first sentence of a rule', () => {
+    expect(firstSentence('Turns the bolt 90°. Hit it wrong and it fizzles.')).toBe(
+      'Turns the bolt 90°.',
+    );
+    expect(firstSentence('No full stop')).toBe('No full stop');
+    expect(firstSentence('Holds 2.5 units. Then fires.')).toBe('Holds 2.5 units.');
   });
 });
 

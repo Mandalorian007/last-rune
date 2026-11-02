@@ -14,3 +14,29 @@
 6. Keep `tests/e2e/altar.spec.ts` green and update the screenshots. `pnpm check`, `pnpm build` and `pnpm test:e2e` must pass.
 
 ## Log
+
+- **Wave 4 (altar-clarity).** Before shots were critiqued as a first-time player. Problems found:
+  - A held gem lit every legal socket, so the board read as a grid of holes.
+  - Machines were small and sat off to the side, with tiny `Needs` labels.
+  - Under and over results had no explanation on the board.
+  - Fizzle tags overlapped on the finale.
+  - The finale verdict wrapped to three lines.
+- **Changes** (all in `scenes/altar/`):
+  - `circuit-model.ts` (pure, tested): the live-socket mask, the route preview and charge chips.
+  - `circuit-overlay.ts`: one premultiplied material for veils and brass conduits.
+  - Machines are larger (180–230 px). Need labels are larger and sit against the cabinet.
+  - Charge chips show on the board, conduits light up by outcome, and multi-strike labels get per-strike pips.
+  - Fizzle tags no longer overlap.
+  - Verdicts are shorter (no ordinal), with a narrow mode for tight title gaps.
+  - `teach.ts`: new-gem detection for first appearances, fixed-gem rule cards, a tray bob and FUSE nudges.
+- **Merged main** (story-scenes):
+  - On exact, the verdict now shows `exactLine(tier)`.
+  - New gems use `gemNudge(gem)`. The placeholder line ids are gone.
+  - `TEACH_NUDGE` comes from content.
+- **For the PM to decide:**
+  1. `PREVIEW_PATH` (on): the edit-time route preview and open-end glow show which way the bolt goes. This makes puzzles a little easier because of the direction hints, but no charge is shown.
+  2. The veil is cosmetic only. Quiet sockets still accept gems.
+  3. Channel has no `nudge.channel` line. Its first appearance gets the tray bob and tooltip only. Add a line if wanted.
+- **Known issue:** on splitter-mill the storm's stand overlaps the roof of the west machine's cabinet (they are one row apart on the same side). This was already true before; the bigger cabinets make it more visible. The fix would be a layout offset for stacked props on one side. It is not done.
+- `ParticleSystem.clear()` is not used yet: engine-cleanup has not landed on main.
+

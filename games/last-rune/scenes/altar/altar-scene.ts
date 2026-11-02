@@ -52,7 +52,7 @@ import {
   gemsUsed,
   type StrikeTimeline,
 } from './strike';
-import { type NewGems, newGems, nudgeGems } from './teach';
+import { firstSentence, type NewGems, newGems, nudgeGems } from './teach';
 
 type Mode = 'edit' | 'strike' | 'result';
 
@@ -343,6 +343,7 @@ export class AltarScene implements GameScene {
       hidden: true,
       style: { left: `${L.titleX}px`, maxWidth: `${L.titleMax}px` },
     });
+    if (L.titleMax < 600) this.verdict.dataset.narrow = '';
     this.tip = h('div', { class: 'lr-altar-tip', role: 'tooltip', hidden: true });
     this.counts = L.tray.map((s) =>
       h('div', { class: 'lr-altar-count', style: { left: `${s.x}px`, top: `${s.y + 40}px` } }),
@@ -517,6 +518,7 @@ export class AltarScene implements GameScene {
     const L = this.view.layout;
     const a = { x: 0, y: 0 };
     const b = { x: 0, y: 0 };
+    const chipPx = Math.max(16, Math.min(24, Math.round(L.pitch * 0.3)));
     for (const c of chips) {
       anchorOf(L, c.from, a);
       anchorOf(L, c.to, b);
@@ -527,7 +529,13 @@ export class AltarScene implements GameScene {
         {
           class: 'lr-altar-chip',
           hidden: true,
-          style: { left: `${a.x + (b.x - a.x) * t}px`, top: `${a.y + (b.y - a.y) * t}px` },
+          style: {
+            left: `${a.x + (b.x - a.x) * t}px`,
+            top: `${a.y + (b.y - a.y) * t}px`,
+            // Chips scale with the board so a 10-wide altar's run of changes stays legible.
+            fontSize: `${chipPx}px`,
+            lineHeight: `${chipPx + 6}px`,
+          },
         },
         String(c.charge),
       );
@@ -590,7 +598,7 @@ export class AltarScene implements GameScene {
           style: { left: `${pt.x}px`, top: `${pt.y - L.pitch * 0.5}px` },
         },
         h('b', null, GEM_NAME[f.gem]),
-        ` ${this.rules[f.gem] ?? ''}`,
+        ` ${firstSentence(this.rules[f.gem] ?? '')}`,
       );
       el.dataset.gem = f.gem;
       this.dom.append(el);
@@ -1158,10 +1166,9 @@ export class AltarScene implements GameScene {
     const L = this.view.layout;
     const o = res.outcome;
     const ms = res.machines;
-    const say = (i: number, text: string) =>
-      ms.length > 1
-        ? `${['First', 'Second', 'Third', 'Fourth'][i] ?? 'A'} machine: ${text[0]!.toLowerCase()}${text.slice(1)}`
-        : text;
+    // The numbers name the machine: its need label shows the same "Needs N · got M", lit in
+    // the outcome colour, so a multi-machine verdict needs no "second machine" ordinal.
+    const say = (_i: number, text: string) => text;
     if (o === 'exact') {
       // The solve moment's FUSE line follows at once, so the exact line rides in the verdict.
       this.showVerdict(exactLine(Math.min(4, this.ctx.tier()) as 1 | 2 | 3 | 4).text, 'exact');
@@ -1174,13 +1181,13 @@ export class AltarScene implements GameScene {
       if (o === 'over') {
         const m = ms[over]!;
         this.showVerdict(
-          say(over, `Breaker tripped (needs ${m.need}, got ${this.lastReading(m)})`),
+          say(over, `Breaker tripped: needs ${m.need}, got ${this.lastReading(m)}`),
           'over',
         );
       } else if (o === 'under') {
         const m = ms[under] ?? ms[0]!;
         this.showVerdict(
-          say(under, `Not enough (needs ${m.need}, got ${this.lastReading(m)})`),
+          say(under, `Not enough: needs ${m.need}, got ${this.lastReading(m)}`),
           'under',
         );
       } else {

@@ -51,3 +51,9 @@ export function newGems(p: PuzzleDef, solved: readonly PuzzleDef[]): NewGems {
 export function nudgeGems(news: NewGems): GemKind[] {
   return [...news.fixed.map((f) => f.gem), ...news.tray].filter((g) => !!gemNudge(g));
 }
+
+/** The first sentence of a codex rule: the one-line hint pinned beside a new gem. */
+export function firstSentence(rule: string): string {
+  const m = /^.*?[.!?](?=\s|$)/.exec(rule.trim());
+  return m ? m[0] : rule.trim();
+}
