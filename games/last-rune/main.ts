@@ -27,6 +27,12 @@ async function main(): Promise<void> {
   if (!root) throw new Error('#app missing');
   const qs = new URLSearchParams(location.search);
 
+  if (import.meta.env.DEV && qs.get('demo') === 'audio') {
+    const { startAudioDemo } = await import('./scenes/_demo/audio-demo');
+    startAudioDemo(root);
+    return;
+  }
+
   const res = await boot(root, {
     title: TITLE,
     forceUnsupported: import.meta.env.DEV && qs.has('nogpu'),
