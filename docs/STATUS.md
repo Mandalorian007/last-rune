@@ -28,6 +28,7 @@ _Last updated: 2026-11-02 by PM_
 | engine-adoption | ws/engine-adoption | ✅ merged | ending eases with post.blendTo; Builder's mark readable through the door; credits backed over the gold; storm on PingPong; linear emboss mask; global C/O/J; ending Fuse leak fixed. 60fps, draws unchanged |
 | title-fuse | ws/title-fuse | ✅ merged | FUSE strolls between 3 spots left of the menu (still under reduced motion), 22 Tier-1 title lines every 12–20 s, no repeats, caption avoids the menu, silenced on Play |
 | codex-2 | ws/codex-2 | 🟡 running | Codex shows real gem images (+ in/out diagrams for Bend/Gate/Split); entries unlock on first sight, marked Seen vs Yours |
+| ending-2 | ws/ending-2 | 🟡 running | D-032: no Discord details; FUSE "went to ThunderClap Gaming" and made friends; chat mock removed; credits name ThunderSoap |
 | capacitor-clarity | ws/capacitor-clarity | 🟡 running | make the two-strike Capacitor readable before and during the strike (capacitor-bay, lift-shaft, roof-array); no rule changes |
 | onboarding-2 | ws/onboarding-2 | ✅ merged | gem info card lives over the tray band (hover/focus/held; arrival card fades), fixed gems get iron brackets + "Fixed in place", first turnable Bend/Gate shows a turn badge and the preview swings as it turns; Gives N + strike-ready on all 16; new-gem lines before use; tray matches board; charge chips on new gems; `altar-labels.spec` e2e |
 | split-rotate | ws/split-rotate | ✅ merged | D-031: Split has one input (stem) and turns; octagon cut + bold T glyph with outward arrows; red ✕ where the preview stops at a wrong-facing Bend/Gate/Split; 14 Split puzzles keep their routes (conveyor-a 8→4 solutions); solver ignores turn choice in scoring (follow-up) |
@@ -46,7 +47,6 @@ _Last updated: 2026-11-02 by PM_
 ## Risks
 - e2e flake (fixed twice over): repeat taps now queue in Input, and each worktree runs e2e on its own ports (tests/e2e/ports.ts).
 - The master limiter is now on by default (above −1 dBFS only). Needs a human listen along with the rest of the audio.
-- Invented UI copy in the ending (credits, chat server/channel, 6 reactor handles, labels) awaits user confirmation: `docs/design/ending.md`.
 - Audio is only objectively checked (levels, clicks, loops). Needs a human listen; 52 MiB decoded audio may matter on low-memory devices.
 - Photosensitivity: the breaker flash whites out most of the frame for ~0.3 s. hall-art adds a "Reduce flashes" setting (on with reduced motion).
 - Perf measured on Apple M4 only. The game is fill-bound; Auto scales resolution (floor 0.6) and drops to Low if needed. The ending flood at DPR 2 on High is over budget (~17–20 ms GPU); Auto/Low handle it. Still want a real integrated-PC-GPU check.
