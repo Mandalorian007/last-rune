@@ -14,6 +14,7 @@ import { MACHINES } from '../../content/machines';
 import {
   type CapabilityKey,
   capabilityKey,
+  capabilityLabel,
   conduits,
   isSolved,
   isUnlocked,
@@ -32,6 +33,8 @@ export type AlcoveStatus = 'solved' | 'unlocked' | 'locked';
 export interface SocketModel {
   readonly capability: CapabilityKey;
   readonly colour: SocketColour;
+  /** Words for the socket ("Bend", "Storm ×2"), so the door isn't read by colour alone. */
+  readonly label: string;
   /** Storm sockets show `rings` concentric rings (strength); otherwise 1. */
   readonly rings: number;
 }
@@ -89,6 +92,7 @@ export function deriveHall(state: ProgressState, graph: MachineGraph = MACHINES)
         ? missingFor(m, state, graph).map((c) => ({
             capability: capabilityKey(c),
             colour: socketColour(c),
+            label: capabilityLabel(c),
             rings: c.type === 'storm' ? c.strength : 1,
           }))
         : [];
@@ -167,6 +171,20 @@ export function lineForAlcove(a: AlcoveModel): FuseLine | undefined {
   if (own) return own;
   const first = a.missing[0];
   return first ? socketLine(first.capability) : undefined;
+}
+
+/**
+ * The name plate's status line. A locked door names what it is waiting for in words, so
+ * the coloured sockets aren't the only cue.
+ */
+export function alcoveNote(a: AlcoveModel): string {
+  if (a.status === 'solved') return 'Restored';
+  if (a.status === 'unlocked') return 'Open · click or Enter to restore';
+  const needs = a.missing.map((m) => m.label);
+  if (a.missingMachines > 0) {
+    needs.push(`${a.missingMachines} more machine${a.missingMachines === 1 ? '' : 's'}`);
+  }
+  return needs.length ? `Locked · needs ${needs.join(', ')}` : 'Locked';
 }
 
 /** Keyboard focus order: front of the hall to the back, then left to right. */

@@ -5,6 +5,7 @@ import type { MachineId } from '../../rules/types';
 import {
   ALCOVE_HIT,
   alcoveAt,
+  alcoveNote,
   deriveHall,
   focusOrder,
   type HallModel,
@@ -42,10 +43,23 @@ describe('hall state', () => {
   it('storm sockets carry their ring count; the booth counts missing machines', () => {
     const m = deriveHall(initialState());
     expect(byId(m, 'boiler-room').missing).toEqual([
-      { capability: 'storm:2', colour: 'cyan', rings: 2 },
+      { capability: 'storm:2', colour: 'cyan', label: 'Storm ×2', rings: 2 },
     ]);
     expect(byId(m, 'control-booth').missingMachines).toBe(14);
     expect(byId(m, 'the-last-rune').floor).toBe(true);
+  });
+
+  it('the name plate names what a locked door needs, not just its colour', () => {
+    const m = deriveHall(initialState());
+    expect(alcoveNote(byId(m, 'intake-desk'))).toBe('Open · click or Enter to restore');
+    const furnace = byId(m, 'furnace');
+    expect(alcoveNote(furnace)).toMatch(/^Locked · needs \S/);
+    expect(alcoveNote(furnace)).toContain(furnace.missing[0]!.label);
+    expect(alcoveNote(byId(deriveHall(solvedAfter('intake-desk')), 'intake-desk'))).toBe(
+      'Restored',
+    );
+    const booth = m.alcoves.find((a) => a.missingMachines > 0);
+    if (booth) expect(alcoveNote(booth)).toMatch(/\d+ more machines?$/);
   });
 
   it('newlyUnlocked lists doors opened by a solve', () => {

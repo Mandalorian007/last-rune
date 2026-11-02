@@ -234,8 +234,8 @@ const CSS = /* css */ `
   font-family: var(--tc-font-mono); font-size: 20px; line-height: 1.4; color: #6b3b10;
   transform: rotate(2deg); border-left: 3px dashed rgba(140,80,20,0.45);
 }
-.tc-overlay .lr-margin b { display: block; font-size: 16px; letter-spacing: 2px; opacity: 0.7; margin-bottom: 6px; }
-.tc-overlay .lr-codex-folio { grid-column: 1 / -1; align-self: end; text-align: center; font-size: 22px; color: #7a5a3a; }
+.tc-overlay .lr-margin b { display: block; font-size: 16px; letter-spacing: 2px; margin-bottom: 6px; }
+.tc-overlay .lr-codex-folio { grid-column: 1 / -1; align-self: end; text-align: center; font-size: 22px; color: #5e4329; }
 .tc-overlay .lr-codex-head {
   position: absolute; left: 0; right: 0; top: -2px; z-index: 3; text-align: center; pointer-events: none;
   font-size: 22px; letter-spacing: 2px; color: #f0d79c; text-shadow: 0 1px 2px #000;

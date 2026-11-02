@@ -5,7 +5,7 @@
 const CSS = /* css */ `
 .tc-overlay .lr-altar { position: absolute; inset: 0; pointer-events: none; }
 .tc-overlay .lr-altar button { pointer-events: auto; }
-.tc-overlay .lr-altar kbd { font-family: var(--tc-font-mono); font-size: 18px; opacity: 0.65; margin-left: 10px; }
+.tc-overlay .lr-altar kbd { font-family: var(--tc-font-mono); font-size: 18px; opacity: 0.8; margin-left: 10px; }
 
 .tc-overlay .lr-altar-title {
   position: absolute; left: 50%; top: 18px; transform: translateX(-50%); text-align: center;
@@ -137,9 +137,10 @@ const CSS = /* css */ `
 
 .tc-overlay .lr-altar-hint {
   position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); white-space: nowrap;
-  font-size: 19px; color: rgba(232,220,192,0.62); text-shadow: 0 1px 4px #000;
+  font-size: 19px; color: rgba(232,220,192,0.9); text-shadow: 0 1px 4px #000;
+  padding: 6px 80px; background: radial-gradient(closest-side, #05060ab0, #05060a70 60%, #05060a00);
 }
-.tc-overlay .lr-altar-hint b { color: rgba(232,192,106,0.85); font-weight: 600; }
+.tc-overlay .lr-altar-hint b { color: #e8c06a; font-weight: 600; }
 [data-reduced-motion] .tc-overlay .lr-altar-verdict,
 [data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-altar-teach,
 [data-reduced-motion] .tc-overlay .lr-altar-tag { animation: none; }

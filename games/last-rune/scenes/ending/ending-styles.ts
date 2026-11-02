@@ -60,6 +60,12 @@ const CSS = /* css */ `
 /* ── Title card, safety record, credits ─────────────────────────────────── */
 .tc-overlay .lr-end-title {
   position: absolute; left: 0; right: 0; top: 150px; text-align: center; opacity: 0; transition: opacity 1600ms ease;
+  isolation: isolate;
+}
+/* A scrim so the lines stay readable over the ending's bright bloom. */
+.tc-overlay .lr-end-title::before {
+  content: ''; position: absolute; z-index: -1; left: 12%; right: 12%; top: -50px; bottom: -50px;
+  background: radial-gradient(closest-side, #1c0d02c8, #1c0d0290 55%, #1c0d0200);
 }
 .tc-overlay .lr-end-title[data-in] { opacity: 1; }
 .tc-overlay .lr-end-title h2 {
@@ -109,7 +115,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-end-footer {
   margin: 0; padding: 16px 90px; font-family: var(--tc-font-ui); font-size: 24px; color: #fff4dc;
   text-shadow: 0 1px 3px #2a1400, 0 2px 12px #2a1400aa;
-  background: radial-gradient(closest-side, #1c0d02a8, #1c0d0270 50%, #1c0d0200);
+  background: radial-gradient(closest-side, #1c0d02d8, #1c0d02a0 55%, #1c0d0200);
 }
 .tc-overlay .lr-end-back { margin-top: 8px; }
 

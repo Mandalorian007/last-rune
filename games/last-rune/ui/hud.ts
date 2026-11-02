@@ -1,11 +1,11 @@
 /**
  * Always-there corner buttons (Codex, Settings; Journal in the hall) plus the hall's name plate.
- * C, O and J are Input `globalKeys` (game/ctx.ts), so they work while a button has focus. The
- * buttons still drop focus after a click: the panel they open hands focus back to whatever
- * was focused when it opened, and a focused button would take the arrows, Enter and Space
- * (Enter/Space would click it again) instead of the hall and the altar.
+ * C, O and J are Input `globalKeys` and Esc/arrows are `buttonKeys` (game/ctx.ts), so they work
+ * while a button has focus. Panels opened from here return focus to the canvas when they close,
+ * not to the button (`NO_RESTORE_FOCUS_ATTR` on the bar), so play resumes by keyboard. The
+ * Journal button switches scene, which hides the HUD and drops focus with it.
  */
-import { h } from '@engine/ui';
+import { h, NO_RESTORE_FOCUS_ATTR } from '@engine/ui';
 
 export interface HudActions {
   codex(): void;
@@ -29,12 +29,7 @@ export class Hud {
           type: 'button',
           class: 'lr-stone-button',
           'aria-keyshortcuts': key,
-          on: {
-            click: (e) => {
-              (e.currentTarget as HTMLElement).blur();
-              fn();
-            },
-          },
+          on: { click: () => fn() },
         },
         label,
         h('kbd', { 'aria-hidden': 'true' }, key),
@@ -46,7 +41,7 @@ export class Hud {
     }
     this.root = h(
       'div',
-      { class: 'lr-hud', hidden: true },
+      { class: 'lr-hud', hidden: true, [NO_RESTORE_FOCUS_ATTR]: '' },
       this.journalBtn,
       btn('Codex', 'C', actions.codex),
       btn('Settings', 'O', actions.settings),
