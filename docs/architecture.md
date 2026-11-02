@@ -61,8 +61,8 @@ A small, documented surface in `engine/render/README.md`: create renderer on a c
 ### C6 · Engine systems API (owned by engine-systems)
 `engine/input` (action map), `engine/audio` (buses, synth one-shots), `engine/ui` (overlay stack mounted over the canvas, theme tokens), `engine/save` (versioned slots, migrations, quota/blocked-storage safe). Each module has a README with usage.
 
-### C7 · Scene contract (wave 2, PM defines before wave 2)
-`Scene { enter(ctx); exit(); update(dt); render(frame); }` managed by a scene stack in `engine/core`. Final shape is decided when wave 1 merges.
+### C7 · Scene contract (adopted, as built by engine-render)
+`Scene<Ctx, Frame>` in `engine/core`: `enter(ctx)`, `exit()`, `pause()`, `resume()`, `update(dt)` (fixed 60 Hz), `render(frame, alpha)`, `transparent` flag (overlays render over the scene below). `SceneStack` ops (`push/pop/replace/clear`) are deferred while updating/rendering. One shared game `Ctx` holds `renderer`, `post`, `surface`, `particles` + engine-systems' `input`, `audio`, `ui`, `save`. Template: `games/last-rune/scenes/_demo/render-demo.ts`. Draw order = submission order (no depth); scenes order their own draws.
 
 ## Runtime shape
 - Logical design space **1920×1080**, letterboxed 16:9 into whatever the iframe gives us (itch embed 960×540 + fullscreen). Render at device pixel ratio, capped for perf.
