@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M1 Foundations (wave 1)
+**Current milestone:** M2 Playable vertical (wave 3)
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
@@ -13,9 +13,10 @@ _Last updated: 2026-11-02 by PM_
 | progression-content | ws/progression-content | ✅ merged | 16-machine graph, 79 lines (31 new), 16 journal pages, ending data. D-014, D-015 |
 | ship-ops | ws/ship-ops | ✅ merged | WebGPU works in the itch iframe (D-016); CI, itch zip packager, itch-sim, Playwright e2e (2 tests pending the Title scene) |
 | game-shell | ws/game-shell | ✅ merged | GameCtx, save v1, settings, Title → Hall → puzzle stub → solve stub loop, codex shell. e2e 7/7 strict |
-| art-materials | ws/art-materials | 🟡 in progress | wave 2 early start: gems, stone, altar, lighting |
+| art-materials | ws/art-materials | ✅ merged | light set, 6 gem cuts × 5 states, baked stone, altar slab, candles, gold emboss, post presets; `?demo=art` 60fps (stress 9 draws). Screens in docs/design/screens/ |
 | audio-design | ws/audio-design | 🟡 in progress | procedural sound bank, moods by tier |
 | difficulty-fun | ws/difficulty-fun | 🟡 in progress | difficulty model, novice bot, target curve, puzzle retunes (D-021) |
+| altar-scene | ws/altar-scene | 🟡 in progress | wave 3: playable altar puzzle + solve moment |
 | art-props | ws/art-props | 🟡 in progress | wave 2 early start: FUSE, storm cell, bolt ribbon, machine, locked alcove |
 
 ## Blocked / needs user
@@ -23,6 +24,7 @@ _Last updated: 2026-11-02 by PM_
 - (Planned) Enable GitHub Pages "Source: GitHub Actions" in repo settings at M3α. PM can do it via `gh api`.
 
 ## Risks
+- Perf not yet measured on an integrated PC GPU (only Apple M-series). Lights are the first knob.
 - Puzzle difficulty may be too low (small altars, 1–4 gem minimum through Tier 2; the finale has 72 solutions). Tune in M4 from playtest data.
 - Firefox + WebGPU in the itch iframe untested (manual check at launch).
 - Puzzle quality: 16 puzzles must be interesting, not just solvable. The solver gives difficulty metrics, and the PM reviews.
