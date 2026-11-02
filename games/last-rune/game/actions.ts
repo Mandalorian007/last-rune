@@ -25,6 +25,7 @@ export type Action =
   | 'strike'
   | 'clear'
   | 'trayNext'
+  | 'jump' // keyboard cursor to the wire's open end (the next empty socket the bolt reaches)
   | 'slot1'
   | 'slot2'
   | 'slot3'
@@ -65,6 +66,7 @@ export const BINDINGS: Bindings<Action> = {
   strike: [{ key: 'KeyF' }, { padButton: 7 }],
   clear: [{ key: 'Delete' }, { padButton: 8 }],
   trayNext: [{ key: 'KeyT' }, { padButton: 4 }],
+  jump: [{ key: 'KeyG' }, { padButton: 11 }],
   slot1: [{ key: 'Digit1' }],
   slot2: [{ key: 'Digit2' }],
   slot3: [{ key: 'Digit3' }],

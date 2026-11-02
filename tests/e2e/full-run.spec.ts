@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { pagesFound, pagesUnlockedBy } from '../../games/last-rune/content/journal';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
-import { isRotational } from '../../games/last-rune/rules';
+import { isRotational, type Placement } from '../../games/last-rune/rules';
 import {
   availableMachines,
   getMachine,
@@ -13,6 +13,7 @@ import {
 } from '../../games/last-rune/rules/progression';
 import { GEM_KINDS, type MachineId } from '../../games/last-rune/rules/types';
 import { deriveHall, focusOrder } from '../../games/last-rune/scenes/hall/hall-state';
+import { cursorKeys, nextGem, turnKeys } from './altar-keys';
 import { PREVIEW_URL, pressKey, readSave, trackProblems, waitFrames } from './helpers';
 
 // Full run of the production build with real input only: title → hall → all 16 machines, in
@@ -239,7 +240,11 @@ async function altarCursor(page: Page): Promise<{ x: number; y: number }> {
   return { x: x!, y: y! };
 }
 
-/** Build the intended solution with the keyboard cursor: 1-6 picks, R turns, arrows, Enter. */
+/**
+ * Build the intended solution with the keyboard, the way a player follows the wire: place the
+ * gem on the wire's open end next (else the nearest), 1-6 takes it, R/Q turn it, then the
+ * fewest arrows and G (jump to the wire's open end) reach its socket, and Enter places it.
+ */
 async function buildSolution(machine: MachineId): Promise<number> {
   const p = puzzleFor(machine);
   const tray = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
@@ -248,18 +253,19 @@ async function buildSolution(machine: MachineId): Promise<number> {
     presses += times;
     await pressKey(page, key, times);
   };
-  for (const g of p.design.intended) {
+  const todo = [...p.design.intended];
+  const placed: Placement[] = [];
+  while (todo.length) {
+    const g = todo.splice(nextGem(p, placed, todo, await altarCursor(page)), 1)[0]!;
     const slot = tray.indexOf(g.gem);
     expect(slot, `${machine}: ${g.gem} not in tray`).toBeGreaterThanOrEqual(0);
     await press(`Digit${slot + 1}`);
-    if (isRotational(g.gem)) await press('KeyR', g.rot);
-    // The altar moves the cursor on to the route's open end after each Enter; read where.
-    const cursor = await altarCursor(page);
-    const dx = g.cell.x - cursor.x;
-    const dy = g.cell.y - cursor.y;
-    await press(dx > 0 ? 'ArrowRight' : 'ArrowLeft', Math.abs(dx));
-    await press(dy > 0 ? 'ArrowDown' : 'ArrowUp', Math.abs(dy));
+    for (const k of turnKeys(isRotational(g.gem) ? g.rot : 0)) await press(k);
+    // Taking a gem may move the cursor on to the wire's open end; plan from where it is.
+    for (const k of cursorKeys(p, placed, await altarCursor(page), g.cell)) await press(k);
+    expect(await altarCursor(page), `${machine}: cursor missed ${g.gem}`).toEqual(g.cell);
     await press('Enter');
+    placed.push({ gem: g.gem, cell: g.cell, rot: g.rot });
   }
   return presses;
 }

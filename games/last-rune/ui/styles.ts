@@ -2,6 +2,7 @@
  * Game-specific overlay CSS (design px; the overlay scales it). Procedural only:
  * gradients and shadows, no images or fonts fetched. Scoped under `.tc-overlay`.
  */
+import { scaleFontSizes } from './text-scale';
 
 /** Palette names from the pitch, as CSS colours for DOM UI. */
 export const CSS_PALETTE = {
@@ -236,6 +237,18 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-margin b { display: block; font-size: 16px; letter-spacing: 2px; margin-bottom: 6px; }
 .tc-overlay .lr-codex-folio { grid-column: 1 / -1; align-self: end; text-align: center; font-size: 22px; color: #5e4329; }
+/* Bigger text: the niche and FUSE's note share a row and the rule runs the page's full width,
+   so a page still fits the spread. */
+.tc-overlay[data-text-scale] .lr-codex-page { padding: 40px 56px 32px; grid-template-rows: auto auto auto auto 1fr auto; }
+.tc-overlay[data-text-scale] .lr-codex-page h3 { margin-bottom: 12px; }
+.tc-overlay[data-text-scale] .lr-niche { width: 180px; height: 180px; }
+.tc-overlay[data-text-scale] .lr-niche .lr-gem { width: 100px; height: 100px; }
+.tc-overlay[data-text-scale] .lr-niche--locked::before, .tc-overlay[data-text-scale] .lr-niche--locked::after { width: 220px; }
+.tc-overlay[data-text-scale] .lr-margin { grid-row: 2; align-self: center; margin-top: 0; }
+.tc-overlay[data-text-scale] .lr-codex-rule,
+.tc-overlay[data-text-scale] .lr-codex-maths,
+.tc-overlay[data-text-scale] .lr-codex-locked { grid-column: 1 / -1; margin-top: 18px; }
+.tc-overlay[data-text-scale] .lr-codex-folio { grid-row: 6; }
 .tc-overlay .lr-codex-head {
   position: absolute; left: 0; right: 0; top: -2px; z-index: 3; text-align: center; pointer-events: none;
   font-size: 22px; letter-spacing: 2px; color: #f0d79c; text-shadow: 0 1px 2px #000;
@@ -285,6 +298,6 @@ export function ensureGameStyles(doc: Document = document): void {
   injected.add(doc);
   const el = doc.createElement('style');
   el.dataset.lr = 'game';
-  el.textContent = CSS;
+  el.textContent = scaleFontSizes(CSS);
   doc.head.append(el);
 }

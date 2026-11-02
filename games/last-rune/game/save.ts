@@ -45,6 +45,8 @@ export const CaptionSpeed = s.literal('normal', 'fast', 'instant');
 export const ReduceFlashesPref = s.literal('auto', 'on', 'off');
 /** `auto` picks a tier from measured frame time (see game/graphics.ts). */
 export const GraphicsPref = s.literal('auto', 'high', 'low');
+/** Overlay text size in percent (ui/text-scale.ts). */
+export const TextScalePref = s.literal(100, 125, 150);
 
 const Settings = s.object({
   /** `system` follows `prefers-reduced-motion`. */
@@ -58,6 +60,8 @@ const Settings = s.object({
   reduceFlashes: s.optional(ReduceFlashesPref),
   /** Graphics quality tier (game/graphics.ts). Optional: missing = `auto`. */
   graphics: s.optional(GraphicsPref),
+  /** Overlay text size, percent. Optional: missing = 100. */
+  textScale: s.optional(TextScalePref),
 });
 
 const Stats = s.object({

@@ -9,6 +9,7 @@ export type CaptionSpeed = GameSettings['captionSpeed'];
 export type ReducedMotionPref = GameSettings['reducedMotion'];
 export type ReduceFlashesPref = NonNullable<GameSettings['reduceFlashes']>;
 export type GraphicsPref = NonNullable<GameSettings['graphics']>;
+export type TextScalePref = NonNullable<GameSettings['textScale']>;
 
 export function resolveReducedMotion(pref: ReducedMotionPref, system: boolean): boolean {
   return pref === 'system' ? system : pref === 'reduce';
@@ -37,6 +38,8 @@ export interface EffectiveSettings {
   readonly reduceFlashes: boolean;
   /** Graphics quality preference (missing in old saves = `auto`). See game/graphics.ts. */
   readonly graphics: GraphicsPref;
+  /** Overlay text size in percent (missing in old saves = 100). See ui/text-scale.ts. */
+  readonly textScale: TextScalePref;
 }
 
 export interface SettingsTargets {
@@ -96,7 +99,8 @@ export class SettingsController {
       next.reducedMotion === this._effective.reducedMotion &&
       next.captionCps === this._effective.captionCps &&
       next.reduceFlashes === this._effective.reduceFlashes &&
-      next.graphics === this._effective.graphics
+      next.graphics === this._effective.graphics &&
+      next.textScale === this._effective.textScale
     ) {
       return;
     }
@@ -118,6 +122,7 @@ export class SettingsController {
       captionCps: captionCps(s.captionSpeed),
       reduceFlashes: resolveReduceFlashes(s.reduceFlashes, reducedMotion),
       graphics: s.graphics ?? 'auto',
+      textScale: s.textScale ?? 100,
     };
   }
 }

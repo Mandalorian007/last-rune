@@ -29,6 +29,8 @@ const BUSES: { bus: BusName; label: string }[] = [
   { bus: 'ui', label: 'Interface' },
 ];
 
+import { TEXT_SCALES, type TextScale, toTextScale } from './text-scale';
+
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 function select<T extends string>(
@@ -84,6 +86,12 @@ export function openSettings(deps: SettingsPanelDeps): void {
       ['instant', 'Instant'],
     ],
     (v) => settings.set({ captionSpeed: v }),
+  );
+  const text = select<`${TextScale}`>(
+    'Text size',
+    `${toTextScale(settings.stored.textScale)}`,
+    TEXT_SCALES.map((n): [`${TextScale}`, string] => [`${n}`, `${n}%`]),
+    (v) => settings.set({ textScale: toTextScale(Number(v)) }),
   );
   const graphics = select<GraphicsPref>(
     'Graphics quality',
@@ -162,7 +170,7 @@ export function openSettings(deps: SettingsPanelDeps): void {
     'div',
     { class: 'lr-settings' },
     h('section', null, h('h3', null, 'Sound'), ...volumes),
-    h('section', null, h('h3', null, 'Comfort'), motion, flashes, speed),
+    h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed),
     h('section', null, h('h3', null, 'Graphics'), graphics),
     h(
       'section',
