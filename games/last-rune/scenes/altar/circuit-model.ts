@@ -136,3 +136,35 @@ export function chargeChips(result: SimResult): ChargeChip[] {
   });
   return out;
 }
+
+const SIDE_DX = [0, 1, 0, -1] as const;
+const SIDE_DY = [-1, 0, 1, 0] as const;
+
+/**
+ * Guide stubs for fixed gems met for the first time: a hop from each side the gem joins (rules
+ * section 4). Bend rot r joins sides r and r+1 (N=0, E, S, W); Gate rot r takes the two sides
+ * perpendicular to r and outputs r. Hops point into the gem from inputs and out to the output;
+ * a Bend is two-way, so its hops simply touch both joined sides. Other gems get none.
+ */
+export function guideHops(p: PuzzleDef, cells: readonly Cell[]): PathHop[] {
+  const out: PathHop[] = [];
+  for (const c of cells) {
+    const f = p.fixed.find((q) => q.cell.x === c.x && q.cell.y === c.y);
+    if (!f) continue;
+    const at = { x: c.x, y: c.y };
+    const side = (s: number) => {
+      const i = ((s % 4) + 4) % 4;
+      return { x: c.x + SIDE_DX[i]!, y: c.y + SIDE_DY[i]! };
+    };
+    if (f.gem === 'bend') {
+      out.push({ from: side(f.rot), to: at }, { from: at, to: side(f.rot + 1) });
+    } else if (f.gem === 'gate') {
+      out.push(
+        { from: side(f.rot + 1), to: at },
+        { from: side(f.rot + 3), to: at },
+        { from: at, to: side(f.rot) },
+      );
+    }
+  }
+  return out;
+}

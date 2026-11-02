@@ -50,7 +50,7 @@ panel, Esc from focused buttons, and the altar's live-region text).
 ## Screen reader (after fixes)
 
 - FUSE lines go through the caption card's sr-only live region.
-- Altar open: "Intake Desk altar. Storm ×1. The machine needs exactly 4." With several machines or several strikes, the storm part becomes "Storm ×2, 2 strikes" and the need becomes "3 machines need exactly 2, 4 and 6."
+- Altar open: "Intake Desk altar. Storm ×1 gives 4. The machine needs exactly 4." With several machines or several strikes, the storm part becomes "Storm ×2 gives 8, 2 strikes" and the need becomes "3 machines need exactly 2, 4 and 6."
 - After a strike: the verdict headline, then per machine "Machine 2: needs 4, got 6, too much", any fizzled tags, then "Change anything to try again." The region is polite and atomic, and is cleared and refilled so a repeated verdict is spoken again.
 - Solve card: a polite status region (unchanged).
 

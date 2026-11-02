@@ -37,6 +37,8 @@ const WORK: RGBA = [0.62, 0.66, 0.8, 1];
 const STORM_GLOW: RGBA = [0.7, 1.1, 1.8, 1];
 /** Route preview glow: a faint warm trace in the groove. */
 const PREVIEW_GLOW: RGBA = [1.2, 0.85, 0.4, 1];
+/** Guide stubs on a new fixed gem: the gem's own violet, so they read as "what it joins". */
+const GUIDE_GLOW: RGBA = [1.0, 0.6, 1.6, 1];
 /** How far a socket out of play recedes (veil opacity). */
 const VEIL_AMOUNT = 0.75;
 
@@ -126,6 +128,16 @@ export class AltarView {
   /** Per-machine: does the edit-time route reach it? */
   readonly machineLinked: boolean[];
   private readonly machineLinkK: number[];
+  /**
+   * First altar: the storm's conduit and each machine's conduit breathe in turn (storm first),
+   * so "power goes from there to there" reads before any words. 0..1 target, eased.
+   */
+  beckonTarget = 0;
+  private beckonK = 0;
+  /** Faint stubs on a newly met fixed gem's joined sides (what a Bend connects), 0..1 eased. */
+  guide: PathHop[] = [];
+  guideTarget = 0;
+  private guideK = 0;
 
   private readonly lights = new LightSet();
   private readonly rig = new PropLightRig();
@@ -310,14 +322,28 @@ export class AltarView {
     return this.board.find((b) => b.cell.x === c.x && b.cell.y === c.y);
   }
 
-  /** Orient non-rotational gems along the bolt that passed through them (cosmetic). */
+  /** Orient non-rotational gems along the bolt that passed through them. */
   orientAlong(timeline: StrikeTimeline): void {
-    for (const s of timeline.segments) {
-      const b = this.gemAt(s.seg.from);
-      if (!b || b.g.kind === 'bend' || b.g.kind === 'gate') continue;
-      const dx = s.seg.to.x - s.seg.from.x;
-      const dy = s.seg.to.y - s.seg.from.y;
-      const q = dy < 0 ? 0 : dx > 0 ? 1 : dy > 0 ? 2 : 3;
+    this.faceAlong(timeline.segments.map((s) => s.seg));
+  }
+
+  /**
+   * Turn each non-rotational gem so its glyph's input faces where the bolt comes in: the hop
+   * that ends on the gem. (Outgoing hops would mislead: a Split's outputs are perpendicular.)
+   * With `rest`, gems no hop reaches go back to facing the storm.
+   */
+  faceAlong(hops: readonly { from: Cell; to: Cell }[], rest = false): void {
+    for (const b of this.board) {
+      if (b.g.kind === 'bend' || b.g.kind === 'gate') continue;
+      const h = hops.find((s) => s.to.x === b.cell.x && s.to.y === b.cell.y);
+      let q: number;
+      if (h) {
+        const dx = h.to.x - h.from.x;
+        const dy = h.to.y - h.from.y;
+        q = dy < 0 ? 0 : dx > 0 ? 1 : dy > 0 ? 2 : 3;
+      } else if (rest) {
+        q = this.restRot({ gem: b.g.kind, cell: b.cell, rot: 0 });
+      } else continue;
       const cur = Math.round(b.rotTarget);
       const fwd = (((q - cur) % 4) + 4) % 4;
       b.rotTarget = cur + (fwd === 3 ? -1 : fwd);
@@ -391,6 +417,8 @@ export class AltarView {
     for (let i = 0; i < this.veilK.length; i++)
       this.veilK[i]! += (this.veilTarget[i]! - this.veilK[i]!) * kv;
     this.previewK += (this.previewTarget - this.previewK) * kv;
+    this.beckonK += (this.beckonTarget - this.beckonK) * kv;
+    this.guideK += (this.guideTarget - this.guideK) * kv;
     for (let i = 0; i < this.machineLinkK.length; i++) {
       const t = this.machineLinked[i] ? this.previewTarget : 0;
       this.machineLinkK[i]! += (t - this.machineLinkK[i]!) * kv;
@@ -438,7 +466,7 @@ export class AltarView {
         L.storm.size * 0.2,
         r * 0.95,
       );
-      const g = Math.max(this.stormGlow, this.previewK * 0.35);
+      const g = Math.max(this.stormGlow, this.previewK * 0.35, this.beckon(0));
       c.conduit(frame, x0, y0, x1, y1, wide, 0.9, g, STORM_GLOW);
     }
     // Exit socket → each machine's terminal.
@@ -446,8 +474,15 @@ export class AltarView {
       const m = L.machines[i]!;
       cellCenter(L, m.inner, a);
       const [x0, y0, x1, y1] = trim(a.x, a.y, m.port.x, m.port.y, r * 0.95, 0);
-      const g = Math.max(this.machineGlow[i]!, this.machineLinkK[i]! * 0.5);
-      const col = this.machineGlow[i]! > 0.01 ? this.machineColor[i]! : PREVIEW_GLOW;
+      const lit = Math.max(this.machineGlow[i]!, this.machineLinkK[i]! * 0.5);
+      const call = this.beckon(0.5);
+      const g = Math.max(lit, call);
+      const col =
+        this.machineGlow[i]! > 0.01
+          ? this.machineColor[i]!
+          : call > lit
+            ? STORM_GLOW
+            : PREVIEW_GLOW;
       c.conduit(frame, x0, y0, x1, y1, wide, 0.9, g, col);
     }
     // Route preview between sockets.
@@ -471,6 +506,20 @@ export class AltarView {
         );
       }
     }
+    // Guide stubs: what a newly met fixed gem joins, before the route reaches it.
+    if (this.guideK > 0.01) {
+      const b = { x: 0, y: 0 };
+      const breathe = this.reducedMotion ? 0.7 : 0.55 + 0.3 * Math.sin(this.time * 2.4);
+      for (const h of this.guide) {
+        if (!inside(L, h.from) || !inside(L, h.to)) continue;
+        if (this.preview.some((p) => sameHop(p, h))) continue;
+        cellCenter(L, h.from, a);
+        cellCenter(L, h.to, b);
+        const [x0, y0, x1, y1] = trim(a.x, a.y, b.x, b.y, r * 0.9, r * 0.9);
+        const k = this.guideK * breathe;
+        c.conduit(frame, x0, y0, x1, y1, wide * 0.8, 0.6 * k, 0.35 * k, GUIDE_GLOW);
+      }
+    }
     // Veils.
     for (let y = 0; y < L.rows; y++) {
       for (let x = 0; x < L.cols; x++) {
@@ -480,6 +529,15 @@ export class AltarView {
         c.veil(frame, a.x, a.y, r, k);
       }
     }
+  }
+
+  /** Beckon glow for a conduit; `lag` (0..1 of a cycle) runs the machine's after the storm's. */
+  private beckon(lag: number): number {
+    if (this.beckonK < 0.01) return 0;
+    if (this.reducedMotion) return this.beckonK * 0.45;
+    const ph = (this.time / 2.2 - lag) % 1;
+    const u = ph < 0 ? ph + 1 : ph;
+    return this.beckonK * (0.15 + 0.6 * Math.exp(-(((u - 0.25) * 6) ** 2)));
   }
 
   render(frame: Frame): void {
@@ -576,7 +634,8 @@ export class AltarView {
       const h = this.held;
       const g = this.heldInst;
       g.kind = h.kind;
-      g.rot = h.rot;
+      // Non-rotational gems in hand look as they will once set down (facing the storm).
+      g.rot = this.restRot({ gem: h.kind, cell: { x: 0, y: 0 }, rot: h.rot as Placement['rot'] });
       g.x = h.x;
       g.y = h.y;
       g.lift = h.snapped ? 0.6 : 1;
@@ -604,4 +663,10 @@ export { DANGER, GOLD };
 
 function inside(L: AltarLayout, c: Cell): boolean {
   return c.x >= 0 && c.y >= 0 && c.x < L.cols && c.y < L.rows;
+}
+
+/** Same hop either way round (guide stubs are two-way). */
+function sameHop(p: PathHop, h: PathHop): boolean {
+  const eq = (a: Cell, b: Cell) => a.x === b.x && a.y === b.y;
+  return (eq(p.from, h.from) && eq(p.to, h.to)) || (eq(p.from, h.to) && eq(p.to, h.from));
 }

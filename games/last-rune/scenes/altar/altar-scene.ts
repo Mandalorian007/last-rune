@@ -32,6 +32,7 @@ import {
   type PuzzleDef,
   type SimResult,
   simulate,
+  stormCharge,
 } from '../../rules';
 import { getMachine } from '../../rules/progression';
 import type { Cell, GemKind, MachineId } from '../../rules/types';
@@ -40,7 +41,14 @@ import { scalePxCss } from '../../ui/text-scale';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, DANGER, GOLD } from './altar-view';
 import { BoardState } from './board';
-import { type ChargeChip, chargeChips, liveSockets, previewPath } from './circuit-model';
+import {
+  type ChargeChip,
+  chargeChips,
+  guideHops,
+  liveSockets,
+  type PathHop,
+  previewPath,
+} from './circuit-model';
 import { jumpCursor, stepCursor } from './cursor';
 import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
 import { setHintTarget } from './hints';
@@ -218,6 +226,8 @@ export class AltarScene implements GameScene {
   private actionsEl!: HTMLElement;
   private hintMode: HintMode | '' = '';
   private needs: HTMLElement[] = [];
+  /** First altar only: "Gives N" at the storm, the twin of the machine's "Needs N". */
+  private stormLabel: HTMLElement | null = null;
   private tags: HTMLElement[] = [];
 
   // Circuit read-out (altar-clarity)
@@ -234,6 +244,8 @@ export class AltarScene implements GameScene {
   private news: NewGems = { fixed: [], tray: [] };
   /** New fixed gems still pulsing (until hovered, turned, or the first strike). */
   private teachFixed: { gem: GemKind; cell: Cell }[] = [];
+  /** Stubs on the sides each new fixed gem joins (see `guideHops`). */
+  private guide: PathHop[] = [];
   /** New tray kinds not yet picked up. */
   private teachTray = new Set<GemKind>();
   private teachTags: HTMLElement[] = [];
@@ -273,6 +285,10 @@ export class AltarScene implements GameScene {
       this.news = newGems(this.puzzle, solved);
       this.teachFixed = this.news.fixed.map((f) => ({ gem: f.gem, cell: f.cell }));
       this.teachTray = new Set(this.news.tray);
+      this.guide = guideHops(
+        this.puzzle,
+        this.teachFixed.map((f) => f.cell),
+      );
     }
 
     ensureAltarStyles(ctx.ui.root.ownerDocument);
@@ -376,6 +392,7 @@ export class AltarScene implements GameScene {
       const o = ui.root.getBoundingClientRect();
       const els = [
         ...this.needs,
+        ...(this.stormLabel ? [this.stormLabel] : []),
         this.actionsEl,
         ...ui.root.querySelectorAll<HTMLElement>('.lr-hud'),
       ];
@@ -467,6 +484,24 @@ export class AltarScene implements GameScene {
         style: { left: `${m.label.x}px`, top: `${m.label.y}px` },
       }),
     );
+    // First altar: the storm says what it gives, in the same card as the machine's need, so
+    // "Gives 4" and "Needs 4" read as one quantity before anything is placed.
+    this.stormLabel = this.teachCell
+      ? h(
+          'div',
+          {
+            class: 'lr-altar-need lr-altar-storm',
+            'data-align': L.storm.label.align,
+            style: { left: `${L.storm.label.x}px`, top: `${L.storm.label.y}px` },
+          },
+          h(
+            'span',
+            { class: 'lr-need-row' },
+            'Gives ',
+            h('b', null, String(stormCharge(this.puzzle.storm.strength))),
+          ),
+        )
+      : null;
     this.titleEl = h(
       'div',
       { class: 'lr-altar-title', style: { left: `${L.titleX}px` } },
@@ -492,9 +527,11 @@ export class AltarScene implements GameScene {
       this.announcer,
       ...this.counts,
       ...this.needs,
+      ...(this.stormLabel ? [this.stormLabel] : []),
       this.tip,
       this.hint,
     );
+    this.dom.toggleAttribute('data-first', !!this.teachCell);
     this.ctx.ui.layers.hud.append(this.dom);
   }
 
@@ -522,7 +559,7 @@ export class AltarScene implements GameScene {
       const p = this.puzzle.pulses;
       const s = this.puzzle.storm.strength;
       this.subtitle.textContent =
-        `Storm ×${s}` +
+        `Storm ×${s} gives ${stormCharge(s)}` +
         (p > 1 ? ` · ${p} strikes` : '') +
         (this.attempts > 0 ? ` · try ${this.attempts + 1}` : '');
     }
@@ -601,7 +638,8 @@ export class AltarScene implements GameScene {
         ? `The machine needs exactly ${needs[0]}.`
         : `${needs.length} machines need exactly ${listText(needs.map(String))}.`;
     const strikes = p.pulses > 1 ? `, ${p.pulses} strikes` : '';
-    return `${getMachine(this.machine).name} altar. Storm ×${p.storm.strength}${strikes}. ${ask}`;
+    const gives = stormCharge(p.storm.strength);
+    return `${getMachine(this.machine).name} altar. Storm ×${p.storm.strength} gives ${gives}${strikes}. ${ask}`;
   }
 
   /** The strike result for screen readers: the verdict plus every machine's reading. */
@@ -697,12 +735,15 @@ export class AltarScene implements GameScene {
       this.openEnds = pv.openEnds;
       v.preview = pv.hops;
       v.previewTarget = PREVIEW_PATH ? 1 : 0;
+      // Glyphs face the way the bolt will really come in, before any strike.
+      v.faceAlong(pv.hops, true);
       this.puzzle.machines.forEach((m, i) => {
         v.machineLinked[i] = pv.hops.some((q) => q.to.x === m.at.x && q.to.y === m.at.y);
       });
     } else {
       v.previewTarget = 0;
     }
+    this.updateFirstTime();
     this.liveMask = liveSockets(this.puzzle, placements, this.openEnds, this.liveMask);
     v.setLive(
       this.liveMask,
@@ -712,6 +753,22 @@ export class AltarScene implements GameScene {
       },
       first,
     );
+  }
+
+  /**
+   * The first altar's showing-not-telling (intake desk, until solved):
+   * - the storm and machine conduits breathe in turn until the route reaches the machine;
+   * - a new fixed gem shows the sides it joins until its first strike;
+   * - Strike glows once the route reaches every machine.
+   */
+  private updateFirstTime(): void {
+    const v = this.view;
+    const edit = this.mode === 'edit';
+    const linked = v.machineLinked.every(Boolean);
+    v.beckonTarget = edit && !!this.teachCell && !linked ? 1 : 0;
+    v.guide = this.teachFixed.length > 0 ? this.guide : [];
+    v.guideTarget = edit && this.teachFixed.length > 0 ? 1 : 0;
+    this.strikeBtn.toggleAttribute('data-ready', edit && !!this.teachCell && linked);
   }
 
   private isLive(c: Cell): boolean {
@@ -1948,6 +2005,13 @@ export class AltarScene implements GameScene {
     if (this.teaching) {
       const c = this.teachCell!;
       v.mark(c.x, c.y, 'highlighted', GOLD, 1.3, 3);
+    }
+    if (this.teachCell && this.mode === 'edit') {
+      // The other end of the wire: each machine's exit socket, until the route reaches it.
+      this.view.layout.machines.forEach((m, i) => {
+        if (v.machineLinked[i] || this.board.at(m.inner)) return;
+        v.mark(m.inner.x, m.inner.y, 'highlighted', GOLD, 0.8, 3);
+      });
     }
     if (this.mode === 'edit') {
       const hand = this.hand;
