@@ -4,6 +4,11 @@
  *
  * Every edit goes through `validatePlacement` (rules), so the board can never hold a placement
  * the sim would ignore. A move is "remove, then place" as one undo step.
+ *
+ * Locked gems (`lock`, used by the hint mechanism) are player placements the player cannot
+ * move, turn or remove: they count against the tray, go to the sim and the save like any
+ * placement, survive clear and undo, and read as "fixed" to the edit methods. The lock itself
+ * is not saved; a reopened puzzle treats a former hint gem as an ordinary placement.
  */
 import {
   isRotational,
@@ -44,15 +49,21 @@ function samePlacements(a: readonly Placement[], b: readonly Placement[]): boole
 
 export class BoardState {
   private list: Placement[] = [];
+  private locked: Placement[] = [];
   private readonly undoStack: Placement[][] = [];
   /** Bumped on every successful edit (cheap change detection for views). */
   revision = 0;
 
   constructor(readonly puzzle: PuzzleDef) {}
 
-  /** Current placements (do not mutate). */
+  /** Current player placements, locked hint gems included (do not mutate). */
   get placements(): readonly Placement[] {
-    return this.list;
+    return this.locked.length === 0 ? this.list : [...this.locked, ...this.list];
+  }
+
+  /** Locked (hint) gems. */
+  get lockedPlacements(): readonly Placement[] {
+    return this.locked;
   }
 
   get canUndo(): boolean {
@@ -63,14 +74,52 @@ export class BoardState {
     return this.list.length === 0;
   }
 
-  /** The player gem on `cell`, if any. */
+  /** The editable player gem on `cell`, if any (locked gems excluded). */
   at(cell: Cell): Placement | undefined {
     return this.list.find((p) => p.cell.x === cell.x && p.cell.y === cell.y);
   }
 
-  /** The fixed (puzzle) gem on `cell`, if any. */
+  /** The fixed gem on `cell`, if any: the puzzle's own, or a locked hint gem. */
   fixedAt(cell: Cell): Placement | undefined {
-    return this.puzzle.fixed.find((p) => p.cell.x === cell.x && p.cell.y === cell.y);
+    const same = (p: Placement) => p.cell.x === cell.x && p.cell.y === cell.y;
+    return this.puzzle.fixed.find(same) ?? this.locked.find(same);
+  }
+
+  /** The locked hint gem on `cell`, if any. */
+  lockedAt(cell: Cell): Placement | undefined {
+    return this.locked.find((p) => p.cell.x === cell.x && p.cell.y === cell.y);
+  }
+
+  /**
+   * Put a gem on `cell` and lock it there (hint mechanism). Whatever player gem sat on the cell
+   * goes back to the tray; if the tray has none of `gem` left, the most recently placed one is
+   * taken off the board to pay for it. Clears undo (a hint is a commit point).
+   */
+  lock(cell: Cell, gem: GemKind, rot: number = 0): EditResult {
+    if (this.lockedAt(cell)) return { ok: false, reason: 'fixed' };
+    const before = this.list;
+    this.list = this.list.filter((p) => p.cell.x !== cell.x || p.cell.y !== cell.y);
+    if (this.remaining(gem) <= 0) {
+      for (let i = this.list.length - 1; i >= 0; i--) {
+        if (this.list[i]!.gem === gem) {
+          this.list.splice(i, 1);
+          break;
+        }
+      }
+    }
+    const r = validatePlacement(this.puzzle, this.placements, cell, gem);
+    if (!r.ok) {
+      this.list = before;
+      return { ok: false, reason: r.reason ?? 'occupied' };
+    }
+    this.locked.push({
+      gem,
+      cell: { x: cell.x, y: cell.y },
+      rot: isRotational(gem) ? rotOf(rot) : 0,
+    });
+    this.undoStack.length = 0;
+    this.revision++;
+    return OK;
   }
 
   isBlocked(cell: Cell): boolean {
@@ -81,6 +130,7 @@ export class BoardState {
   remaining(gem: GemKind): number {
     let used = 0;
     for (const p of this.list) if (p.gem === gem) used++;
+    for (const p of this.locked) if (p.gem === gem) used++;
     return (this.puzzle.tray[gem] ?? 0) - used;
   }
 
@@ -91,7 +141,7 @@ export class BoardState {
 
   /** Would placing `gem` on `cell` be legal right now? */
   check(cell: Cell, gem: GemKind): EditResult {
-    const r = validatePlacement(this.puzzle, this.list, cell, gem);
+    const r = validatePlacement(this.puzzle, this.placements, cell, gem);
     return r.ok ? OK : { ok: false, reason: r.reason ?? 'occupied' };
   }
 
@@ -134,7 +184,7 @@ export class BoardState {
     const p = this.at(from);
     if (!p) return { ok: false, reason: this.fixedAt(from) ? 'fixed' : 'empty' };
     if (from.x === to.x && from.y === to.y) return OK;
-    const rest = this.list.filter((q) => q !== p);
+    const rest = this.placements.filter((q) => q !== p);
     const r = validatePlacement(this.puzzle, rest, to, p.gem);
     if (!r.ok) return { ok: false, reason: r.reason ?? 'occupied' };
     this.push();
@@ -143,7 +193,7 @@ export class BoardState {
     return OK;
   }
 
-  /** Return every player gem to the tray (one undo step). */
+  /** Return every unlocked player gem to the tray (one undo step). */
   clear(): boolean {
     if (this.list.length === 0) return false;
     this.push();
@@ -160,9 +210,9 @@ export class BoardState {
     return true;
   }
 
-  /** Placements for the save file (copies). */
+  /** Placements for the sim and the save file (copies; locked gems included). */
   serialise(): Placement[] {
-    return this.list.map(copy);
+    return this.placements.map(copy);
   }
 
   /**
@@ -171,6 +221,7 @@ export class BoardState {
    */
   restore(saved: readonly Placement[]): number {
     this.list = [];
+    this.locked = [];
     this.undoStack.length = 0;
     let dropped = 0;
     for (const s of saved) {
@@ -192,7 +243,7 @@ export class BoardState {
   /** Same placements as `other` (order-insensitive). */
   equals(other: readonly Placement[]): boolean {
     const key = (p: Placement) => `${p.cell.x},${p.cell.y}:${p.gem}:${p.rot}`;
-    const a = this.list.map(key).sort();
+    const a = this.placements.map(key).sort();
     const b = other.map(key).sort();
     return a.length === b.length && a.every((k, i) => k === b[i]);
   }

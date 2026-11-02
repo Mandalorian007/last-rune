@@ -37,7 +37,8 @@ import type { Cell, GemKind, MachineId } from '../../rules/types';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, DANGER, GOLD } from './altar-view';
 import { BoardState } from './board';
-import { emitPuzzleEvent } from './events';
+import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
+import { setHintTarget } from './hints';
 import { anchorOf, cellAt, cellCenter, traySlotAt } from './layout';
 import {
   type Arrival,
@@ -142,6 +143,8 @@ export class AltarScene implements GameScene {
   private resets = 0;
   private outcomes: Record<BoltOutcome, number> = { dead: 0, under: 0, exact: 0, over: 0 };
   private solved = false;
+  /** Socket the hint mechanism is pointing at, if any. */
+  private hintCell: Cell | null = null;
 
   // DOM
   private dom!: HTMLElement;
@@ -187,10 +190,22 @@ export class AltarScene implements GameScene {
       const arrive = machineLine(this.machine, 'arrive');
       if (arrive) void ctx.fuse.say(arrive, { interrupt: true });
     }
-    emitPuzzleEvent({ type: 'open', machine: this.machine, t: 0 });
+    setHintTarget({
+      machine: this.machine,
+      highlight: (cell) => this.hintHighlight(cell),
+      lock: (p) => this.hintLock(p),
+    });
+    emitPuzzleEvent({
+      type: 'open',
+      machine: this.machine,
+      t: 0,
+      placements: this.board.serialise(),
+      attempts: saved?.attempts ?? 0,
+    });
   }
 
   exit(): void {
+    setHintTarget(null);
     this.ctx.flow.savePlacements(this.machine, this.board.serialise());
     this.boltSound?.stop(0.2);
     this.boltSound = null;
@@ -209,6 +224,7 @@ export class AltarScene implements GameScene {
       attempts: this.attempts,
       resets: this.resets,
       outcomes: { ...this.outcomes },
+      placements: this.board.serialise(),
     });
   }
 
@@ -427,6 +443,7 @@ export class AltarScene implements GameScene {
         this.board.remove(cell);
         this.board.move(from, cell);
         this.board.place(from, other.gem, other.rot);
+        this.logPlace(from, cell);
       } else {
         const r = this.board.move(from, cell);
         if (!r.ok) {
@@ -439,6 +456,7 @@ export class AltarScene implements GameScene {
         gem: this.board.at(cell)?.gem ?? hand.kind,
         pan: this.panOf(cell),
       });
+      this.logPlace(cell, from);
       this.changed(cell);
       return;
     }
@@ -448,6 +466,7 @@ export class AltarScene implements GameScene {
         if (isRotational(hand.kind) && existing.rot !== (hand.rot & 3)) {
           this.board.rotate(cell, ((hand.rot & 3) - existing.rot + 4) & 3);
           this.ctx.sound.sfx.play('gemRotate');
+          this.logRotate(cell);
           this.changed();
         }
         return;
@@ -461,6 +480,8 @@ export class AltarScene implements GameScene {
       return;
     }
     this.ctx.sound.sfx.play('gemPlace', { gem: hand.kind, pan: this.panOf(cell) });
+    if (existing) this.logRemove(existing.gem, cell);
+    this.logPlace(cell, null);
     this.changed(cell);
   }
 
@@ -473,6 +494,7 @@ export class AltarScene implements GameScene {
         this.board.remove(cell);
         this.hand = { kind: p.gem, rot: p.rot, from: null };
         this.ctx.sound.sfx.play('gemPick', { gem: p.gem });
+        this.logRemove(p.gem, cell);
         this.changed();
       }
       return;
@@ -496,6 +518,7 @@ export class AltarScene implements GameScene {
     if (!isRotational(p.gem)) return;
     this.board.rotate(cell, by);
     this.ctx.sound.sfx.play('gemRotate', { pan: this.panOf(cell) });
+    this.logRotate(cell);
     this.changed();
   }
 
@@ -507,6 +530,7 @@ export class AltarScene implements GameScene {
     }
     this.board.remove(cell);
     this.ctx.sound.sfx.play('gemPick', { gem: p.gem, pan: this.panOf(cell) });
+    this.logRemove(p.gem, cell);
     this.changed();
   }
 
@@ -515,7 +539,7 @@ export class AltarScene implements GameScene {
     this.dropHand();
     if (this.board.undo()) {
       this.resets++;
-      emitPuzzleEvent({ type: 'reset', machine: this.machine, t: this.time, kind: 'undo' });
+      this.logReset('undo');
       this.ctx.sound.sfx.play('gemRotate');
       this.changed();
     }
@@ -526,7 +550,7 @@ export class AltarScene implements GameScene {
     this.dropHand();
     if (this.board.clear()) {
       this.resets++;
-      emitPuzzleEvent({ type: 'reset', machine: this.machine, t: this.time, kind: 'clear' });
+      this.logReset('clear');
       this.ctx.sound.sfx.play('gemPick');
       this.changed();
     }
@@ -535,6 +559,99 @@ export class AltarScene implements GameScene {
   private back(): void {
     this.ctx.fuse.hush();
     this.ctx.flow.closePuzzle();
+  }
+
+  // ── Playtest events + hint mechanism ───────────────────────────────────
+
+  private logPlace(cell: Cell, from: Cell | null): void {
+    if (!puzzleEventsWanted()) return;
+    const p = this.board.at(cell);
+    if (!p) return;
+    emitPuzzleEvent({
+      type: 'place',
+      machine: this.machine,
+      t: this.time,
+      gem: p.gem,
+      cell: { x: cell.x, y: cell.y },
+      rot: p.rot,
+      from: from ? { x: from.x, y: from.y } : null,
+    });
+  }
+
+  private logRemove(gem: GemKind, cell: Cell): void {
+    if (!puzzleEventsWanted()) return;
+    emitPuzzleEvent({
+      type: 'remove',
+      machine: this.machine,
+      t: this.time,
+      gem,
+      cell: { x: cell.x, y: cell.y },
+    });
+  }
+
+  private logRotate(cell: Cell): void {
+    if (!puzzleEventsWanted()) return;
+    const p = this.board.at(cell);
+    if (!p) return;
+    emitPuzzleEvent({
+      type: 'rotate',
+      machine: this.machine,
+      t: this.time,
+      gem: p.gem,
+      cell: { x: cell.x, y: cell.y },
+      rot: p.rot,
+    });
+  }
+
+  private logReset(kind: 'clear' | 'undo'): void {
+    if (!puzzleEventsWanted()) return;
+    emitPuzzleEvent({
+      type: 'reset',
+      machine: this.machine,
+      t: this.time,
+      kind,
+      placements: this.board.serialise(),
+    });
+  }
+
+  private inBounds(cell: Cell): boolean {
+    const L = this.view.layout;
+    return cell.x >= 0 && cell.y >= 0 && cell.x < L.cols && cell.y < L.rows;
+  }
+
+  private hintHighlight(cell: Cell | null): boolean {
+    if (cell && !this.inBounds(cell)) return false;
+    this.hintCell = cell ? { x: cell.x, y: cell.y } : null;
+    emitPuzzleEvent({
+      type: 'hint',
+      machine: this.machine,
+      t: this.time,
+      kind: 'highlight',
+      cell: this.hintCell,
+      gem: null,
+    });
+    return true;
+  }
+
+  private hintLock(p: Placement): boolean {
+    if (this.mode === 'strike' || !this.inBounds(p.cell)) return false;
+    this.dropHand();
+    const r = this.board.lock(p.cell, p.gem, p.rot);
+    if (!r.ok) return false;
+    if (this.hintCell && this.hintCell.x === p.cell.x && this.hintCell.y === p.cell.y) {
+      this.hintCell = null;
+    }
+    this.ctx.sound.sfx.play('gemPlace', { gem: p.gem, pan: this.panOf(p.cell) });
+    this.changed(p.cell);
+    emitPuzzleEvent({
+      type: 'hint',
+      machine: this.machine,
+      t: this.time,
+      kind: 'lock',
+      cell: { x: p.cell.x, y: p.cell.y },
+      gem: p.gem,
+    });
+    return true;
   }
 
   // ── Strike ──────────────────────────────────────────────────────────────
@@ -552,14 +669,26 @@ export class AltarScene implements GameScene {
     this.attempts++;
     this.outcomes[result.outcome]++;
     this.ctx.flow.recordAttempt(this.machine, result.outcome);
-    emitPuzzleEvent({
-      type: 'strike',
-      machine: this.machine,
-      t: this.time,
-      outcome: result.outcome,
-      attempt: this.attempts,
-      gems: placements.length,
-    });
+    if (puzzleEventsWanted()) {
+      const saved = this.ctx.save.get().puzzles[this.machine];
+      emitPuzzleEvent({
+        type: 'fire',
+        machine: this.machine,
+        t: this.time,
+        attempt: saved?.attempts ?? this.attempts,
+        placements,
+        outcome: result.outcome,
+        strikes: result.pulsesRun,
+        machines: result.machines.map(
+          (m): FireMachine => ({
+            at: { x: m.at.x, y: m.at.y },
+            need: m.need,
+            outcome: m.outcome,
+            readings: [...m.readings],
+          }),
+        ),
+      });
+    }
 
     // Ribbons: one per strike; the verdict strike plays in the outcome's mode, with the
     // segment that decides it (tripped machine / last fizzle) last so the ribbon ends there.
@@ -1007,14 +1136,23 @@ export class AltarScene implements GameScene {
       if (input.pressed(SLOT_ACTIONS[i]!) && L.tray[i]) {
         if (this.hand?.from) this.dropHand();
         this.takeFromTray(L.tray[i]!.gem);
+        if (!this.hoverCell) this.keyboard = true;
       }
     }
-    if (input.pressed('trayNext')) this.cycleTray();
-    const target = this.keyboard ? this.cursor : this.hoverCell;
-    if (input.pressed('confirm') && this.keyboard) {
-      if (this.hand) this.placeHand(this.cursor);
-      else this.actOnGem(this.cursor);
+    if (input.pressed('trayNext')) {
+      this.cycleTray();
+      if (!this.hoverCell) this.keyboard = true;
     }
+    if (input.pressed('confirm')) {
+      // Enter acts where the player is looking: the hovered socket, else the cursor.
+      if (!this.keyboard && !this.hoverCell) this.keyboard = true;
+      const at = this.keyboard ? this.cursor : this.hoverCell;
+      if (at) {
+        if (this.hand) this.placeHand(at);
+        else this.actOnGem(at);
+      }
+    }
+    const target = this.keyboard ? this.cursor : this.hoverCell;
     const turn = (input.pressed('rotate') ? 1 : 0) - (input.pressed('rotateBack') ? 1 : 0);
     if (turn !== 0) {
       if (this.hand && isRotational(this.hand.kind)) {
@@ -1121,6 +1259,12 @@ export class AltarScene implements GameScene {
     v.clearMarks();
     for (const b of this.puzzle.blocked) v.mark(b.x, b.y, 'blocked', GOLD, 1);
     for (const f of this.puzzle.fixed) v.mark(f.cell.x, f.cell.y, 'wanted', FIXED_RING, 0.8);
+    for (const f of this.board.lockedPlacements) {
+      v.mark(f.cell.x, f.cell.y, 'wanted', FIXED_RING, 0.8);
+    }
+    if (this.hintCell && this.mode !== 'strike') {
+      v.mark(this.hintCell.x, this.hintCell.y, 'highlighted', GOLD, 1.3, 3);
+    }
     if (this.mode === 'result' && this.result?.outcome !== 'exact') {
       const L = v.layout;
       for (const f of this.fizzleList) {

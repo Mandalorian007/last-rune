@@ -204,7 +204,7 @@ export class AltarView {
     const L = this.layout;
     const want: { p: Placement; fixed: boolean }[] = [
       ...this.puzzle.fixed.map((p) => ({ p, fixed: true })),
-      ...state.placements.map((p) => ({ p, fixed: false })),
+      ...state.placements.map((p) => ({ p, fixed: state.lockedPlacements.includes(p) })),
     ];
     const old = this.board.splice(0, this.board.length);
     for (const { p, fixed } of want) {
