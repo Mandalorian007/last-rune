@@ -1,0 +1,213 @@
+import type { FullscreenPass } from '@engine/render/fullscreen';
+import type { PostInputs, PostProcessor, Renderer } from '@engine/render/renderer';
+import {
+  applyPostPatch,
+  defaultPostSettings,
+  POST_UNIFORM_FLOATS,
+  type PostSettings,
+  type PostSettingsPatch,
+  packPostUniforms,
+} from './settings';
+import { COMPOSITE_WGSL, DOWN_WGSL, PREFILTER_WGSL, RAYS_WGSL, UP_WGSL } from './shaders';
+
+const HDR: GPUTextureFormat = 'rgba16float';
+
+/**
+ * The painterly post stack: bloom (mip chain), floor mist, god rays, ACES tonemap, colour
+ * grade, vignette, dither. Plug it into a renderer with `renderer.post = new PostStack(r)`.
+ *
+ * Settings are plain objects you can mutate at runtime (`post.settings.bloom.intensity = 2`)
+ * or patch with `post.set({ fog: { density: 0.4 } })`. Disabled passes are skipped entirely.
+ */
+export class PostStack implements PostProcessor {
+  readonly settings: PostSettings;
+
+  private readonly renderer: Renderer;
+  private readonly uniforms = new Float32Array(POST_UNIFORM_FLOATS);
+  private readonly prefilter: FullscreenPass;
+  private readonly down: FullscreenPass;
+  private readonly up: FullscreenPass;
+  private readonly rays: FullscreenPass;
+  private readonly composite: FullscreenPass;
+
+  private bloomTex: GPUTexture | null = null;
+  private mipViews: GPUTextureView[] = [];
+  private raysTex: GPUTexture | null = null;
+  private raysView: GPUTextureView | null = null;
+  private levels = 0;
+  private width = 0;
+  private height = 0;
+  private boundColor: GPUTextureView | null = null;
+  private boundEmissive: GPUTextureView | null = null;
+
+  private prefilterGroup: GPUBindGroup | null = null;
+  private downGroups: GPUBindGroup[] = [];
+  private upGroups: GPUBindGroup[] = [];
+  private raysGroup: GPUBindGroup | null = null;
+  private compositeGroup: GPUBindGroup | null = null;
+  private readonly blendConstant: GPUColorDict = { r: 1, g: 1, b: 1, a: 1 };
+  private readonly noClear = null;
+
+  constructor(renderer: Renderer, patch: PostSettingsPatch = {}) {
+    this.renderer = renderer;
+    this.settings = applyPostPatch(defaultPostSettings(), patch);
+    const bytes = POST_UNIFORM_FLOATS * 4;
+    this.prefilter = renderer.createFullscreenPass({
+      label: 'post-bloom-prefilter',
+      wgsl: PREFILTER_WGSL,
+      targets: [HDR],
+      uniformBytes: bytes,
+      textures: 2,
+    });
+    this.down = renderer.createFullscreenPass({
+      label: 'post-bloom-down',
+      wgsl: DOWN_WGSL,
+      targets: [HDR],
+      textures: 1,
+    });
+    this.up = renderer.createFullscreenPass({
+      label: 'post-bloom-up',
+      wgsl: UP_WGSL,
+      targets: [HDR],
+      textures: 1,
+      blend: {
+        color: { srcFactor: 'constant', dstFactor: 'one', operation: 'add' },
+        alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' },
+      },
+    });
+    this.rays = renderer.createFullscreenPass({
+      label: 'post-godrays',
+      wgsl: RAYS_WGSL,
+      targets: [HDR],
+      uniformBytes: bytes,
+      textures: 1,
+    });
+    this.composite = renderer.createFullscreenPass({
+      label: 'post-composite',
+      wgsl: COMPOSITE_WGSL,
+      targets: [renderer.format],
+      uniformBytes: bytes,
+      textures: 4,
+    });
+    this.resize(renderer.width, renderer.height);
+  }
+
+  /** Patch settings section by section. */
+  set(patch: PostSettingsPatch): this {
+    applyPostPatch(this.settings, patch);
+    return this;
+  }
+
+  resize(width: number, height: number): void {
+    const levels = Math.max(2, Math.min(8, Math.floor(this.settings.bloom.levels)));
+    if (width === this.width && height === this.height && levels === this.levels) return;
+    this.width = width;
+    this.height = height;
+    const device = this.renderer.device;
+    this.bloomTex?.destroy();
+    this.raysTex?.destroy();
+
+    const bw = Math.max(1, width >> 1);
+    const bh = Math.max(1, height >> 1);
+    const maxLevels = Math.max(1, Math.floor(Math.log2(Math.min(bw, bh))) - 1);
+    this.levels = Math.max(1, Math.min(levels, maxLevels));
+    const usage = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
+    this.bloomTex = device.createTexture({
+      label: 'post-bloom',
+      size: [bw, bh],
+      format: HDR,
+      mipLevelCount: this.levels,
+      usage,
+    });
+    this.mipViews = [];
+    for (let i = 0; i < this.levels; i++) {
+      this.mipViews.push(this.bloomTex.createView({ baseMipLevel: i, mipLevelCount: 1 }));
+    }
+    this.raysTex = device.createTexture({ label: 'post-rays', size: [bw, bh], format: HDR, usage });
+    this.raysView = this.raysTex.createView();
+
+    this.downGroups = [];
+    this.upGroups = [];
+    for (let i = 1; i < this.levels; i++) {
+      this.downGroups[i] = this.down.createBindGroup([this.mipViews[i - 1]!]);
+    }
+    for (let i = 0; i < this.levels - 1; i++) {
+      this.upGroups[i] = this.up.createBindGroup([this.mipViews[i + 1]!]);
+    }
+    this.raysGroup = this.rays.createBindGroup([this.mipViews[0]!]);
+    this.boundColor = null;
+    this.boundEmissive = null;
+  }
+
+  encode(encoder: GPUCommandEncoder, inputs: PostInputs, output: GPUTextureView): void {
+    const s = this.settings;
+    const r = this.renderer;
+    if (Math.max(2, Math.min(8, Math.floor(s.bloom.levels))) !== this.levels && this.levels > 1) {
+      this.resize(this.width, this.height);
+    }
+    this.bindInputs(inputs.color.view, inputs.emissive.view);
+
+    packPostUniforms(
+      this.uniforms,
+      s,
+      inputs.time,
+      this.width,
+      this.height,
+      r.logicalWidth,
+      r.logicalHeight,
+    );
+    const needBloomChain = s.bloom.enabled || (s.godRays.enabled && s.godRays.bloomSource > 0);
+    this.composite.setUniforms(this.uniforms);
+
+    if (needBloomChain) {
+      this.prefilter.setUniforms(this.uniforms);
+      this.prefilter.encode(encoder, this.mipViews[0]!, { bindGroup: this.prefilterGroup! });
+      for (let i = 1; i < this.levels; i++) {
+        this.down.encode(encoder, this.mipViews[i]!, { bindGroup: this.downGroups[i]! });
+      }
+      const k = Math.min(Math.max(s.bloom.scatter, 0), 1);
+      this.blendConstant.r = k;
+      this.blendConstant.g = k;
+      this.blendConstant.b = k;
+      for (let i = this.levels - 2; i >= 0; i--) {
+        this.up.encode(encoder, this.mipViews[i]!, {
+          bindGroup: this.upGroups[i]!,
+          clear: this.noClear,
+          blendConstant: this.blendConstant,
+        });
+      }
+    }
+    // When the chain is skipped, mip 0 is stale or zero; composite/rays ignore it then.
+
+    if (s.godRays.enabled) {
+      this.rays.setUniforms(this.uniforms);
+      this.rays.encode(encoder, this.raysView!, { bindGroup: this.raysGroup! });
+    }
+
+    this.composite.encode(encoder, output, {
+      bindGroup: this.compositeGroup!,
+      clear: { r: 0, g: 0, b: 0, a: 1 },
+    });
+  }
+
+  private bindInputs(color: GPUTextureView, emissive: GPUTextureView): void {
+    if (color === this.boundColor && emissive === this.boundEmissive) return;
+    this.boundColor = color;
+    this.boundEmissive = emissive;
+    this.prefilterGroup = this.prefilter.createBindGroup([color, emissive]);
+    this.compositeGroup = this.composite.createBindGroup([
+      color,
+      emissive,
+      this.mipViews[0]!,
+      this.raysView!,
+    ]);
+  }
+
+  destroy(): void {
+    this.bloomTex?.destroy();
+    this.raysTex?.destroy();
+    this.prefilter.destroy();
+    this.rays.destroy();
+    this.composite.destroy();
+  }
+}
