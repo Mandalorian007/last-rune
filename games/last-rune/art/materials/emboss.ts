@@ -115,17 +115,13 @@ export class EmbossLabel {
       out[i * 4 + 2] = B[j]!;
       out[i * 4 + 3] = A ? A[j]! : 0;
     }
-    const tex = this.renderer.createTexture({
+    // Mask data, not colour: linear rgba8unorm, so the shader reads the bytes as written.
+    return this.renderer.textureFromPixels({
       width: w,
       height: h,
-      format: 'rgba8unorm',
+      data: out,
       label: 'emboss-mask',
     });
-    this.renderer.device.queue.writeTexture({ texture: tex.texture }, out, { bytesPerRow: w * 4 }, [
-      w,
-      h,
-    ]);
-    return tex;
   }
 
   destroy(): void {
