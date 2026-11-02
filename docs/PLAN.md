@@ -1,7 +1,7 @@
 # Plan
 
 **Goal:** ship *The Last Rune*: free browser game, 16 machines, about 1 hour, WebGPU, itch.io with a tip jar. Built from [design/pitch-v0.3.md](design/pitch-v0.3.md).
-**Target:** feature complete Thu 2026-11-05, ship Fri 2026-11-06. The pitch's one-week plan is the guide; quality beats the date.
+**Target:** no fixed date (user direction, D-011). Milestones are sequential gates, finished when their exit criteria are met. Quality over speed.
 
 ## Hard constraints
 - **WebGPU only.** Unsupported browsers get a styled "use Chrome / Edge / Safari" screen (D-002).
