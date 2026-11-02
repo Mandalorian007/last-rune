@@ -9,7 +9,8 @@
  * - params.w = seed (inclusions, facet sparkle phase)
  * - emissive = glow multiplier (1 = default for the state)
  *
- * Rotation 0: the glyph's input is at the bottom (south), its main output at the top (north).
+ * Rotation 0 matches rules.md rot 0: straight gems run south→north; Bend joins N–E; Gate takes
+ * W + E and outputs N. Keep glyphs in step with the rules: players read them as the wiring.
  *
  * Look: flat table + two rows of crown facets per side, a dark girdle. The inner glyph is lit
  * from inside and seen through each facet with a different refraction offset (per-channel,
@@ -49,14 +50,15 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     d = min(d, g_seg(p, vec2f(-0.12, 0.44), vec2f(0.12, 0.44)));
     d = min(d, g_seg(p, vec2f(-0.12, -0.44), vec2f(0.12, -0.44)));
   } else if (kind == 1) {
-    // Bend: in from the south, a quarter arc, out to the east with an arrowhead.
-    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.2));
-    let c = vec2f(0.2, 0.2);
+    // Bend: an elbow joining north and east (rules: rot 0 joins N–E). Two-way, so no
+    // arrowhead: an end tick on each joined side, like the Channel.
+    d = g_seg(p, vec2f(0.0, -0.56), vec2f(0.0, -0.2));
+    let c = vec2f(0.2, -0.2);
     let q = p - c;
-    if (q.x < 0.0 && q.y < 0.0) { d = min(d, abs(length(q) - 0.2)); }
-    d = min(d, g_seg(p, vec2f(0.2, 0.0), vec2f(0.54, 0.0)));
-    d = min(d, g_seg(p, vec2f(0.56, 0.0), vec2f(0.4, -0.14)));
-    d = min(d, g_seg(p, vec2f(0.56, 0.0), vec2f(0.4, 0.14)));
+    if (q.x < 0.0 && q.y > 0.0) { d = min(d, abs(length(q) - 0.2)); }
+    d = min(d, g_seg(p, vec2f(0.2, 0.0), vec2f(0.56, 0.0)));
+    d = min(d, g_seg(p, vec2f(-0.12, -0.44), vec2f(0.12, -0.44)));
+    d = min(d, g_seg(p, vec2f(0.44, -0.12), vec2f(0.44, 0.12)));
   } else if (kind == 2) {
     // Split: a stem that forks into two arms, node at the fork.
     d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.08));
@@ -74,10 +76,10 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
       d = min(d, g_seg(p, vec2f(0.34, 0.16 + o), vec2f(0.0, -0.14 + o)));
     }
   } else if (kind == 4) {
-    // Gate: two inputs meet in a ring; one output leaves.
-    d = g_seg(p, vec2f(-0.5, 0.4), vec2f(-0.12, 0.13));
-    d = min(d, g_seg(p, vec2f(0.5, 0.4), vec2f(0.12, 0.13)));
-    d = min(d, g_ring(p, vec2f(0.0, 0.03), 0.15));
+    // Gate: inputs from west and east meet in a ring; one output leaves north (rules rot 0).
+    d = g_seg(p, vec2f(-0.56, 0.0), vec2f(-0.15, 0.0));
+    d = min(d, g_seg(p, vec2f(0.56, 0.0), vec2f(0.15, 0.0)));
+    d = min(d, g_ring(p, vec2f(0.0, 0.0), 0.15));
     d = min(d, g_seg(p, vec2f(0.0, -0.12), vec2f(0.0, -0.56)));
     d = min(d, g_seg(p, vec2f(-0.1, -0.44), vec2f(0.1, -0.44)));
   } else {
