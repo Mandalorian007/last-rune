@@ -76,7 +76,14 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-end-safety[data-in] { opacity: 1; transform: rotate(-1.2deg); }
 .tc-overlay .lr-end-safety small { display: block; font-family: var(--tc-font-ui); font-size: 18px; letter-spacing: 3px; text-transform: uppercase; color: #7a5a30; margin-bottom: 6px; }
-.tc-overlay .lr-end-credits { position: absolute; left: 0; right: 0; top: 650px; text-align: center; color: #fff4d8; text-shadow: 0 1px 3px #2a1400, 0 2px 14px #2a1400aa; }
+.tc-overlay .lr-end-credits { position: absolute; z-index: 0; left: 0; right: 0; top: 650px; text-align: center; color: #fff4d8; text-shadow: 0 1px 3px #2a1400, 0 2px 14px #2a1400aa; }
+/* A soft dark backing so the credits read over the gold flood (fades in with the credits). */
+.tc-overlay .lr-end-credits::before {
+  content: ''; position: absolute; z-index: -1; left: 50%; top: -64px; width: 1240px; height: 220px; margin-left: -620px;
+  background: radial-gradient(closest-side, #1c0d02c4, #1c0d0290 45%, #1c0d0200);
+  opacity: 0; transition: opacity 1400ms ease; pointer-events: none;
+}
+.tc-overlay .lr-end-credits[data-in]::before { opacity: 1; }
 .tc-overlay .lr-end-credits div { opacity: 0; transform: translateY(14px); transition: opacity 1000ms ease, transform 1000ms ease; margin-bottom: 26px; }
 .tc-overlay .lr-end-credits div[data-in] { opacity: 1; transform: none; }
 .tc-overlay .lr-end-credits div[data-out] { opacity: 0; transform: translateY(-14px); }
@@ -99,7 +106,11 @@ const CSS = /* css */ `
   display: inline-flex; align-items: center; padding: 22px 40px; border-radius: 14px; text-decoration: none;
   font-family: var(--tc-font-display); font-size: 32px; color: #fff1cc; border: 2px solid #ffe3a066; background: #3a2408aa;
 }
-.tc-overlay .lr-end-footer { font-family: var(--tc-font-ui); font-size: 24px; color: #fff4dc; text-shadow: 0 1px 3px #2a1400, 0 2px 12px #2a1400aa; }
+.tc-overlay .lr-end-footer {
+  margin: 0; padding: 16px 90px; font-family: var(--tc-font-ui); font-size: 24px; color: #fff4dc;
+  text-shadow: 0 1px 3px #2a1400, 0 2px 12px #2a1400aa;
+  background: radial-gradient(closest-side, #1c0d02a8, #1c0d0270 50%, #1c0d0200);
+}
 .tc-overlay .lr-end-back { margin-top: 8px; }
 
 /* ── Skip, clipboard note ─────────────────────────────────────────────── */

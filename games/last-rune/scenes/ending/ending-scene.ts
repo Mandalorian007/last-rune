@@ -12,6 +12,7 @@
  * Directed by an async script over scene-time waits. A generation token makes
  * skip / exit cancel it cleanly. Skippable only after the first viewing.
  */
+import type { PostSettingsPatch } from '@engine/post';
 import type { DrawParams, Frame, Material, RGBA } from '@engine/render';
 import { h } from '@engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
@@ -74,6 +75,19 @@ const DUSK_POST = {
   vignette: { intensity: 0.7 },
   grade: { exposure: 0.92 },
 } as const;
+/**
+ * The door opening: bloom, rays and haze ease down while the door rises, so the Builder's
+ * mark still reads through the light instead of blooming out.
+ */
+const DOOR_POST = {
+  bloom: { intensity: 0.5, threshold: 1.75 },
+  godRays: { intensity: 0.12 },
+  fog: { density: 0.14 },
+  grade: { exposure: 0.88 },
+} as const;
+/** FUSE goes through: the light swells back up into the white-out. */
+const THROUGH_POST = { bloom: { intensity: 0.8, threshold: 1.35 }, godRays: { intensity: 0.3 } };
+const THROUGH_POST_CALM = { bloom: { intensity: 0.6, threshold: 1.55 } };
 /** The gold flood: warm and full, but held under white so the end card reads. */
 const FLOOD_POST = {
   bloom: { intensity: 0.75, threshold: 1.4 },
@@ -84,11 +98,26 @@ const FLOOD_POST = {
 } as const;
 /** Reduce flashes: the same flood with a softer bloom (no sudden glare). */
 const FLOOD_POST_CALM = { ...FLOOD_POST, bloom: { intensity: 0.55, threshold: 1.6 } } as const;
+/** The chat: a flat screen. Fog and rays fade to nothing, then switch off. */
 const CHAT_POST = {
-  fog: { enabled: false },
-  godRays: { enabled: false },
+  fog: { density: 0, enabled: false },
+  godRays: { intensity: 0, enabled: false },
   vignette: { intensity: 0.2 },
 } as const;
+
+/** `b` over `a`, section by section (built once, at load). */
+function mergePost(a: PostSettingsPatch, b: PostSettingsPatch): PostSettingsPatch {
+  const out: Record<string, unknown> = {};
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const key = k as keyof PostSettingsPatch;
+    out[k] = { ...a[key], ...b[key] };
+  }
+  return out as PostSettingsPatch;
+}
+const FLOOD_LOOK = mergePost(POST_PRESETS.ending, FLOOD_POST);
+const FLOOD_LOOK_CALM = mergePost(POST_PRESETS.ending, FLOOD_POST_CALM);
+/** Fog and rays come back from nothing when the gold floods in. */
+const FLOOD_FROM = { fog: { enabled: true, density: 0 }, godRays: { enabled: true, intensity: 0 } };
 
 /** A scalar eased from `from` to `to` over `dur` seconds of scene time. Allocation-free. */
 class Tween {
@@ -247,6 +276,7 @@ export class EndingScene implements GameScene {
       this.postLine = idle.line;
     }
     this.buildDom(doc);
+    // A hard cut, like the view itself (the solve moment hands straight over to the hall).
     ctx.post.set(POST_PRESETS.ending);
     ctx.post.set(DUSK_POST);
     ctx.setMood('ending');
@@ -270,8 +300,10 @@ export class EndingScene implements GameScene {
     this.root = null;
     this.view.dispose();
     this.desk.destroy();
+    this.fuse.destroy();
     this.matPre.destroy();
     this.matAdd.destroy();
+    this.ctx.post.finishBlend();
     this.ctx.post.set(POST_PRESETS.hall);
   }
 
@@ -352,6 +384,7 @@ export class EndingScene implements GameScene {
         this.door.set(1, 3.2, t + 0.6);
         this.aperture.set(0.24, 3, t);
         this.approach.set(1, 7, t);
+        this.ctx.post.blendTo(DOOR_POST, 3.8);
         this.ctx.sound.sfx.play('endingSwell');
         await this.wait(4.2);
         break;
@@ -379,6 +412,7 @@ export class EndingScene implements GameScene {
         this.fuseDepth.set(1, 3.2, this.time);
         this.fuseFade.set(0, 2.6, this.time + 1.0);
         this.doorBright.set(this.calm ? 0.45 : 0.7, 3, this.time + 0.8);
+        this.ctx.post.blendTo(this.calm ? THROUGH_POST_CALM : THROUGH_POST, 4.5);
         await this.wait(2.8);
         // Reduce flashes: a slower fade to a dimmer white.
         this.screen.set(1, this.calm ? 2.8 : 1.6, this.time);
@@ -393,8 +427,8 @@ export class EndingScene implements GameScene {
         this.aperture.snap(0.08);
         this.approach.snap(0);
         this.screenDark.set(1, 1.6, t);
-        // A flat screen: no fog, no god rays, no vignette while the chat is up.
-        this.ctx.post.set(CHAT_POST);
+        // A flat screen: fog, god rays and vignette ease away as the white goes dark.
+        this.ctx.post.blendTo(CHAT_POST, 1.6);
         await this.wait(1.0);
         this.chat.setAttribute('data-in', '');
         await this.wait(1.6);
@@ -413,8 +447,9 @@ export class EndingScene implements GameScene {
         this._phase = 'flood';
         this.typing.textContent = '';
         this.chat.setAttribute('data-shrink', '');
-        this.ctx.post.set(POST_PRESETS.ending);
-        this.ctx.post.set(this.calm ? FLOOD_POST_CALM : FLOOD_POST);
+        // The warmth eases in with the gold (slower with Reduce flashes).
+        this.ctx.post.set(FLOOD_FROM);
+        this.ctx.post.blendTo(this.calm ? FLOOD_LOOK_CALM : FLOOD_LOOK, this.calm ? 5 : 3);
         this.ctx.sound.sfx.play('endingSwell');
         this.screen.set(0, 2.2, t + 0.5);
         // Reduce flashes: the gold rises slowly instead of blooming at once.
@@ -449,6 +484,7 @@ export class EndingScene implements GameScene {
     await this.wait(2.6);
     this.safetyEl.setAttribute('data-in', '');
     await this.wait(2.8);
+    this.creditsEl.setAttribute('data-in', '');
     const items = Array.from(this.creditsEl.children) as HTMLElement[];
     for (const el of items) {
       if (g !== this.gen) return;
@@ -482,8 +518,8 @@ export class EndingScene implements GameScene {
     this.flushWaits();
     this.ctx.fuse.hush();
     this.typingLine = null;
-    this.ctx.post.set(POST_PRESETS.ending);
-    this.ctx.post.set(this.calm ? FLOOD_POST_CALM : FLOOD_POST);
+    this.ctx.post.finishBlend();
+    this.ctx.post.set(this.calm ? FLOOD_LOOK_CALM : FLOOD_LOOK);
     // The world as the ending leaves it: rune lit, door shut, FUSE gone, clipboard on the floor.
     this.dusk.snap(1);
     this.ign.snap(1);
