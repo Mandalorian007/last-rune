@@ -14,7 +14,7 @@
 import { flicker, valueNoise1 } from '@engine/fx';
 import type { DrawParams, Frame, Material, Renderer } from '@engine/render';
 import { FUSE_MATERIAL_WGSL, FUSE_UNIFORM_FLOATS } from '../../shaders/fuse-shaders';
-import { PROP_LIGHT_FLOATS, type PropLightRig } from './lighting';
+import { PROP_LIGHT_FLOATS, type PropLightSource } from './lighting';
 import { prop } from './palette';
 
 export type FuseMood = 'idle' | 'talk' | 'quiet';
@@ -255,7 +255,7 @@ export class Fuse {
     this.eye.intensity = s.eyeGlow * (1 - s.lid * 0.7) * this.opacity;
   }
 
-  draw(frame: Frame, lights: PropLightRig): void {
+  draw(frame: Frame, lights: PropLightSource): void {
     const u = this.uniforms;
     u.set(lights.data, 0);
     writeFuseState(this.state, u, PROP_LIGHT_FLOATS);

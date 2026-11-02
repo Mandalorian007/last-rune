@@ -138,7 +138,7 @@ fn paint_ring(acc: ptr<function, Acc>, p: vec2f, aa: f32, world: vec2f, i: f32, 
   let across = clamp(g.x / 0.026, -1.0, 1.0);
   let n = normalize(vec3f(across * 0.8 * normalize(p - SPHERE_C), 1.0 - across * across * 0.5));
   let wn = to_world_n(n, 1.0, 0.0);
-  var c = prop_light(U.L, world, wn, brass_albedo(vec2f(g.z, i), 1.0, i) * 1.15, 0.9, 0.7);
+  var c = prop_light(world, wn, brass_albedo(vec2f(g.z, i), 1.0, i) * 1.15, 0.9, 0.7);
   // Cool light from the plasma on the inner faces.
   c += C_CYAN * 0.35 * U.a.z * max(-across, 0.0);
   c *= select(0.55, 1.0, front);
@@ -169,10 +169,10 @@ fn paint_ring(acc: ptr<function, Acc>, p: vec2f, aa: f32, world: vec2f, i: f32, 
   let foot = sdg_box(p - vec2f(0.0, -0.98), vec2f(0.5, 0.1), 0.05);
   let stem = sdg_box(p - vec2f(0.0, -0.72), vec2f(0.13 + (p.y + 0.72) * -0.25, 0.22), 0.03);
   let ped = sdg_smin(foot, stem, 0.08);
-  put(&acc, ped.x, aa, prop_light(U.L, world, to_world_n(pillow(ped, 0.06), 1.0, 0.0),
+  put(&acc, ped.x, aa, prop_light(world, to_world_n(pillow(ped, 0.06), 1.0, 0.0),
       iron_albedo(p, 9.0), 0.7, 0.5), vec3f(0.0), 1.0);
   let fr = sdg_circle(vec2f(abs(p.x) - 0.38, p.y + 0.98), 0.03);
-  put(&acc, fr.x, aa, prop_light(U.L, world, to_world_n(dome(fr, 0.03), 1.0, 0.0), C_BRASS, 0.9, 0.7),
+  put(&acc, fr.x, aa, prop_light(world, to_world_n(dome(fr, 0.03), 1.0, 0.0), C_BRASS, 0.9, 0.7),
       vec3f(0.0), 0.5);
 
   // Back halves of the rings.
@@ -183,7 +183,7 @@ fn paint_ring(acc: ptr<function, Acc>, p: vec2f, aa: f32, world: vec2f, i: f32, 
   // Cup under the sphere (behind the glass's lower half).
   let cupO = sdg_circle(p - SPHERE_C, SPHERE_R + 0.07);
   let cup = sdg_intersect(cupO, vec3f(p.y - (SPHERE_C.y - 0.28), 0.0, 1.0));
-  put(&acc, cup.x, aa, prop_light(U.L, world, to_world_n(pillow(cup, 0.08), 1.0, 0.0),
+  put(&acc, cup.x, aa, prop_light(world, to_world_n(pillow(cup, 0.08), 1.0, 0.0),
       brass_albedo(p * 2.0, 1.0, 5.0), 0.85, 0.6), vec3f(0.0), 1.2);
 
   // Glass sphere with the plasma inside.
@@ -207,7 +207,7 @@ fn paint_ring(acc: ptr<function, Acc>, p: vec2f, aa: f32, world: vec2f, i: f32, 
 
   // Front lip of the cup with rivets.
   let lip = sdg_intersect(sdg_ring(sp, SPHERE_R + 0.03, 0.045), vec3f(sp.y + 0.24, 0.0, -1.0));
-  put(&acc, lip.x, aa, prop_light(U.L, world, to_world_n(pillow(lip, 0.04), 1.0, 0.0),
+  put(&acc, lip.x, aa, prop_light(world, to_world_n(pillow(lip, 0.04), 1.0, 0.0),
       brass_albedo(p * 3.0, 1.0, 6.0) * 1.1, 0.9, 0.7), vec3f(0.0), 0.8);
 
   // Front halves of the rings.

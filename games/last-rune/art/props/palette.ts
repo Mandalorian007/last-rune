@@ -1,46 +1,45 @@
 /**
- * Prop palette (art-props). Names follow the pitch's palette list; prop-only materials
- * (brass, iron, ...) are grouped below. Values are sRGB hex; convert with `hex()` from
- * `@engine/render` (linear, HDR multiplier optional).
- *
- * PM reconciles these against `docs/design/art-direction.md` (art-materials). If a value
- * changes there, change it here: every prop shader reads colours through this file.
+ * Prop palette (art-props). Names follow the pitch's palette list. Every shared colour is
+ * read from `art/materials/palette.ts` (`PALETTE_HEX`, the single source of colour truth);
+ * only prop-only materials (verdigris, rust, FUSE's eye, ...) are defined here.
+ * Values are sRGB hex; convert with `hex()` from `@engine/render`.
  */
 import { hex, type RGBA } from '@engine/render';
+import { PALETTE_HEX } from '../materials/palette';
 
-/** The pitch palette (Art direction → Palette). */
+/** The pitch palette (Art direction -> Palette), named by colour. Derived from PALETTE_HEX. */
 export const PITCH = {
   /** Channel. */
-  cyan: '#3fe0ff',
+  cyan: PALETTE_HEX.channel,
   /** Bend. */
-  amethyst: '#9b5cff',
+  amethyst: PALETTE_HEX.bend,
   /** Split. */
-  magenta: '#ff3fb4',
+  magenta: PALETTE_HEX.split,
   /** Amplify. */
-  amber: '#ffb03f',
+  amber: PALETTE_HEX.amplify,
   /** Gate. */
-  emerald: '#3fff9a',
+  emerald: PALETTE_HEX.gate,
   /** Capacitor. */
-  ice: '#bfe6ff',
+  ice: PALETTE_HEX.capacitor,
   /** Stone. */
-  slate: '#3a4152',
+  slate: PALETTE_HEX.stone,
   /** Shadow. */
-  ink: '#0b0d14',
+  ink: PALETTE_HEX.ink,
   /** Candle. */
-  warm: '#ffb35c',
+  warm: PALETTE_HEX.candle,
   /** Emboss. */
-  gold: '#e8b54a',
-  parchment: '#e9d9b0',
-  mist: '#9fb4d8',
+  gold: PALETTE_HEX.gold,
+  parchment: PALETTE_HEX.parchment,
+  mist: PALETTE_HEX.mist,
 } as const;
 
-/** Materials that only props use. */
+/** Materials that only props use (brass and iron come from PALETTE_HEX). */
 export const PROP = {
-  brass: '#c99a3e',
+  brass: PALETTE_HEX.brass,
   brassDark: '#6b4a1a',
   brassHi: '#ffe0a0',
   verdigris: '#3f8f7a',
-  iron: '#5b5f6b',
+  iron: PALETTE_HEX.iron,
   ironDark: '#23252c',
   rust: '#7a3a1c',
   /** FUSE's live eye: deeper and warmer than candle so it reads as "his". */

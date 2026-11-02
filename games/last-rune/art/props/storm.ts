@@ -30,7 +30,7 @@ import {
   STORM_SIM_WGSL,
   STORM_UNIFORM_FLOATS,
 } from '../../shaders/storm-shaders';
-import { PROP_LIGHT_FLOATS, type PropLightRig } from './lighting';
+import { PROP_LIGHT_FLOATS, type PropLightSource } from './lighting';
 import { pitch } from './palette';
 
 export type { StormStrength } from '../../rules/types';
@@ -141,7 +141,7 @@ export class StormCell {
     this.light.intensity = this.intensity * (0.6 + 0.25 * this.rings) * f * (1 + this.surgeK * 2);
   }
 
-  draw(frame: Frame, lights: PropLightRig): void {
+  draw(frame: Frame, lights: PropLightSource): void {
     frame.prePass(this.runSim);
     const u = this.u;
     u.set(lights.data, 0);

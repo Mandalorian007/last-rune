@@ -15,7 +15,7 @@
 import type { DrawParams, Frame, Material, Renderer } from '@engine/render';
 import type { Capability } from '../../rules/types';
 import { ALCOVE_MATERIAL_WGSL, ALCOVE_UNIFORM_FLOATS } from '../../shaders/alcove-shaders';
-import { PROP_LIGHT_FLOATS, type PropLightRig } from './lighting';
+import { PROP_LIGHT_FLOATS, type PropLightSource } from './lighting';
 import { GEM_COLOUR, GEM_ORDER, pitch } from './palette';
 
 /** Socket kinds: 0..5 gem colours in GEM_ORDER, 6 storm, 7 altar. */
@@ -121,7 +121,7 @@ export class Alcove {
     this.light.intensity = Math.min(this.state, 1) * 0.35 + Math.max(this.state - 1, 0) * 0.65;
   }
 
-  draw(frame: Frame, lights: PropLightRig): void {
+  draw(frame: Frame, lights: PropLightSource): void {
     const s = this.sh;
     s.u.set(lights.data, 0);
     s.u[PROP_LIGHT_FLOATS] = this.time;
