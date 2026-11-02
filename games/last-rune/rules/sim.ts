@@ -125,7 +125,7 @@ export function emptyBoard(p: PuzzleDef, fill: number): Board {
 // Core
 
 /** Ancestry: which sockets a bolt's charge passed through (bitset, up to 96 sockets). */
-type Anc = readonly [number, number, number];
+export type Anc = readonly [number, number, number];
 const NO_ANC: Anc = [0, 0, 0];
 function ancWith(a: Anc, i: number): Anc {
   const r: [number, number, number] = [a[0], a[1], a[2]];
@@ -174,6 +174,14 @@ export interface CoreDecision {
   overSoFar: boolean;
   /** Machines awake after completed strikes. */
   awake: boolean[];
+  /**
+   * Sockets that handled a bolt during the current strike, and sockets that are still
+   * "alive": ancestors of a moving bolt, a waiting gate input, a stored capacitor charge, a
+   * bolt that reached a machine this strike, or charge that woke a machine earlier. A socket
+   * in `lit` but not in `live` cannot carry charge to a machine on this strike.
+   */
+  lit: Uint8Array;
+  live: Anc;
 }
 
 export interface CoreDone {
@@ -295,6 +303,20 @@ export function runCore(p: PuzzleDef, board: Board, wantTrace: boolean): CoreRes
           let overSoFar = false;
           for (let j = 0; j < m; j++)
             if (!awake[j] && reading[j]! > machines[j]!.need) overSoFar = true;
+          const lit = used.slice();
+          let live = useful;
+          for (const b of cur) live = ancOr(live, b.anc);
+          for (const b of next) live = ancOr(live, b.anc);
+          for (const [gi, gs] of gates) {
+            lit[gi] = 1;
+            if (!gs.fired && (gs.a || gs.b)) {
+              live = ancWith(live, gi);
+              if (gs.a) live = ancOr(live, gs.a.anc);
+              if (gs.b) live = ancOr(live, gs.b.anc);
+            }
+          }
+          for (let ci = 0; ci < n; ci++) if (capFull[ci]) live = ancOr(live, capAnc[ci] ?? NO_ANC);
+          for (let j = 0; j < m; j++) live = ancOr(live, readingAnc[j]!);
           return {
             status: 'decide',
             cell: i,
@@ -302,6 +324,8 @@ export function runCore(p: PuzzleDef, board: Board, wantTrace: boolean): CoreRes
             charges: group.map((b) => b.charge),
             overSoFar,
             awake: awake.slice(),
+            lit,
+            live,
           };
         }
         const r = rot[i]!;

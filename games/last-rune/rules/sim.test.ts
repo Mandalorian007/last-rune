@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { blockedFromAscii, fromAscii } from './ascii';
 import type { MachineTarget, Placement, PuzzleDef } from './model';
 import { simulate } from './sim';
-import { blockedFromAscii, fromAscii } from './testkit';
 import type { StormStrength } from './types';
 import { puzzleProblems, validatePlacement } from './validate';
 
@@ -167,7 +167,12 @@ describe('split', () => {
 describe('amplify', () => {
   it('doubles the charge', () => {
     const p = bench({ machines: [{ at: { x: 6, y: 1 }, need: 8 }] });
-    expect(readings(p, ['', '= = A = = =', '', ''].map((s) => s || '. . . . . .'))).toEqual([[8]]);
+    expect(
+      readings(
+        p,
+        ['', '= = A = = =', '', ''].map((s) => s || '. . . . . .'),
+      ),
+    ).toEqual([[8]]);
   });
 
   it('once per path: a second amber does nothing', () => {
@@ -248,12 +253,7 @@ describe('gate', () => {
 
   it('waits for a late input within the same strike', () => {
     // the south half takes a longer route (arrives tick 8, north arrives tick 6)
-    const r = run(bench(), [
-      '. ┌ = ┐ . .',
-      '= S . G1 = =',
-      '. = . = . .',
-      '. └ = ┘ . .',
-    ]);
+    const r = run(bench(), ['. ┌ = ┐ . .', '= S . G1 = =', '. = . = . .', '. └ = ┘ . .']);
     expect(r.outcome).toBe('exact');
     const inputs = r.trace.filter((s) => s.to.x === 3 && s.to.y === 1);
     expect(inputs.map((s) => [s.tick + 1, s.end])).toEqual([
@@ -314,7 +314,12 @@ describe('capacitor and strikes', () => {
   });
 
   it('the storm stops once every machine is awake', () => {
-    const r = run(bench({ pulses: 3 }), ['. . . . . .', '= = = = = =', '. . . . . .', '. . . . . .']);
+    const r = run(bench({ pulses: 3 }), [
+      '. . . . . .',
+      '= = = = = =',
+      '. . . . . .',
+      '. . . . . .',
+    ]);
     expect(r.pulsesRun).toBe(1);
   });
 

@@ -73,6 +73,7 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
   const canonical = opts.canonical ?? true;
   const maxNodes = opts.maxNodes ?? 3_000_000;
   const tray = opts.tray ?? p.tray;
+  const firstOnly = maxSolutions === 1;
 
   const board = emptyBoard(p, S_UNKNOWN);
   const { w, h } = altarDims(p.altar);
@@ -201,6 +202,11 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
       return;
     }
     if (r.overSoFar) return;
+    if (canonical) {
+      // A placed gem whose every bolt this strike has already died can never be useful.
+      for (let i = 0; i < n; i++)
+        if (r.lit[i] && board.kind[i]! >= 0 && !fixedMask[i] && !ancHas(r.live, i)) return;
+    }
     if (lowerBound(r.awake) > totalRemaining) return;
 
     const i = r.cell;
@@ -209,14 +215,19 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
     decisions++;
     let branches = 0;
 
-    // Option 1: nothing here (or a Bend/Gate facing away, decided later).
-    board.kind[i] = S_DEFERRED;
-    board.excl[i] = prevExcl | r.sides;
-    branches++;
-    dfs();
-    board.excl[i] = prevExcl;
+    // Option A: nothing here (or a Bend/Gate facing away, decided later).
+    const tryNothing = () => {
+      board.kind[i] = S_DEFERRED;
+      board.excl[i] = prevExcl | r.sides;
+      branches++;
+      dfs();
+      board.excl[i] = prevExcl;
+      board.kind[i] = prevKind;
+    };
+    // Looking for one solution, gems first finds it sooner; counting, the order is moot.
+    if (!firstOnly) tryNothing();
 
-    // Option 2: a gem that accepts at least one of the arriving bolts.
+    // Option B: a gem that accepts at least one of the arriving bolts.
     const allOdd = r.charges.every((c) => c % 2 !== 0);
     for (const code of CODES) {
       if (stopped) break;
@@ -236,6 +247,7 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
         if (stopped) break;
       }
     }
+    if (firstOnly && !stopped) tryNothing();
     board.kind[i] = prevKind;
     board.excl[i] = prevExcl;
     branchSum += branches;
@@ -258,9 +270,13 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
   };
 }
 
-/** Is there any solution at all with this tray? (Non-canonical, stops at the first.) */
+/**
+ * Is there a solution with this tray? Stops at the first. Searches canonical solutions (every
+ * gem carries charge to a machine), which is much faster; any solution reduces to one by
+ * lifting its idle gems, unless an idle bolt's collision was holding the circuit together.
+ */
 export function isSolvable(p: PuzzleDef, tray: Partial<Record<GemKind, number>> = p.tray): boolean {
-  return solve(p, { tray, canonical: false, maxSolutions: 1, keep: 1 }).count > 0;
+  return solve(p, { tray, maxSolutions: 1, keep: 1 }).count > 0;
 }
 
 /** Gem kinds in the tray without which the puzzle cannot be solved. */

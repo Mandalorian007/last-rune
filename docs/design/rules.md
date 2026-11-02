@@ -127,3 +127,18 @@ anything, else `under`.
 A gem may be placed on a cell that is inside the altar, not blocked, not fixed, not already
 holding a placed gem, and only while the tray still has one of that kind left. (Moving a gem is
 remove + place.)
+
+## 9. Solver (`rules/solver.ts`)
+
+`solve(p)` searches by following the bolts. A gem is only ever decided on a cell that a bolt
+reaches, so empty sockets elsewhere are never enumerated. It counts **canonical** solutions:
+every placed gem must carry charge that ends up in a machine. Solutions that only add idle
+gems, such as a spare channel the bolt never reaches or a gem whose output fizzles, are not
+counted separately. Within one search the solver drops a branch as soon as a placed gem has been
+lit but can no longer reach a machine. Brute-force enumeration on small boards matches its counts
+(`solver.test.ts`).
+
+`isSolvable` and `essentialGems` use the same canonical search with `maxSolutions: 1`. In rare
+cases a board is only solvable with an idle gem that changes things just by being there (for
+example, it catches a stray bolt that would otherwise collide). The canonical search does not
+look for those boards.
