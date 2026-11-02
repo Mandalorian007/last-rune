@@ -13,3 +13,40 @@
 7. **Tests**: save schema and migrations scaffold, flow/state transitions, hall state derivation. Playwright screenshot pass of Title and Hall to verify (see `docs/workstreams/engine-render.md` for the headless WebGPU setup).
 
 ## Log
+
+### 2026-11-02 — shell landed (branch `worktree-agent-aaca8cac53ea8daeb`)
+**Done:** all seven deliverables. `pnpm check` (186 tests) and `pnpm build` pass. A Playwright click-through passes: Title → Play → Hall → hover an alcove (name plate + FUSE caption) → C opens the codex, Esc closes it → the HUD codex button opens it, × closes it → click the Intake Desk → puzzle stub → Restore → solve stub → Continue → Hall with the desk solved and four doors open → settings → reload shows Continue. No console errors. `?demo=render` and `?nogpu` still work.
+
+**Layout**
+- `game/save.ts`: schema v1 (`SaveV1`), `MIGRATIONS` scaffold (empty), `repairSave`, `newGameData` (keeps settings).
+- `game/flow.ts`: `GameFlow` owns every transition and progress write. The flow is unit-tested against a fake stack.
+- `game/ctx.ts`: `createGameCtx` wiring. `game/actions.ts`: bindings. `game/settings.ts`: reduced motion and caption speed.
+- `scenes/hall/hall-state.ts`: pure derivation (alcoves, missing sockets, conduits, hit-testing, FUSE line choice).
+- `scenes/hall/hall-scene.ts`, `scenes/title/title-scene.ts`, `scenes/stubs/{puzzle,solve}-stub.ts`.
+- `scenes/views.ts`: the `HallView`/`TitleView` seams. `scenes/placeholder/*` holds the SDF stand-ins.
+- `ui/`: `fuse.ts` (caption glue plus the portrait swap point), `codex.ts` + `codex-data.ts`, `settings-panel.ts`, `hud.ts`, `styles.ts` (all CSS, procedural).
+
+**Hook points**
+- Altar: in `main.ts` `SCENES.puzzle = (id) => new AltarScene(id)`. Its contract is in the header of `scenes/stubs/puzzle-stub.ts`:
+  - `flow.placementsFor` and `flow.savePlacements`
+  - `flow.recordAttempt(id, outcome)` (`'over'` counts a tripped breaker)
+  - `flow.completePuzzle(id)` (exact charge)
+  - `flow.closePuzzle()`
+- Solve moment: `SCENES.solve = (moment) => new SolveScene(moment)`. It gets a `SolveMoment {machine, grants, unlocked, pages, firstTime, complete}` and calls `flow.finishSolve()`. The hall view gets `onRestored(machine)` on return.
+- Art:
+  - The hall and title swap through `ctx.views.hall` / `ctx.views.title`, which are factories of `(ViewContext) => HallView | TitleView`. The scene keeps input, hit-testing and FUSE; the view only draws `HallViewFrame {model, hover, focus, time, reducedMotion}`.
+  - The FUSE portrait swaps through `ctx.fuse.setPortrait(factory)`.
+
+**Decisions**
+- Volumes live in the `persistMixer` slot, not in the save, so a progress reset or import never touches audio.
+- Puzzle and solve are transparent scenes pushed over the hall, so the hall keeps rendering underneath. Solve *replaces* the puzzle; popping it returns to the hall.
+- The global keys are C for the codex and O for settings. Both are ignored while a modal is open, and FUSE hushes when either panel opens because the caption layer sits above panels.
+- The HUD is stacked in the top-left corner, the only wall area the alcove layout leaves clear.
+- Play time accumulates in the flow. It is committed on hide/pagehide and on each solve.
+
+**Open issues / requests**
+- **Content:** the codex rule and maths copy in `ui/codex-data.ts` is PROVISIONAL, taken from the pitch gem list. It needs an owner, probably `content/codex.ts` next to `codexNote`.
+- **Engine gap:** `Input` ignores keys whose target is a focused button or input, so global shortcuts die after a panel restores focus to a button. Mitigated here by blurring HUD buttons after a click. A clean fix would be an opt-in `globalKeys` set in Input.
+- **Engine gap (minor):** `SceneStack` takes its ctx only at construction, so the ctx object is built empty and filled with `Object.assign`. A `setContext` or a lazy getter would be cleaner.
+- **Layout:** the bottom-right alcove sits under the FUSE caption card (bottom-right corner). Either the alcove layout in `content/machines.ts` moves, or the caption corner switches to bottom-left while in the hall.
+- The ending scene is not built. The flow toasts on `complete`.

@@ -1,0 +1,212 @@
+/**
+ * The machine hall: pick a machine. Logic only; pixels come from `ctx.views.hall`.
+ *
+ * - Pointer: hover an alcove → name plate now, FUSE's line after a short dwell.
+ *   Click an open alcove → `flow.openPuzzle`. Click a locked one → FUSE says why.
+ * - Keyboard/pad: ←/→ cycle alcoves (front to back), Enter opens, Esc → settings.
+ * - First visit: FUSE's welcome. Idle: an ambient line now and then.
+ * - Coming back from a solve: tells the view what was restored and opened.
+ */
+import type { Frame } from '@engine/render';
+import { hallLines } from '../../content/lines';
+import type { GameCtx, GameScene } from '../../game/ctx';
+import { progressOf } from '../../game/save';
+import { type ProgressState, storyTier } from '../../rules/progression';
+import type { MachineId } from '../../rules/types';
+import type { HallView, HallViewFrame } from '../views';
+import {
+  ALCOVE_HIT,
+  type AlcoveModel,
+  alcoveAt,
+  deriveHall,
+  focusOrder,
+  type HallModel,
+  lineForAlcove,
+  newlyUnlocked,
+} from './hall-state';
+
+const DWELL = 0.35;
+const AMBIENT_EVERY = 75;
+
+const STATUS_NOTE: Record<AlcoveModel['status'], string> = {
+  solved: 'Restored',
+  unlocked: 'Open · click to restore',
+  locked: 'Locked',
+};
+
+export class HallScene implements GameScene {
+  readonly name = 'hall';
+  private ctx!: GameCtx;
+  private view!: HallView;
+  private progress!: ProgressState;
+  private model!: HallModel;
+  private time = 0;
+  private hover: MachineId | null = null;
+  private focus: MachineId | null = null;
+  private dwell = 0;
+  private spoken: MachineId | null = null;
+  private idle = 0;
+  private ambientIndex = 0;
+  private lastPointer = { x: -1, y: -1 };
+
+  enter(ctx: GameCtx): void {
+    this.ctx = ctx;
+    this.view = ctx.views.hall(ctx.viewContext);
+    this.refresh();
+    ctx.post.set({ godRays: { intensity: 0.25 }, fog: { density: 0.55 } });
+    if (!ctx.save.get().flags.hallIntro) {
+      const first = hallLines('first-entry', 1)[0];
+      if (first) void ctx.fuse.say(first);
+      ctx.save.update((d) => {
+        d.flags.hallIntro = true;
+        return undefined;
+      });
+    }
+  }
+
+  exit(): void {
+    this.view.dispose();
+    this.ctx.hud.plate(null);
+  }
+
+  pause(): void {
+    this.ctx.hud.plate(null);
+    this.ctx.fuse.hush();
+  }
+
+  resume(): void {
+    const before = this.progress;
+    this.refresh();
+    const restored = this.progress.solved.filter((id) => !before.solved.includes(id));
+    for (const id of restored) this.view.onRestored?.(id, newlyUnlocked(before, this.progress));
+    this.hover = null;
+    this.spoken = null;
+    this.idle = 0;
+  }
+
+  /** Read-only snapshot for tests/diagnostics. */
+  get state(): { model: HallModel; hover: MachineId | null; focus: MachineId | null } {
+    return { model: this.model, hover: this.hover, focus: this.focus };
+  }
+
+  update(dt: number): void {
+    const { input } = this.ctx;
+    this.time += dt;
+    this.idle += dt;
+
+    // Pointer hover (pointer movement takes over from keyboard focus).
+    const p = input.pointer;
+    const moved = p.x !== this.lastPointer.x || p.y !== this.lastPointer.y;
+    if (moved) {
+      this.lastPointer = { x: p.x, y: p.y };
+      this.focus = null;
+      const hit = p.inside ? alcoveAt(this.model, p.x, p.y) : null;
+      this.setHover(hit?.id ?? null);
+    }
+
+    // Keyboard / pad focus.
+    const step = input.pressed('next') ? 1 : input.pressed('prev') ? -1 : 0;
+    if (step !== 0) {
+      const order = focusOrder(this.model);
+      const cur = this.focus ?? this.hover;
+      const i = cur ? order.indexOf(cur) : -1;
+      const next = order[(i + step + order.length) % order.length]!;
+      this.focus = next;
+      this.setHover(next);
+      this.dwell = DWELL; // speak right away for keyboard users
+    }
+
+    if (this.hover) {
+      this.dwell += dt;
+      if (this.dwell >= DWELL && this.spoken !== this.hover) this.speak(this.hover);
+    }
+
+    if (input.pressed('select')) {
+      const hit = alcoveAt(this.model, p.x, p.y);
+      if (hit) this.activate(hit);
+    } else if (input.pressed('confirm') && (this.focus ?? this.hover)) {
+      const a = this.alcove(this.focus ?? this.hover!);
+      if (a) this.activate(a);
+    } else if (input.pressed('cancel')) {
+      this.ctx.openSettings();
+    }
+
+    if (this.idle >= AMBIENT_EVERY && !this.ctx.fuse.speaking) this.ambient();
+
+    this.view.update(dt, this.frameState());
+  }
+
+  render(frame: Frame): void {
+    this.view.render(frame, this.frameState());
+  }
+
+  // ── internals ───────────────────────────────────────────────────────────
+
+  private frameState(): HallViewFrame {
+    return {
+      time: this.time,
+      reducedMotion: this.ctx.settings.reducedMotion,
+      model: this.model,
+      hover: this.hover,
+      focus: this.focus,
+    };
+  }
+
+  private refresh(): void {
+    this.progress = progressOf(this.ctx.save.get());
+    this.model = deriveHall(this.progress);
+  }
+
+  private alcove(id: MachineId): AlcoveModel | undefined {
+    return this.model.alcoves.find((a) => a.id === id);
+  }
+
+  private setHover(id: MachineId | null): void {
+    if (id === this.hover) return;
+    this.hover = id;
+    this.dwell = 0;
+    const a = id ? this.alcove(id) : undefined;
+    if (!a) {
+      this.ctx.hud.plate(null);
+      return;
+    }
+    this.ctx.sfx('ui.hover');
+    const top = a.y < 320;
+    const half = a.floor ? ALCOVE_HIT.h * 0.6 : ALCOVE_HIT.h / 2;
+    this.ctx.hud.plate({
+      x: a.x,
+      y: top ? a.y + half + 14 : a.y - half - 80,
+      name: a.name,
+      note: STATUS_NOTE[a.status],
+    });
+  }
+
+  private speak(id: MachineId): void {
+    const a = this.alcove(id);
+    this.spoken = id;
+    this.idle = 0;
+    const line = a ? lineForAlcove(a) : undefined;
+    if (line && !this.ctx.fuse.isSaying(line)) void this.ctx.fuse.say(line, { interrupt: true });
+  }
+
+  private activate(a: AlcoveModel): void {
+    this.idle = 0;
+    if (a.status === 'locked') {
+      this.ctx.sfx('ui.deny');
+      this.speak(a.id);
+      return;
+    }
+    this.ctx.sfx('ui.click');
+    this.ctx.fuse.hush();
+    this.ctx.flow.openPuzzle(a.id);
+  }
+
+  private ambient(): void {
+    this.idle = 0;
+    const tier = storyTier(this.progress);
+    const pool = [...hallLines('ambient', tier), ...(tier >= 3 ? hallLines('echo', tier) : [])];
+    if (pool.length === 0) return;
+    const line = pool[this.ambientIndex++ % pool.length]!;
+    void this.ctx.fuse.say(line);
+  }
+}

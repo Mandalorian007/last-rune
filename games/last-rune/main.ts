@@ -1,9 +1,26 @@
-// Entry point: mount the letterboxed canvas, bring up WebGPU, then hand off.
-// Fatal screens (no WebGPU, device lost) come from engine/platform.
+// Entry point: mount the letterboxed canvas, bring up WebGPU, build the GameCtx
+// and boot into the title. Fatal screens (no WebGPU, device lost) come from
+// engine/platform. Dev routes: `?demo=render`, `?nogpu`.
 import { boot } from '@engine/platform';
 import { installGpuErrorLogging } from '@engine/render';
+import { createGameCtx, type GameCtx, type SceneFactories } from './game/ctx';
+import { HallScene } from './scenes/hall/hall-scene';
+import { PuzzleStubScene } from './scenes/stubs/puzzle-stub';
+import { SolveStubScene } from './scenes/stubs/solve-stub';
+import { TitleScene } from './scenes/title/title-scene';
 
 const TITLE = 'The Last Rune';
+
+/**
+ * Scene wiring. The altar (rules-puzzles) and solve moment replace the stubs
+ * here; art replaces `ctx.views.hall` / `ctx.views.title` (see scenes/views.ts).
+ */
+const SCENES: SceneFactories = {
+  title: () => new TitleScene(),
+  hall: () => new HallScene(),
+  puzzle: (machine) => new PuzzleStubScene(machine),
+  solve: (moment) => new SolveStubScene(moment),
+};
 
 async function main(): Promise<void> {
   const root = document.getElementById('app');
@@ -23,12 +40,21 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Placeholder until the wave-2 game scenes land.
-  const note = document.createElement('p');
-  note.textContent = `${TITLE}: engine up.${import.meta.env.DEV ? ' Try ?demo=render' : ''}`;
-  note.style.cssText =
-    'position:fixed;left:0;right:0;bottom:16px;text-align:center;color:#8a93a6;font:14px serif';
-  root.appendChild(note);
+  const ctx = createGameCtx(res.surface, res.gpu, SCENES);
+  if (!ctx.save.persistent) {
+    ctx.ui.toasts.show('Progress can’t be saved in this browser. Settings → Export keeps a copy.', {
+      tone: 'warn',
+      duration: 8000,
+    });
+  }
+  ctx.flow.start();
+  ctx.loop.start();
+  res.surface.canvas.focus();
+
+  if (import.meta.env.DEV) {
+    // Dev/e2e handle: `window.__game.flow.state`, `__game.save.get()`.
+    (window as unknown as { __game: GameCtx }).__game = ctx;
+  }
 }
 
 main().catch((err) => {
