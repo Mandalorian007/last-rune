@@ -6,7 +6,9 @@ import { installGpuErrorLogging } from '@engine/render';
 import { createGameCtx, type GameCtx, type SceneFactories } from './game/ctx';
 import { AltarScene } from './scenes/altar/altar-scene';
 import { SolveScene } from './scenes/altar/solve-scene';
+import { EndingScene } from './scenes/ending/ending-scene';
 import { HallScene } from './scenes/hall/hall-scene';
+import { JournalScene } from './scenes/journal/journal-scene';
 import { TitleScene } from './scenes/title/title-scene';
 
 const TITLE = 'The Last Rune';
@@ -20,6 +22,8 @@ const SCENES: SceneFactories = {
   hall: () => new HallScene(),
   puzzle: (machine) => new AltarScene(machine),
   solve: (moment) => new SolveScene(moment),
+  journal: () => new JournalScene(),
+  ending: (moment) => new EndingScene(moment),
 };
 
 async function main(): Promise<void> {

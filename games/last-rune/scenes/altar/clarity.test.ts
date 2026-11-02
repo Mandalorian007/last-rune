@@ -5,7 +5,7 @@ import { altarDims } from '../../rules/model';
 import type { MachineId } from '../../rules/types';
 import { chargeChips, liveSockets, previewPath } from './circuit-model';
 import { computeLayout } from './layout';
-import { newGems, TEACH_HOOKS, teachHooks, teachLine } from './teach';
+import { newGems, nudgeGems } from './teach';
 
 const P = (gem: Placement['gem'], x: number, y: number, rot: Placement['rot'] = 0): Placement => ({
   gem,
@@ -100,12 +100,13 @@ describe('new gems', () => {
     expect(newGems(puzzleFor('furnace'), all)).toEqual({ fixed: [], tray: [] });
   });
 
-  it('every hook it can ask for exists', () => {
+  it('has a FUSE nudge for every new gem but Channel', () => {
+    const intake = newGems(puzzleFor('intake-desk'), []);
+    expect(nudgeGems(intake)).toEqual(['bend']);
     for (const p of Object.values(PUZZLES)) {
-      for (const id of teachHooks(newGems(p, []), p.id)) {
-        expect(TEACH_HOOKS[id]).toBeTruthy();
-        expect(teachLine(id).length).toBeGreaterThan(0);
-      }
+      const news = newGems(p, []);
+      const kinds = [...news.fixed.map((f) => f.gem), ...news.tray].filter((g) => g !== 'channel');
+      expect(nudgeGems(news).sort()).toEqual([...new Set(kinds)].sort());
     }
   });
 });

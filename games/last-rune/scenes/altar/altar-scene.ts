@@ -21,7 +21,7 @@ import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
 import type { BoltHandle, StormCellHandle } from '../../audio';
-import { machineLine, reactionLine } from '../../content/lines';
+import { exactLine, gemNudge, machineLine, reactionLine, TEACH_NUDGE } from '../../content/lines';
 import { puzzleFor } from '../../content/puzzles';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { BoltOutcome } from '../../game/flow';
@@ -52,7 +52,7 @@ import {
   gemsUsed,
   type StrikeTimeline,
 } from './strike';
-import { type NewGems, newGems, type TeachHookId, teachHooks, teachLine } from './teach';
+import { type NewGems, newGems, nudgeGems } from './teach';
 
 type Mode = 'edit' | 'strike' | 'result';
 
@@ -211,7 +211,7 @@ export class AltarScene implements GameScene {
   /** New tray kinds not yet picked up. */
   private teachTray = new Set<GemKind>();
   private teachTags: HTMLElement[] = [];
-  private spoken = new Set<TeachHookId>();
+  private spoken = new Set<GemKind>();
 
   constructor(readonly machine: MachineId) {}
 
@@ -258,8 +258,7 @@ export class AltarScene implements GameScene {
       const arrive = machineLine(this.machine, 'arrive');
       if (arrive) void ctx.fuse.say(arrive, { interrupt: true });
       // New fixed gems: one hint each, queued after the arrive line.
-      for (const id of teachHooks({ fixed: this.news.fixed, tray: [] }, this.machine))
-        this.speak(id);
+      for (const g of nudgeGems({ fixed: this.news.fixed, tray: [] })) this.speak(g);
     }
     this.buildTeachTags();
     setHintTarget({
@@ -568,10 +567,12 @@ export class AltarScene implements GameScene {
 
   // ── First-appearance teaching ───────────────────────────────────────────
 
-  private speak(id: TeachHookId): void {
-    if (this.spoken.has(id)) return;
-    this.spoken.add(id);
-    void this.ctx.fuse.say(teachLine(id));
+  /** FUSE's nudge for a gem's first appearance (queued, never interrupting). */
+  private speak(gem: GemKind): void {
+    if (this.spoken.has(gem)) return;
+    this.spoken.add(gem);
+    const line = gemNudge(gem);
+    if (line) void this.ctx.fuse.say(line);
   }
 
   /** Rule cards pinned above new fixed gems until the first strike. */
@@ -653,7 +654,7 @@ export class AltarScene implements GameScene {
     const rot = keepRot && this.hand?.kind === kind ? this.hand.rot : 0;
     this.hand = { kind, rot, from: null };
     if (this.teachTray.delete(kind)) {
-      for (const id of teachHooks({ fixed: [], tray: [kind] }, this.machine)) this.speak(id);
+      for (const g of nudgeGems({ fixed: [], tray: [kind] })) this.speak(g);
     }
     this.ctx.sound.sfx.play('gemPick', { gem: kind });
     this.refreshHud();
@@ -1162,7 +1163,8 @@ export class AltarScene implements GameScene {
         ? `${['First', 'Second', 'Third', 'Fourth'][i] ?? 'A'} machine: ${text[0]!.toLowerCase()}${text.slice(1)}`
         : text;
     if (o === 'exact') {
-      this.showVerdict('Exactly right. It wakes.', 'exact');
+      // The solve moment's FUSE line follows at once, so the exact line rides in the verdict.
+      this.showVerdict(exactLine(Math.min(4, this.ctx.tier()) as 1 | 2 | 3 | 4).text, 'exact');
       this.wakeTimer = this.ctx.settings.reducedMotion ? 0.9 : 1.5;
       this.solved = true;
       this.ctx.sound.music.duck(0.5, 1.6);
@@ -1500,7 +1502,7 @@ export class AltarScene implements GameScene {
     this.idle += dt;
     if (!this.nudged && this.idle > TEACH_IDLE && this.board.isEmpty) {
       this.nudged = true;
-      void this.ctx.fuse.say(teachLine('altar.teach.place'), { interrupt: true });
+      void this.ctx.fuse.say(TEACH_NUDGE, { interrupt: true });
     }
   }
 

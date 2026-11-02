@@ -11,6 +11,8 @@
  *   hall                        (bottom while playing)
  *   hall, puzzle(id)            (hall paused underneath)
  *   hall, solve(moment)         (solve replaces the puzzle; pop returns to hall)
+ *   hall, journal               (journal desk pushed over the hall)
+ *   hall, ending(moment)        (the final solve moment hands over to the ending)
  */
 import { type JournalPage, pagesUnlockedBy } from '../content/journal';
 import { getMachine, isComplete, isSolved, isUnlocked, solveMachine } from '../rules/progression';
@@ -18,7 +20,7 @@ import type { Capability, MachineId } from '../rules/types';
 import { newlyUnlocked } from '../scenes/hall/hall-state';
 import { type GameSave, newGameData, progressOf, type SaveData, type SavedPlacement } from './save';
 
-export type FlowState = 'boot' | 'title' | 'hall' | 'puzzle' | 'solve';
+export type FlowState = 'boot' | 'title' | 'hall' | 'puzzle' | 'solve' | 'journal' | 'ending';
 
 /** Outcome of firing the bolt (mirrors rules C2 `SimResult.outcome`). */
 export type BoltOutcome = 'dead' | 'under' | 'exact' | 'over';
@@ -45,6 +47,10 @@ export interface FlowScenes<S> {
   puzzle(machine: MachineId): S;
   /** Hook for the solve-moment scene. */
   solve(moment: SolveMoment): S;
+  /** Hook for the journal desk (story-scenes). Optional: without it the journal never opens. */
+  journal?(): S;
+  /** Hook for the ending (story-scenes). Optional: without it a complete solve returns to the hall. */
+  ending?(moment: SolveMoment): S;
 }
 
 export interface StackLike<S> {
@@ -63,6 +69,7 @@ export class GameFlow<S> {
   private _state: FlowState = 'boot';
   private _machine: MachineId | null = null;
   private pendingPlay = 0;
+  private lastMoment: SolveMoment | null = null;
   private readonly listeners = new Set<FlowListener>();
 
   constructor(
@@ -201,16 +208,59 @@ export class GameFlow<S> {
       firstTime,
       complete,
     };
+    this.lastMoment = moment;
     this.stack.replace(this.scenes.solve(moment));
     this.set('solve', machine);
     return moment;
   }
 
-  /** Solve moment → hall. (The ending scene will hook in here when `complete`.) */
+  /** Solve moment → hall, or → the ending when that solve completed the facility. */
   finishSolve(): void {
     if (this._state !== 'solve') return;
+    const moment = this.lastMoment;
+    this.lastMoment = null;
+    if (moment?.complete && this.scenes.ending) {
+      this.stack.replace(this.scenes.ending(moment));
+      this.set('ending', moment.machine);
+      return;
+    }
     this.stack.pop();
     this.set('hall', null);
+  }
+
+  /** Ending → hall ("Back to the hall"). The save is kept: the hall is post-game now. */
+  finishEnding(): void {
+    if (this._state !== 'ending') return;
+    this.commitPlayTime();
+    this.save.flush();
+    this.enterHall();
+  }
+
+  // ── Journal ──────────────────────────────────────────────────────────────
+
+  /** Hall → journal desk. Returns false if not in the hall or no journal scene is wired. */
+  openJournal(): boolean {
+    if (this._state !== 'hall' || !this.scenes.journal) return false;
+    this.stack.push(this.scenes.journal());
+    this.set('journal', null);
+    return true;
+  }
+
+  /** Journal desk → hall. */
+  closeJournal(): void {
+    if (this._state !== 'journal') return;
+    this.stack.pop();
+    this.set('hall', null);
+  }
+
+  /** Mark found pages as read (the desk's "new" highlight clears). Ignores unfound pages. */
+  markPagesRead(pages: readonly number[]): void {
+    const d0 = this.save.get();
+    const todo = pages.filter((p) => d0.journal.found.includes(p) && !d0.journal.read.includes(p));
+    if (todo.length === 0) return;
+    this.save.update((d) => {
+      for (const p of todo) if (!d.journal.read.includes(p)) d.journal.read.push(p);
+    });
   }
 
   // ── Play time ────────────────────────────────────────────────────────────
