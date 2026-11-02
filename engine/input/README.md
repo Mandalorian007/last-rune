@@ -31,6 +31,7 @@ const { x, y, inside, down, dx, dy, wheelY } = input.pointer;   // game space
 ## Semantics
 - `pressed` is true for exactly one `update()` when an action becomes active; `released` for one `update()` after it stops. `held` while active. `heldTicks` counts ticks.
 - A tap that goes down and up between two ticks still produces `pressed` (and `held`) for one tick and `released` on the next.
+- **Repeat taps are queued** (default on; `new Input(b, { queueTaps: false })` turns it off). If a key or mouse button goes down again before the tick that saw its first press, each extra tap fires `pressed` on one of the following ticks, up to 8 queued per key. The action stays `held` across them, and `released` fires once the queue drains. Quick double taps and automated `keydown`/`keyup` bursts therefore never lose a press. While `blocked()`, on `releaseAll()` and on `setBindings` the queue is dropped. A tap on a second binding of an action that is already held still does not re-press it.
 - Several bindings on one action are OR'ed; switching from one to another while held doesn't re-press.
 - `blocked()` true → every action reads inactive, nothing is `preventDefault`ed. Keys held across the block do not fire `pressed` when it ends.
 - `lastDevice` (`keyboard | mouse | touch | pen | gamepad`) for showing the right prompts.
@@ -39,6 +40,7 @@ const { x, y, inside, down, dx, dy, wheelY } = input.pointer;   // game space
 
 ## Embedding (itch.io iframe)
 - Only **bound** keys are `preventDefault`ed, and only when no Ctrl/Meta/Alt is held, the event target isn't a text field/button/link, input isn't blocked, and the document has focus. Browser shortcuts and the parent page keep working.
+- Keys typed on a focused button, link or other control are ignored, so Space and Enter activate the control rather than the game. The exception is **global keys**: `new Input(b, { globalKeys: ['KeyC', 'KeyO'] })` or `input.setGlobalKeys([...])`. These still register on buttons, links and checkboxes, so HUD shortcuts keep working after a HUD button is clicked. The control keeps its default action, since global keys are never `preventDefault`ed there. They never register in text entry (`isTextEntryTarget`: text inputs, textarea, select, contenteditable, `role=textbox|searchbox|combobox`).
 - Wheel is `preventDefault`ed only if a wheel binding exists; right-click menu only if mouse button 2 is bound.
 - `touch-action: none` is set on the pointer target (restored on `detach`).
 - Pointer down on the target calls `window.focus()` so the iframe receives keys after a click.
