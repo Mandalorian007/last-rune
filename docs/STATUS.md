@@ -17,13 +17,15 @@ _Last updated: 2026-11-02 by PM_
 | audio-design | ws/audio-design | 🟡 in progress | procedural sound bank, moods by tier |
 | difficulty-fun | ws/difficulty-fun | 🟡 in progress | difficulty model, novice bot, target curve, puzzle retunes (D-021) |
 | altar-scene | ws/altar-scene | 🟡 in progress | wave 3: playable altar puzzle + solve moment |
-| art-props | ws/art-props | 🟡 in progress | wave 2 early start: FUSE, storm cell, bolt ribbon, machine, locked alcove |
+| art-props | ws/art-props | ✅ merged | FUSE (rig + caption portrait), storm cell (fluid sim), bolt ribbon (trace adapter, exact/over/under), machine gauge + breaker, alcove lock/unlock/restore; `?demo=props` |
+| hall-art | ws/hall-art | 🟡 in progress | wave 3: the hall dressed with real props and lighting; title art; palette/light-rig unification |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
 - (Planned) Enable GitHub Pages "Source: GitHub Actions" in repo settings at M3α. PM can do it via `gh api`.
 
 ## Risks
+- Photosensitivity: the breaker flash whites out most of the frame for ~0.3 s. hall-art adds a "Reduce flashes" setting (on with reduced motion).
 - Perf not yet measured on an integrated PC GPU (only Apple M-series). Lights are the first knob.
 - Puzzle difficulty may be too low (small altars, 1–4 gem minimum through Tier 2; the finale has 72 solutions). Tune in M4 from playtest data.
 - Firefox + WebGPU in the itch iframe untested (manual check at launch).
