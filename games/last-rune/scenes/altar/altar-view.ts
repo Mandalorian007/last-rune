@@ -19,7 +19,7 @@ import { Machine } from '../../art/props/machine';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
 import { StormCell } from '../../art/props/storm';
 import type { GameCtx } from '../../game/ctx';
-import type { Placement, PuzzleDef } from '../../rules';
+import { isRotational, type Placement, type PuzzleDef } from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
 import { type AltarAssets, altarAssets, ensureBolts } from './assets';
 import type { BoardState } from './board';
@@ -184,7 +184,7 @@ export class AltarView {
       size: s.size,
       state: 'idle' as GemState,
       lift: 0,
-      // As it will sit on the board: Channel and friends face the bolt, Bend and Gate as held.
+      // As it will sit on the board: straight gems face the bolt; Bend, Gate, Split as held.
       rot: this.restRot({ gem: s.gem, cell: { x: 0, y: 0 }, rot: 0 }),
       seed: 40 + i,
     }));
@@ -274,8 +274,8 @@ export class AltarView {
       );
       cellCenter(L, p.cell, this.pt);
       if (prev) {
-        // Turn forward to the new rotation (Bend/Gate only; others keep their look).
-        if (p.gem === 'bend' || p.gem === 'gate') {
+        // Turn forward to the new rotation (Bend/Gate/Split only; others keep their look).
+        if (isRotational(p.gem)) {
           const cur = Math.round(prev.rotTarget);
           const fwd = (((p.rot - cur) % 4) + 4) % 4;
           prev.rotTarget = cur + (fwd === 3 ? -1 : fwd);
@@ -312,9 +312,9 @@ export class AltarView {
     }
   }
 
-  /** Rest rotation: Bend/Gate as set; other gems face the bolt (storm direction) for looks. */
+  /** Rest rotation: Bend/Gate/Split as set; other gems face the bolt (storm direction). */
   private restRot(p: Placement): number {
-    if (p.gem === 'bend' || p.gem === 'gate') return p.rot;
+    if (isRotational(p.gem)) return p.rot;
     const d = this.puzzle.storm.dir;
     return d === 'N' ? 0 : d === 'E' ? 1 : d === 'S' ? 2 : 3;
   }
@@ -329,13 +329,13 @@ export class AltarView {
   }
 
   /**
-   * Turn each non-rotational gem so its glyph's input faces where the bolt comes in: the hop
-   * that ends on the gem. (Outgoing hops would mislead: a Split's outputs are perpendicular.)
-   * With `rest`, gems no hop reaches go back to facing the storm.
+   * Turn each straight-through gem so its glyph's input faces where the bolt comes in: the hop
+   * that ends on the gem. With `rest`, gems no hop reaches go back to facing the storm.
+   * Bend, Gate and Split never move: their turn is part of the rules.
    */
   faceAlong(hops: readonly { from: Cell; to: Cell }[], rest = false): void {
     for (const b of this.board) {
-      if (b.g.kind === 'bend' || b.g.kind === 'gate') continue;
+      if (isRotational(b.g.kind)) continue;
       const h = hops.find((s) => s.to.x === b.cell.x && s.to.y === b.cell.y);
       let q: number;
       if (h) {

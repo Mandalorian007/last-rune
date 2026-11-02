@@ -3,9 +3,10 @@
  *
  * One token per socket, separated by spaces:
  *   .  empty      #  blocked
- *   =  channel    S  split     A  amplify     C  capacitor
+ *   =  channel    A  amplify     C  capacitor
  *   bend: L0 L1 L2 L3 (or └ ┌ ┐ ┘ for N-E, E-S, S-W, W-N)
  *   gate: G0 G1 G2 G3 (rot = output side N/E/S/W)
+ *   split: S0 S1 S2 S3 (input side S/W/N/E; S0 takes a bolt from below and sends halves W and E)
  * A `*` prefix (e.g. `*A`, `*L1`) marks a fixed (pre-set) gem in `parseBoard`.
  */
 import type { Placement, PuzzleDef, Rot } from './model';
@@ -52,12 +53,12 @@ export function parseBoard(rows: string[]): {
 function tokenGem(t: string): { gem: GemKind; rot: Rot } | null {
   if (t === '.' || t === '#') return null;
   if (t === '=') return { gem: 'channel', rot: 0 };
-  if (t === 'S') return { gem: 'split', rot: 0 };
   if (t === 'A') return { gem: 'amplify', rot: 0 };
   if (t === 'C') return { gem: 'capacitor', rot: 0 };
   if (t in BEND_GLYPH) return { gem: 'bend', rot: BEND_GLYPH[t]! };
   if (/^L[0-3]$/.test(t)) return { gem: 'bend', rot: Number(t[1]) as Rot };
   if (/^G[0-3]$/.test(t)) return { gem: 'gate', rot: Number(t[1]) as Rot };
+  if (/^S[0-3]$/.test(t)) return { gem: 'split', rot: Number(t[1]) as Rot };
   throw new Error(`bad token ${t}`);
 }
 
@@ -93,7 +94,7 @@ function glyph(pl: Placement): string {
     case 'channel':
       return '=';
     case 'split':
-      return 'S';
+      return `S${pl.rot}`;
     case 'amplify':
       return 'A';
     case 'capacitor':

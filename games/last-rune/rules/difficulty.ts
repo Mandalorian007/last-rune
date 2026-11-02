@@ -11,6 +11,7 @@ import {
   C_BEND,
   C_CAPACITOR,
   C_GATE,
+  C_SPLIT,
   CODE_GEM,
   emptyBoard,
   runCore,
@@ -328,12 +329,12 @@ export function noviceBot(p: PuzzleDef, opts: BotOptions = {}): BotResult {
     const out: Option[] = [{ key: 63, code: -1, rot: 0, score: -4 }];
     for (let code = 0; code < 6; code++) {
       if (left[code]! <= 0) continue;
-      const rotational = code === C_BEND || code === C_GATE;
+      const rotational = code === C_BEND || code === C_GATE || code === C_SPLIT;
       for (let rot = 0; rot < (rotational ? 4 : 1); rot++) {
         if (!(acceptMask(code, rot) & (1 << side))) continue;
         let outs: number[];
         if (code === C_BEND) outs = [side === rot ? (rot + 1) & 3 : rot];
-        else if (code === 2) outs = [(d + 3) & 3, (d + 1) & 3];
+        else if (code === C_SPLIT) outs = [(d + 3) & 3, (d + 1) & 3];
         else if (code === C_GATE) outs = [rot];
         else outs = [d];
         const costs = outs.map((o) => outCost(x, y, o, r.awake));

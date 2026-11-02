@@ -168,7 +168,7 @@ export class BoardState {
     return p!;
   }
 
-  /** Turn the gem on `cell` a quarter clockwise (`by` quarters). Only Bend and Gate turn. */
+  /** Turn the gem on `cell` a quarter clockwise (`by` quarters). Only Bend, Gate and Split turn. */
   rotate(cell: Cell, by = 1): EditResult {
     const p = this.at(cell);
     if (!p) return { ok: false, reason: this.fixedAt(cell) ? 'fixed' : 'empty' };

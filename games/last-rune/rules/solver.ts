@@ -7,16 +7,14 @@
  * reaches stay empty, so every solution found lights every gem it places.
  *
  * "Nothing" is modelled as *deferred*: bolts bounce off it, and if a later bolt arrives from a
- * different side the socket may still turn out to be a Bend or Gate that was facing away. That
+ * different side the socket may still turn out to be a Bend, Gate or Split that was facing away. That
  * keeps the search complete without branching over every useless rotation.
  */
-import { altarDims, type Placement, type PuzzleDef, type Rot } from './model';
+import { altarDims, isRotational, type Placement, type PuzzleDef, type Rot } from './model';
 import {
   acceptMask,
   ancHas,
-  C_BEND,
   C_CAPACITOR,
-  C_GATE,
   C_SPLIT,
   CODE_GEM,
   emptyBoard,
@@ -177,7 +175,7 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
       pls.push({
         gem,
         cell: { x: i % w, y: Math.floor(i / w) },
-        rot: (gem === 'bend' || gem === 'gate' ? board.rot[i]! : 0) as Rot,
+        rot: (isRotational(gem) ? board.rot[i]! : 0) as Rot,
       });
     }
     count++;
@@ -228,7 +226,7 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
     decisions++;
     let branches = 0;
 
-    // Option A: nothing here (or a Bend/Gate facing away, decided later).
+    // Option A: nothing here (or a Bend/Gate/Split facing away, decided later).
     const tryNothing = () => {
       board.kind[i] = S_DEFERRED;
       board.excl[i] = prevExcl | r.sides;
@@ -245,7 +243,7 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
     for (const code of CODES) {
       if (stopped) break;
       if (remaining[code]! <= 0) continue;
-      const rotational = code === C_BEND || code === C_GATE;
+      const rotational = isRotational(CODE_GEM[code]!);
       if (prevKind === S_DEFERRED && !rotational) continue;
       if (code === C_SPLIT && allOdd && !capPossible) continue;
       if (code === C_CAPACITOR && p.pulses < 2) continue;

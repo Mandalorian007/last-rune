@@ -99,7 +99,7 @@ export type FizzleCause =
   | 'empty' // no gem in the socket
   | 'blocked' // carved stone
   | 'ground' // ran off the altar where no machine stands
-  | 'facing' // a Bend/Gate that does not accept that side
+  | 'facing' // a Bend/Gate/Split that does not accept that side
   | 'odd-split' // odd charge into a Split
   | 'gate-alone' // a Gate input with no partner
   | 'spent'; // the gem was already used this strike (or two bolts met in it)
@@ -183,8 +183,11 @@ export function fizzles(
           );
           cause = partner ? 'spent' : 'gate-alone';
         }
-      } else if (g.gem === 'split' && s.charge % 2 !== 0) cause = 'odd-split';
-      else cause = 'spent';
+      } else if (g.gem === 'split') {
+        // One input side, opposite the way it points: rot 0 takes a bolt from the S.
+        if (side !== ((g.rot + 2) & 3)) cause = 'facing';
+        else cause = s.charge % 2 !== 0 ? 'odd-split' : 'spent';
+      } else cause = 'spent';
     }
     out.push({ cell: { x: c.x, y: c.y }, pulse: s.pulse, cause, t });
   });

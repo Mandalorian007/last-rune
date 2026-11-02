@@ -7,7 +7,7 @@ import { definePuzzle, gem, machineAt, stormAt } from './define';
 export default definePuzzle({
   id: 'crane',
   altar: '6x4',
-  board: ['# # . . . #', '. . *S . . #', '# . . *S . .', '# # . . . #'],
+  board: ['# # . . . #', '. . *S1 . . #', '# . . *S1 . .', '# # . . . #'],
   storm: stormAt('W', 1, '6x4'),
   machines: [machineAt('E', 2, '6x4', 3)],
   tray: { channel: 5, bend: 5, gate: 1 },
@@ -15,5 +15,5 @@ export default definePuzzle({
   minutes: 4,
   assumes: [gem('bend'), gem('gate')],
   essential: ['gate'],
-  solution: ['# # ┌ = ┐ #', '= = *S . = #', '# . └ *S G1 =', '# # . └ ┘ #'],
+  solution: ['# # ┌ = ┐ #', '= = *S1 . = #', '# . └ *S1 G1 =', '# # . └ ┘ #'],
 });

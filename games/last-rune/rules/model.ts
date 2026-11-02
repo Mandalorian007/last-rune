@@ -6,7 +6,7 @@ import type { AltarSize, Capability, Cell, Dir, GemKind, MachineId, StormStrengt
 
 export type Rot = 0 | 1 | 2 | 3;
 
-/** One gem set into one socket. `rot` only matters for Bend and Gate. */
+/** One gem set into one socket. `rot` only matters for Bend, Gate and Split. */
 export interface Placement {
   gem: GemKind;
   cell: Cell;
@@ -79,7 +79,7 @@ export function stormCharge(strength: StormStrength): number {
 
 /** Gems whose behaviour depends on rotation. */
 export function isRotational(gem: GemKind): boolean {
-  return gem === 'bend' || gem === 'gate';
+  return gem === 'bend' || gem === 'gate' || gem === 'split';
 }
 
 export function cellKey(c: Cell): string {

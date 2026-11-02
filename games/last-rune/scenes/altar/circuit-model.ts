@@ -143,8 +143,9 @@ const SIDE_DY = [-1, 0, 1, 0] as const;
 /**
  * Guide stubs for fixed gems met for the first time: a hop from each side the gem joins (rules
  * section 4). Bend rot r joins sides r and r+1 (N=0, E, S, W); Gate rot r takes the two sides
- * perpendicular to r and outputs r. Hops point into the gem from inputs and out to the output;
- * a Bend is two-way, so its hops simply touch both joined sides. Other gems get none.
+ * perpendicular to r and outputs r; Split rot r takes side r+2 and outputs both sides
+ * perpendicular to r. Hops point into the gem from inputs and out to the outputs; a Bend is
+ * two-way, so its hops simply touch both joined sides. Other gems get none.
  */
 export function guideHops(p: PuzzleDef, cells: readonly Cell[]): PathHop[] {
   const out: PathHop[] = [];
@@ -163,6 +164,12 @@ export function guideHops(p: PuzzleDef, cells: readonly Cell[]): PathHop[] {
         { from: side(f.rot + 1), to: at },
         { from: side(f.rot + 3), to: at },
         { from: at, to: side(f.rot) },
+      );
+    } else if (f.gem === 'split') {
+      out.push(
+        { from: side(f.rot + 2), to: at },
+        { from: at, to: side(f.rot + 3) },
+        { from: at, to: side(f.rot + 1) },
       );
     }
   }

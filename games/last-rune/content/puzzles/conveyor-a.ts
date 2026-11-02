@@ -4,7 +4,7 @@ import { definePuzzle, gem, machineAt, stormAt } from './define';
 export default definePuzzle({
   id: 'conveyor-a',
   altar: '6x4',
-  board: ['. . . . . .', '*A . . . . .', '. . . *S . .', '. . . . . .'],
+  board: ['. . . . . .', '*A . . . . .', '. . . *S2 . .', '. . . . . .'],
   storm: stormAt('W', 1, '6x4'),
   machines: [machineAt('E', 3, '6x4', 4)],
   tray: { channel: 8, bend: 4 },
@@ -12,5 +12,5 @@ export default definePuzzle({
   minutes: 2,
   assumes: [gem('bend')],
   essential: ['bend'],
-  solution: ['. . . . . .', '*A = = ┐ . .', '. . . *S = ┐', '. . . . . └'],
+  solution: ['. . . . . .', '*A = = ┐ . .', '. . . *S2 = ┐', '. . . . . └'],
 });

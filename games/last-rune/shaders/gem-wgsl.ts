@@ -10,7 +10,8 @@
  * - emissive = glow multiplier (1 = default for the state)
  *
  * Rotation 0 matches rules.md rot 0: straight gems run south→north; Bend joins N–E; Gate takes
- * W + E and outputs N. Keep glyphs in step with the rules: players read them as the wiring.
+ * W + E and outputs N; Split takes S and outputs W + E. Keep glyphs in step with the rules:
+ * players read them as the wiring.
  *
  * Look: flat table + two rows of crown facets per side, a dark girdle. The inner glyph is lit
  * from inside and seen through each facet with a different refraction offset (per-channel,
@@ -66,15 +67,19 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     d = min(d, g_seg(p, vec2f(-0.16, -e), vec2f(0.16, -e)));
     d = min(d, g_seg(p, vec2f(e, -0.16), vec2f(e, 0.16)));
   } else if (kind == 2) {
-    // Split: in from the south, out both sides (west and east), never straight on. A T with a
-    // node at the fork and a door on each of the three sides it uses.
+    // Split (rules rot 0): one way in, from the south; out both sides (west and east), never
+    // straight on. A T: the stem ends in a wide door bar at its one input, a node at the fork,
+    // and each arm ends in an arrowhead pointing out, like the Gate's output (D-031).
     let y = -0.16;
-    d = g_seg(p, vec2f(0.0, 0.7), vec2f(0.0, y));
-    d = min(d, g_seg(p, vec2f(-0.56, y), vec2f(0.56, y)));
+    let e = 0.66;
+    d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, y));
+    d = min(d, g_seg(p, vec2f(-e, y), vec2f(e, y)));
     d = min(d, max(length(p - vec2f(0.0, y)) - 0.1, 0.0));
-    d = min(d, g_seg(p, vec2f(-0.14, 0.7), vec2f(0.14, 0.7)));
-    d = min(d, g_seg(p, vec2f(-0.56, y - 0.14), vec2f(-0.56, y + 0.14)));
-    d = min(d, g_seg(p, vec2f(0.56, y - 0.14), vec2f(0.56, y + 0.14)));
+    d = min(d, g_seg(p, vec2f(-0.2, 0.72), vec2f(0.2, 0.72)));
+    d = min(d, g_seg(p, vec2f(-e + 0.15, y - 0.15), vec2f(-e, y)));
+    d = min(d, g_seg(p, vec2f(-e + 0.15, y + 0.15), vec2f(-e, y)));
+    d = min(d, g_seg(p, vec2f(e - 0.15, y - 0.15), vec2f(e, y)));
+    d = min(d, g_seg(p, vec2f(e - 0.15, y + 0.15), vec2f(e, y)));
   } else if (kind == 3) {
     // Amplify: straight through, two stacked chevrons pointing the way out.
     d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.3));

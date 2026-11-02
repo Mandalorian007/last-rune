@@ -68,6 +68,9 @@ describe('fizzle causes', () => {
     // Bend rot 0 accepts N and E; a bolt travelling east enters from the W.
     const bend = [{ gem: 'bend' as const, cell: { x: 0, y: 1 }, rot: 0 as const }];
     expect(fizzles(q, bend, simulate(q, bend))[0]!.cause).toBe('facing');
+    // Split rot 0 takes its bolt from the S only; fed from the W it refuses.
+    const split = [{ gem: 'split' as const, cell: { x: 0, y: 1 }, rot: 0 as const }];
+    expect(fizzles(q, split, simulate(q, split))[0]!.cause).toBe('facing');
 
     // Gate rot 1 outputs east, inputs N and S; fed from W it refuses.
     const gate = [{ gem: 'gate' as const, cell: { x: 0, y: 1 }, rot: 1 as const }];
@@ -87,9 +90,10 @@ describe('fizzle causes', () => {
 
   it('split halves that run off or into empty sockets', () => {
     const p = bench({ tray: { split: 2, channel: 4, bend: 2 } });
-    // Split (0,1) sends 2 north to split (0,0): 1 west (off the altar), 1 east (empty).
+    // Split (0,1) (input W) sends 2 north to split (0,0) (input S): 1 west (off the altar),
+    // 1 east (empty).
     const pl = [
-      { gem: 'split' as const, cell: { x: 0, y: 1 }, rot: 0 as const },
+      { gem: 'split' as const, cell: { x: 0, y: 1 }, rot: 1 as const },
       { gem: 'split' as const, cell: { x: 0, y: 0 }, rot: 0 as const },
     ];
     const r = simulate(p, pl);

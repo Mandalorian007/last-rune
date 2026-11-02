@@ -42,7 +42,7 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
   split: {
     gem: 'split',
     name: 'Split',
-    rule: 'Sends the bolt out both sides, left and right, at half charge each. An odd charge fizzles.',
+    rule: 'Takes the bolt in at its stem and sends it out both arms, half charge each. Any other side, or an odd charge, fizzles.',
     maths: '4 → 2 + 2 · odd → fizzle',
   },
   amplify: {

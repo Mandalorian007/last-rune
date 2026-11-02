@@ -45,14 +45,14 @@ before magenta").
 
 ## 4. The gems
 
-Rotation `rot ∈ {0,1,2,3}` turns a gem clockwise by `rot × 90°`. Only Bend and Gate care about
-rotation; for the other four `rot` is ignored (treated as 0).
+Rotation `rot ∈ {0,1,2,3}` turns a gem clockwise by `rot × 90°`. Bend, Gate and Split care
+about rotation (D-031); for the other three `rot` is ignored (treated as 0).
 
 | Gem | Colour | Rule |
 |---|---|---|
 | **Channel** | cyan | Carries the bolt straight on, whichever way it enters. Charge unchanged. |
 | **Bend** | amethyst | An elbow joining two neighbouring sides. `rot 0` joins N–E, `1` E–S, `2` S–W, `3` W–N. Enter one joined side, leave by the other. Entering any other side: fizzle ("facing a wall"). |
-| **Split** | magenta | Whichever way the bolt enters, it leaves by **both perpendicular sides** (its left and right), each with **half** the charge. Odd charge: fizzle. Both halves keep the amber mark. |
+| **Split** | magenta | One input, two outputs: the inverse of a Gate. Input side is `S/W/N/E` for `rot 0/1/2/3` (rot 0: input S, outputs W and E), so `rot` names the way the bolt travels as it enters. The bolt leaves by **both perpendicular sides** (its left and right), each with **half** the charge. Odd charge: fizzle. Both halves keep the amber mark. A bolt entering any other side (either output side, or the side opposite the input) fizzles, as at a Bend. |
 | **Amplify** | amber | Carries straight on, like a Channel, and **doubles** the charge, **once per path**: if the bolt already carries the amber mark it passes through unchanged. The bolt now carries the amber mark. |
 | **Gate** | emerald | Two inputs, one output. Output side is `N/E/S/W` for `rot 0/1/2/3`; the two inputs are the sides perpendicular to it (rot 0: inputs W and E, output N). The gate fires only when **both** inputs are live **in the same strike**. It then sends one bolt out of its output side carrying the **sum** of the two inputs, with the amber mark if either input had it. A bolt entering the output side or the side opposite it fizzles. A lone input waits until the end of the strike, then fizzles. |
 | **Capacitor** | ice | Straight-through, like a Channel. If it is **empty** when a bolt arrives, it **stores** the bolt (charge and amber mark) and nothing comes out. If it is **charged** when a bolt arrives, it **releases**: one bolt leaves straight on carrying **stored + incoming** charge (amber mark if either had it), and the capacitor is empty again. Its charge persists between strikes, not between attempts. |
@@ -98,8 +98,8 @@ anything, else `under`.
   stands). If two bolts reach the same unused gem on the same tick, both fizzle (short), and
   the gem is used.
 - A bolt that hits a side a gem does not accept (the back of a Bend, a Gate's output or back
-  side) bounces off and fizzles **without** using the gem up; a later bolt from a proper side
-  still works.
+  side, any side of a Split but its input) bounces off and fizzles **without** using the gem
+  up; a later bolt from a proper side still works.
 - **Gate:** each of its two input sides accepts one bolt per strike; a second bolt on the same
   side fizzles. Once fired, any further bolt fizzles.
 - Because each gem is used at most once (twice for a Gate) per strike, every strike ends; there
@@ -107,7 +107,9 @@ anything, else `under`.
 - A machine's edge socket handles one bolt per strike, so at most one bolt reaches a machine
   per strike. Combining charge is the Gate's job (or the Capacitor's, across strikes).
 - **Determinism.** Within a tick, bolts are processed in the order they were created; the two
-  halves of a Split are created left side first, then right side (relative to travel).
+  halves of a Split are created left side first, then right side, relative to travel. A Split
+  only takes a bolt travelling its `rot` way, so that is always `rot + 3` then `rot + 1` (rot 0:
+  west, then east).
 
 ## 7. Render trace
 
