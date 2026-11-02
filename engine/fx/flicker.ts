@@ -29,7 +29,7 @@ export interface FlickerOptions {
 }
 
 /**
- * Candle/torch flicker: two octaves of value noise plus a rare dip.
+ * Flame/torch flicker: two octaves of value noise plus a rare dip.
  * Returns `base * (1 - amount * n)` with n in [0, 1].
  */
 export function flicker(t: number, opts: FlickerOptions = {}): number {

@@ -20,3 +20,29 @@
 
 ## Log
 _(agent appends progress, decisions, open issues here)_
+
+### 2026-11-02, wave 1 (engine-render agent)
+**Done:** platform, core, render, post, and fx are all in, plus `?demo=render`. `pnpm check` (32 tests) and `pnpm build` pass. The dev-only demo is tree-shaken out of the production bundle (8.8 kB JS).
+
+**Verified in headless Chromium (Apple Metal, WebGPU):**
+- `?demo=render` runs at 60 fps with 0 GPU validation errors.
+- `&sparks=20000` also runs at 60 fps.
+- A click burst lands at the clicked logical point, so pointer → logical mapping works.
+- Keys 1–5 toggle each post pass.
+- An 800×900 viewport letterboxes correctly.
+- `?nogpu` (dev) previews the unsupported screen.
+
+**Decisions:**
+- The scene pass writes MRT: two rgba16float targets, colour and emissive. Materials write both. The final image is colour + emissive + bloom, so glow is explicit, not threshold luck.
+- One pipeline shape serves all quads and meshes: 32-byte vertex + 80-byte instance (xform, rotation/emissive, uvRect, tint, params). Consecutive draws with the same material and mesh merge into one instanced draw. There is no depth buffer; draw order is submission order.
+- Material WGSL = engine prelude + the game's `fs_main(VSOut) -> FragOut`. Bindings: group 0 = engine globals, group 1 = material (uniform 0, sampler 1, textures 2+).
+- Post: bloom runs on a half-res mip chain. God rays march over a half-res light disc plus a fraction of the bloom. Fog is screen-space and runs inside the composite. Output is sRGB-encoded in-shader to `bgra8unorm`.
+- Particles: compute spawn + integrate in a ring buffer (64k by default). The CPU only writes small spawn records each frame. They render as velocity-stretched additive quads into both targets.
+- WGSL errors: `createShaderModule` logs `getCompilationInfo` with line and caret. `installGpuErrorLogging` logs `uncapturederror` and counts errors in `gpuDiagnostics`, which the demo exposes as `window.__demo`.
+
+**Open issues / risks:**
+- No depth sorting or layers. Wave 2 orders draws by hand, so a layer API may be needed.
+- Particles render in a single draw of `capacity` instances; dead ones are culled in the vertex shader. That's fine at 64k, but there's no indirect draw yet.
+- Device loss shows the reload screen; there is no automatic resource rebuild.
+- Headless WebGPU on macOS needs a full Chrome for Testing binary (`executablePath`) served from `http://localhost`. `about:blank` has no `navigator.gpu`. ship-ops should know this for the Playwright smoke test.
+- The demo stone is lit by fake 2D point lights inside a game material. A real lighting helper could move into the engine later if wave 2 wants one.
