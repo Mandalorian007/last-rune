@@ -5,8 +5,13 @@
  * Every edit goes through `validatePlacement` (rules), so the board can never hold a placement
  * the sim would ignore. A move is "remove, then place" as one undo step.
  */
-import { isRotational, type Placement, type PuzzleDef, type Rot } from '../../rules';
-import { validatePlacement } from '../../rules';
+import {
+  isRotational,
+  type Placement,
+  type PuzzleDef,
+  type Rot,
+  validatePlacement,
+} from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
 import { GEM_KINDS } from '../../rules/types';
 
@@ -94,7 +99,11 @@ export class BoardState {
     const r = this.check(cell, gem);
     if (!r.ok) return r;
     this.push();
-    this.list.push({ gem, cell: { x: cell.x, y: cell.y }, rot: isRotational(gem) ? rotOf(rot) : 0 });
+    this.list.push({
+      gem,
+      cell: { x: cell.x, y: cell.y },
+      rot: isRotational(gem) ? rotOf(rot) : 0,
+    });
     this.revision++;
     return OK;
   }

@@ -1,0 +1,460 @@
+/**
+ * Everything the altar draws: room, slab, sockets, gems, storm cell, machines, bolts, FUSE.
+ * The scene owns the rules state and tells the view what to show; the view owns animation
+ * (gem lift/settle, rotation easing, energise glow) and lighting.
+ *
+ * Render order (submission order = draw order): wall, floor, candle bodies, slab, socket
+ * overlays, props (storm, machines), gem shadows/pools, gems, held gem, bolts, candle flames,
+ * FUSE, particles.
+ */
+import type { Frame, RGBA } from '@engine/render';
+import type { CandleInstance } from '../../art/materials/candles';
+import { addGemLight, type GemInstance, type GemState } from '../../art/materials/gems';
+import { LightSet } from '../../art/materials/lights';
+import { LINEAR } from '../../art/materials/palette';
+import type { AltarSlab, SocketState } from '../../art/materials/stone';
+import type { BoltRibbon, BoltSegment } from '../../art/props/bolt';
+import { PropLightRig } from '../../art/props/lighting';
+import { Machine } from '../../art/props/machine';
+import { GEM_COLOUR, pitch } from '../../art/props/palette';
+import { StormCell } from '../../art/props/storm';
+import type { GameCtx } from '../../game/ctx';
+import type { Placement, PuzzleDef } from '../../rules';
+import type { Cell, GemKind } from '../../rules/types';
+import { type AltarAssets, altarAssets, ensureBolts } from './assets';
+import type { BoardState } from './board';
+import { type AltarLayout, anchorOf, cellCenter, computeLayout, DESIGN_W } from './layout';
+import type { StrikeTimeline } from './strike';
+
+const W = DESIGN_W;
+const GOLD: RGBA = [LINEAR.gold[0] * 1.4, LINEAR.gold[1] * 1.4, LINEAR.gold[2] * 1.4, 1];
+const DANGER: RGBA = [2.2, 0.35, 0.22, 1];
+const ROOF: RGBA = [0.5, 0.62, 0.95, 1];
+
+const CANDLES: CandleInstance[] = [
+  { x: 96, y: 1012, height: 200, seed: 1, melt: 0.6, radius: 820 },
+  { x: 1690, y: 1032, height: 150, seed: 3, melt: 0.5, radius: 760 },
+  { x: 1812, y: 1008, height: 220, seed: 4, melt: 0.7, radius: 820 },
+];
+
+/** Visual + animation state for one gem on the board. */
+export interface BoardGem {
+  g: GemInstance;
+  cell: Cell;
+  fixed: boolean;
+  /** Target rotation (quarters, unwrapped so easing always turns the short way forward). */
+  rotTarget: number;
+  /** Settle bounce 0..1 (decays). */
+  settle: number;
+  /** Lift target 0..1. */
+  liftTarget: number;
+  /** Energise level 0..1 (eases). */
+  energy: number;
+  energyTarget: number;
+  /** Extra pulse (capacitor holding charge). */
+  holding: boolean;
+  /** Being dragged: drawn at the pointer instead. */
+  hidden: boolean;
+}
+
+export interface SocketMark {
+  col: number;
+  row: number;
+  state: SocketState;
+  color: Readonly<RGBA>;
+  intensity: number;
+  /** Pulse speed (0 = steady). */
+  pulse: number;
+}
+
+export interface HeldGem {
+  kind: GemKind;
+  rot: number;
+  x: number;
+  y: number;
+  /** Over a legal socket: snap preview. */
+  snapped: boolean;
+}
+
+export class AltarView {
+  readonly layout: AltarLayout;
+  readonly slab: AltarSlab;
+  readonly storm: StormCell;
+  readonly machines: Machine[];
+  readonly assets: AltarAssets;
+  readonly board: BoardGem[] = [];
+  readonly tray: GemInstance[];
+  /** Tray slot emphasis (selected kind) and lift targets. */
+  readonly trayLift: number[];
+  readonly marks: SocketMark[] = [];
+  held: HeldGem | null = null;
+  /** A gem shown large in front of everything (the solve moment's granted gem). */
+  showcase: GemInstance | null = null;
+  private readonly showcaseList: GemInstance[] = [];
+  /** Camera shake amount (decays); set by the scene. */
+  shake = 0;
+  /** 0..1 global dim for the room while the solve moment plays. */
+  wake = 0;
+  time = 0;
+  reducedMotion = false;
+  /** Bolt playback speed (fast-forward). */
+  boltRate = 1;
+  private readonly markPool: SocketMark[] = [];
+
+  private readonly lights = new LightSet();
+  private readonly rig = new PropLightRig();
+  private readonly heldInst: GemInstance = {
+    kind: 'channel',
+    x: 0,
+    y: 0,
+    size: 80,
+    state: 'hover',
+  };
+  private readonly heldList: GemInstance[] = [this.heldInst];
+  private readonly drawList: GemInstance[] = [];
+  private readonly pt = { x: 0, y: 0 };
+  private activeBolts = 0;
+
+  constructor(
+    private readonly ctx: GameCtx,
+    readonly puzzle: PuzzleDef,
+  ) {
+    const r = ctx.renderer;
+    this.assets = altarAssets(r, ctx.particles);
+    ensureBolts(this.assets, r, ctx.particles, Math.max(1, puzzle.pulses));
+    const L = computeLayout(puzzle);
+    this.layout = L;
+    this.slab = this.assets.slab(L.cols, L.rows, L.pitch);
+    this.slab.place(L.cx, L.cy);
+    this.storm = new StormCell(r, {
+      x: L.storm.x,
+      y: L.storm.y,
+      size: L.storm.size,
+      strength: puzzle.storm.strength,
+    });
+    this.machines = L.machines.map((m) => new Machine(r, { x: m.x, y: m.y, size: m.size }));
+    this.tray = L.tray.map((s, i) => ({
+      kind: s.gem,
+      x: s.x,
+      y: s.y,
+      size: s.size,
+      state: 'idle' as GemState,
+      lift: 0,
+      rot: 0,
+      seed: 40 + i,
+    }));
+    this.trayLift = L.tray.map(() => 0);
+    this.heldInst.size = L.gemSize;
+    const fuse = this.assets.fuse;
+    fuse.place(300, 1046);
+    fuse.mood = 'idle';
+    fuse.lookAt(null);
+    for (const b of this.assets.bolts) b.clear();
+  }
+
+  dispose(): void {
+    this.storm.destroy();
+    for (const b of this.assets.bolts) b.clear();
+    this.ctx.renderer.camera.x = 0;
+    this.ctx.renderer.camera.y = 0;
+    this.ctx.renderer.camera.zoom = 1;
+    this.ctx.renderer.camera.rotation = 0;
+  }
+
+  get bolts(): readonly BoltRibbon[] {
+    return this.assets.bolts;
+  }
+
+  get fuse() {
+    return this.assets.fuse;
+  }
+
+  // ── Socket overlays (rebuilt each frame from a pool) ─────────────────────
+
+  clearMarks(): void {
+    this.marks.length = 0;
+  }
+
+  mark(
+    col: number,
+    row: number,
+    state: SocketState,
+    color: Readonly<RGBA>,
+    intensity = 1,
+    pulse = 0,
+  ): void {
+    let m = this.markPool[this.marks.length];
+    if (!m) {
+      m = { col, row, state, color, intensity, pulse };
+      this.markPool.push(m);
+    }
+    m.col = col;
+    m.row = row;
+    m.state = state;
+    m.color = color;
+    m.intensity = intensity;
+    m.pulse = pulse;
+    this.marks.push(m);
+  }
+
+  // ── Board gems ──────────────────────────────────────────────────────────
+
+  /** Rebuild the board gem list after an edit, keeping animation state for gems that stayed. */
+  syncBoard(state: BoardState, justPlaced: Cell | null = null): void {
+    const L = this.layout;
+    const want: { p: Placement; fixed: boolean }[] = [
+      ...this.puzzle.fixed.map((p) => ({ p, fixed: true })),
+      ...state.placements.map((p) => ({ p, fixed: false })),
+    ];
+    const old = this.board.splice(0, this.board.length);
+    for (const { p, fixed } of want) {
+      const prev = old.find(
+        (b) => b.cell.x === p.cell.x && b.cell.y === p.cell.y && b.g.kind === p.gem,
+      );
+      cellCenter(L, p.cell, this.pt);
+      if (prev) {
+        // Turn forward to the new rotation (Bend/Gate only; others keep their look).
+        if (p.gem === 'bend' || p.gem === 'gate') {
+          const cur = Math.round(prev.rotTarget);
+          const fwd = (((p.rot - cur) % 4) + 4) % 4;
+          prev.rotTarget = cur + (fwd === 3 ? -1 : fwd);
+        }
+        prev.hidden = false;
+        this.board.push(prev);
+        continue;
+      }
+      const g: GemInstance = {
+        kind: p.gem,
+        x: this.pt.x,
+        y: this.pt.y,
+        size: L.gemSize,
+        state: 'placed',
+        rot: this.restRot(p),
+        lift: 0,
+        glow: 1,
+        seed: p.cell.x * 7 + p.cell.y * 13 + (fixed ? 100 : 0),
+      };
+      const isNew = justPlaced && justPlaced.x === p.cell.x && justPlaced.y === p.cell.y;
+      this.board.push({
+        g,
+        cell: { x: p.cell.x, y: p.cell.y },
+        fixed,
+        rotTarget: g.rot ?? 0,
+        settle: isNew ? 1 : 0,
+        liftTarget: 0,
+        energy: 0,
+        energyTarget: 0,
+        holding: false,
+        hidden: false,
+      });
+      if (isNew) g.lift = 1;
+    }
+  }
+
+  /** Rest rotation: Bend/Gate as set; other gems face the bolt (storm direction) for looks. */
+  private restRot(p: Placement): number {
+    if (p.gem === 'bend' || p.gem === 'gate') return p.rot;
+    const d = this.puzzle.storm.dir;
+    return d === 'N' ? 0 : d === 'E' ? 1 : d === 'S' ? 2 : 3;
+  }
+
+  gemAt(c: Cell): BoardGem | undefined {
+    return this.board.find((b) => b.cell.x === c.x && b.cell.y === c.y);
+  }
+
+  /** Orient non-rotational gems along the bolt that passed through them (cosmetic). */
+  orientAlong(timeline: StrikeTimeline): void {
+    for (const s of timeline.segments) {
+      const b = this.gemAt(s.seg.from);
+      if (!b || b.g.kind === 'bend' || b.g.kind === 'gate') continue;
+      const dx = s.seg.to.x - s.seg.from.x;
+      const dy = s.seg.to.y - s.seg.from.y;
+      const q = dy < 0 ? 0 : dx > 0 ? 1 : dy > 0 ? 2 : 3;
+      const cur = Math.round(b.rotTarget);
+      const fwd = (((q - cur) % 4) + 4) % 4;
+      b.rotTarget = cur + (fwd === 3 ? -1 : fwd);
+    }
+  }
+
+  /** Reset energy/holding (back to editing). */
+  deenergise(): void {
+    for (const b of this.board) {
+      b.energyTarget = 0;
+      b.holding = false;
+    }
+  }
+
+  // ── Bolts ───────────────────────────────────────────────────────────────
+
+  /** Ribbon segments for one strike, in seconds relative to the strike's start. */
+  boltSegments(timeline: StrikeTimeline, pulse: number, out: BoltSegment[]): BoltSegment[] {
+    out.length = 0;
+    const start = timeline.pulses[pulse]!.start;
+    const a = { x: 0, y: 0 };
+    const b = { x: 0, y: 0 };
+    for (const s of timeline.segments) {
+      if (s.seg.pulse !== pulse) continue;
+      anchorOf(this.layout, s.seg.from, a);
+      anchorOf(this.layout, s.seg.to, b);
+      out.push({
+        ax: a.x,
+        ay: a.y,
+        bx: b.x,
+        by: b.y,
+        colour: pitch(GEM_COLOUR[s.seg.colour], 1.6),
+        charge: s.seg.charge / 4,
+        t0: s.t0 - start,
+        t1: s.t1 - start,
+      });
+    }
+    return out;
+  }
+
+  setActiveBolts(n: number): void {
+    this.activeBolts = n;
+  }
+
+  // ── Frame ───────────────────────────────────────────────────────────────
+
+  update(dt: number): void {
+    this.time += dt;
+    const k = 1 - Math.exp(-14 * dt);
+    const rm = this.reducedMotion;
+    for (const b of this.board) {
+      const g = b.g;
+      g.lift = (g.lift ?? 0) + (b.liftTarget - (g.lift ?? 0)) * k;
+      g.rot = (g.rot ?? 0) + (b.rotTarget - (g.rot ?? 0)) * (rm ? 1 : 1 - Math.exp(-18 * dt));
+      b.settle = Math.max(0, b.settle - dt * 3.2);
+      b.energy +=
+        (b.energyTarget - b.energy) * (1 - Math.exp(-(b.energyTarget > b.energy ? 30 : 4) * dt));
+      // Settle: a small overshoot squash as the gem seats (easeOutBack-ish bounce).
+      const s = b.settle;
+      const bounce = rm ? 0 : Math.sin(s * Math.PI * 2.2) * s * 0.09;
+      g.size = this.layout.gemSize * (1 + bounce);
+      g.state = b.energy > 0.15 ? 'energised' : b.hidden ? 'dim' : 'placed';
+      const hold = b.holding ? 0.35 + 0.25 * Math.sin(this.time * 6) : 0;
+      g.glow = 1 + b.energy * 0.6 + hold + (b.fixed ? 0 : 0);
+    }
+    for (let i = 0; i < this.tray.length; i++) {
+      const t = this.tray[i]!;
+      t.lift = (t.lift ?? 0) + (this.trayLift[i]! - (t.lift ?? 0)) * k;
+    }
+    this.storm.update(dt);
+    for (const m of this.machines) m.update(dt);
+    for (let i = 0; i < this.activeBolts; i++) this.assets.bolts[i]!.update(dt * this.boltRate);
+    this.assets.candles.reducedMotion = rm;
+    this.assets.candles.update(CANDLES, this.time);
+    this.fuse.update(dt);
+    this.shake = Math.max(0, this.shake - dt * 2.4);
+  }
+
+  render(frame: Frame): void {
+    const a = this.assets;
+    const L = this.layout;
+    const cam = this.ctx.renderer.camera;
+    if (this.shake > 0 && !this.reducedMotion) {
+      const s = this.shake * this.shake * 14;
+      cam.x = Math.sin(this.time * 71) * s;
+      cam.y = Math.cos(this.time * 53) * s * 0.7;
+    } else {
+      cam.x = 0;
+      cam.y = 0;
+    }
+
+    // ── Lights ──
+    const Ls = this.lights;
+    Ls.begin(0.06, 0.062, 0.085, 0.5, 0.75);
+    a.candles.addLights(Ls, CANDLES);
+    Ls.add(W / 2, 40, 1500, ROOF, 0.42 + this.wake * 0.6, 700);
+    const st = this.storm.light;
+    Ls.add(st.x, st.y, L.pitch * 6, st.color, 0.55 * st.intensity, 160);
+    let bx = 0;
+    let by = 0;
+    let bc: ArrayLike<number> | null = null;
+    let glow = 0;
+    for (let i = 0; i < this.activeBolts; i++) {
+      const b = a.bolts[i]!;
+      if (b.head) {
+        bx = b.head.x;
+        by = b.head.y;
+        bc = b.head.colour;
+      }
+      glow = Math.max(glow, b.glow);
+    }
+    if (bc) Ls.add(bx, by, L.pitch * 5, bc, 1.1, 80);
+    for (const m of this.machines) {
+      if (m.light.intensity > 0.02)
+        Ls.add(m.x, m.y, L.pitch * 4, m.light.color, m.light.intensity, 140);
+    }
+    for (const b of this.board) if (b.g.state === 'energised') addGemLight(Ls, b.g);
+    for (const b of this.board) if (b.g.state !== 'energised') addGemLight(Ls, b.g, 0.6);
+    if (this.showcase) addGemLight(Ls, this.showcase, 1.5);
+
+    a.wall.light(Ls);
+    a.floor.light(Ls);
+    a.candles.light(Ls);
+    a.gems.light(Ls);
+    this.slab.light(Ls);
+
+    const rig = this.rig.begin(0.16, 0.17, 0.24);
+    rig.add(1812, 820, 1500, pitch('warm'), 1.4, 260);
+    rig.add(96, 820, 1300, pitch('warm'), 1.2, 260);
+    rig.add(st.x, st.y, 1100, st.color, 0.8 * st.intensity, 200);
+    if (bc) rig.add(bx, by, 700, bc, 0.8 * Math.max(glow, 0.5), 80);
+    const f = this.fuse;
+    rig.add(f.eye.x, f.eye.y, 380, f.eye.color, f.eye.intensity, 40);
+    let lit: Machine | null = null;
+    for (const m of this.machines) if (!lit || m.light.intensity > lit.light.intensity) lit = m;
+    if (lit && lit.light.intensity > 0.02) {
+      rig.add(lit.light.x, lit.light.y, 500, lit.light.color, 0.6 * lit.light.intensity, 120);
+    }
+
+    // ── Draw ──
+    frame.clear(0, 0, 0, 1);
+    a.wall.draw(frame, W / 2, 540);
+    a.floor.draw(frame, W / 2, 1080 - 150, W, 300, undefined, 1, 0.18);
+    a.candles.drawBodies(frame, CANDLES);
+    this.slab.draw(frame);
+    for (const m of this.marks) {
+      const pulse = m.pulse > 0 ? 0.72 + 0.28 * Math.sin(this.time * m.pulse + m.col * 0.7) : 1;
+      this.slab.drawSocket(frame, m.col, m.row, m.state, m.color, m.intensity * pulse);
+    }
+    this.storm.draw(frame, rig);
+    for (const m of this.machines) m.draw(frame, rig);
+
+    const list = this.drawList;
+    list.length = 0;
+    for (const b of this.board) if (!b.hidden) list.push(b.g);
+    for (const t of this.tray) list.push(t);
+    a.gems.drawUnder(frame, list);
+    a.gems.drawGems(frame, list);
+
+    if (this.held) {
+      const h = this.held;
+      const g = this.heldInst;
+      g.kind = h.kind;
+      g.rot = h.rot;
+      g.x = h.x;
+      g.y = h.y;
+      g.lift = h.snapped ? 0.6 : 1;
+      g.state = 'hover';
+      g.size = L.gemSize * (h.snapped ? 1 : 1.05);
+      g.glow = 1.1;
+      a.gems.drawUnder(frame, this.heldList);
+      a.gems.drawGems(frame, this.heldList);
+    }
+
+    if (this.showcase) {
+      this.showcaseList[0] = this.showcase;
+      a.gems.drawUnder(frame, this.showcaseList);
+      a.gems.drawGems(frame, this.showcaseList);
+    }
+
+    for (let i = 0; i < this.activeBolts; i++) a.bolts[i]!.draw(frame);
+    a.candles.drawFlames(frame, CANDLES);
+    f.draw(frame, rig);
+    frame.drawable(this.ctx.particles);
+  }
+}
+
+export { DANGER, GOLD };
