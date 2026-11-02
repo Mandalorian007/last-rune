@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅. Next: user playtest of alpha-1 feeds difficulty-fun phase 2 + polish backlog. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
+**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; codex-2 + capacitor-clarity running. Next: user playtest of alpha-1 feeds difficulty-fun phase 2 + polish backlog. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
@@ -27,6 +27,8 @@ _Last updated: 2026-11-02 by PM_
 | altar-polish | ws/altar-polish | ✅ merged | caption lane; blocked sockets sealed with an X cap; lit boards before the first strike; labels notched to machines; Enter always picks up; fizzle tags fade; splitter-mill overlap fixed; Channel line; cursor jumps to the route's open end |
 | engine-adoption | ws/engine-adoption | ✅ merged | ending eases with post.blendTo; Builder's mark readable through the door; credits backed over the gold; storm on PingPong; linear emboss mask; global C/O/J; ending Fuse leak fixed. 60fps, draws unchanged |
 | title-fuse | ws/title-fuse | ✅ merged | FUSE strolls between 3 spots left of the menu (still under reduced motion), 22 Tier-1 title lines every 12–20 s, no repeats, caption avoids the menu, silenced on Play |
+| codex-2 | ws/codex-2 | 🟡 running | Codex shows real gem images (+ in/out diagrams for Bend/Gate/Split); entries unlock on first sight, marked Seen vs Yours |
+| capacitor-clarity | ws/capacitor-clarity | 🟡 running | make the two-strike Capacitor readable before and during the strike (capacitor-bay, lift-shaft, roof-array); no rule changes |
 | onboarding-2 | ws/onboarding-2 | ✅ merged | gem info card lives over the tray band (hover/focus/held; arrival card fades), fixed gems get iron brackets + "Fixed in place", first turnable Bend/Gate shows a turn badge and the preview swings as it turns; Gives N + strike-ready on all 16; new-gem lines before use; tray matches board; charge chips on new gems; `altar-labels.spec` e2e |
 | split-rotate | ws/split-rotate | ✅ merged | D-031: Split has one input (stem) and turns; octagon cut + bold T glyph with outward arrows; red ✕ where the preview stops at a wrong-facing Bend/Gate/Split; 14 Split puzzles keep their routes (conveyor-a 8→4 solutions); solver ignores turn choice in scoring (follow-up) |
 | turn-2 | ws/turn-2 | ✅ merged | R/Q/scroll over a placed gem turns it in place and saves at once, even with a gem in hand; held-gem ghost only over empty sockets; drag-turn kept on drop; plainer hint/tag/card text; 2 new e2e |
