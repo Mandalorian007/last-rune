@@ -2,6 +2,8 @@ export {
   CaptionCard,
   type CaptionOptions,
   type Corner,
+  cornerOrder,
+  overlapArea,
   type ReadingTimeOptions,
   readingTimeMs,
   revealDelayMs,

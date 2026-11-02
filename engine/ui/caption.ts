@@ -1,7 +1,27 @@
 import { h } from './dom';
+import type { Rect } from './overlay';
 import { prefersReducedMotion } from './styles';
 
 export type Corner = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
+/** Area (px²) of `box` that lies inside any of `regions` (overlaps between regions count twice). Pure. */
+export function overlapArea(box: Rect, regions: readonly Rect[]): number {
+  let area = 0;
+  for (const r of regions) {
+    const w = Math.min(box.x + box.width, r.x + r.width) - Math.max(box.x, r.x);
+    const h = Math.min(box.y + box.height, r.y + r.height) - Math.max(box.y, r.y);
+    if (w > 0 && h > 0) area += w * h;
+  }
+  return area;
+}
+
+/** The order corners are tried in: the preferred one, its mirror across, then the other edge. Pure. */
+export function cornerOrder(preferred: Corner): Corner[] {
+  const [v, side] = preferred.split('-') as ['top' | 'bottom', 'left' | 'right'];
+  const flipV = v === 'top' ? 'bottom' : 'top';
+  const flipS = side === 'left' ? 'right' : 'left';
+  return [preferred, `${v}-${flipS}`, `${flipV}-${side}`, `${flipV}-${flipS}`] as Corner[];
+}
 
 export interface ReadingTimeOptions {
   /** Base time added to every line. Default 1200 ms. */
@@ -52,6 +72,11 @@ export interface CaptionOptions {
   cps?: number;
   /** Clicking the card skips the reveal, then advances. Default true. */
   clickToAdvance?: boolean;
+  /**
+   * Narrowest the card may get when it squeezes past an `avoid()` region, in container px.
+   * Default 480. Narrower cards wrap onto more lines; text is never clipped.
+   */
+  minWidth?: number;
 }
 
 interface Line {
@@ -80,11 +105,18 @@ export class CaptionCard {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private phase: 'idle' | 'typing' | 'holding' = 'idle';
   private readonly corner: Corner;
+  private readonly minWidth: number;
+  private readonly sideEl: HTMLElement;
+  private readonly bodyEl: HTMLElement;
+  private avoidRects: Rect[] = [];
+  private lineCps = 0;
+  private isSuspended = false;
   reducedMotion: boolean;
   cps: number;
 
   constructor(container: HTMLElement, opts: CaptionOptions = {}) {
     this.corner = opts.corner ?? 'bottom-right';
+    this.minWidth = opts.minWidth ?? 480;
     this.reducedMotion = opts.reducedMotion ?? prefersReducedMotion();
     this.cps = opts.cps ?? 45;
     this.portraitEl = h('div', { class: 'tc-caption-portrait', 'aria-hidden': 'true' });
@@ -103,11 +135,14 @@ export class CaptionCard {
       'aria-live': 'polite',
       'aria-atomic': 'true',
     });
+    // With a portrait, the speaker's name sits under it (a shorter card); without, above the text.
+    this.sideEl = h('div', { class: 'tc-caption-side' }, this.portraitEl);
+    this.bodyEl = h('div', { class: 'tc-caption-body' }, this.speakerEl, this.textEl);
     this.element = h(
       'div',
       { class: 'tc-caption', dataset: { corner: this.corner }, hidden: true },
-      this.portraitEl,
-      h('div', { class: 'tc-caption-body' }, this.speakerEl, this.textEl),
+      this.sideEl,
+      this.bodyEl,
     );
     if (opts.clickToAdvance !== false) this.element.addEventListener('click', () => this.advance());
     container.append(this.element, this.liveEl);
@@ -125,6 +160,40 @@ export class CaptionCard {
   /** Text of the line being shown, or null. */
   get currentText(): string | null {
     return this.current?.text ?? null;
+  }
+
+  /** True while `suspend(true)` holds the card hidden and frozen. */
+  get suspended(): boolean {
+    return this.isSuspended;
+  }
+
+  /**
+   * Keep the card out of these regions (container px: design px for the overlay's card). The
+   * card stays in its corner if it fits there, else narrows (down to `minWidth`), else moves to
+   * the mirrored corner, then the other edge, taking the first spot that touches no region (or
+   * the one that covers least). `null` or `[]` lifts the constraint. Re-applied to every line
+   * until changed, and immediately to the line on screen.
+   */
+  avoid(regions: Rect | readonly Rect[] | null): void {
+    this.avoidRects = !regions ? [] : Array.isArray(regions) ? [...regions] : [regions as Rect];
+    this.place();
+  }
+
+  /**
+   * Hide the card and freeze its typing and hold timers (e.g. while a modal panel is open);
+   * `suspend(false)` shows it again and picks up where it left off, with a fresh hold. The
+   * queue and live region are untouched, and `say()` still queues while suspended.
+   */
+  suspend(on: boolean): void {
+    if (on === this.isSuspended) return;
+    this.isSuspended = on;
+    this.element.toggleAttribute('data-suspended', on);
+    if (on) {
+      this.stopTimer();
+    } else {
+      this.place();
+      this.schedule();
+    }
   }
 
   /** Queue a line; resolves when it's dismissed (held time elapsed, advanced, or cleared). */
@@ -172,17 +241,67 @@ export class CaptionCard {
     this.revealed = 0;
     this.speakerEl.textContent = line.opts.speaker ?? '';
     this.portraitEl.replaceChildren(...(line.opts.portrait ? [line.opts.portrait] : []));
-    this.element.dataset.corner = line.opts.corner ?? this.corner;
+    this.sideEl.hidden = !line.opts.portrait;
+    if (line.opts.portrait) this.sideEl.append(this.speakerEl);
+    else this.bodyEl.prepend(this.speakerEl);
     this.liveEl.textContent = line.opts.speaker ? `${line.opts.speaker}: ${line.text}` : line.text;
     this.element.hidden = false;
-    const cps = line.opts.cps ?? this.cps;
-    if (this.reducedMotion || cps <= 0) {
-      this.finishReveal();
-      return;
-    }
-    this.phase = 'typing';
+    this.lineCps = line.opts.cps ?? this.cps;
+    const instant = this.reducedMotion || this.lineCps <= 0;
+    if (instant) this.revealed = [...line.text].length;
+    this.phase = instant ? 'holding' : 'typing';
+    // The whole line is laid out from the start (pending chars hidden), so place it once now.
     this.render();
-    this.tick(cps);
+    this.place();
+    this.schedule();
+  }
+
+  /** (Re)start the timer for the current phase, unless suspended. */
+  private schedule() {
+    this.stopTimer();
+    const line = this.current;
+    if (!line || this.isSuspended) return;
+    if (this.phase === 'typing') this.tick(this.lineCps);
+    else if (this.phase === 'holding') {
+      const hold = line.opts.hold ?? readingTimeMs(line.text);
+      if (hold > 0) this.timer = setTimeout(() => this.dismiss(), hold);
+    }
+  }
+
+  /** Choose the corner and width for the current line (see `avoid`). */
+  private place() {
+    const el = this.element;
+    const line = this.current;
+    if (!line || el.hidden || this.isSuspended) return;
+    const preferred = line.opts.corner ?? this.corner;
+    el.dataset.corner = preferred;
+    el.style.maxWidth = '';
+    if (this.avoidRects.length === 0) return;
+    const full = el.offsetWidth;
+    // Widths to try per corner: as laid out, then narrower in ~15% steps down to minWidth.
+    const widths = [full];
+    for (let w = full * 0.85; w > this.minWidth; w *= 0.85) widths.push(Math.round(w));
+    if (full > this.minWidth) widths.push(this.minWidth);
+    let best: { corner: Corner; width: number; area: number } | null = null;
+    for (const corner of cornerOrder(preferred)) {
+      el.dataset.corner = corner;
+      for (const w of widths) {
+        el.style.maxWidth = `${w}px`;
+        const box = {
+          x: el.offsetLeft,
+          y: el.offsetTop,
+          width: el.offsetWidth,
+          height: el.offsetHeight,
+        };
+        const area = overlapArea(box, this.avoidRects);
+        if (area === 0) return;
+        if (!best || area < best.area) best = { corner, width: w, area };
+      }
+    }
+    if (best) {
+      el.dataset.corner = best.corner;
+      el.style.maxWidth = `${best.width}px`;
+    }
   }
 
   private tick(cps: number) {
@@ -202,12 +321,10 @@ export class CaptionCard {
   private finishReveal() {
     const line = this.current;
     if (!line) return;
-    this.stopTimer();
     this.revealed = [...line.text].length;
     this.render();
     this.phase = 'holding';
-    const hold = line.opts.hold ?? readingTimeMs(line.text);
-    if (hold > 0) this.timer = setTimeout(() => this.dismiss(), hold);
+    this.schedule();
   }
 
   private dismiss() {

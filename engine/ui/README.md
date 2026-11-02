@@ -18,7 +18,8 @@ input.blocked = () => ui.stack.hasModal;       // the game ignores input while a
   ratio differs from the design's, the overlay is centred inside it.
 - The root and its layers are `pointer-events: none`. Only interactive elements (buttons, panels,
   toasts, the caption card) take the pointer, so clicks on empty space still reach the canvas.
-- Layers, bottom to top: `hud`, `panels`, `captions`, `toasts`. Game HUD elements go in
+- Layers, bottom to top: `hud`, `captions`, `panels`, `toasts`. A modal panel always covers the
+  caption card, and the overlay also suspends the card (hidden, timers frozen) while a modal is open. Game HUD elements go in
   `ui.layers.hud`.
 - `ui.clientToDesign(clientX, clientY)` maps viewport coordinates to design space, or returns null
   outside the overlay. Platform owns the canonical transform, so prefer that one.
@@ -58,7 +59,7 @@ A corner speech card with a typewriter reveal and a queue.
 ```ts
 await ui.caption.say('Something old is listening.', {
   speaker: 'Narrator',
-  portrait: glyphCanvas,     // optional Node shown left of the text
+  portrait: glyphCanvas,     // optional Node shown left of the text (speaker name goes under it)
   onChar: () => audio.play('blip', { gain: 0.3 }),
   hold: 0,                   // 0 = wait for a click / advance(); default readingTimeMs(text)
 });
@@ -77,6 +78,17 @@ await ui.caption.say('Something old is listening.', {
 - Corners: `bottom-right` (the default), `bottom-left`, `top-right`, `top-left`. Set one per card
   with `caption: { corner }` or per line with `say(…, { corner })`. For a second, independent card,
   create one: `new CaptionCard(ui.layers.captions, opts)`.
+- Size: the card is as wide as its text needs, up to `--tc-caption-max-width` (default 720px), and
+  sits `--tc-caption-margin` from the edges. It has no max height and long words wrap, so text is
+  never clipped. Set both vars on `.tc-overlay` to tune them per game.
+- `avoid(rect | rect[] | null)` keeps the card off parts of the screen (container px, i.e. design px
+  for `ui.caption`). The card stays in its corner if it fits, else narrows (down to
+  `caption: { minWidth }`, default 480), else tries the mirrored corner, then the opposite edge, and
+  takes the first spot that touches nothing (or the one that covers least). It applies to the line
+  on screen and every later one until changed. It is not cleared on its own: a scene that sets it
+  clears it (`avoid(null)`) when it leaves.
+- `suspend(on)` hides the card and freezes its typing and hold. `suspend(false)` resumes where it
+  was with a fresh hold. `say()` still queues while suspended. The overlay calls it for modals.
 
 ## Widgets and helpers
 
@@ -118,6 +130,6 @@ inside the overlay.
 
 `ui.test.ts` runs under happy-dom and covers theme var names, overlay mount and scaling,
 client→design mapping, the modal focus trap, Esc, focus restore, inert stacking, non-modal panels,
-backdrop clicks, toast caps and timers, caption typing / hold / skip / queue / reduced motion, and
+backdrop clicks, toast caps and timers, caption typing / hold / skip / queue / reduced motion / suspend / avoid placement, and
 the slider's aria-valuetext. Layout and focus were also checked once in Chromium via Playwright (not
 part of CI).
