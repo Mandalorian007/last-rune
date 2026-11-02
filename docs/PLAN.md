@@ -34,7 +34,7 @@ A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 t
 | 2 Playable vertical | game-shell, art-materials, audio-design, difficulty-fun (phase 1), art-props | ✅ merged |
 | 3 Content complete | altar-scene, hall-art, story-scenes | ✅ merged |
 | 4 Alpha + verify | hall-floor ✅, altar-clarity ✅, full-run ✅ (keyboard e2e through all 16 + playtest report), engine-cleanup ✅, engine-adoption ✅, then the playtest fixes before alpha: caption-layout ✅, altar-polish ✅; release label on title ✅; then the M3α pre-release | ✅ merged |
-| 5 Polish | perf-tiers ✅, a11y ✅; then difficulty-fun phase 2 from alpha-1 feedback, polish backlog, bug bash | 🟡 running |
+| 5 Polish | perf-tiers ✅, a11y ✅, polish-1 🟡; then difficulty-fun phase 2 from alpha-1 feedback, polish backlog, bug bash | 🟡 running |
 | 6 Ship | v1.0.0 release, tags, itch kit | ⏳ |
 
 ## User feedback backlog
