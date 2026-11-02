@@ -137,7 +137,7 @@ describe('Input DOM attachment', () => {
 
   it('accepts global keys from options', () => {
     const other = new Input(
-      { codex: [{ key: 'KeyC' }] },
+      { menu: [{ key: 'KeyC' }] },
       {
         getGamepads: () => [],
         globalKeys: ['KeyC'],
@@ -147,7 +147,7 @@ describe('Input DOM attachment', () => {
     other.attach({ pointerTarget: canvas, keyTarget: el });
     el.dispatchEvent(key('keydown', 'KeyC'));
     other.update();
-    expect(other.pressed('codex')).toBe(true);
+    expect(other.pressed('menu')).toBe(true);
     other.detach();
   });
 

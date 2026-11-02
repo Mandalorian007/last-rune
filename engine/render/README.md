@@ -107,9 +107,9 @@ one frame. Pass each draw's block as `DrawParams.uniforms`, an array of f32 valu
 of the block reads 0, and the shader code stays the same.
 
 ```ts
-const bolt = renderer.createMaterial({ label: 'bolt', wgsl, uniformBytes: 32, perDrawUniforms: true });
-bolt.setUniforms(shared);                            // used by draws without `uniforms`
-frame.sprite(bolt, { x, y, w, h, uniforms: seg.u }); // own block, bound at a dynamic offset
+const glow = renderer.createMaterial({ label: 'glow', wgsl, uniformBytes: 32, perDrawUniforms: true });
+glow.setUniforms(shared);                            // used by draws without `uniforms`
+frame.sprite(glow, { x, y, w, h, uniforms: obj.u });  // own block, bound at a dynamic offset
 ```
 
 - Blocks are staged on the CPU and uploaded in one `writeBuffer` per material in `endFrame`.
