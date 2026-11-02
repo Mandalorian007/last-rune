@@ -1,10 +1,13 @@
 /// <reference types="@webgpu/types" />
 import type { Frame, Page } from '@playwright/test';
 
-// Keep in sync with playwright.config.ts.
-export const PREVIEW_URL = 'http://localhost:4173';
-export const ITCH_SIM_URL = 'http://localhost:8790';
-export const ITCH_GAME_ORIGIN = 'http://127.0.0.1:8791';
+// Keep in sync with playwright.config.ts (E2E_PREVIEW_PORT / E2E_ITCH_PORT override the ports).
+const PREVIEW_PORT = Number(process.env.E2E_PREVIEW_PORT ?? 4173);
+const ITCH_PORT = Number(process.env.E2E_ITCH_PORT ?? 8790);
+export const PREVIEW_URL = `http://localhost:${PREVIEW_PORT}`;
+export const ITCH_SIM_URL = `http://localhost:${ITCH_PORT}`;
+/** itch-sim serves the game files from 127.0.0.1 on the next port up. */
+export const ITCH_GAME_ORIGIN = `http://127.0.0.1:${ITCH_PORT + 1}`;
 
 /** Console noise that is not ours: Chromium warns about itch's non-standard allow tokens. */
 const IGNORED_CONSOLE = [/Unrecognized feature: '(monetization|xr|web-share)'/];
@@ -112,4 +115,40 @@ export async function itchGameFrame(page: Page): Promise<Frame> {
     await page.waitForTimeout(100);
   }
   throw new Error('itch-sim game frame never loaded');
+}
+
+// ── Gameplay helpers (full-run, playtest) ─────────────────────────────────────
+
+/** localStorage key of the main save slot (engine/save envelope). */
+export const SAVE_KEY = 'thunderclap:last-rune:main';
+
+export interface SaveDataView {
+  progress: { solved: string[] };
+  puzzles: Record<string, { attempts: number; placements: unknown[] }>;
+  journal?: { found: number[] };
+  stats?: { attempts: number; breakersTripped: number; playSeconds: number };
+}
+
+/** Read the save as the game wrote it (read-only: tests never seed saves). */
+export async function readSave(target: Page | Frame): Promise<SaveDataView | null> {
+  const raw = await target.evaluate((k) => localStorage.getItem(k), SAVE_KEY);
+  return raw ? (JSON.parse(raw) as { d: SaveDataView }).d : null;
+}
+
+/** Wait `n` real animation frames in the page (game state advances per frame, not per ms). */
+export async function waitFrames(target: Page | Frame, n = 3) {
+  await target.evaluate(async (n) => {
+    for (let i = 0; i < n; i++) await new Promise((r) => requestAnimationFrame(r));
+  }, n);
+}
+
+/**
+ * Press a key `times` times. Input collapses repeat taps of one key inside a single tick, so
+ * wait three real frames (at least one fixed-step tick) between presses.
+ */
+export async function pressKey(page: Page, key: string, times = 1) {
+  for (let i = 0; i < times; i++) {
+    await page.keyboard.press(key, { delay: 50 });
+    await waitFrames(page, 3);
+  }
 }

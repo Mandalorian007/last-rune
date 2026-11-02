@@ -1,0 +1,447 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { pagesFound, pagesUnlockedBy } from '../../games/last-rune/content/journal';
+import { puzzleFor } from '../../games/last-rune/content/puzzles';
+import { altarDims, isRotational } from '../../games/last-rune/rules';
+import {
+  availableMachines,
+  getMachine,
+  initialState,
+  type ProgressState,
+  solveMachine,
+} from '../../games/last-rune/rules/progression';
+import { GEM_KINDS, type MachineId } from '../../games/last-rune/rules/types';
+import { deriveHall, focusOrder } from '../../games/last-rune/scenes/hall/hall-state';
+import { PREVIEW_URL, pressKey, readSave, trackProblems, waitFrames } from './helpers';
+
+// Full run of the production build with real input only: title → hall → all 16 machines, in
+// the order the hall unlocks them. Keyboard only (no dev handles, no save seeding), so the
+// test survives hall and altar art changes: it finds alcoves by the hall's name plate, not by
+// pixel position. One shared page plays the whole game; it is split into serial tests so
+// each stays well under the 5-minute budget.
+//
+// PLAYTEST_OUT=<dir> also records the playtest data behind docs/design/playtest-report.md:
+// screenshots at each beat (1280x720 and itch's 960x540), per-machine timings, frame times
+// during the strike, and a DOM audit for overlapping or clipped text. See scripts/playtest/.
+
+const PLAYTEST_OUT = process.env.PLAYTEST_OUT ? resolve(process.env.PLAYTEST_OUT) : null;
+
+/**
+ * The play order: walk the hall front to back and restore the first open machine each time,
+ * the way a player who follows the glow would. Derived from the rules so it tracks the graph.
+ */
+function playOrder(): MachineId[] {
+  const order: MachineId[] = [];
+  let state: ProgressState = initialState();
+  for (;;) {
+    const open = new Set(availableMachines(state).map((m) => m.id));
+    const next = focusOrder(deriveHall(state)).find((id) => open.has(id));
+    if (!next) return order;
+    order.push(next);
+    state = solveMachine(state, next);
+  }
+}
+
+const ORDER = playOrder();
+const FINAL: MachineId = 'the-last-rune';
+/** story-scenes' ending screen (an ARIA region named "Ending"). */
+const ending = () => page.getByRole('region', { name: 'Ending' });
+const CHUNKS = [ORDER.slice(0, 4), ORDER.slice(4, 8), ORDER.slice(8, 12), ORDER.slice(12)];
+
+interface MachineMetrics {
+  n: number;
+  machine: MachineId;
+  board: string;
+  gems: number;
+  keyPresses: number;
+  placeMs: number;
+  strikeMs: number;
+  wakeMs: number;
+  solveCardMs: number;
+  strikeFrames: { frames: number; avgMs: number; p95Ms: number; maxMs: number; over33: number };
+  audit: AuditIssue[];
+  pages: number;
+  unlockedAfter: MachineId[];
+}
+
+interface AuditIssue {
+  viewport: string;
+  beat: string;
+  kind: 'overlap' | 'clipped' | 'offscreen';
+  what: string;
+}
+
+const metrics: MachineMetrics[] = [];
+const consoleLog: string[] = [];
+let context: BrowserContext;
+let page: Page;
+let problems: string[];
+let shot = 0;
+
+// ── Page instrumentation ─────────────────────────────────────────────────────
+
+/** Frame-time recorder (test-side only; the game exposes nothing in production). */
+function installFrameRecorder() {
+  const w = window as unknown as { __ptFrames: number[] };
+  w.__ptFrames = [];
+  const loop = (t: number) => {
+    w.__ptFrames.push(t);
+    if (w.__ptFrames.length > 20_000) w.__ptFrames.splice(0, 10_000);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+
+async function frameMark(): Promise<number> {
+  return page.evaluate(() => (window as unknown as { __ptFrames: number[] }).__ptFrames.length);
+}
+
+async function frameStats(from: number) {
+  const ts = await page.evaluate(
+    (from) => (window as unknown as { __ptFrames: number[] }).__ptFrames.slice(from),
+    from,
+  );
+  const dts = ts
+    .slice(1)
+    .map((t, i) => t - ts[i]!)
+    .sort((a, b) => a - b);
+  if (dts.length === 0) return { frames: 0, avgMs: 0, p95Ms: 0, maxMs: 0, over33: 0 };
+  const avg = dts.reduce((s, d) => s + d, 0) / dts.length;
+  const r = (x: number) => Math.round(x * 10) / 10;
+  return {
+    frames: dts.length,
+    avgMs: r(avg),
+    p95Ms: r(dts[Math.floor(dts.length * 0.95)]!),
+    maxMs: r(dts[dts.length - 1]!),
+    over33: dts.filter((d) => d > 33.4).length,
+  };
+}
+
+/** Overlapping, clipped or off-screen UI text, as a player would see it. */
+async function audit(beat: string): Promise<AuditIssue[]> {
+  const viewport = `${page.viewportSize()?.width}x${page.viewportSize()?.height}`;
+  const found = await page.evaluate(() => {
+    const out: { kind: 'overlap' | 'clipped' | 'offscreen'; what: string }[] = [];
+    const sel = [
+      '.lr-altar-title',
+      '.lr-altar-actions',
+      '.lr-altar-verdict',
+      '.lr-altar-need',
+      '.lr-altar-count',
+      '.lr-altar-hint',
+      '.lr-altar-tag',
+      '.lr-altar-tip',
+      '.lr-hud',
+      '.lr-nameplate',
+      '.tc-caption',
+      '.lr-solve-card',
+      '.lr-page-note',
+      '.lr-solve-continue',
+    ];
+    const vis = (el: Element) => {
+      const s = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return (
+        s.display !== 'none' &&
+        s.visibility !== 'hidden' &&
+        Number(s.opacity) > 0.05 &&
+        r.width > 0 &&
+        r.height > 0 &&
+        !(el as HTMLElement).closest('[hidden]')
+      );
+    };
+    const label = (el: Element) =>
+      `${el.className.toString().split(' ')[0]}「${(el.textContent ?? '').trim().slice(0, 40)}」`;
+    const els = sel.flatMap((s) => [...document.querySelectorAll(s)]).filter(vis);
+    for (const el of els) {
+      const r = el.getBoundingClientRect();
+      if (r.left < -1 || r.top < -1 || r.right > innerWidth + 1 || r.bottom > innerHeight + 1) {
+        out.push({
+          kind: 'offscreen',
+          what: `${label(el)} at ${Math.round(r.left)},${Math.round(r.top)}–${Math.round(r.right)},${Math.round(r.bottom)}`,
+        });
+      }
+      const h = el as HTMLElement;
+      if (h.scrollWidth > h.clientWidth + 2 && getComputedStyle(h).overflowX !== 'visible') {
+        out.push({ kind: 'clipped', what: `${label(el)} ${h.scrollWidth}>${h.clientWidth}px` });
+      }
+    }
+    for (let i = 0; i < els.length; i++) {
+      for (let j = i + 1; j < els.length; j++) {
+        const a = els[i]!;
+        const b = els[j]!;
+        if (a.contains(b) || b.contains(a)) continue;
+        const ra = a.getBoundingClientRect();
+        const rb = b.getBoundingClientRect();
+        const ox = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+        const oy = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+        if (ox > 2 && oy > 2) {
+          out.push({
+            kind: 'overlap',
+            what: `${label(a)} × ${label(b)} (${Math.round(ox)}×${Math.round(oy)}px)`,
+          });
+        }
+      }
+    }
+    return out;
+  });
+  return found.map((f) => ({ ...f, viewport, beat }));
+}
+
+/** Screenshot + DOM audit at 1280x720 and 960x540 (playtest mode only). */
+async function beat(name: string, issues?: AuditIssue[]) {
+  if (!PLAYTEST_OUT) return;
+  const tag = `${String(++shot).padStart(3, '0')}-${name}`;
+  await page.screenshot({ path: join(PLAYTEST_OUT, `${tag}.png`) });
+  issues?.push(...(await audit(name)));
+  await page.setViewportSize({ width: 960, height: 540 });
+  await waitFrames(page, 4);
+  await page.screenshot({ path: join(PLAYTEST_OUT, `${tag}-960.png`) });
+  issues?.push(...(await audit(name)));
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await waitFrames(page, 4);
+}
+
+// ── Driving the game ─────────────────────────────────────────────────────────
+
+async function plate(): Promise<{ name: string; note: string } | null> {
+  return page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>('.lr-nameplate');
+    if (!el || el.hidden) return null;
+    return {
+      name: el.querySelector('span')?.textContent ?? '',
+      note: el.querySelector('small')?.textContent ?? '',
+    };
+  });
+}
+
+/** Hall → altar: ArrowRight walks the alcoves until the name plate names the machine. */
+async function openAltar(machine: MachineId): Promise<number> {
+  const name = getMachine(machine).name;
+  let presses = 0;
+  for (; presses < 40; presses++) {
+    if ((await plate())?.name === name) break;
+    await pressKey(page, 'ArrowRight');
+  }
+  expect((await plate())?.name, `hall focus never reached ${name}`).toBe(name);
+  expect((await plate())?.note).toMatch(/open/i);
+  await pressKey(page, 'Enter');
+  await expect(page.locator('.lr-altar')).toBeVisible();
+  await expect(page.locator('.lr-altar-title')).toContainText(name);
+  return presses + 1;
+}
+
+/** Build the intended solution with the keyboard cursor: 1-6 picks, R turns, arrows, Enter. */
+async function buildSolution(machine: MachineId): Promise<number> {
+  const p = puzzleFor(machine);
+  const tray = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
+  const rows = altarDims(p.altar).h;
+  // The altar's starting cursor (see AltarScene.enter).
+  const cursor = { x: 0, y: Math.min(Math.max(0, p.storm.at.y), rows - 1) };
+  let presses = 0;
+  const press = async (key: string, times = 1) => {
+    presses += times;
+    await pressKey(page, key, times);
+  };
+  for (const g of p.design.intended) {
+    const slot = tray.indexOf(g.gem);
+    expect(slot, `${machine}: ${g.gem} not in tray`).toBeGreaterThanOrEqual(0);
+    await press(`Digit${slot + 1}`);
+    if (isRotational(g.gem)) await press('KeyR', g.rot);
+    const dx = g.cell.x - cursor.x;
+    const dy = g.cell.y - cursor.y;
+    await press(dx > 0 ? 'ArrowRight' : 'ArrowLeft', Math.abs(dx));
+    await press(dy > 0 ? 'ArrowDown' : 'ArrowUp', Math.abs(dy));
+    cursor.x = g.cell.x;
+    cursor.y = g.cell.y;
+    await press('Enter');
+  }
+  return presses;
+}
+
+async function titleToHall() {
+  await page.goto(PREVIEW_URL);
+  await expect(page.locator('[data-action="play"]')).toBeVisible();
+  await waitFrames(page, 10);
+  await beat('title');
+  await pressKey(page, 'Enter');
+  await expect(page.locator('.lr-title-screen')).toHaveCount(0);
+  await expect(page.locator('.lr-hud')).toBeVisible();
+  const save = await readSave(page);
+  expect(save?.progress.solved).toEqual([]);
+  await waitFrames(page, 10);
+  await beat('hall-first-entry');
+}
+
+async function solve(machine: MachineId) {
+  const n = metrics.length + 1;
+  const p = puzzleFor(machine);
+  const before = (await readSave(page))?.progress.solved ?? [];
+  const issues: AuditIssue[] = [];
+
+  const hallPresses = await openAltar(machine);
+  await waitFrames(page, 6);
+  await beat(`${String(n).padStart(2, '0')}-${machine}-open`, issues);
+
+  const t0 = Date.now();
+  const placePresses = await buildSolution(machine);
+  const placeMs = Date.now() - t0;
+  // Placements save on a short debounce.
+  await expect
+    .poll(async () => (await readSave(page))?.puzzles[machine]?.placements.length, {
+      timeout: 5_000,
+    })
+    .toBe(p.design.intended.length);
+  await beat(`${String(n).padStart(2, '0')}-${machine}-placed`, issues);
+
+  // Strike at normal speed (no fast-forward): what a first-time player sits through.
+  const f0 = await frameMark();
+  const s0 = Date.now();
+  await page.keyboard.press('KeyF', { delay: 50 });
+  if (PLAYTEST_OUT) {
+    // One mid-bolt screenshot, taken on the game's clock: a few frames after the press.
+    await waitFrames(page, 30);
+    if (await page.locator('.lr-altar-verdict').isHidden()) {
+      await page.screenshot({
+        path: join(PLAYTEST_OUT, `${String(++shot).padStart(3, '0')}-${n}-${machine}-bolt.png`),
+      });
+    }
+  }
+  const verdict = page.locator('.lr-altar-verdict');
+  await expect(verdict).toBeVisible({ timeout: 60_000 });
+  const strikeMs = Date.now() - s0;
+  const strikeFrames = await frameStats(f0);
+  await expect(verdict).toContainText(/exactly right/i);
+  if (PLAYTEST_OUT) {
+    await page.screenshot({
+      path: join(PLAYTEST_OUT, `${String(++shot).padStart(3, '0')}-${n}-${machine}-verdict.png`),
+    });
+    issues.push(...(await audit(`${machine}-verdict`)));
+  }
+  const w0 = Date.now();
+  await expect(page.locator('.lr-solve')).toBeVisible({ timeout: 20_000 });
+  const wakeMs = Date.now() - w0;
+
+  // The save is written at the solve moment.
+  const save = await readSave(page);
+  expect(save?.progress.solved).toEqual([...before, machine]);
+  expect(save?.puzzles[machine]?.attempts).toBe(1);
+
+  // Let the card play out on its own (no skip), as a first-time player would see it.
+  const c0 = Date.now();
+  await expect(page.locator('.lr-solve-continue')).toBeVisible({ timeout: 15_000 });
+  const solveCardMs = Date.now() - c0;
+  // Journal pages land on the card after Continue shows (2.4 s vs 1.6 s); wait for them.
+  const pages = pagesUnlockedBy(machine).length;
+  if (pages > 0) await expect(page.locator('.lr-page-note')).toBeVisible({ timeout: 10_000 });
+  expect(save?.journal?.found).toEqual(
+    expect.arrayContaining(pagesUnlockedBy(machine).map((p) => p.page)),
+  );
+  await waitFrames(page, 10);
+  await beat(`${String(n).padStart(2, '0')}-${machine}-solve`, issues);
+
+  // Continue to the hall.
+  await pressKey(page, 'Enter');
+  if (await page.locator('.lr-solve').count()) await pressKey(page, 'Enter');
+  await expect(page.locator('.lr-solve')).toHaveCount(0, { timeout: 5_000 });
+  await expect(page.locator('.lr-altar')).toHaveCount(0);
+  if (machine === FINAL) {
+    // ENDING HOOK: the last solve hands over to story-scenes' ending, or (before it lands)
+    // back to the hall. Either is a pass here; the ending's own test is the fixme below.
+    await expect(page.locator('.lr-hud').or(ending())).toBeVisible();
+    await waitFrames(page, 20);
+    await beat(`${String(n).padStart(2, '0')}-${machine}-after`, issues);
+  } else {
+    await expect(page.locator('.lr-hud')).toBeVisible();
+    await waitFrames(page, 20);
+    await beat(`${String(n).padStart(2, '0')}-${machine}-hall-after`, issues);
+  }
+
+  const after = (await readSave(page))?.progress.solved ?? [];
+  const state: ProgressState = { solved: after as MachineId[] };
+  metrics.push({
+    n,
+    machine,
+    board: p.altar,
+    gems: p.design.intended.length,
+    keyPresses: hallPresses + placePresses + 1,
+    placeMs,
+    strikeMs,
+    wakeMs,
+    solveCardMs,
+    strikeFrames,
+    audit: issues,
+    pages,
+    unlockedAfter: availableMachines(state).map((m) => m.id),
+  });
+}
+
+// ── Tests ────────────────────────────────────────────────────────────────────
+
+test.describe.configure({ mode: 'serial' });
+
+test.describe('full run (prod build, keyboard only)', () => {
+  test.beforeAll(async ({ browser }) => {
+    if (PLAYTEST_OUT) mkdirSync(PLAYTEST_OUT, { recursive: true });
+    context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    page = await context.newPage();
+    await page.addInitScript(installFrameRecorder);
+    problems = trackProblems(page);
+    page.on('console', (m) => {
+      if (m.type() === 'warning' || m.type() === 'error')
+        consoleLog.push(`${m.type()}: ${m.text()}`);
+    });
+  });
+
+  test.afterAll(async () => {
+    if (PLAYTEST_OUT) {
+      writeFileSync(
+        join(PLAYTEST_OUT, 'metrics.json'),
+        `${JSON.stringify({ order: ORDER, metrics, console: consoleLog, problems }, null, 2)}\n`,
+      );
+    }
+    await context?.close();
+  });
+
+  test('play order covers all 16 machines', () => {
+    expect(ORDER).toHaveLength(16);
+    expect(new Set(ORDER).size).toBe(16);
+    expect(ORDER[0]).toBe('intake-desk');
+    expect(ORDER.slice(-2)).toEqual(['control-booth', 'the-last-rune']);
+  });
+
+  CHUNKS.forEach((chunk, i) => {
+    test(`machines ${i * 4 + 1}-${i * 4 + chunk.length}: ${chunk.join(', ')}`, async () => {
+      test.setTimeout(PLAYTEST_OUT ? 600_000 : 240_000);
+      if (i === 0) await titleToHall();
+      for (const m of chunk) await solve(m);
+      expect(problems).toEqual([]);
+    });
+  });
+
+  test('all 16 machines end solved, and the save survives a reload', async () => {
+    const save = await readSave(page);
+    expect(save?.progress.solved).toEqual(ORDER);
+    for (const m of ORDER) expect(save?.puzzles[m]?.attempts).toBe(1);
+    expect([...(save?.journal?.found ?? [])].sort((a, b) => a - b)).toEqual(
+      pagesFound(ORDER).map((p) => p.page),
+    );
+    // Reload: the title now offers Continue, and continuing lands in a fully restored hall.
+    await page.reload();
+    await expect(page.locator('[data-action="continue"]')).toBeVisible();
+    await waitFrames(page, 10);
+    await pressKey(page, 'Enter');
+    await expect(page.locator('.lr-hud')).toBeVisible();
+    await waitFrames(page, 20);
+    await beat('hall-complete');
+    expect((await readSave(page))?.progress.solved).toEqual(ORDER);
+    expect(problems).toEqual([]);
+  });
+
+  // ── ENDING HOOK (story-scenes) ──────────────────────────────────────────────
+  // Solving the-last-rune is the last step this suite drives. When story-scenes lands the
+  // ending, replace this fixme: after the rune's solve moment, expect the ending scene
+  // instead of the hall, play it through by keyboard, then assert stats.completedAt > 0.
+  test.fixme('ending plays after the last rune (story-scenes)', async () => {});
+});

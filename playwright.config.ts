@@ -7,9 +7,12 @@ import { defineConfig, devices } from '@playwright/test';
 //   - itch-sim (scripts/itch-sim) at http://localhost:8790, which embeds the same dist/ in a
 //     cross-site iframe from http://127.0.0.1:8791 with itch.io's exact iframe attributes.
 
-// Keep in sync with tests/e2e/helpers.ts.
-const PREVIEW_URL = 'http://localhost:4173';
-const ITCH_SIM_URL = 'http://localhost:8790';
+// Keep in sync with tests/e2e/helpers.ts. E2E_PREVIEW_PORT / E2E_ITCH_PORT move the servers so
+// parallel worktrees don't reuse each other's server (reuseExistingServer is on locally).
+const PREVIEW_PORT = Number(process.env.E2E_PREVIEW_PORT ?? 4173);
+const ITCH_PORT = Number(process.env.E2E_ITCH_PORT ?? 8790);
+const PREVIEW_URL = `http://localhost:${PREVIEW_PORT}`;
+const ITCH_SIM_URL = `http://localhost:${ITCH_PORT}`;
 
 const isCI = !!process.env.CI;
 
@@ -42,9 +45,8 @@ function webgpuArgs(): string[] {
 }
 
 // E2E_SKIP_BUILD=1 reuses an existing dist/ (e.g. after `pnpm build` in CI).
-const previewCommand = process.env.E2E_SKIP_BUILD
-  ? 'pnpm exec vite preview --port 4173 --strictPort'
-  : 'pnpm build && pnpm exec vite preview --port 4173 --strictPort';
+const previewServe = `pnpm exec vite preview --port ${PREVIEW_PORT} --strictPort`;
+const previewCommand = process.env.E2E_SKIP_BUILD ? previewServe : `pnpm build && ${previewServe}`;
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -77,7 +79,7 @@ export default defineConfig({
     },
     {
       // Serves dist/ lazily, so it is fine that the build above may still be running.
-      command: 'node scripts/itch-sim/serve.mjs --port 8790',
+      command: `node scripts/itch-sim/serve.mjs --port ${ITCH_PORT}`,
       url: `${ITCH_SIM_URL}/`,
       reuseExistingServer: !isCI,
       timeout: 30_000,
