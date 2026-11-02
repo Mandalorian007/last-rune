@@ -23,6 +23,7 @@ _Last updated: 2026-11-02 by PM_
 | hall-floor | ws/hall-floor | 🟡 in progress | wave 4: floor dressing, locked alcoves readable, available machine most inviting |
 | altar-clarity | ws/altar-clarity | 🟡 in progress | wave 4: less board noise, output visibly feeds the machine, readable strikes, onboarding for the first 3 gems |
 | full-run | ws/full-run | 🟡 in progress | wave 4: real-input e2e through all 16 puzzles + player-eye playtest report |
+| engine-adoption | ws/engine-adoption | 🟡 in progress | wave 4: callers adopt engine-cleanup's APIs; ending eases with post.blendTo; credits backing; door bloom |
 | engine-cleanup | ws/engine-cleanup | ✅ merged | particles clear, bolt timing from trace, Fuse.destroy, per-draw uniforms, texture uploads, PingPong, global keys, queued taps, master limiter + reverb, post.blendTo. 60fps, no new churn |
 
 ## Blocked / needs user

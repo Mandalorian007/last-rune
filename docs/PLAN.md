@@ -48,10 +48,10 @@ Each item stays here until it is verified in a merged build. The owning workstre
 | 2026-11-02 | Auto-formatting on | PM | ✅ D-024 |
 
 ## Polish backlog (wave 5 unless picked up earlier)
-- Ending: darker backing behind credits over the gold flood (fading lines are faint); the door blooms hot over the disc centre; ease post settings once `post.blendTo` exists.
+- Ending credits backing, door bloom, eased post: engine-adoption (wave 4).
 - Ending UI copy (credits, chat names) pending user confirmation.
 
-## Engine adoption (callers to migrate onto engine-cleanup's APIs, wave 5)
+## Engine adoption (engine-adoption workstream, wave 4; altar and hall items go to their owners)
 1. Ending: use `post.blendTo` instead of washes hiding preset swaps.
 2. `art/props/storm.ts`: use `createPingPong`, and destroy its material in `destroy()`.
 3. bolt/storm/fuse: share one `perDrawUniforms` material.
