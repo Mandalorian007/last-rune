@@ -794,9 +794,9 @@ export class AltarScene implements GameScene {
     return o === 'over' ? 'over' : o === 'exact' ? 'exact' : 'under';
   }
 
+  /** Effective "Reduce flashes" ('auto' follows reduced motion; an explicit on/off wins). */
   private get reduceFlashes(): boolean {
-    const eff = this.ctx.settings.effective as unknown as Record<string, unknown>;
-    return eff.reduceFlashes === true || this.ctx.settings.reducedMotion;
+    return this.ctx.settings.reduceFlashes;
   }
 
   private startPulse(i: number): void {
