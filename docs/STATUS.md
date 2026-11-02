@@ -16,6 +16,7 @@ _Last updated: 2026-11-02 by PM_
 ## Blocked / needs user
 - Discord invite URL (placeholder until provided). D-005
 - itch.io page and account details at ship time (M5)
+- (Planned) Enable GitHub Pages "Source: GitHub Actions" in repo settings at M3α. PM can do it via `gh api`.
 
 ## Risks
 - WebGPU inside the itch iframe (permissions policy). ship-ops is verifying.

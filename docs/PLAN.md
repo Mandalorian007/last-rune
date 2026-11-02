@@ -18,6 +18,7 @@
 | M1 | Foundations (wave 1) | WebGPU renderer and post stack demo; engine systems; charge sim, solver and 16 puzzles verified; progression and content data; itch pipeline and CI |
 | M2 | Playable vertical (wave 2) | Title → Hall → Puzzle → Solve loop with real data and save/continue; Codex; procedural gem and stone art |
 | M3 | Content complete (wave 3) | All 16 machines, Journal, FUSE lines, Ending and Discord door, audio, mist/candles/storm |
+| M3α | **Alpha release: GitHub Pages** | First public release location. Actions workflow deploys `main` → `https://mandalorian007.github.io/last-rune/` on push; alpha label in-game; playtest link shared |
 | M4 | Polish + playtest | Automated playtest (solver-driven full run), perf pass, a11y pass, bug bash |
 | M5 | Ship | itch zip, page copy, devlog draft, `engine-v0.1` tag |
 
@@ -31,5 +32,7 @@
 5. `ship-ops`: itch research, packaging script, GitHub Actions CI, Playwright WebGPU smoke harness
 
 **Wave 2 — Playable vertical** (after wave 1 merges): scenes (title, hall, altar/puzzle, solve, codex), procedural art (gem refraction, stone, FUSE), game state/flow.
+
+**Alpha release (after wave 3 content lands):** GitHub Pages deploy workflow + alpha build (D-010).
 
 **Wave 3 — Complete + polish:** journal desk, ending sequence, storm fluid, mist/candles, audio pass, automated full-run playtest, perf/cleanup agents as needed.
