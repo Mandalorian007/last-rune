@@ -26,7 +26,12 @@ async function readSave(page: Page): Promise<SaveEnvelope['d'] | null> {
 async function press(page: Page, key: string, times = 1) {
   for (let i = 0; i < times; i++) {
     await page.keyboard.press(key, { delay: 50 });
-    await page.waitForTimeout(40);
+    // Input collapses repeat taps of one key inside a single tick, so wait three real frames
+    // (at least one fixed-step tick, not wall time) before the next press. Under GPU load a frame can exceed any fixed delay.
+    await page.evaluate(() => {
+      const raf = () => new Promise((r) => requestAnimationFrame(r));
+      return raf().then(raf).then(raf);
+    });
   }
 }
 
