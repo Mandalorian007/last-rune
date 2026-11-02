@@ -104,7 +104,7 @@ describe('overlay', () => {
     bar.append(opener);
     ov.layers.hud.append(bar);
     opener.focus();
-    ov.stack.push({ title: 'Codex', content: button('x', () => {}) });
+    ov.stack.push({ title: 'Help', content: button('x', () => {}) });
     key('Escape');
     expect(document.activeElement).toBe(home);
 

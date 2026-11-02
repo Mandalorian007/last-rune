@@ -27,7 +27,7 @@ _Last updated: 2026-11-02 by PM_
 | altar-polish | ws/altar-polish | ✅ merged | caption lane; blocked sockets sealed with an X cap; lit boards before the first strike; labels notched to machines; Enter always picks up; fizzle tags fade; splitter-mill overlap fixed; Channel line; cursor jumps to the route's open end |
 | engine-adoption | ws/engine-adoption | ✅ merged | ending eases with post.blendTo; Builder's mark readable through the door; credits backed over the gold; storm on PingPong; linear emboss mask; global C/O/J; ending Fuse leak fixed. 60fps, draws unchanged |
 | perf-tiers | ws/perf-tiers | 🟡 in progress | wave 5: measure, dynamic resolution, Auto/High/Low quality |
-| a11y | ws/a11y | 🟡 in progress | wave 5: audit + fixes, HUD focus restore in engine, a11y e2e |
+| a11y | ws/a11y | ✅ merged | audit (docs/design/a11y-audit.md); S1: title menu role, gamepad stuck in panels (engine PadNav); HUD focus restore fixed in engine (blur workaround gone); altar briefing + verdict announced; locked doors say what they need; contrast ≥ 4.5:1; axe e2e |
 | engine-cleanup | ws/engine-cleanup | ✅ merged | particles clear, bolt timing from trace, Fuse.destroy, per-draw uniforms, texture uploads, PingPong, global keys, queued taps, master limiter + reverb, post.blendTo. 60fps, no new churn |
 
 ## Blocked / needs user
