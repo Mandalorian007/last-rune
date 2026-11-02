@@ -24,3 +24,21 @@
 - Retune from user/friend playtest data; log every change and why in `docs/design/difficulty-curve.md`.
 
 ## Log
+
+### 2026-11-02 — Phase 1 done (branch `worktree-agent-a60fe6a51069ad7a9`)
+- **Built**: `rules/difficulty.ts` (flow markers, novice bot, `measure`, `scoreOf`), solver now
+  reports failed-leaf kinds (dead/under/over), `pnpm puzzle <id|all|table ids…> [--json]
+  [--solutions N]` (`tools/puzzle.ts`, tsx devDep), `content/puzzles/targets.ts` (score bands),
+  `content/puzzles/difficulty.test.ts` (fast unit tests + FULL=1 curve check, ~4 s).
+- **Decision: score reads as minutes on a by-hand scale.** Weights fitted to my estimate of the
+  16 original puzzles, then rounded. The pitch's `minutes` (finale 8) run about 1.25 × score. The
+  curve's shape is the contract until Phase 2 playtests refit. Details: `docs/design/difficulty-curve.md`.
+- **Decision: bot = build by following the bolt, then edit the best board from gauge readings.**
+  A rebuild-from-scratch bot with a tabu memory couldn't assign credit and solved nothing past Tier 1.
+- **Retuned**: furnace (first try reads under), capacitor-bay (8×6; first try reads over),
+  lift-shaft (pre-set rails, 12 → 3 solutions), control-booth (amber lure + rails, 6 → 1),
+  the-last-rune (arm rails pre-set, 72 → 4 solutions, finale checks ~1 s). All invariants and
+  tests kept; puzzle ids and the `PUZZLES`/`puzzleFor` API unchanged.
+- **Open**: conveyor-a (8) / press-unit-4 (9) / capacitor-bay (11) solution counts; the bot
+  can't plan Gate meetings (hits its 300 cap on most Gate puzzles); STATUS.md and
+  rules-puzzles.md still quote the finale's 72 solutions (PM-owned files, not edited).
