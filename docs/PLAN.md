@@ -15,7 +15,7 @@
 
 | # | Milestone | State | Exit criteria |
 |---|---|---|---|
-| 2026-11-02 | Re-check after onboarding-2: intake desk "great and clear and intuitive", but "maybe some bugs on rotating vs selecting". Second stage (splitter-mill, probably) "confusing as all hell with the layout and rotating desired… I thought I would rotate the splitter, but then the rotate looked like the piece I was placing" | turn-clarity | 🟡 |
+| 2026-11-02 | Re-check after onboarding-2: intake desk "great and clear and intuitive", but "maybe some bugs on rotating vs selecting". Second stage (splitter-mill, probably) "confusing as all hell with the layout and rotating desired… I thought I would rotate the splitter, but then the rotate looked like the piece I was placing" | turn-clarity | ✅ merged; awaiting user check |
 | M0 | Scaffold | ✅ done | Repo, tooling, docs, CI, GitHub public |
 | M1 | Foundations (wave 1) | ✅ done | WebGPU renderer and post stack demo; engine systems; charge sim, solver and 16 puzzles verified; progression and content data; itch pipeline and CI |
 | M2 | Playable vertical (wave 2) | ✅ done | Title → Hall → Puzzle → Solve loop with real data and save/continue; Codex; procedural gem and stone art |
