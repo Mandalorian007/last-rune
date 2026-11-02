@@ -85,3 +85,17 @@
 - Scenes that create a Fuse should call fuse.destroy() on exit.
 - e2e press() helpers can drop their between-press tick waits now that taps queue (optional).
 - The limiter is on by default and catches only peaks above -1 dBFS. Audio owners should listen once, and they can opt out with `limiter: false`.
+
+### 2026-11-02 (PM addition: post blending, merge of main)
+- Added `post.blendTo(patch, seconds, ease?)` to `engine/post`:
+  - Numbers and RGB colours ease from their current values. The default ease is smoothstep; `easeLinear`, `easeIn` and `easeOut` are exported too.
+  - `enabled: true` applies at once. `enabled: false`, `tonemap`, `dither` and `bloom.levels` switch when the blend ends.
+  - A later `set` or `blendTo` on the same key takes over from wherever that key is.
+  - Blends advance with the frame time inside `encode`, and each step counts at most 0.1 s.
+  - Also added: `post.blending`, `post.finishBlend()`, `post.advanceBlend(time)`, and the pure class `PostBlender`. Nothing allocates per frame.
+  - 7 unit tests, and a README section titled "Easing between looks".
+  - No callers were migrated. The ending can replace its preset swaps hidden behind a white or dark wash with `blendTo`.
+- Merged main (story-scenes) into this branch with no conflicts.
+  - `pnpm check`: 556 tests pass and 2 are skipped.
+  - `pnpm build` passes.
+  - e2e: 10 of 10 pass, including `ending.spec`. As before, I ran the specs from a temporary copy on remapped ports (4183, 8800 and 5185), because another agent's servers held 4173, 8790 and 5175.
