@@ -11,7 +11,7 @@ _Last updated: 2026-11-02 by PM_
 | engine-systems | ws/engine-systems | ✅ merged | save (versioned, iframe-safe), input action map, audio buses + synth recipes, ui overlay/panels/caption card |
 | rules-puzzles | ws/rules-puzzles | 🟡 in progress | |
 | progression-content | ws/progression-content | ✅ merged | 16-machine graph, 79 lines (31 new), 16 journal pages, ending data. D-014, D-015 |
-| ship-ops | ws/ship-ops | 🟡 in progress | |
+| ship-ops | ws/ship-ops | ✅ merged | WebGPU works in the itch iframe (D-016); CI, itch zip packager, itch-sim, Playwright e2e (2 tests pending the Title scene) |
 | art-materials | ws/art-materials | 🟡 in progress | wave 2 early start: gems, stone, altar, lighting |
 | art-props | ws/art-props | 🟡 in progress | wave 2 early start: FUSE, storm cell, bolt ribbon, machine, locked alcove |
 
@@ -20,6 +20,6 @@ _Last updated: 2026-11-02 by PM_
 - (Planned) Enable GitHub Pages "Source: GitHub Actions" in repo settings at M3α. PM can do it via `gh api`.
 
 ## Risks
-- WebGPU inside the itch iframe (permissions policy). ship-ops is verifying.
+- Firefox + WebGPU in the itch iframe untested (manual check at launch).
 - Puzzle quality: 16 puzzles must be interesting, not just solvable. The solver gives difficulty metrics, and the PM reviews.
 - Procedural art reaching "painterly" quality: art R&D is front-loaded in wave 2.
