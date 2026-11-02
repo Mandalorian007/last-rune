@@ -1,3 +1,5 @@
+export type { BootOptions, BootResult } from './boot';
+export { boot } from './boot';
 export { prefersReducedMotion, watchReducedMotion, watchVisibility } from './environment';
 export type { GpuContext, GpuFailureReason, GpuInitOptions, GpuInitResult } from './gpu';
 export { initGpu } from './gpu';
