@@ -17,6 +17,11 @@ export default defineConfig({
     assetsInlineLimit: 4096,
   },
   test: {
-    include: ['engine/**/*.test.ts', 'games/**/*.test.ts', 'tests/unit/**/*.test.ts'],
+    include: [
+      'engine/**/*.test.ts',
+      'games/**/*.test.ts',
+      'tests/unit/**/*.test.ts',
+      'scripts/**/*.test.ts',
+    ],
   },
 });

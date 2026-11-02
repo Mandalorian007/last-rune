@@ -1,0 +1,89 @@
+<!doctype html>
+<!--
+  itch.io game page stand-in, served by scripts/itch-sim/serve.mjs.
+  Mirrors itch's "Embed in page" markup observed on live pages (2026-11-02):
+  a click-to-launch placeholder that injects <iframe id="game_drop" allow="..."> into a
+  fixed-size frame, plus a fullscreen button that fullscreens the iframe.
+
+  Query params:
+    ?autoload=1        inject the iframe immediately (itch: "Click to Play" off)
+    ?w=960&h=540       viewport size (default 960x540, our recommended itch setting)
+    ?allow=none        omit the allow attribute entirely (experiments)
+    ?sandbox=1         add sandbox="allow-scripts" (itch does NOT do this; negative test)
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>itch.io simulation: The Last Rune</title>
+    <style>
+      body { margin: 0; background: #2b2b2b; color: #ddd; font: 14px/1.4 system-ui, sans-serif; }
+      header { padding: 10px 16px; background: #1a1a1a; border-bottom: 1px solid #444; }
+      header b { color: #fa5c5c; }
+      main { padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+      #game_frame { position: relative; background: #000; box-shadow: 0 0 0 1px #555; }
+      #game_frame iframe { border: 0; width: 100%; height: 100%; display: block; }
+      #run_btn {
+        position: absolute; inset: 0; margin: auto; width: 160px; height: 48px;
+        font: 600 16px system-ui; color: #fff; background: #fa5c5c; border: 0; border-radius: 4px;
+        cursor: pointer;
+      }
+      #fullscreen_btn {
+        position: absolute; right: 6px; bottom: 6px; z-index: 2; width: 32px; height: 32px;
+        background: rgba(0, 0, 0, 0.5); color: #fff; border: 1px solid #888; border-radius: 3px;
+        cursor: pointer; display: none;
+      }
+      #game_frame.loaded #fullscreen_btn { display: block; }
+      code { color: #9cf; }
+      .note { max-width: 960px; color: #999; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header><b>itch-sim</b> · local stand-in for an itch.io HTML5 game page (cross-site iframe)</header>
+    <main>
+      <div id="game_frame">
+        <button id="run_btn" type="button">▶ Run game</button>
+        <button id="fullscreen_btn" type="button" title="Enter fullscreen">⛶</button>
+      </div>
+      <p class="note">
+        Game is served from <code>__GAME_SRC__</code> (a different site, like
+        <code>html-classic.itch.zone</code>). iframe <code>allow</code> attribute =
+        <code>__ITCH_ALLOW__</code>
+      </p>
+    </main>
+    <script>
+      const q = new URLSearchParams(location.search);
+      const w = Number(q.get('w') || 960);
+      const h = Number(q.get('h') || 540);
+      const frame = document.getElementById('game_frame');
+      frame.style.width = `${w}px`;
+      frame.style.height = `${h}px`;
+
+      function launch() {
+        const iframe = document.createElement('iframe');
+        iframe.id = 'game_drop';
+        // Same attributes itch.io sets on the game iframe.
+        iframe.setAttribute('frameborder', '0');
+        iframe.setAttribute('allowfullscreen', 'true');
+        iframe.setAttribute('scrolling', 'no');
+        iframe.setAttribute('allowtransparency', 'true');
+        iframe.setAttribute('webkitallowfullscreen', 'true');
+        iframe.setAttribute('mozallowfullscreen', 'true');
+        iframe.setAttribute('msallowfullscreen', 'true');
+        if (q.get('allow') !== 'none') iframe.setAttribute('allow', '__ITCH_ALLOW__');
+        if (q.get('sandbox') === '1') iframe.setAttribute('sandbox', 'allow-scripts');
+        iframe.src = '__GAME_SRC__';
+        document.getElementById('run_btn').remove();
+        frame.prepend(iframe);
+        frame.classList.add('loaded');
+        // Like itch, give the game keyboard focus after launch.
+        iframe.addEventListener('load', () => iframe.focus());
+      }
+
+      document.getElementById('run_btn').addEventListener('click', launch);
+      document.getElementById('fullscreen_btn').addEventListener('click', () => {
+        document.getElementById('game_drop')?.requestFullscreen();
+      });
+      if (q.get('autoload') === '1') launch();
+    </script>
+  </body>
+</html>
