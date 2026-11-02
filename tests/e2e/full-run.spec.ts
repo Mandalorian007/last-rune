@@ -260,10 +260,11 @@ async function buildSolution(machine: MachineId): Promise<number> {
     const slot = tray.indexOf(g.gem);
     expect(slot, `${machine}: ${g.gem} not in tray`).toBeGreaterThanOrEqual(0);
     await press(`Digit${slot + 1}`);
-    for (const k of turnKeys(isRotational(g.gem) ? g.rot : 0)) await press(k);
     // Taking a gem may move the cursor on to the wire's open end; plan from where it is.
     for (const k of cursorKeys(p, placed, await altarCursor(page), g.cell)) await press(k);
     expect(await altarCursor(page), `${machine}: cursor missed ${g.gem}`).toEqual(g.cell);
+    // R turns the gem under the cursor: the held gem, shown in the socket it will land in.
+    for (const k of turnKeys(isRotational(g.gem) ? g.rot : 0)) await press(k);
     await press('Enter');
     placed.push({ gem: g.gem, cell: g.cell, rot: g.rot });
   }

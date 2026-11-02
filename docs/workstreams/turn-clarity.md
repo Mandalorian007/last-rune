@@ -29,3 +29,54 @@ One rule the player never has to think about, plus a readable second stage.
 - Screenshot sequences (1920×1080 and 1280×720 at 150% text) for each second-stage altar as a newcomer, in your scratchpad, listed in your report.
 - `docs/design/altar-ux.md` documents the input model. Update the hint lane copy ("Click a gem, then a socket · Scroll or R turns · Right-click removes") if the model changes.
 - Log progress here. Propose decisions to the PM; don't edit DECISIONS.md.
+
+## Log (turn-clarity agent)
+
+### Findings (confirmed, baseline shots in scratchpad `turn/before/`)
+- All four PM findings held. On splitter-mill, a Bend in hand over the fixed Split *floated on top of the Split*
+  (`updateTray` only snapped to legal sockets and otherwise drew the gem at the pointer), so R turned the Bend
+  where the Split sits: the user's "the rotate looked like the piece I was placing".
+- The unfed Split rested facing the storm's travel (W→E), i.e. outputs N/S, away from both machines, so it
+  looked wrong and begged to be turned. The glyph itself matches rules.md section 4 (apex = input, halves leave by
+  the two perpendicular sides).
+
+### Input model (built)
+One rule for mouse, keys and pad (documented in `docs/design/altar-ux.md` "Controls"):
+- Click / Enter / A picks up and sets down; never turns. A click on a placed Bend now picks it up (was: turned it).
+- Scroll / R / Q / RB turns the gem under the pointer or cursor: the held gem (drawn in the socket it will land in,
+  route preview through it) or, with an empty hand, a placed Bend/Gate.
+- Can't turn → tag at that gem + deny sound + announcer; nothing else turns. Over a fixed gem the hand is not
+  turned even when holding a Bend. Holding a non-turning gem and pressing R tags the held gem.
+- Over a socket that won't take the held gem, a reason tag shows while hovered and the held gem is drawn beside the
+  socket, not over the fixed gem. The turn badge hides there.
+- Ghost: also over the player's own placed gems (it would replace them); its route preview now also swings every
+  Split/Channel/Amplify glyph (`faceAlong` on the ghost's hops).
+- Split: a small `in` pill on its input side (real feed, would-be feed, or storm's travel); card reads "Feed it from
+  any side: half the charge leaves by each side beside it." Placed Bend/Gate card: "Scroll or R turns · click picks up".
+- Announcer: turns read the sides used ("Bend joins north and east."); picking up a Bend/Gate says its sides.
+- Hint lane: "Click picks up / sets down · Scroll or R turns the gem under it · Right-click removes";
+  keys: "… Enter pick up / set down · R turns the gem there".
+- Dragging a placed Bend and turning it mid-drag now lands it turned.
+
+### Layouts
+- splitter-mill: storm moved from W row 0 to **N column 0** (machines stay E1/W1). The unfed Split now rests with
+  its input up and halves out W/E toward both machines, the storm no longer shares the W edge with a machine, and
+  the insight "feed it from above" is now literally where the storm is. Solution row 0 `└ = ┐ . . .`.
+  Solver: **1 solution before, 1 after**; min gems 8; score 2.4 (target 1.5–2.8) unchanged; novice bot 12/12.
+  `pnpm test` (difficulty, solve, puzzles) green.
+- furnace, relay-tower, conveyor-a: unchanged. With the `in` pill and the new turn rule they read cleanly in
+  the after shots (no shared storm/machine edge; Splits rest facing their feed).
+
+### Tests
+- New `tests/e2e/turn-clarity.spec.ts` (R/scroll over fixed Split with Bend in hand: tag, hand unturned; click
+  picks up a placed Bend; scroll turns a placed Bend).
+- `altar.spec.ts`, `full-run.spec.ts`, `scripts/playtest/caption.spec.ts`: move the cursor to the socket first,
+  then R (R now turns the gem under the cursor).
+- Playtest `scripts/playtest/turn-clarity.spec.ts`: 13-shot newcomer sequences, 4 altars × (1920@100, 1280@150).
+
+### Proposed decisions (for the PM)
+- D-?: "One input rule at the altar: click picks up / sets down, scroll/R turns the gem under the pointer; a gem
+  that can't turn says so at that gem." (Supersedes click-to-turn in altar-ux.)
+- splitter-mill storm on the N edge (content change; solution count unchanged).
+- Codex Split rule could match the card ("Feed it from any side: half leaves by each side beside it.") — not
+  changed here.

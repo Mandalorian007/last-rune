@@ -173,6 +173,13 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-verdict[data-outcome="under"] { border-color: #ffb03f; }
 .tc-overlay .lr-altar-verdict[data-outcome="exact"] { border-color: #3fe0ff; color: #dff9ff; }
 
+/* A Split's input side: a small pill on the socket edge the bolt comes in by. */
+.tc-overlay .lr-altar-in {
+  position: absolute; transform: translate(-50%, -50%); padding: 0 7px; border-radius: 9px;
+  font-size: 16px; line-height: 20px; letter-spacing: 0.04em; color: #ffe6f6;
+  background: rgba(40,10,32,0.88); border: 1px solid rgba(255,120,210,0.75); pointer-events: none;
+}
+
 .tc-overlay .lr-altar-tag {
   position: absolute; transform: translate(-50%, -100%); padding: 4px 12px; border-radius: 8px; white-space: nowrap;
   font-size: 20px; color: #ffe3dc; background: rgba(60,14,10,0.9); border: 1px solid rgba(255,110,80,0.7);

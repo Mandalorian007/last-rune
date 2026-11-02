@@ -27,17 +27,37 @@ sides. It fits every puzzle from 4×4 up to the 10×8 finale.
 | Take a gem | click it in the tray | `1`–`6`, `T` cycles | LB cycles |
 | Place | click a socket, or drag and drop | arrows/WASD move the gold cursor (skipping carved stone), `Enter` | d-pad/stick, A |
 | Go to the wire's end | (the amber socket is in view) | `G`: the wire's open end; again for the next end | R3 |
-| Turn (Bend, Gate) | click the placed gem, or scroll | `R` / `Q` (also turns the gem in hand) | RB |
-| Pick up / move | drag a placed gem; drop it off the altar to return it | `Enter` on any placed gem picks it up, keeping its turn | A |
+| Turn the gem under the pointer | scroll, or `R` / `Q` | `R` / `Q` at the cursor | RB |
+| Pick up / move | click a placed gem (keeps its turn); drag it; drop it off the altar to return it | `Enter` on a placed gem picks it up, keeping its turn | A |
 | Remove | right-click | `X` | X |
 | Undo / clear | buttons | `Z` / `Del` | Back |
 | Strike | Strike button | `F` (hold to fast-forward) | Start |
 | Skip strike | click | `Enter` / `Esc` | A / B |
 | Leave | Back | `Esc` (drops the gem in hand first) | B |
 
-`Enter` acts where the player is looking: the hovered socket, otherwise the cursor. On the
-keyboard the rule is one rule: `Enter` picks up and puts down, `R`/`Q` turn. Only a mouse click
-turns a placed Bend or Gate, since the mouse has no `R` to hand.
+**One input rule (turn-clarity).** The same for mouse, keyboard and pad:
+
+- **Click / `Enter` / A picks up and sets down. It never turns anything.** On a placed gem with
+  an empty hand it picks that gem up, keeping its turn. With a gem in hand it sets down the gem
+  the player sees in that socket (on one of the player's own gems, that gem goes back to the
+  tray).
+- **Scroll / `R` / `Q` / RB turns the gem under the pointer** (the cursor on keys and pad):
+  - with a gem in hand, the held gem, which is drawn in the socket it will land in, at its real
+    turn, with the route preview running through it;
+  - with an empty hand, a placed Bend or Gate.
+- **A gem that cannot turn says so, at that gem**, with the deny sound and the announcer, and
+  nothing else turns in its place: `Splits don't turn: feed any side, halves leave by the two
+  beside it`; `Channels / Amplifies / Capacitors don't turn: the bolt runs straight through`;
+  a fixed Bend or Gate `Fixed in place: this one stays as the machine set it`. Over a fixed gem
+  this holds even with a Bend in hand: the hand is not turned.
+- **A socket that will not take the held gem** (fixed gem, carved stone) shows why in a tag above
+  it while hovered, and the held gem is drawn beside the socket, not on it, so the gem or stone
+  underneath stays in sight. The turn arrow badge hides there, since R would not turn the hand.
+
+`Enter` acts where the player is looking: the hovered socket, otherwise the cursor. The hint
+lane says it in one line: `Click picks up / sets down · Scroll or R turns the gem under it ·
+Right-click removes` (keys: `1–6 take · Arrows move · G wire's end · Enter pick up / set down ·
+R turns the gem there`). Turns are announced with the sides used (`Bend joins north and east.`).
 
 After `Enter` fills a socket, taking the next gem by key (`1`–`6`, `T`) moves the cursor on to
 the nearest open end of the route, so a long route costs a gem key and `Enter` per socket. The
@@ -93,9 +113,16 @@ It sits between FUSE (x ≤ 410) and his caption card; the altar passes its meas
   read on arrival ends with the same text; taking a gem announces its rule.
 - **Turning.** A held Bend or Gate on the altar that first puts one in the tray (`turns` in
   `teach.ts`) wears a turn arrow with `R / Scroll` (`R / Q` on keys) until the player turns
-  it once. Its card is tagged `Turns: R or scroll`. Held over a socket it fits, the gem is tried
-  there in the route preview, so the preview swings as it turns. Linking and Strike-ready
-  ignore the held gem.
+  it once. Its card is tagged `Turns: R or scroll`; a placed Bend or Gate's card is tagged
+  `Scroll or R turns · click picks up` (`R or Q turns · Enter picks up` on keys). Held over a
+  socket it fits (or over one of the player's gems it would replace), the gem is tried there in
+  the route preview, so the preview and every Split's glyph swing as it turns. Linking and
+  Strike-ready ignore the held gem.
+- **Split input.** A Split never turns, so it shows how it is fed: its glyph's apex and a small
+  `in` pill sit on the side the bolt comes in by (the real feed, the held gem's would-be feed,
+  or the storm's travel when nothing reaches it yet); the halves leave by the two sides beside
+  it (rules.md section 4). Its card reads `Feed it from any side: half the charge leaves by each
+  side beside it.`
 - **Storm and needs.** Every altar shows `Gives N` by the storm and `Needs N` by each machine.
 - **Strike-ready.** Strike glows on any altar once the route (over all strikes) reaches every
   machine. Reaching is not exact: the glow says the bolt has somewhere to go, not that the

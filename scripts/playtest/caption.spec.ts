@@ -156,11 +156,12 @@ async function buildSolution(page: Page, machine: MachineId) {
   const cursor = { x: 0, y: Math.min(Math.max(0, p.storm.at.y), rows - 1) };
   for (const g of p.design.intended) {
     await pressKey(page, `Digit${tray.indexOf(g.gem) + 1}`);
-    if (isRotational(g.gem)) await pressKey(page, 'KeyR', g.rot);
     const dx = g.cell.x - cursor.x;
     const dy = g.cell.y - cursor.y;
     await pressKey(page, dx > 0 ? 'ArrowRight' : 'ArrowLeft', Math.abs(dx));
     await pressKey(page, dy > 0 ? 'ArrowDown' : 'ArrowUp', Math.abs(dy));
+    // R turns the gem under the cursor: the held gem, over the socket it will land in.
+    if (isRotational(g.gem)) await pressKey(page, 'KeyR', g.rot);
     cursor.x = g.cell.x;
     cursor.y = g.cell.y;
     await pressKey(page, 'Enter');
