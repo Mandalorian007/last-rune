@@ -246,6 +246,15 @@ export function createFakeDevice(limits: Partial<Record<string, number>> = {}): 
   };
 }
 
+/** `{ device, context, format }` for `new Renderer(...)` on a fake device. */
+export function fakeRendererGpu(fake: FakeDevice): {
+  device: GPUDevice;
+  context: GPUCanvasContext;
+  format: GPUTextureFormat;
+} {
+  return { device: fake.device, context: fakeCanvasContext(fake), format: 'bgra8unorm' };
+}
+
 /** A fake canvas context good enough for `new Renderer(...)`. */
 export function fakeCanvasContext(fake: FakeDevice): GPUCanvasContext {
   const tex = fake.device.createTexture({

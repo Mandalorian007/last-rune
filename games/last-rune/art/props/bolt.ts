@@ -5,6 +5,7 @@
  * ```ts
  * const bolt = new BoltRibbon(renderer, { particles });           // particles optional (sparks)
  * // From a sim trace (C2 SimResult.trace), with your altar's cell → px mapping:
+ * // One sim tick = TRACE_TICK_SECONDS (0.15 s) by default; override with { tickSeconds }.
  * bolt.play(boltSegmentsFromTrace(result.trace, cellToPx), result.outcome); // 'exact'|'over'|'under'
  * // ...or from any polyline:
  * bolt.play(boltSegmentsFromPolyline(points, { colours, charges, speed: 1400 }), 'exact');
@@ -49,17 +50,54 @@ export interface TraceSegmentLike {
 }
 
 export interface TraceOptions {
-  /** Seconds per trace time unit. Default 0.14. */
+  /**
+   * Seconds per sim tick. Default {@link TRACE_TICK_SECONDS} (the altar's strike pace). The trace's
+   * normalised `t0/t1` are mapped back to ticks, so relative timing (including the one-tick
+   * gap between strikes) matches the sim exactly.
+   */
+  tickSeconds?: number;
+  /**
+   * Trace length in ticks (`SimResult.duration`). Default: recovered from the trace itself
+   * (every hop spans exactly one tick, i.e. `t1 - t0 = 1 / duration`).
+   */
+  duration?: number;
+  /**
+   * Legacy timing: seconds per normalised trace unit (`t * timeScale`). When set it overrides
+   * `tickSeconds`/`duration`. The old default was 0.14, which squeezed a whole attempt into
+   * 0.14 s.
+   */
   timeScale?: number;
 }
 
-/** Convert a sim render trace to drawable segments. `cellToPx` maps a cell to its socket centre. */
+/** Default seconds per sim tick for `boltSegmentsFromTrace` (matches the altar strike pace). */
+export const TRACE_TICK_SECONDS = 0.15;
+
+/** Ticks spanned by a normalised trace: `1 / (t1 - t0)` of its shortest hop. */
+export function traceDurationTicks(trace: readonly { t0: number; t1: number }[]): number {
+  let span = Infinity;
+  for (const s of trace) {
+    const d = s.t1 - s.t0;
+    if (d > 1e-9 && d < span) span = d;
+  }
+  if (!Number.isFinite(span)) return 1;
+  const n = 1 / span;
+  const r = Math.round(n);
+  return Math.abs(n - r) < 1e-6 * n ? r : n;
+}
+
+/**
+ * Convert a sim render trace to drawable segments, in seconds from `play()`.
+ * `cellToPx` maps a cell to its socket centre. By default one sim tick lasts
+ * `TRACE_TICK_SECONDS`; pass `{ timeScale }` for the legacy scaling.
+ */
 export function boltSegmentsFromTrace(
   trace: readonly TraceSegmentLike[],
   cellToPx: (c: Cell) => { x: number; y: number },
   opts: TraceOptions = {},
 ): BoltSegment[] {
-  const ts = opts.timeScale ?? 0.14;
+  const ts =
+    opts.timeScale ??
+    (opts.duration ?? traceDurationTicks(trace)) * (opts.tickSeconds ?? TRACE_TICK_SECONDS);
   return trace.map((s) => {
     const a = cellToPx(s.from);
     const b = cellToPx(s.to);

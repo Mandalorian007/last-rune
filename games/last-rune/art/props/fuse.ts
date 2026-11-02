@@ -133,6 +133,11 @@ export class Fuse {
     });
   }
 
+  /** Free GPU resources (the material's uniform buffer). Don't draw the Fuse afterwards. */
+  destroy(): void {
+    this.material.destroy();
+  }
+
   /** Look at a logical point, or `null` to look out at the player. */
   lookAt(x: number | null, y?: number): void {
     if (x === null) this.lookTarget = null;
