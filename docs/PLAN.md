@@ -15,6 +15,7 @@
 
 | # | Milestone | State | Exit criteria |
 |---|---|---|---|
+| 2026-11-02 | "Is storm cell 2 even winnable without being able to rotate splitters?" (it is: 1 solution, Splits take any side and fork perpendicular, so the player read Split as directional) | PM: Split must read as 'works from any side' | 🟡 needs fix |
 | 2026-11-02 | After turn-clarity: "rotate should save rotation without enter key and should be more intuitive on text" | turn-2 | ✅ merged; awaiting user check |
 | 2026-11-02 | Re-check after onboarding-2: intake desk "great and clear and intuitive", but "maybe some bugs on rotating vs selecting". Second stage (splitter-mill, probably) "confusing as all hell with the layout and rotating desired… I thought I would rotate the splitter, but then the rotate looked like the piece I was placing" | turn-clarity | ✅ merged; awaiting user check |
 | M0 | Scaffold | ✅ done | Repo, tooling, docs, CI, GitHub public |
