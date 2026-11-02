@@ -1,5 +1,6 @@
 import type { FullscreenPass } from '@engine/render/fullscreen';
 import type { PostInputs, PostProcessor, Renderer } from '@engine/render/renderer';
+import { type Ease, easeInOut, PostBlender } from './blend';
 import {
   applyPostPatch,
   defaultPostSettings,
@@ -18,6 +19,7 @@ const HDR: GPUTextureFormat = 'rgba16float';
  *
  * Settings are plain objects you can mutate at runtime (`post.settings.bloom.intensity = 2`)
  * or patch with `post.set({ fog: { density: 0.4 } })`. Disabled passes are skipped entirely.
+ * `post.blendTo(patch, seconds, ease?)` eases numeric settings over time instead.
  */
 export class PostStack implements PostProcessor {
   readonly settings: PostSettings;
@@ -47,6 +49,8 @@ export class PostStack implements PostProcessor {
   private compositeGroup: GPUBindGroup | null = null;
   private readonly blendConstant: GPUColorDict = { r: 1, g: 1, b: 1, a: 1 };
   private readonly noClear = null;
+  private readonly blender = new PostBlender();
+  private lastTime: number | null = null;
 
   constructor(renderer: Renderer, patch: PostSettingsPatch = {}) {
     this.renderer = renderer;
@@ -94,8 +98,43 @@ export class PostStack implements PostProcessor {
 
   /** Patch settings section by section. */
   set(patch: PostSettingsPatch): this {
+    this.blender.cancel(patch);
     applyPostPatch(this.settings, patch);
     return this;
+  }
+
+  /**
+   * Ease settings toward `patch` over `seconds` of frame time (default ease: smoothstep).
+   * Numbers and RGB colours interpolate from their current values. `enabled: true` applies
+   * at once, so set the pass's strength to 0 first to fade it in. `enabled: false`, `tonemap`,
+   * `dither` and `bloom.levels` switch at the end. A later `set` or `blendTo` on the same
+   * key takes over from wherever the blend is. `seconds <= 0` behaves like `set`.
+   */
+  blendTo(patch: PostSettingsPatch, seconds: number, ease: Ease = easeInOut): this {
+    this.blender.blendTo(this.settings, patch, seconds, ease);
+    return this;
+  }
+
+  /** True while a `blendTo` is still running. */
+  get blending(): boolean {
+    return this.blender.active;
+  }
+
+  /** Jump every running blend to its end value. */
+  finishBlend(): this {
+    this.blender.finish(this.settings);
+    return this;
+  }
+
+  /**
+   * Advance running blends to frame time `time` (seconds). `encode` calls this; call it
+   * yourself only when driving the stack without rendering. Steps are capped at 0.1 s, so
+   * a hidden tab or long hitch slows a blend rather than skipping it.
+   */
+  advanceBlend(time: number): void {
+    const dt = this.lastTime === null ? 0 : Math.min(0.1, Math.max(0, time - this.lastTime));
+    this.lastTime = time;
+    if (this.blender.active) this.blender.advance(this.settings, dt);
   }
 
   resize(width: number, height: number): void {
@@ -140,6 +179,7 @@ export class PostStack implements PostProcessor {
   }
 
   encode(encoder: GPUCommandEncoder, inputs: PostInputs, output: GPUTextureView): void {
+    this.advanceBlend(inputs.time);
     const s = this.settings;
     const r = this.renderer;
     if (Math.max(2, Math.min(8, Math.floor(s.bloom.levels))) !== this.levels && this.levels > 1) {
