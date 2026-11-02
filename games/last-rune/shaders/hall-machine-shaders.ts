@@ -45,7 +45,8 @@ export const HALL_MACHINE_KINDS = [
   'control-booth',
 ] as const;
 
-const PARTS_WGSL = /* wgsl */ `
+/** Shared part primitives (surface compositing, materials, lamps, gauges, gears, steam). */
+export const HALL_PARTS_WGSL = /* wgsl */ `
 struct Surf {
   alb: vec3f,
   nrm: vec3f,
@@ -679,7 +680,7 @@ export const HALL_MACHINE_WGSL = /* wgsl */ `
 ${PROP_COMMON_WGSL}
 struct HallMachU { L: PropLights, a: vec4f };
 @group(1) @binding(0) var<uniform> U: HallMachU;
-${PARTS_WGSL}
+${HALL_PARTS_WGSL}
 ${MACHINES_WGSL}
 
 /** 1 where the alcove's grate bars or padlock cover this pixel (so they stay in front). */
@@ -737,28 +738,69 @@ fn grate_cut(q: vec2f, open: f32) -> f32 {
     default: { m_booth(q); }
   }
 
+  // Restored: a pilot lamp in the machine's grant colour beats slowly in the niche's corner
+  // (anim time, so it holds still under reduced motion).
+  if (g_al > 0.01) {
+    let hb = fract(g_t * 0.55 + g_seed * 0.1);
+    let beat = 0.35 + 0.65 * max(exp(-hb * 22.0), 0.7 * exp(-abs(hb - 0.16) * 22.0));
+    lamp(q, vec2f(42.0, 54.0), 3.2, normalize(g_acc + 0.05) * 1.1, beat * g_al);
+  }
+
   let world = in.world;
+  // Colour of the work lamp that lights an open (available) niche: warmer white than the candles.
+  let SPOT = mix(C_WARM, vec3f(1.0, 0.86, 0.6), 0.55);
   let cold = 1.0 - g_op;
   let avail = g_op * (1.0 - g_al);
+  let pulse = 0.5 + 0.5 * sin(g_now * 2.6 + g_seed);
+  // Edge band just inside the silhouette (for rim lights).
+  let edge = (1.0 - smoothstep(0.0, 3.5, -S.d)) * S.cov;
   var col = vec3f(0.0);
   if (S.cov > 0.0) {
-    let n = to_world_n(normalize(S.nrm), 1.0, 0.0);
+    let ln = normalize(S.nrm);
+    let n = to_world_n(ln, 1.0, 0.0);
     col = prop_light(world, n, S.alb, S.met, 0.5);
     // Self fill so each silhouette reads even in a dark niche: cold when locked, warm when alive.
-    let fill = vec3f(0.035, 0.04, 0.06) * cold + C_GOLD * 0.08 * avail + C_WARM * 0.25 * g_al;
+    let fill = vec3f(0.045, 0.055, 0.085) * cold + C_WARM * 0.11 * g_al;
     col += S.alb * fill;
-    // Locked: dim and drained of colour.
+    // Available: a warm key light from a lamp at the top of the niche, on the real materials.
+    let kd = normalize(vec3f(-q.x, 92.0 - q.y, 60.0));
+    let kfall = 0.55 + 0.45 * smoothstep(-70.0, 80.0, q.y);
+    let kdiff = max(dot(ln, kd), 0.0);
+    let kspec = pow(max(dot(ln, normalize(kd + vec3f(0.0, 0.0, 1.0))), 0.0), 24.0) * (0.3 + S.met);
+    col += (S.alb * kdiff * 1.5 + C_GOLD * kspec * 0.6) * SPOT * kfall * avail;
+    // Locked: dim, drained of colour, with a cold rim so the silhouette shows behind the grate.
     let lum = dot(col, vec3f(0.3, 0.55, 0.15));
-    col = mix(col, vec3f(lum) * vec3f(0.8, 0.9, 1.15), 0.65 * cold) * (1.0 - 0.55 * cold);
+    col = mix(col, vec3f(lum) * vec3f(0.8, 0.9, 1.15), 0.65 * cold) * (1.0 - 0.35 * cold);
+    col += vec3f(0.07, 0.1, 0.18) * edge * cold;
+    // Available: a gold rim that breathes, inviting a click.
+    col += C_GOLD * edge * avail * (0.16 + 0.3 * pulse);
     col += S.emi;
   }
-  // Available: a gentle gold pulse around the silhouette, inviting a click.
-  let pulse = 0.5 + 0.5 * sin(g_now * 2.6 + g_seed);
   let outD = max(S.d, 0.0);
-  let halo = C_GOLD * avail * (0.2 + 0.8 * pulse) * 0.5 * exp(-outD * 0.3) * (1.0 - S.cov);
+  let empty = 1.0 - S.cov;
+  // Available: a soft gold aura hugging the silhouette, a beam from the niche lamp, dust motes.
+  let halo = C_GOLD * avail * (0.25 + 0.75 * pulse) * 0.03 * exp(-outD * 0.3) * empty;
+  let bw = 14.0 + (92.0 - q.y) * 0.24;
+  let beam = exp(-abs(q.x) / bw) * smoothstep(-70.0, 60.0, q.y) * (0.007 + 0.005 * pulse);
+  var motes = 0.0;
+  for (var i = 0; i < 6; i++) {
+    let fi = f32(i);
+    let ph = fract(g_now * (0.05 + 0.012 * fi) + fi * 0.37);
+    let mp = vec2f(sin(fi * 2.7 + g_now * 0.3) * (14.0 + fi * 5.0), 84.0 - ph * 150.0);
+    motes += exp(-length(q - mp) * 1.1) * sin(ph * PI);
+  }
+  let lit = (SPOT * beam + C_GOLD * motes * 0.45) * avail * empty;
+  // Locked: a faint cold backlight on the back wall, so the machine is a dark shape against it.
+  let cb = exp(-length((q - vec2f(0.0, 18.0)) * vec2f(1.0, 0.75)) / 52.0);
+  let coldBack = vec3f(0.045, 0.068, 0.13) * cold * (0.35 + 0.65 * cb) * empty;
   // Alive: warm light from behind the machine fills the niche.
-  let back = C_WARM * g_al * 0.06 * exp(-length((q - vec2f(0.0, -6.0)) * vec2f(1.0, 0.85)) / 36.0) * (1.0 - S.cov);
-  let glow = g_glow * (1.0 - 0.6 * cold) + halo + back;
+  let back = C_WARM * g_al * 0.035 * exp(-length((q - vec2f(0.0, -6.0)) * vec2f(1.0, 0.85)) / 36.0) * empty;
+  // Available: the inside edge of the arch catches the work lamp and breathes gold (a lit
+  // doorway), the one cue no other state has.
+  let niche = sdg_union(sdg_box(q - vec2f(0.0, -22.0), vec2f(61.0, 44.5), 0.0), sdg_circle(q - vec2f(0.0, 22.5), 61.0));
+  let arch = exp(-max(-niche.x, 0.0) / 2.5) * smoothstep(-80.0, -40.0, q.y);
+  let doorway = C_GOLD * avail * arch * (0.05 + 0.1 * pulse);
+  let glow = g_glow * (1.0 - 0.6 * cold) + halo + lit + back + coldBack + doorway;
 
   // Contact shadow on the sill.
   let sh = (1.0 - smoothstep(-6.0, 6.0, sdg_ellipse(q - vec2f(0.0, -64.0), vec2f(58.0, 5.0)).x)) * 0.55;
@@ -775,11 +817,12 @@ fn grate_cut(q: vec2f, open: f32) -> f32 {
   rgb += glow;
 
   // Clip to the niche, and keep the grate and padlock in front.
-  let niche = sdg_union(sdg_box(q - vec2f(0.0, -22.0), vec2f(61.0, 44.5), 0.0), sdg_circle(q - vec2f(0.0, 22.5), 61.0));
   let mask = cover(niche.x, g_aa) * (1.0 - grate_cut(q, g_op)) * in.color.a;
   var o: FragOut;
   o.color = vec4f(rgb, a) * mask;
-  o.emissive = vec4f((S.emi * S.cov + glow) * in.emissive * mask, a * mask);
+  // Only true light sources bloom; the niche's fills and the doorway stay out of the bloom.
+  let bloomSrc = g_glow * (1.0 - 0.6 * cold) + back + doorway * 0.3 + coldBack * 0.5;
+  o.emissive = vec4f((S.emi * S.cov + bloomSrc) * in.emissive * mask, a * mask);
   return o;
 }
 `;

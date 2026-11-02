@@ -9,8 +9,10 @@
  * Mood follows progress: the storm outside darkens and strikes more often, while every restored
  * machine adds warm light inside, so the hall gets darker outside and warmer within.
  *
- * Draw calls (one batch each): wall, floor, conduits, windows, seal, alcoves, machines, fx,
- * candle bodies, candle halos, candle flames, FUSE, particles.
+ * Draw calls (one batch each): wall, floor, floor props (wall layer), conduits, windows, seal,
+ * alcoves, machines, fx, floor props (floor layer), candle bodies, candle halos, candle flames,
+ * FUSE, particles. The floor props (`hall-floor.ts`) are pipes, cables, lamps, rails, a cart,
+ * crates, barrels, steam vents and puddles.
  */
 import type { DrawParams, Frame, Material, Renderer } from '@engine/render';
 import { MACHINES } from '../../content/machines';
@@ -46,6 +48,7 @@ import { Alcove, socketKindOf } from '../props/alcove';
 import { Fuse } from '../props/fuse';
 import { PROP_LIGHT_FLOATS } from '../props/lighting';
 import { type PitchColour, pitch } from '../props/palette';
+import { HALL_LAMPS, HallFloor } from './hall-floor';
 import { Lightning } from './lightning';
 
 const W = 1920;
@@ -168,6 +171,10 @@ function candle(x: number, y: number, height: number, seed: number, melt = 0.5):
 
 export class CathedralHallView implements HallView {
   private readonly kit: HallKit;
+  private readonly floorProps: HallFloor;
+  /** Hanging-lamp brightness 0..1 (wakes with progress, dips when lightning strikes). */
+  private lamp = 0;
+  private motion = 1;
   private readonly lights = new LightSet();
   private readonly lightning = new Lightning(WINDOWS.length, 3);
   private readonly slots = new Map<MachineId, Slot>();
@@ -216,6 +223,7 @@ export class CathedralHallView implements HallView {
   constructor(private readonly vc: ViewContext) {
     const r = vc.renderer;
     this.kit = hallKit(r);
+    this.floorProps = new HallFloor(r);
     const rune = MACHINES.find((m) => m.id === 'the-last-rune');
     this.sealX = rune?.alcove.x ?? 960;
     this.sealY = rune?.alcove.y ?? 520;
@@ -316,6 +324,8 @@ export class CathedralHallView implements HallView {
     lt.reduceFlashes = s.reduceFlashes ?? s.reducedMotion;
     lt.level = this.level;
     lt.update(dt);
+    this.motion = s.reducedMotion ? 0 : 1;
+    this.lamp = (0.3 + 0.7 * this.warmth) * (1 - 0.55 * Math.min(1, lt.flash));
 
     // Seal.
     const sealA = this.sealModel;
@@ -353,6 +363,8 @@ export class CathedralHallView implements HallView {
     );
 
     // Conduits carved into the wall, under everything else.
+    this.floorProps.update(L, this.time, this.motion, this.warmth, this.lamp);
+    this.floorProps.drawBack(frame);
     for (const seg of this.segments) {
       seg.params[1] = this.time;
       frame.sprite(kit.fxMat, seg.dp);
@@ -365,11 +377,13 @@ export class CathedralHallView implements HallView {
     for (const slot of this.slotList) slot.alcove.draw(frame, L);
     const mu = this.machineU;
     mu.set(L.data, 0);
-    mu[PROP_LIGHT_FLOATS] = this.time;
+    // Reduced motion: hold the machines' clock (pulses, motes, flicker) still.
+    mu[PROP_LIGHT_FLOATS] = s.reducedMotion ? 0 : this.time;
     kit.machineMat.setUniforms(mu);
     for (const slot of this.slotList) frame.sprite(kit.machineMat, slot.machine);
 
     this.drawFx(frame, s);
+    this.floorProps.drawFront(frame);
 
     kit.candles.drawBodies(frame, this.allCandles);
     kit.candles.drawFlames(frame, this.allCandles);
@@ -530,6 +544,10 @@ export class CathedralHallView implements HallView {
     L.add(290, 400, 560, COOL, 0.26, 240);
     L.add(1630, 400, 560, COOL, 0.26, 240);
     this.kit.candles.addLights(L, this.litCandles);
+    // The two wing lamps (the centre pair sits in the seal's and windows' light already).
+    for (const l of HALL_LAMPS) {
+      if (l.x === 325 || l.x === 1595) L.add(l.x, l.y + 30, 420, WARM, 0.75 * this.lamp, 120);
+    }
     // The seal: amethyst ember while sealed, gold once open.
     const so = this.sealOpen;
     L.add(this.sealX, this.sealY, 520, so > 0.5 ? GOLD : AMETHYST, 0.25 + 0.75 * so, 140);
@@ -587,7 +605,7 @@ export class CathedralHallView implements HallView {
         k = 1.4 * (1 - since / 2.5);
         rgb = slot.def.grants ? SOCKET_RGB[socketColour(slot.def.grants)] : GOLD;
       } else if (slot.status === 'unlocked' && slot.open > 0.5) {
-        k = 0.06 + 0.04 * Math.sin((t / 2.4) * Math.PI * 2 + slot.def.alcove.x * 0.01);
+        k = 0.025 + 0.015 * Math.sin((t / 2.4) * Math.PI * 2 + slot.def.alcove.x * 0.01);
       }
       if (k <= 0.001) continue;
       const tint = slot.poolTint;
