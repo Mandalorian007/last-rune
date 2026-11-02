@@ -23,6 +23,9 @@
 | M5 | **Release: GitHub Pages v1.0** (PM's finish line) | Polished build live on Pages, GitHub Release + `v1.0.0` and `engine-v0.1` tags, itch zip + page copy + devlog draft prepared for the user |
 | — | itch.io launch (manual, with user) | User uploads with PM's runbook; not an agent task (D-012) |
 
+## Fun and difficulty (continuous, D-021)
+A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 through M4: a difficulty model and novice bot, a target curve, puzzle retunes, a dev puzzle viewer, then a playtest loop (local-only metrics, FUSE hint ladder) after the alpha. Exit criteria for M4 include: user playtest confirms the curve feels right, no puzzle is an outlier against its target, and the finale is the hardest and most satisfying.
+
 ## Waves (max 5 parallel top-level agents)
 
 **Wave 1 — Foundations** (independent, contract-first)

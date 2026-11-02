@@ -13,6 +13,8 @@ _Last updated: 2026-11-02 by PM_
 | progression-content | ws/progression-content | ✅ merged | 16-machine graph, 79 lines (31 new), 16 journal pages, ending data. D-014, D-015 |
 | ship-ops | ws/ship-ops | ✅ merged | WebGPU works in the itch iframe (D-016); CI, itch zip packager, itch-sim, Playwright e2e (2 tests pending the Title scene) |
 | art-materials | ws/art-materials | 🟡 in progress | wave 2 early start: gems, stone, altar, lighting |
+| audio-design | ws/audio-design | 🟡 in progress | procedural sound bank, moods by tier |
+| difficulty-fun | ws/difficulty-fun | 🟡 in progress | difficulty model, novice bot, target curve, puzzle retunes (D-021) |
 | art-props | ws/art-props | 🟡 in progress | wave 2 early start: FUSE, storm cell, bolt ribbon, machine, locked alcove |
 
 ## Blocked / needs user
