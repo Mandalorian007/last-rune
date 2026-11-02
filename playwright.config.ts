@@ -76,6 +76,13 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
+      // Vite dev server: story e2e (ending) needs the DEV-only `window.__game` handle.
+      command: 'pnpm exec vite --port 5175 --strictPort --host 127.0.0.1',
+      url: 'http://127.0.0.1:5175/',
+      reuseExistingServer: !isCI,
+      timeout: 60_000,
+    },
+    {
       // Serves dist/ lazily, so it is fine that the build above may still be running.
       command: 'node scripts/itch-sim/serve.mjs --port 8790',
       url: `${ITCH_SIM_URL}/`,

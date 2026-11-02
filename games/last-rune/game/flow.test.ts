@@ -6,7 +6,7 @@ import { createGameSave } from './save';
 
 type FakeScene = { kind: string; id?: MachineId; moment?: SolveMoment };
 
-function setup() {
+function setup(withStory = false) {
   const stack: FakeScene[] = [];
   const fake = {
     push: (s: FakeScene) => {
@@ -33,6 +33,12 @@ function setup() {
       hall: () => ({ kind: 'hall' }),
       puzzle: (id) => ({ kind: 'puzzle', id }),
       solve: (moment) => ({ kind: 'solve', moment }),
+      ...(withStory
+        ? {
+            journal: () => ({ kind: 'journal' }),
+            ending: (moment: SolveMoment) => ({ kind: 'ending', moment }),
+          }
+        : {}),
     },
     () => t++,
   );
@@ -187,6 +193,57 @@ describe('GameFlow', () => {
     expect(f.save.get().progress.solved).toHaveLength(16);
     expect(last?.machine).toBe('the-last-rune');
     expect(last?.complete).toBe(true);
+    expect(f.save.get().stats.completedAt).toBeGreaterThan(0);
+  });
+
+  it('journal: opens only from the hall, closes back to it, marks only found pages read', () => {
+    const f = setup(true);
+    f.flow.start();
+    expect(f.flow.openJournal()).toBe(false); // title
+    f.flow.newGame();
+    expect(f.flow.openJournal()).toBe(true);
+    expect(f.kinds()).toEqual(['hall', 'journal']);
+    expect(f.flow.state).toBe('journal');
+    expect(f.flow.openJournal()).toBe(false);
+    f.flow.closeJournal();
+    expect(f.kinds()).toEqual(['hall']);
+    expect(f.flow.state).toBe('hall');
+    f.save.update((d) => {
+      d.journal.found = [1, 3];
+    });
+    f.flow.markPagesRead([1, 2, 3, 1]);
+    expect(f.save.get().journal.read).toEqual([1, 3]);
+  });
+
+  it('journal: without a scene wired, the hall stays put', () => {
+    const f = setup();
+    f.flow.start();
+    f.flow.newGame();
+    expect(f.flow.openJournal()).toBe(false);
+    expect(f.kinds()).toEqual(['hall']);
+  });
+
+  it('the completing solve hands off to the ending; back to the hall keeps the save', () => {
+    const f = setup(true);
+    f.flow.start();
+    f.flow.newGame();
+    for (let guard = 0; guard < 20; guard++) {
+      const solved = f.save.get().progress.solved;
+      const next = MACHINE_IDS.find((id) => !solved.includes(id) && f.flow.canOpen(id));
+      if (!next) break;
+      f.flow.openPuzzle(next);
+      f.flow.completePuzzle(next);
+      f.flow.finishSolve();
+      if (next !== 'the-last-rune') expect(f.flow.state).toBe('hall');
+    }
+    expect(f.flow.state).toBe('ending');
+    expect(f.kinds()).toEqual(['hall', 'ending']);
+    const scene = f.stack[f.stack.length - 1]!;
+    expect(scene.moment?.complete).toBe(true);
+    expect(scene.moment?.firstTime).toBe(true);
+    f.flow.finishEnding();
+    expect(f.flow.state).toBe('hall');
+    expect(f.save.get().progress.solved).toHaveLength(16);
     expect(f.save.get().stats.completedAt).toBeGreaterThan(0);
   });
 });

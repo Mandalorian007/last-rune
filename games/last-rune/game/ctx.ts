@@ -59,6 +59,10 @@ export interface SceneFactories {
   puzzle(machine: MachineId): GameScene;
   /** Hook for the solve moment (replaces the puzzle; popping returns to the hall). */
   solve(moment: SolveMoment): GameScene;
+  /** The journal desk (story-scenes), pushed over the hall. */
+  journal(): GameScene;
+  /** The ending (story-scenes); replaces the final solve moment. */
+  ending(moment: SolveMoment): GameScene;
 }
 
 export interface GameCtx {
@@ -228,9 +232,19 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
       fuse.hush();
       doOpenSettings();
     },
+    journal: () => {
+      sfx('ui.click');
+      fuse.hush();
+      flow.openJournal();
+    },
   });
+  const unreadPages = () => {
+    const j = save.get().journal;
+    return j.found.filter((p) => !j.read.includes(p)).length;
+  };
   flow.onChange((state) => {
-    hud.visible = state !== 'title' && state !== 'boot';
+    hud.visible = state === 'hall' || state === 'puzzle' || state === 'solve';
+    hud.journalShown(state === 'hall', unreadPages());
     hud.plate(null);
   });
 
@@ -251,8 +265,12 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   const loop = new GameLoop({
     update: (dt: number) => {
       input.update();
-      if (!ui.stack.hasModal) {
-        if (input.pressed('codex')) {
+      if (!ui.stack.hasModal && flow.state !== 'ending') {
+        if (input.pressed('journal') && flow.state === 'hall') {
+          sfx('ui.click');
+          fuse.hush();
+          flow.openJournal();
+        } else if (input.pressed('codex')) {
           sfx('ui.click');
           fuse.hush();
           codex.open();

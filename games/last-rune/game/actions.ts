@@ -30,7 +30,8 @@ export type Action =
   | 'slot3'
   | 'slot4'
   | 'slot5'
-  | 'slot6';
+  | 'slot6'
+  | 'journal'; // the journal desk (from the hall)
 
 export const BINDINGS: Bindings<Action> = {
   select: [{ mouse: 0 }],
@@ -70,4 +71,5 @@ export const BINDINGS: Bindings<Action> = {
   slot4: [{ key: 'Digit4' }],
   slot5: [{ key: 'Digit5' }],
   slot6: [{ key: 'Digit6' }],
+  journal: [{ key: 'KeyJ' }],
 };

@@ -649,3 +649,43 @@ FUSE's plate: *(blank)*
 
 > Keeps a bolt for later. Ice keeps things. That's what ice is for. **[NEW]**  
 > <sub>`codex.capacitor` · 13w</sub>
+
+## At the altar
+
+Heard at the altar itself, not in the hall. Written for the altar in the same voice.
+
+**Exact solve** (the verdict card when a machine wakes; one per tier, `exactLine(tier)`)
+
+> Exactly right. Look at it go. Paperwork can wait. **[NEW]**  
+> <sub>`exact.t1` · 9w</sub>
+
+> Right on the number. Management would call that adequate. Management is wrong. **[NEW]**  
+> <sub>`exact.t2` · 12w</sub>
+
+> Exact. Not a spark wasted. I've signed worse. **[NEW]**  
+> <sub>`exact.t3` · 8w</sub>
+
+> Exact. Mind the door on your way through. **[NEW]**  
+> <sub>`exact.t4` · 8w</sub>
+
+**Teach nudge** (idle on Intake Desk, `TEACH_NUDGE`)
+
+> Gem from the tray. Into the glowing socket. The form is very clear on this. **[NEW]**  
+> <sub>`nudge.teach` · 15w</sub>
+
+**New-gem nudges** (idle, the first puzzle that offers the gem, `gemNudge(gem)`)
+
+> New gem in the tray. It has opinions about straight lines. **[NEW]**  
+> <sub>`nudge.bend` · 10w</sub>
+
+> Amber in the tray. Handle it like the meter is watching. **[NEW]**  
+> <sub>`nudge.amplify` · 10w</sub>
+
+> Magenta's in the tray now. It's been waiting all morning. **[NEW]**  
+> <sub>`nudge.split` · 10w</sub>
+
+> New one in the tray. It won't work alone. Nobody here does. **[NEW]**  
+> <sub>`nudge.gate` · 12w</sub>
+
+> Ice in the tray. I'd use it. Eventually. That's rather the point. **[NEW]**  
+> <sub>`nudge.capacitor` · 12w</sub>

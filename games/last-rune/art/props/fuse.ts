@@ -84,6 +84,8 @@ export class Fuse {
   mood: FuseMood = 'idle';
   /** 0..1 global fade (e.g. walking through the door). */
   opacity = 1;
+  /** False once he has dropped the clipboard (the ending). */
+  clipboard = true;
   /** Seconds left of an automatic talk burst (see `speak`). */
   private talkTimer = 0;
 
@@ -110,7 +112,15 @@ export class Fuse {
 
   private readonly material: Material;
   private readonly uniforms = new Float32Array(FUSE_UNIFORM_FLOATS);
-  private readonly dp: DrawParams = { x: 0, y: 0, w: 1, h: 1, tint: [1, 1, 1, 1], emissive: 1.4 };
+  private readonly dp: DrawParams = {
+    x: 0,
+    y: 0,
+    w: 1,
+    h: 1,
+    tint: [1, 1, 1, 1],
+    emissive: 1.4,
+    params: [0, 0, 0, 0],
+  };
   private targetX: number;
   private vx = 0;
   private readonly look = { x: 0, y: 0 };
@@ -276,6 +286,7 @@ export class Fuse {
     dp.w = 2.2 * this.scale;
     dp.h = 2.5 * this.scale;
     (dp.tint as number[])[3] = this.opacity;
+    (dp.params as number[])[0] = this.clipboard ? 0 : 1;
     frame.sprite(this.material, dp);
   }
 }
