@@ -1,0 +1,56 @@
+# Gate for main: typecheck + lint + unit tests, production build, itch zip validation.
+# No secrets are used or needed. Nothing is uploaded to itch.io (see docs/shipping-itch.md).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-build:
+    name: check + build + package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # pnpm version comes from package.json#packageManager.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm check
+
+      - run: pnpm build
+
+      # Validates dist/ against itch.io upload rules and writes build/last-rune-itch-<v>.zip.
+      - run: pnpm package:itch --skip-build
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: itch-zip
+          path: build/*.zip
+          if-no-files-found: error
+          retention-days: 14
