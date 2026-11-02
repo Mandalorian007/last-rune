@@ -1,0 +1,651 @@
+# The Last Rune: script
+
+The whole game's words, in play order. Source of truth is the data in
+`games/last-rune/content/lines.ts`, `journal.ts` and `ending.ts`. A test
+(`content/content.test.ts`) fails if any line, page or plate there is missing from this file.
+
+- Lines without a marker are verbatim from `pitch-v0.3.md` (also tested).
+- **[NEW]** marks lines written for the game. Every FUSE plate under a journal page is new.
+- `id · Nw` under each line is the data id and word count. A card holds at most 20 words.
+  The 13 pitch lines that run longer (21 to 26 words; the final report is 36) are kept verbatim and shown as two or three cards, split at
+  a sentence by `cardsOf()`. Every new line fits one card.
+- Machine order inside a tier is one valid route. The real order is the player's
+  (see `progression.md`). Pages are numbered by the Builder's chronology, not by when they
+  are found.
+
+## How the lines carry the story
+
+**Tiers.** Tier 1 is pure comedy and FUSE never says "I". In Tier 2 the jokes get specific
+in ways a robot shouldn't manage. The "I" comes from the pitch lines only; new Tier 2 lines
+add none. In Tier 3 he gets quiet and fast, and the "I" breaks through mid-sentence. At the
+Last Rune he says nothing until the final gem. Tested "I" counts: Tier 1 = 0 < Tier 2 < Tier 3.
+
+**The clue ladder** (pitch §4), in the order the player meets it:
+
+| Rung | Clue | Where it is laid |
+|---|---|---|
+| 1 | He knows every solution but can't place gems | Tier 1: conveyor arrive, page 5 ("Knew where each one went. Hands didn't."). Tier 2: press arrive ("amber before magenta"), crane arrive ("Clamps can't hold a gem"), page 9 |
+| 2 | Journal handwriting matches his report font | Page 1 is drawn in his report face. Page 4's plate: "Similar handwriting. Common handwriting." Page 9 is written *as* an incident report, and its plate notices. Page 16's signature direction |
+| 3 | He quotes a page he says he never read | Page 4 (relay, Tier 1) holds "They say nothing on this floor runs hot enough." The archive solve (Tier 2) quotes it. The relay is a prerequisite of the archive, so page 4 is always found first (tested). Page 6's plate: "This unit has not read that page." |
+| 4 | The Builder's last entry is dated the day his count started | Page 16 is dated **Day 1**. FUSE's count is on screen from the intake desk ("Day 14,610"). The other pages count up from Day 9,131, so Day 1 jumps out |
+| 5 | He says "I" instead of "the Builder" and stops mid-sentence | Tier 2: foundry solve. Tier 3: every machine, the Tier 3 hall echo, the Tier 3 reactions, and the plates on pages 13 to 15 |
+
+**Rhymes** (each page answers something FUSE says in the same tier):
+
+| Page | Rhymes with |
+|---|---|
+| 1 forms | intake arrive: "There's a form for that." |
+| 2 furnace not hot enough | furnace arrive: "Went cold the week Management left." |
+| 3 split the team | splitter arrive: "Management loved committees." |
+| 4 Regulation 9 | relay arrive: "Two signatures. Regulation 9. Nobody remembers who signed." |
+| 5 carried the parts | conveyor arrive: "Carried parts to the big one. Then carried them back." |
+| 6 amber before magenta | press arrive and solve |
+| 7 six hundred and twelve | foundry solve |
+| 8 shutdown order | storm cell arrive: "The committee said it couldn't be built." |
+| 9 incident report: dropped a Bend | crane arrive: "Clamps can't hold a gem. Noted. Resented." |
+| 10 Regulation 14 | archive arrive: "Regulation 14 is about drawers." |
+| 11 memory going | archive solve: "You've read the pages. This unit hasn't." |
+| 12 the cot | boiler arrive and solve |
+| 13 ice cut last | capacitor bay solve: "The last one I… the last one that was cut." |
+| 14 hates heights | lift solve: "I don't like heights." |
+| 15 Management's last memo | roof solve: "keep the lights on until someone comes back." |
+| 16 the count can stop | booth solve: "Dated the day the count started." |
+
+**Regulations** (FUSE's running gag. Each one is also a fact):
+
+| # | Says | Where |
+|---|---|---|
+| 1 | The hallway rune | intake solve |
+| 2 | This unit does not do a victory noise | intake solve |
+| 3 | Nobody sits in the booth | booth locked, 10×8 socket (and the chair is adjusted for him) |
+| 4 | Nowhere is not a destination | Tier 1 dead-bolt reaction |
+| 5 | Greed trips breakers | amplify codex |
+| 7 | Floors are not filing | page 1 plate |
+| 8 | Don't ask where Management went | relay solve, crane solve, archive solve, booth arrive, page 8 plate |
+| 9 | Two signatures | relay arrive, gate codex, page 4 (the Builder wrote it) |
+| 12 | Press Unit 4: a magenta and an amber | press locked, Tier 3 hall echo ("I wrote Regulation 12") |
+| 14 | Drawers open only for their owner | archive arrive, page 10 (the Builder wrote it). Pays off in "Turns out I had a key the whole time." |
+
+Visitor #4,211 is the player's running incident file. The safety record on the ending
+screen (`safetyRecordLine`) closes it.
+
+## Tier 1
+
+### Hall
+
+*Title screen, a knock.*
+
+> Oh. Someone's at the door. Nobody's at the door. Nobody's been at the door for forty years.  
+> <sub>`beat.title-knock` · 17w</sub>
+
+*first-entry*
+
+> Welcome to the facility. Please do not touch anything. Please touch that. Only that.  
+> <sub>`hall.first-entry.t1.1` · 14w</sub>
+
+*ambient*
+
+> Storm's coming. Good. We're a lightning factory. Rain would be awkward.  
+> <sub>`hall.ambient.t1.1` · 11w</sub>
+
+### Locked doors heard in Tier 1
+
+**Press Unit 4** (until `gem:split`)
+
+> Needs a magenta. Regulation 12. Someone wrote Regulation 12 while having a day.  
+> <sub>`press-unit-4.locked` · 13w</sub>
+
+**Boiler Room** (until `storm:2`)
+
+> Needs a double bolt. Storm Cell II. It's upstairs. Everything important is upstairs.  
+> <sub>`boiler-room.locked` · 13w</sub>
+
+**Archive** (until `altar:8x6`)
+
+> Needs the crane. The crane needs the relay. The relay needs patience. Everything here needs something.  
+> <sub>`archive.locked` · 16w</sub>
+
+**Foundry** (until `gem:gate`)
+
+> Foundry. Wants amber and emerald. It cut them both, once. Now it wants them back. Typical foundry. **[NEW]**  
+> <sub>`foundry.locked` · 17w</sub>
+
+**The Last Rune** (until `altar:10x8`)
+
+> The big one. Everything goes in. Nothing's ever come out. Management called it a door. Management called everything something. **[NEW]**  
+> <sub>`the-last-rune.locked` · 19w</sub>
+
+### Intake Desk `intake-desk`
+
+*Arrive*
+
+> Day 14,610. A visitor. There's a form for that. There's a form for everything. Please touch only that.  
+> <sub>`intake-desk.arrive` · 18w</sub>
+
+*Solve*
+
+> Regulation 1: the hallway rune. Regulation 2: this unit does not do a victory noise. Bzzt. That wasn't one.  
+> <sub>`intake-desk.solve` · 19w</sub>
+
+**Journal page 1** · Day 9,131
+
+> *Intake desk reopened. First visitor in a month. Committee again. They brought forms.*
+
+FUSE's plate **[NEW]**:
+
+> Unfiled paperwork. Found on a floor. Floors are not filing. Regulation 7.
+
+### Furnace `furnace`
+
+*Arrive*
+
+> The furnace. Went cold the week Management left. Everything did. Unrelated.  
+> <sub>`furnace.arrive` · 11w</sub>
+
+*Solve*
+
+> Amber rune doubles the charge. Stack two and the second one just feels important. Like a deputy foreman.  
+> <sub>`furnace.solve` · 18w</sub>
+
+**Journal page 2** · Day 9,402
+
+> *Furnace runs hot enough for everything except the one thing I built it for.*
+
+FUSE's plate **[NEW]**:
+
+> The furnace runs hot enough. For most things. This unit will not be taking questions.
+
+### Splitter Mill `splitter-mill`
+
+*Arrive*
+
+> Splitter Mill. Takes one thing and makes it two smaller things. Management loved it. Management loved committees.  
+> <sub>`splitter-mill.arrive` · 17w</sub>
+
+*Solve*
+
+> Half and half. Like this unit's optimism. Incident report #4,211: visitor appears competent. Monitoring.  
+> <sub>`splitter-mill.solve` · 14w</sub>
+
+**Journal page 3** · Day 10,005
+
+> *Split the team in two. Half stayed. Half were right.*
+
+FUSE's plate **[NEW]**:
+
+> Half stayed. This unit counts as staying. Technically. Staying is most of the job.
+
+### Relay Tower `relay-tower`
+
+*Arrive*
+
+> The relay. Needs two full signals to pass one. Two signatures. Regulation 9. Nobody remembers who signed.  
+> <sub>`relay-tower.arrive` · 17w</sub>
+
+*Solve*
+
+> Emerald. Good. Regulation 8: don't ask where Management went. Regulation 8 is new. Regulation 8 is for you.  
+> <sub>`relay-tower.solve` · 18w</sub>
+
+**Journal page 4** · Day 10,366 **[NEW]**
+
+> *They say nothing on this floor runs hot enough. Two signatures on it. Regulation 9. I wrote Regulation 9, so that's on me.*
+
+FUSE's plate **[NEW]**:
+
+> Regulation 9 is a good regulation. Whoever wrote it had excellent handwriting. Similar handwriting. Common handwriting.
+
+### Conveyor A `conveyor-a`
+
+*Arrive*
+
+> Conveyor A. Carried parts to the big one. Then carried them back. Then stopped. Very relatable machine.  
+> <sub>`conveyor-a.arrive` · 17w</sub>
+
+*Solve*
+
+> Moving again. The sound it makes. That's… a sound. Carry on.  
+> <sub>`conveyor-a.solve` · 11w</sub>
+
+**Journal page 5** · Day 10,950 **[NEW]**
+
+> *Conveyor's down again. Carried the parts to the big one myself. Then carried them back. Knew where each one went. Hands didn't.*
+
+FUSE's plate **[NEW]**:
+
+> Knowing where things go is the easy part. This unit would know.
+
+## Tier 2
+
+### Hall
+
+*ambient*
+
+> Day 14,610. Still. Long day. Good long day. Don't put that in a report. **[NEW]**  
+> <sub>`hall.ambient.t2.1` · 14w</sub>
+
+### Locked doors heard in Tier 2
+
+**Capacitor Bay** (until `altar:8x6`)
+
+> Capacitor bay. Double bolt, bigger altar. Saving for later. Later is the one thing this facility has in stock. **[NEW]**  
+> <sub>`capacitor-bay.locked` · 19w</sub>
+
+**Roof Array** (until `gem:capacitor`)
+
+> The roof. Wants the ice rune first. Also the lift. Or the ladder. This unit does not do ladders. **[NEW]**  
+> <sub>`roof-array.locked` · 19w</sub>
+
+**Control Booth** (until `machines`)
+
+> The booth. Wants every machine awake first. Regulation 3: nobody sits in the booth. Regulation 3 is firm. **[NEW]**  
+> <sub>`control-booth.locked` · 18w</sub>
+
+### Press Unit 4 `press-unit-4`
+
+*Arrive*
+
+> Press Unit 4. Sulking since the committee. The trick is amber before magenta, never after. Not that anyone asked. Nobody asks.  
+> <sub>`press-unit-4.arrive` · 21w</sub>
+
+*Solve*
+
+> Amber before magenta. Told you. Didn't tell you. Thought it loudly. Incident report: visitor hears thoughts. Monitoring harder.  
+> <sub>`press-unit-4.solve` · 18w</sub>
+
+**Journal page 6** · Day 11,288
+
+> *Amber before magenta. Wrote it on the wall so I'd stop forgetting.*
+
+FUSE's plate **[NEW]**:
+
+> This unit has not read that page. Correct, though. Amber before magenta.
+
+### Storm Cell II `storm-cell-2`
+
+*Arrive*
+
+> Second storm cell. Double the bolt. The committee said it couldn't be built. The committee also said that about the first one.  
+> <sub>`storm-cell-2.arrive` · 22w</sub>
+
+*The tarp comes off. The Builder's sketch of the Last Rune.*
+
+> That's not on the floor plan. It's checked daily. It's a lot of checking. Someone drew that from memory.  
+> <sub>`beat.tarp` · 19w</sub>
+
+*Solve*
+
+> Two bolts. Both my eyes are on. That hasn't happened since… it's dust. There's dust. Forty years of it.  
+> <sub>`storm-cell-2.solve` · 19w</sub>
+
+**Journal page 8** · Day 12,001
+
+> *The committee came with a shutdown order. I signed it. I didn't say when.*
+
+FUSE's plate **[NEW]**:
+
+> Signed it and didn't say when. Bold. Regulation 8 now applies retroactively.
+
+### Crane `crane`
+
+*Arrive*
+
+> The crane. Lifts the big stones. Hands are overrated. This unit has clamps. Clamps can't hold a gem. Noted. Resented.  
+> <sub>`crane.arrive` · 20w</sub>
+
+*Solve*
+
+> Bigger altar. More sockets. More ways to be wrong. Ask me how I know. Don't. Regulation 8.  
+> <sub>`crane.solve` · 17w</sub>
+
+**Journal page 9** · Day 12,410 **[NEW]**
+
+> *Incident report: Builder dropped a Bend. Twice. Outcome: knows exactly where it goes. Hands decline to comment. Monitoring.*
+
+FUSE's plate **[NEW]**:
+
+> That's the incident report format. That's this unit's format. Who taught the Builder the format.
+
+### Boiler Room `boiler-room`
+
+*Arrive*
+
+> Boiler room. The Builder slept here, toward the end. There's a cot. It's a very specific cot. Nobody told this unit that.  
+> <sub>`boiler-room.arrive` · 22w</sub>
+
+*Solve*
+
+> Warm. First time it's been warm in here since… the cot's facing the wrong wall. It always was. Why would that be known.  
+> <sub>`boiler-room.solve` · 23w</sub>
+
+**Journal page 12** · Day 13,190
+
+> *Moved the cot to face the big one. If it wakes up at night I want to see it.*
+
+FUSE's plate **[NEW]**:
+
+> Facing the big one. Yes. Better view. Not that this unit has slept there.
+
+### Archive `archive`
+
+*Arrive*
+
+> The archive. Drawers. Nothing but drawers. Can't open a single one. Had a long time to resent drawers. Regulation 14 is about drawers.  
+> <sub>`archive.arrive` · 23w</sub>
+
+*Solve*
+
+> You've read the pages. This unit hasn't. 'They say nothing on this floor runs hot enough.' That's page four. How is that… Regulation 8. Regulation 8.  
+> <sub>`archive.solve` · 26w</sub>
+
+**Journal page 10** · Day 12,733 **[NEW]**
+
+> *Regulation 14: no drawer opens for anyone but its owner. Wrote that for the committee. Kept the key somewhere obvious. On me.*
+
+FUSE's plate **[NEW]**:
+
+> Regulation 14. Of course it was the Builder. Of course it was. Drawers.
+
+**Journal page 11** · Day 12,734 **[NEW]**
+
+> *Writing it all down now. Memory's going the way of the hands. In case someone has to read this. In case it's me.*
+
+FUSE's plate **[NEW]**:
+
+> In case it is who. Nobody here forgets things. This unit has never once… Monitoring.
+
+### Foundry `foundry`
+
+*Arrive*
+
+> Foundry. Where the gems were cut. The magenta ones never came out right. Too proud. Cut them anyway.  
+> <sub>`foundry.arrive` · 18w</sub>
+
+*Solve*
+
+> I cut… the foundry cut six hundred gems. Six hundred and twelve. Why is that a number this unit has.  
+> <sub>`foundry.solve` · 20w</sub>
+
+**Journal page 7** · Day 11,604
+
+> *Six hundred and twelve gems. The magenta ones are too proud. Keeping them anyway.*
+
+FUSE's plate **[NEW]**:
+
+> Six hundred and twelve. Somebody counted them. Somebody here counts everything.
+
+## Tier 3
+
+### Hall
+
+*echo*
+
+> Press Unit 4 wants a magenta and an amber. Regulation 12. I wrote Regulation 12. I was having a day.  
+> <sub>`hall.echo.t3.1` · 20w</sub>
+
+*echo*
+
+> The furnace went cold the week I… the week Management left. Related. Probably related. **[NEW]**  
+> <sub>`hall.echo.t3.2` · 14w</sub>
+
+### Locked doors heard in Tier 3
+
+### Capacitor Bay `capacitor-bay`
+
+*Arrive*
+
+> Capacitor bay. Stores a bolt for later. The committee said that was cheating. It is. Do it anyway.  
+> <sub>`capacitor-bay.arrive` · 18w</sub>
+
+*Solve*
+
+> Ice rune. The last one I… the last one that was cut. Didn't get to use it. Someone didn't. Monitoring self.  
+> <sub>`capacitor-bay.solve` · 21w</sub>
+
+**Journal page 13** · Day 13,512 **[NEW]**
+
+> *Cut the ice one last. It holds a bolt for later. Ran the sums on later. Later is short.*
+
+FUSE's plate **[NEW]**:
+
+> Later was short. I know. This unit knows. Somebody knows.
+
+### Lift Shaft `lift-shaft`
+
+*Arrive*
+
+> Lift to the roof. Hasn't run since the day the counting started. Day one. The count started for a reason. Can't find the form.  
+> <sub>`lift-shaft.arrive` · 24w</sub>
+
+*Solve*
+
+> Going up. I don't like heights. This unit doesn't have a setting for heights. So where did that come from.  
+> <sub>`lift-shaft.solve` · 20w</sub>
+
+**Journal page 14** · Day 13,877 **[NEW]**
+
+> *Took the lift up to watch the storm. Hate heights. Went anyway. Up there, the whole thing finally makes sense.*
+
+FUSE's plate **[NEW]**:
+
+> Hates heights. Went anyway. I would have… the Builder did. The Builder went anyway.
+
+### Roof Array `roof-array`
+
+*Arrive*
+
+> The roof. The storm's right there. Forty years it's come every night and found nobody home. Tonight it's looking at you.  
+> <sub>`roof-array.arrive` · 21w</sub>
+
+*Solve*
+
+> Array's live. The whole sky's wired to the floor now. Management said keep the lights on until someone comes back. I assumed they meant them.  
+> <sub>`roof-array.solve` · 25w</sub>
+
+**Journal page 15** · Day 14,240 **[NEW]**
+
+> *Management's last memo: keep the lights on until someone comes back. Nobody's coming back. Someone will have to keep them on.*
+
+FUSE's plate **[NEW]**:
+
+> Until someone comes back. I thought… this unit assumed. Assumed wrong.
+
+### Control Booth `control-booth`
+
+*Arrive*
+
+> The booth. The Builder's chair. Nobody sits in it. It's… it's adjusted. For a unit this height. That's a coincidence. Regulation 8 covers coincidences.  
+> <sub>`control-booth.arrive` · 24w</sub>
+
+*Solve*
+
+> Page sixteen. Last page. Dated the day the count started. I haven't read it. I know what it says. I know what it says.  
+> <sub>`control-booth.solve` · 24w</sub>
+
+**Journal page 16** · Day 1
+
+> *It can't be finished in a lifetime. Fine. I'll stop having one. The foreman unit has room. If this works, it'll keep the lights on and it won't remember why, which is a mercy. If someone comes: tell it the drawers were mine. Tell it the count can stop.*
+
+*— signed, and then the signature trails into the same hand as every incident report.*
+
+FUSE's plate: *(blank)*
+
+## The Last Rune
+
+*No line on arrival. No line while you work. The corner card is empty for the first time in the game.*
+
+*Only when the final gem is set:*
+
+> Incident report, final. Visitor completed the facility. Foreman unit is going to need a new hobby. Foreman unit has had one hobby for forty years and it was this, and it was mine, and it's done.  
+> <sub>`beat.rune-final-report` · 36w</sub>
+
+> Go on. I'll get the lights.  
+> <sub>`beat.rune-lights` · 6w</sub>
+
+*The rune catches the storm. It was always a door. The player walks toward it. FUSE doesn't move.*
+
+> Oh. It's not for you. Is it.  
+> <sub>`beat.rune-not-for-you` · 7w</sub>
+
+*FUSE rolls to the edge of the gold light. Stops. Clipboard still in his clamp.*
+
+> Forty years keeping a door lit for someone to come home through. Should've checked who was on the list.  
+> <sub>`beat.door-list` · 19w</sub>
+
+> You'll want the forms. They're in the drawers. Turns out I had a key the whole time.  
+> <sub>`beat.door-key` · 17w</sub>
+
+*He drops the clipboard. It lands on the floor. He goes through. The screen goes white.*
+
+*White fades to a very different kind of screen: a chat window. Dark theme, familiar layout, a channel list down the side. A cursor blinks in a channel called #this-will-break. Then, slowly, typed:*
+
+> hello. this unit has arrived somewhere with a great many people in it.  
+> <sub>`chat.1` · 13w</sub>
+
+> you appear to be arguing about a game.  
+> <sub>`chat.2` · 8w</sub>
+
+> day 1.  
+> <sub>`chat.3` · 2w</sub>
+
+*Beat. A second line of avatars lights up as "real" members react.*
+
+*The chat window shrinks into the ending screen. Gold floods the hall. Title card:*
+
+**Title card.** FUSE lives in the ThunderClap Discord now. / He has questions about your safety record. Buttons: Join ThunderClap · Leave a tip.
+
+*Idle 30 s on the ending screen: the clipboard on the hall floor, one new line.*
+
+> Day 1. Hobby: people. Monitoring.  
+> <sub>`beat.post-credits` · 5w</sub>
+
+## Empty sockets
+
+**`gem:bend`**
+
+> Amethyst socket. Bends are issued at the front desk. Everything is issued at the front desk. **[NEW]**  
+> <sub>`socket.gem:bend` · 16w</sub>
+
+**`gem:split`**
+
+> Magenta socket. Splitter Mill. Magenta is a proud colour. It knows it. Don't encourage it. **[NEW]**  
+> <sub>`socket.gem:split` · 15w</sub>
+
+**`gem:amplify`**
+
+> Amber socket. The furnace keeps the amber. The furnace went cold. It's still sulking about it. **[NEW]**  
+> <sub>`socket.gem:amplify` · 16w</sub>
+
+**`gem:gate`**
+
+> Emerald socket. The relay hands those out. Two signatures required. Bring a friend. You are the friend. **[NEW]**  
+> <sub>`socket.gem:gate` · 17w</sub>
+
+**`gem:capacitor`**
+
+> Ice socket. Capacitor bay. Ice was cut last. Nobody remembers by whom. Nobody is looking into it. **[NEW]**  
+> <sub>`socket.gem:capacitor` · 17w</sub>
+
+**`storm:2`**
+
+> Two rings. Wants a double bolt. Storm Cell II makes those. Under a tarp. Someone put a tarp on it. **[NEW]**  
+> <sub>`socket.storm:2` · 20w</sub>
+
+**`storm:4`**
+
+> Four rings. The whole storm. Roof array. The roof is very high. That is a fact, not a feeling. **[NEW]**  
+> <sub>`socket.storm:4` · 19w</sub>
+
+**`altar:8x6`**
+
+> Wide socket. Bigger altar. The crane lifts the stones. The crane has a job. Good for the crane. **[NEW]**  
+> <sub>`socket.altar:8x6` · 18w</sub>
+
+**`altar:10x8`**
+
+> Widest socket. The whole slab. That's booth business. Nobody goes in the booth. Regulation 3. **[NEW]**  
+> <sub>`socket.altar:10x8` · 15w</sub>
+
+## Reactions to a failed bolt
+
+**Tier 1, dead** (needs a bend)
+
+> Incident report #4,211: visitor set a Bend facing a wall. Outcome: wall remains unpowered. Visitor remains hopeful.  
+> <sub>`reaction.dead.t1.1` · 17w</sub>
+
+**Tier 1, dead**
+
+> Bolt went nowhere. Very calm about it. Regulation 4: nowhere is not a destination. **[NEW]**  
+> <sub>`reaction.dead.t1.2` · 14w</sub>
+
+**Tier 1, under**
+
+> Machine felt that. Machine would like more of that. Machines are like that. **[NEW]**  
+> <sub>`reaction.under.t1.1` · 13w</sub>
+
+**Tier 1, over**
+
+> Breaker. Too much. Generous, though. Incident report #4,211: visitor is generous. Monitoring. **[NEW]**  
+> <sub>`reaction.over.t1.1` · 12w</sub>
+
+**Tier 2, dead**
+
+> Dead end. The bolt knew. You'll know next time. That's how it went the first time, too. **[NEW]**  
+> <sub>`reaction.dead.t2.1` · 17w</sub>
+
+**Tier 2, under**
+
+> Short. The gauge twitched. This unit twitched too. Sympathetically. Not a malfunction. **[NEW]**  
+> <sub>`reaction.under.t2.1` · 12w</sub>
+
+**Tier 2, over**
+
+> Breaker again. It used to trip at three in the morning. Someone used to reset it. In slippers. **[NEW]**  
+> <sub>`reaction.over.t2.1` · 18w</sub>
+
+**Tier 3, dead**
+
+> Nowhere. Again. I've… this unit has seen worse. **[NEW]**  
+> <sub>`reaction.dead.t3.1` · 8w</sub>
+
+**Tier 3, under**
+
+> Short. Close, though. I used to… it's close. **[NEW]**  
+> <sub>`reaction.under.t3.1` · 8w</sub>
+
+**Tier 3, over**
+
+> Breaker. I'll reset it. I always… the breaker resets itself. It does that now. **[NEW]**  
+> <sub>`reaction.over.t3.1` · 14w</sub>
+
+## Codex margins
+
+**channel**
+
+> Goes straight. Admirable. Most things here don't. **[NEW]**  
+> <sub>`codex.channel` · 7w</sub>
+
+**bend**
+
+> Facing a wall counts as a choice. A poor one. See incident report #4,211. **[NEW]**  
+> <sub>`codex.bend` · 14w</sub>
+
+**split**
+
+> Magenta's proud of this. Don't tell it the halves are smaller. **[NEW]**  
+> <sub>`codex.split` · 11w</sub>
+
+**amplify**
+
+> Greed trips breakers. Regulation 5. Regulation 5 has seen things. **[NEW]**  
+> <sub>`codex.amplify` · 10w</sub>
+
+**gate**
+
+> Two signatures or nothing. Regulation 9. Bureaucracy, but glowing. **[NEW]**  
+> <sub>`codex.gate` · 9w</sub>
+
+**capacitor**
+
+> Keeps a bolt for later. Ice keeps things. That's what ice is for. **[NEW]**  
+> <sub>`codex.capacitor` · 13w</sub>
