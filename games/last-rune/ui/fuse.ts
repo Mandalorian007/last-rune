@@ -5,9 +5,10 @@
  * - `say(…, { interrupt: true })` drops whatever he was saying (hover changes).
  * - The portrait is a hook: art-props' FUSE portrait swaps in via `setPortrait`.
  *   Until then a CSS placeholder (brass disc, one amber eye) stands in.
+ * - `avoid(rects)` keeps the card off parts of the screen a scene needs (design px).
  */
 
-import type { CaptionCard } from '@engine/ui';
+import type { CaptionCard, Rect } from '@engine/ui';
 import { h } from '@engine/ui';
 import { cardsOf, type FuseLine } from '../content/lines';
 
@@ -90,6 +91,16 @@ export class Fuse {
   isSaying(line: FuseLine | string): boolean {
     const id = typeof line === 'string' ? line : line.id;
     return this.caption.busy && this.lastId === id;
+  }
+
+  /**
+   * Keep FUSE's card off these screen regions (1920×1080 design px). The card stays bottom-right
+   * if it fits, else narrows, else moves to bottom-left, then the top corners, and never clips
+   * its text. Set it in a scene's `enter()`/`resume()` (and again if the layout changes);
+   * clear it with `avoid(null)` in `exit()`/`pause()`, since it outlives the scene.
+   */
+  avoid(regions: Rect | readonly Rect[] | null): void {
+    this.caption.avoid(regions);
   }
 
   hush(): void {

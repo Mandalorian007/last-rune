@@ -83,7 +83,15 @@ const CSS = /* css */ `
 .tc-overlay .lr-hud { position: absolute; left: 28px; top: 24px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; pointer-events: auto; }
 .tc-overlay .lr-hud[hidden] { display: none; }
 .tc-overlay .lr-hud button { min-width: 0; min-height: 56px; font-size: 24px; padding: 0 22px; }
-.tc-overlay .lr-hud kbd { font-family: var(--tc-font-mono); font-size: 20px; opacity: 0.7; margin-left: 10px; }
+/* Key hints are keycaps in the UI sans, so a letter never reads as a digit ("O" vs "0"). */
+.tc-overlay .lr-hud kbd {
+  display: inline-block; min-width: 34px; margin-left: 14px; padding: 0 8px; box-sizing: border-box;
+  font-family: var(--tc-font-ui); font-size: 19px; font-weight: 600; line-height: 28px; text-align: center;
+  font-variant-numeric: slashed-zero; letter-spacing: 0; color: #f4e6c4;
+  background: linear-gradient(180deg, #5d6375 0%, #3a3f4d 100%);
+  border: 1px solid rgba(232,192,106,0.5); border-bottom-width: 3px; border-radius: 7px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+}
 
 .tc-overlay .lr-nameplate {
   position: absolute; transform: translate(-50%, 0); padding: 8px 22px; border-radius: 10px;
@@ -94,6 +102,14 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-nameplate[hidden] { display: none; }
 .tc-overlay .lr-nameplate small { display: block; font-size: 20px; color: #bfae8a; letter-spacing: 0; }
+
+/* ── FUSE caption card ─────────────────────────────────────────────────────
+   Docked low in its corner and wide enough that the longest card (127 chars) takes three
+   lines, so it stays under FUSE's wheel line in the hall (y 866) and below the alcoves. The
+   speaker's name sits under the portrait. Scenes move it off things with fuse.avoid(). */
+.tc-overlay { --tc-caption-max-width: 800px; --tc-caption-margin: 24px; }
+.tc-overlay .tc-caption { gap: 16px; padding: 14px 22px; }
+.tc-overlay .tc-caption-side .tc-caption-speaker { font-size: 19px; }
 
 /* ── FUSE portrait placeholder (art-props replaces it) ─────────────────── */
 .tc-overlay .lr-fuse-portrait {

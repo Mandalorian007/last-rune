@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CaptionCard, readingTimeMs, revealDelayMs } from './caption';
+import { CaptionCard, cornerOrder, overlapArea, readingTimeMs, revealDelayMs } from './caption';
 import { h } from './dom';
 import { createOverlay, type Overlay } from './overlay';
 import { themeToCss, tokenVar } from './theme';
@@ -35,10 +35,19 @@ describe('overlay', () => {
 
   it('mounts layers, injects styles once, applies theme vars', () => {
     expect(parent.querySelector('.tc-overlay')).toBe(ov.root);
-    expect(Object.keys(ov.layers)).toEqual(['hud', 'panels', 'captions', 'toasts']);
+    expect(Object.keys(ov.layers)).toEqual(['hud', 'captions', 'panels', 'toasts']);
     createOverlay({ parent }).destroy();
     expect(document.querySelectorAll('#tc-ui-base').length).toBe(1);
     expect(ov.root.style.getPropertyValue('--tc-color-accent')).toBeTruthy();
+  });
+
+  it('a modal panel suspends the caption, which sits below the panels layer', () => {
+    ov.caption.say('Over the hall', { hold: 0 });
+    const p = ov.stack.push({ title: 'Settings', content: button('OK', () => {}) });
+    expect(ov.caption.suspended).toBe(true);
+    p.close();
+    expect(ov.caption.suspended).toBe(false);
+    expect(ov.caption.currentText).toBe('Over the hall');
   });
 
   it('scales and centres into the letterbox rect; maps client coords', () => {
@@ -184,6 +193,97 @@ describe('caption card', () => {
     expect(card.currentText).toBe('Next');
     card.clear();
     expect(card.busy).toBe(false);
+  });
+
+  it('overlap and corner order are pure', () => {
+    const box = { x: 0, y: 0, width: 100, height: 50 };
+    expect(overlapArea(box, [])).toBe(0);
+    expect(overlapArea(box, [{ x: 50, y: 25, width: 100, height: 100 }])).toBe(50 * 25);
+    expect(overlapArea(box, [{ x: 100, y: 0, width: 10, height: 10 }])).toBe(0); // touching edge
+    expect(cornerOrder('bottom-right')).toEqual([
+      'bottom-right',
+      'bottom-left',
+      'top-right',
+      'top-left',
+    ]);
+    expect(cornerOrder('top-left')).toEqual([
+      'top-left',
+      'top-right',
+      'bottom-left',
+      'bottom-right',
+    ]);
+  });
+
+  it('suspend hides and freezes the line; resume carries on with a fresh hold', async () => {
+    const host = h('div');
+    const card = new CaptionCard(host, { reducedMotion: false, cps: 100 });
+    const done = vi.fn();
+    card.say('Hello there', { hold: 500 }).then(done);
+    card.suspend(true);
+    expect(card.suspended).toBe(true);
+    expect(card.element.hasAttribute('data-suspended')).toBe(true);
+    const pending = () => card.element.querySelector('.tc-caption-pending')!.textContent;
+    const before = pending();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(pending()).toBe(before); // typing frozen
+    expect(done).not.toHaveBeenCalled();
+    card.say('Queued while hidden');
+    expect(card.queued).toBe(1);
+    card.suspend(false);
+    expect(card.element.hasAttribute('data-suspended')).toBe(false);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(pending()).toBe('');
+    card.suspend(true);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(done).not.toHaveBeenCalled(); // hold frozen too
+    card.suspend(false);
+    await vi.advanceTimersByTimeAsync(500);
+    expect(done).toHaveBeenCalled();
+    expect(card.currentText).toBe('Queued while hidden');
+  });
+
+  it('speaker sits under the portrait, or above the text without one', () => {
+    const host = h('div');
+    const card = new CaptionCard(host, { reducedMotion: true });
+    card.say('With face', { speaker: 'BOT', portrait: h('canvas'), hold: 0 });
+    const speaker = card.element.querySelector('.tc-caption-speaker')!;
+    expect(speaker.parentElement!.classList.contains('tc-caption-side')).toBe(true);
+    card.advance();
+    card.say('No face', { speaker: 'BOT', hold: 0 });
+    expect(speaker.parentElement!.classList.contains('tc-caption-body')).toBe(true);
+    expect(card.element.querySelector<HTMLElement>('.tc-caption-side')!.hidden).toBe(true);
+  });
+
+  it('avoid() narrows, then switches corners, to keep off a region', () => {
+    const host = h('div');
+    const card = new CaptionCard(host, { reducedMotion: true, minWidth: 300 });
+    const el = card.element;
+    // Fake layout in a 1920x1080 container: the card is as wide as max-width allows (720).
+    const width = () => Math.min(720, Number.parseFloat(el.style.maxWidth) || 720);
+    const right = () => el.dataset.corner!.endsWith('right');
+    const top = () => el.dataset.corner!.startsWith('top');
+    Object.defineProperties(el, {
+      offsetWidth: { get: width },
+      offsetHeight: { get: () => 100 },
+      offsetLeft: { get: () => (right() ? 1920 - 24 - width() : 24) },
+      offsetTop: { get: () => (top() ? 24 : 1080 - 24 - 100) },
+    });
+    card.say('Line', { hold: 0 });
+    expect(el.dataset.corner).toBe('bottom-right');
+    // Something at the left of the card's spot: narrowing clears it.
+    card.avoid({ x: 1150, y: 900, width: 100, height: 100 });
+    expect(el.dataset.corner).toBe('bottom-right');
+    expect(width()).toBeLessThan(720 - 70);
+    // The whole bottom-right: the card moves across.
+    card.avoid([{ x: 1100, y: 800, width: 820, height: 280 }]);
+    expect(el.dataset.corner).toBe('bottom-left');
+    expect(el.style.maxWidth).toBe('720px');
+    // The whole bottom edge: it goes up.
+    card.avoid({ x: 0, y: 800, width: 1920, height: 280 });
+    expect(el.dataset.corner).toBe('top-right');
+    card.avoid(null);
+    expect(el.dataset.corner).toBe('bottom-right');
+    expect(el.style.maxWidth).toBe('');
   });
 
   it('reduced motion shows the line at once', () => {

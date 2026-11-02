@@ -29,11 +29,11 @@ export interface OverlayOptions {
 export interface Overlay {
   /** `.tc-overlay`, sized designWidth×designHeight and scaled into the rect. */
   readonly root: HTMLElement;
-  /** Layers, bottom to top. Put game HUD in `hud`. */
+  /** Layers, bottom to top. Put game HUD in `hud`. Panels sit above captions. */
   readonly layers: {
     hud: HTMLElement;
-    panels: HTMLElement;
     captions: HTMLElement;
+    panels: HTMLElement;
     toasts: HTMLElement;
   };
   readonly stack: PanelStack;
@@ -66,16 +66,16 @@ export function createOverlay(opts: OverlayOptions): Overlay {
   const layer = (name: string) => h('div', { class: 'tc-layer', dataset: { layer: name } });
   const layers = {
     hud: layer('hud'),
-    panels: layer('panels'),
     captions: layer('captions'),
+    panels: layer('panels'),
     toasts: layer('toasts'),
   };
   const root = h(
     'div',
     { class: 'tc-overlay', style: { width: `${dw}px`, height: `${dh}px` } },
     layers.hud,
-    layers.panels,
     layers.captions,
+    layers.panels,
     layers.toasts,
   );
   applyTheme(root, { ...defaultTheme, ...opts.theme });
@@ -85,6 +85,9 @@ export function createOverlay(opts: OverlayOptions): Overlay {
   const stack = new PanelStack(layers.panels, [layers.hud, layers.captions]);
   const toasts = new Toaster(layers.toasts, opts.maxToasts ?? 3);
   const caption = new CaptionCard(layers.captions, opts.caption);
+  // A modal hides the caption and pauses it, so a line is never read through (or lost under) a
+  // dialog; it picks up again when the last modal closes.
+  const unwatch = stack.onChange((s) => caption.suspend(s.hasModal));
 
   let rect: Rect = { x: 0, y: 0, width: dw, height: dh };
   let scale = 1;
@@ -121,6 +124,7 @@ export function createOverlay(opts: OverlayOptions): Overlay {
       return x >= 0 && y >= 0 && x <= dw && y <= dh ? { x, y } : null;
     },
     destroy() {
+      unwatch();
       stack.destroy();
       caption.destroy();
       toasts.clear();
