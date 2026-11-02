@@ -1,27 +1,12 @@
 /**
- * Codex page model (pure). Rule text is PROVISIONAL: lifted from the pitch's gem
- * list because content/ has no codex rule copy yet. Owner needed (progression-
- * content); move to content/codex.ts and delete RULES here when it lands.
+ * Codex page model (pure). Rule copy comes from `content/codex.ts`; FUSE's
+ * margin notes from `content/lines.ts`.
  */
+import { CODEX } from '../content/codex';
 import { codexNote } from '../content/lines';
 import { granterOf, hasCapability, type ProgressState, socketColour } from '../rules/progression';
 import { GEM_KINDS, type GemKind, type MachineId } from '../rules/types';
 import { CSS_PALETTE } from './styles';
-
-const RULES: Record<GemKind, { rule: string; maths: string }> = {
-  channel: { rule: 'Carries charge straight through.', maths: 'out = in' },
-  bend: { rule: 'Turns the bolt 90°.', maths: 'out = in, direction ± 90°' },
-  split: { rule: 'Two outputs at half charge.', maths: 'out₁ = out₂ = in ÷ 2' },
-  amplify: { rule: 'Doubles the charge, once per path.', maths: 'out = in × 2  (once per path)' },
-  gate: {
-    rule: 'Fires only when both inputs are live.',
-    maths: 'out = a + b  if a > 0 and b > 0, else 0',
-  },
-  capacitor: {
-    rule: 'Stores a bolt; releases it with the next.',
-    maths: 'bolt n: out = 0 · bolt n+1: out = stored + in',
-  },
-};
 
 export interface CodexPage {
   readonly gem: GemKind;
@@ -39,7 +24,7 @@ export interface CodexPage {
 }
 
 export function gemName(g: GemKind): string {
-  return g[0]!.toUpperCase() + g.slice(1);
+  return CODEX[g].name;
 }
 
 export function codexPages(state: ProgressState, seen: readonly GemKind[]): CodexPage[] {
@@ -56,8 +41,8 @@ export function codexPages(state: ProgressState, seen: readonly GemKind[]): Code
       colour,
       unlocked,
       fresh: unlocked && gem !== 'channel' && !seen.includes(gem),
-      rule: RULES[gem].rule,
-      maths: RULES[gem].maths,
+      rule: CODEX[gem].rule,
+      maths: CODEX[gem].maths,
       taughtBy: teacher ? { id: teacher.id, name: teacher.name } : null,
       note: codexNote(gem)?.text ?? null,
     };

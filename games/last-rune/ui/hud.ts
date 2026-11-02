@@ -1,5 +1,5 @@
 /**
- * Always-there corner buttons (Codex, Settings) plus the hall's name plate.
+ * Always-there corner buttons (Codex, Settings; Journal in the hall) plus the hall's name plate.
  * Buttons drop focus after a click so the game's keyboard shortcuts keep
  * working (engine/input ignores keys while a button is focused).
  */
@@ -8,6 +8,8 @@ import { h } from '@engine/ui';
 export interface HudActions {
   codex(): void;
   settings(): void;
+  /** The journal desk (story-scenes). Shown only while `journalShown` is true. */
+  journal?(): void;
 }
 
 export class Hud {
@@ -15,6 +17,7 @@ export class Hud {
   readonly nameplate: HTMLElement;
   private readonly plateName: HTMLElement;
   private readonly plateNote: HTMLElement;
+  private readonly journalBtn: HTMLElement | null;
 
   constructor(layer: HTMLElement, actions: HudActions) {
     const btn = (label: string, key: string, fn: () => void) =>
@@ -34,9 +37,15 @@ export class Hud {
         label,
         h('kbd', { 'aria-hidden': 'true' }, key),
       );
+    this.journalBtn = actions.journal ? btn('Journal', 'J', actions.journal) : null;
+    if (this.journalBtn) {
+      this.journalBtn.dataset.action = 'journal';
+      this.journalBtn.hidden = true;
+    }
     this.root = h(
       'div',
       { class: 'lr-hud', hidden: true },
+      this.journalBtn,
       btn('Codex', 'C', actions.codex),
       btn('Settings', 'O', actions.settings),
     );
@@ -53,6 +62,15 @@ export class Hud {
 
   set visible(v: boolean) {
     this.root.hidden = !v;
+  }
+
+  /** Show or hide the Journal button; `unread` > 0 marks it (new pages on the desk). */
+  journalShown(shown: boolean, unread = 0): void {
+    const b = this.journalBtn;
+    if (!b) return;
+    b.hidden = !shown;
+    b.toggleAttribute('data-unread', unread > 0);
+    b.setAttribute('aria-label', unread > 0 ? `Journal, ${unread} new` : 'Journal');
   }
 
   /** Show the plate centred above (x, y) in design px; null hides it. */
