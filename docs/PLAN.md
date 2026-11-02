@@ -16,7 +16,7 @@
 | # | Milestone | State | Exit criteria |
 |---|---|---|---|
 | 2026-11-02 | "Browser double tap zoom should be disabled, it messes with gameplay" | PM: viewport no-scale, touch-action, block dblclick/gesture/ctrl-wheel zoom (keyboard zoom kept) | ✅ merged; awaiting user check |
-| 2026-11-02 | Ending: "don't give details about the discord, just note that he found friends there… he isn't a bot on the server. Just a game character." Author is ThunderSoap, owner of ThunderClap Gaming | ending-2 (D-032) | 🟡 |
+| 2026-11-02 | Ending: "don't give details about the discord, just note that he found friends there… he isn't a bot on the server. Just a game character." Author is ThunderSoap, owner of ThunderClap Gaming | ending-2 (D-032); new copy approved by user ("I love it") | 🟡 |
 | 2026-11-02 | "Codex should use proper images"; "unlock the entry when you see it, not after you unlock it" (showing locked/unlocked is fine) | codex-2 | 🟡 |
 | 2026-11-02 | "Smooth gameplay up to unlocking capacitor. How it works is not super clear with the double striking thing" | capacitor-clarity | 🟡 |
 | 2026-11-02 | "Is storm cell 2 even winnable without being able to rotate splitters?" (it is: 1 solution, Splits take any side and fork perpendicular, so the player read Split as directional) | split-rotate: user chose "one input and rotate like everything else" (D-031) | ✅ merged; awaiting user check |
