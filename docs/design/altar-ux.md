@@ -25,7 +25,8 @@ sides. It fits every puzzle from 4×4 up to the 10×8 finale.
 | | Pointer | Keyboard | Pad |
 |---|---|---|---|
 | Take a gem | click it in the tray | `1`–`6`, `T` cycles | LB cycles |
-| Place | click a socket, or drag and drop | arrows/WASD move the gold cursor, `Enter` | d-pad/stick, A |
+| Place | click a socket, or drag and drop | arrows/WASD move the gold cursor (skipping carved stone), `Enter` | d-pad/stick, A |
+| Go to the wire's end | (the amber socket is in view) | `G`: the wire's open end; again for the next end | R3 |
 | Turn (Bend, Gate) | click the placed gem, or scroll | `R` / `Q` (also turns the gem in hand) | RB |
 | Pick up / move | drag a placed gem; drop it off the altar to return it | `Enter` on any placed gem picks it up, keeping its turn | A |
 | Remove | right-click | `X` | X |
@@ -41,6 +42,16 @@ turns a placed Bend or Gate, since the mouse has no `R` to hand.
 After `Enter` fills a socket, taking the next gem by key (`1`–`6`, `T`) moves the cursor on to
 the nearest open end of the route, so a long route costs a gem key and `Enter` per socket. The
 cursor is exposed as `data-cursor="x,y"` on `.lr-altar` for tests and tools.
+
+Moving the cursor (polish-1): arrows never stop on carved stone, they slide to the next socket
+that can take a gem (or stay put at the edge), and `G` jumps to the wire's open end, cycling
+through the ends in the order the bolt reaches them. Both are pure functions in
+`scenes/altar/cursor.ts`; `planCursor` gives the fewest presses for the e2e builders.
+
+The key-hint line under the tray shows one short line for the current input: the mouse line
+until the player uses a key, then the keyboard line, and the fast-forward line during a strike.
+It sits between FUSE (x ≤ 410) and his caption card; the altar passes its measured box to
+`fuse.avoid()` with the tray band, and at 125/150% text the caption lifts above it.
 
 ## Board as a circuit (altar-clarity)
 

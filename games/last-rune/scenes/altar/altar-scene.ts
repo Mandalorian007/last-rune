@@ -16,7 +16,7 @@
  * `completePuzzle` on exact (swaps to the solve moment), `closePuzzle` on back.
  */
 import type { Frame, RGBA } from '@engine/render';
-import { button, h } from '@engine/ui';
+import { button, h, type Rect } from '@engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
@@ -36,10 +36,12 @@ import {
 import { getMachine } from '../../rules/progression';
 import type { Cell, GemKind, MachineId } from '../../rules/types';
 import { codexPages } from '../../ui/codex-data';
+import { scalePxCss } from '../../ui/text-scale';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, DANGER, GOLD } from './altar-view';
 import { BoardState } from './board';
 import { type ChargeChip, chargeChips, liveSockets, previewPath } from './circuit-model';
+import { jumpCursor, stepCursor } from './cursor';
 import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
 import { setHintTarget } from './hints';
 import { anchorOf, cellAt, cellCenter, traySlotAt, trayTipX } from './layout';
@@ -210,6 +212,11 @@ export class AltarScene implements GameScene {
   private undoBtn!: HTMLButtonElement;
   private clearBtn!: HTMLButtonElement;
   private counts: HTMLElement[] = [];
+  /** The key-hint line under the tray, and which version of it is showing. */
+  private hint!: HTMLElement;
+  private titleEl!: HTMLElement;
+  private actionsEl!: HTMLElement;
+  private hintMode: HintMode | '' = '';
   private needs: HTMLElement[] = [];
   private tags: HTMLElement[] = [];
 
@@ -273,7 +280,7 @@ export class AltarScene implements GameScene {
     this.refreshHud();
     this.announce(this.briefing());
 
-    this.avoidTray();
+    this.updateHint(); // also keeps the caption off the tray and the hint
     const saved = ctx.save.get().puzzles[this.machine];
     if (!saved || saved.attempts === 0) {
       const arrive = machineLine(this.machine, 'arrive');
@@ -331,22 +338,72 @@ export class AltarScene implements GameScene {
 
   resume(): void {
     this.setMood();
+    this.fitTop(); // the text size may have changed in Settings
     this.avoidTray();
   }
 
-  /** Keep FUSE's caption card off the tray band (slots, counts, tooltips). */
+  /**
+   * Keep FUSE's caption card off the tray band (slots, counts, tooltips) and the key-hint line.
+   * The hint is measured, so a longer line or a bigger text size moves the card as needed.
+   */
   private avoidTray(): void {
     const L = this.view.layout;
+    const regions: Rect[] = [];
     const xs = L.tray.map((s) => s.x);
-    if (!xs.length) return;
-    const left = Math.min(...xs) - 80;
-    const right = Math.max(...xs) + 80;
-    this.ctx.fuse.avoid({
-      x: left,
-      y: L.trayY - 90,
-      width: right - left,
-      height: 1080 - (L.trayY - 90),
-    });
+    if (xs.length) {
+      const left = Math.min(...xs) - 80;
+      const right = Math.max(...xs) + 80;
+      regions.push({
+        x: left,
+        y: L.trayY - 90,
+        width: right - left,
+        height: 1080 - (L.trayY - 90),
+      });
+    }
+    const hint = this.hint;
+    if (hint?.isConnected && hint.offsetWidth > 0) {
+      regions.push({
+        x: hint.offsetLeft,
+        y: hint.offsetTop,
+        width: hint.offsetWidth,
+        height: hint.offsetHeight,
+      });
+    }
+    // Machine need labels, and the button rows, so the card never moves over them either
+    // (bigger text makes the card taller, and it can reach a label beside an east machine).
+    if (this.dom.isConnected) {
+      const ui = this.ctx.ui;
+      const o = ui.root.getBoundingClientRect();
+      const els = [
+        ...this.needs,
+        this.actionsEl,
+        ...ui.root.querySelectorAll<HTMLElement>('.lr-hud'),
+      ];
+      for (const el of els) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0) continue;
+        regions.push({
+          x: (r.left - o.left) / ui.scale,
+          y: (r.top - o.top) / ui.scale,
+          width: r.width / ui.scale,
+          height: r.height / ui.scale,
+        });
+      }
+    }
+    this.ctx.fuse.avoid(regions);
+  }
+
+  /**
+   * The key-hint line says only what applies now: the mouse controls, the keyboard controls
+   * once the player uses keys, or fast-forward while the bolt runs.
+   */
+  private updateHint(): void {
+    const mode: HintMode = this.mode === 'strike' ? 'strike' : this.keyboard ? 'keys' : 'mouse';
+    if (mode === this.hintMode) return;
+    this.hintMode = mode;
+    this.hint.replaceChildren(...hintLine(mode));
+    this.hint.dataset.mode = mode;
+    this.avoidTray();
   }
 
   private setMood(): void {
@@ -392,7 +449,14 @@ export class AltarScene implements GameScene {
     });
     this.tip = h('div', { class: 'lr-altar-tip', role: 'tooltip', hidden: true });
     this.counts = L.tray.map((s) =>
-      h('div', { class: 'lr-altar-count', style: { left: `${s.x}px`, top: `${s.y + 40}px` } }),
+      h('div', {
+        class: 'lr-altar-count',
+        // Bigger text lifts the count up the gem so the hint line below stays clear.
+        style: {
+          left: `${s.x}px`,
+          top: `calc(${s.y + 40}px - (var(--lr-text-scale, 1) - 1) * 50px)`,
+        },
+      }),
     );
     // Need labels sit against their machine: beside it for N/S machines (below would hit the
     // board or the tray), under the cabinet for E/W.
@@ -403,38 +467,33 @@ export class AltarScene implements GameScene {
         style: { left: `${m.label.x}px`, top: `${m.label.y}px` },
       }),
     );
-    const hint = h(
+    this.titleEl = h(
       'div',
-      { class: 'lr-altar-hint' },
-      h('b', null, 'Click'),
-      ' a gem, then a socket · ',
-      h('b', null, 'R'),
-      '/scroll turns · ',
-      h('b', null, 'Right-click'),
-      ' removes · keys: ',
-      h('b', null, '1–6'),
-      ' take, arrows move, ',
-      h('b', null, 'Enter'),
-      ' picks up or places · hold ',
-      h('b', null, 'F'),
-      ' to fast-forward',
+      { class: 'lr-altar-title', style: { left: `${L.titleX}px` } },
+      h('h2', null, getMachine(this.machine).name),
+      this.subtitle,
     );
+    this.actionsEl = h(
+      'div',
+      { class: 'lr-altar-actions' },
+      this.undoBtn,
+      this.clearBtn,
+      back,
+      this.strikeBtn,
+    );
+    this.hint = h('div', { class: 'lr-altar-hint' });
+    this.hintMode = '';
     this.dom = h(
       'div',
       { class: 'lr-altar', role: 'region', 'aria-label': `${getMachine(this.machine).name} altar` },
-      h(
-        'div',
-        { class: 'lr-altar-title', style: { left: `${L.titleX}px` } },
-        h('h2', null, getMachine(this.machine).name),
-        this.subtitle,
-      ),
-      h('div', { class: 'lr-altar-actions' }, this.undoBtn, this.clearBtn, back, this.strikeBtn),
+      this.titleEl,
+      this.actionsEl,
       this.verdict,
       this.announcer,
       ...this.counts,
       ...this.needs,
       this.tip,
-      hint,
+      this.hint,
     );
     this.ctx.ui.layers.hud.append(this.dom);
   }
@@ -467,14 +526,57 @@ export class AltarScene implements GameScene {
         (p > 1 ? ` · ${p} strikes` : '') +
         (this.attempts > 0 ? ` · try ${this.attempts + 1}` : '');
     }
+    this.fitTop();
+  }
+
+  /**
+   * Keep the title and the verdict under it clear of the HUD buttons (left) and the action
+   * row (right). They stay where the layout put them (clear of north gauges) unless bigger
+   * text would push them into a button; then they narrow and slide just far enough.
+   */
+  private fitTop(): void {
+    const L = this.view.layout;
+    const ui = this.ctx.ui;
+    if (!this.dom.isConnected) return;
+    const origin = ui.root.getBoundingClientRect().left;
+    const toDesign = (px: number) => (px - origin) / ui.scale;
+    let hudRight = 0;
+    for (const b of ui.root.querySelectorAll<HTMLElement>('.lr-hud:not([hidden]) button')) {
+      const r = b.getBoundingClientRect();
+      if (r.width > 0) hudRight = Math.max(hudRight, toDesign(r.right));
+    }
+    const actionsLeft = toDesign(this.actionsEl.getBoundingClientRect().left);
+    const half = (L.titleMax + 20) / 2;
+    const lo = Math.max(hudRight + 16, L.titleX - half);
+    const hi = Math.min(actionsLeft - 16, L.titleX + half);
+    const room = Math.max(200, hi - lo);
+    const place = (el: HTMLElement, maxW: number) => {
+      el.style.maxWidth = `${Math.round(maxW)}px`;
+      const w = el.offsetWidth;
+      const x =
+        lo + w / 2 > hi - w / 2
+          ? (lo + hi) / 2
+          : Math.min(Math.max(L.titleX, lo + w / 2), hi - w / 2);
+      el.style.left = `${Math.round(x)}px`;
+    };
+    place(this.titleEl, room);
+    const verdictW = Math.min(L.titleMax, room);
+    this.verdict.toggleAttribute('data-narrow', verdictW < 600);
+    if (!this.verdict.hidden) place(this.verdict, verdictW);
+    for (const el of this.needs) this.clearOfActions(el);
+    // The verdict sits under the title, however many lines the title took.
+    const titleBottom = this.titleEl.offsetTop + this.titleEl.offsetHeight;
+    this.verdict.style.top = `${Math.max(96, titleBottom + 6)}px`;
+    this.avoidTray();
   }
 
   private showVerdict(text: string, outcome: BoltOutcome): void {
     // The verdict sits where the subtitle is; the subtitle steps aside until the next edit.
-    this.subtitle.style.visibility = 'hidden';
+    this.subtitle.style.display = 'none';
     this.verdict.textContent = text;
     this.verdict.dataset.outcome = outcome;
     this.verdict.hidden = false;
+    this.fitTop();
   }
 
   /**
@@ -562,6 +664,21 @@ export class AltarScene implements GameScene {
       }
     }
     el.replaceChildren(...kids);
+    this.clearOfActions(el);
+  }
+
+  /**
+   * A need label beside a machine near the top edge can grow (bigger text, per-strike
+   * readings) into the action row; drop it just below the row when it would touch.
+   */
+  private clearOfActions(el: HTMLElement): void {
+    if (!this.dom.isConnected || !this.actionsEl) return;
+    el.style.marginTop = '';
+    const a = this.actionsEl.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const gap = 8 * this.ctx.ui.scale;
+    if (r.right <= a.left || r.left >= a.right || r.top >= a.bottom + gap) return;
+    el.style.marginTop = `${Math.ceil((a.bottom + gap - r.top) / this.ctx.ui.scale)}px`;
   }
 
   // ── Circuit read-out ────────────────────────────────────────────────────
@@ -629,8 +746,9 @@ export class AltarScene implements GameScene {
             left: `${a.x + (b.x - a.x) * t}px`,
             top: `${a.y + (b.y - a.y) * t}px`,
             // Chips scale with the board so a 10-wide altar's run of changes stays legible.
-            fontSize: `${chipPx}px`,
-            lineHeight: `${chipPx + 6}px`,
+            // and follow the text size setting.
+            fontSize: scalePxCss(chipPx),
+            lineHeight: `calc(${scalePxCss(chipPx)} + 6px)`,
           },
         },
         String(c.charge),
@@ -1339,7 +1457,7 @@ export class AltarScene implements GameScene {
   private backToEdit(): void {
     this.mode = 'edit';
     this.verdict.hidden = true;
-    this.subtitle.style.visibility = '';
+    this.subtitle.style.display = '';
     this.clearTags();
     this.clearChips();
     for (let m = 0; m < this.view.machineGlow.length; m++) this.view.machineGlow[m] = 0;
@@ -1432,6 +1550,7 @@ export class AltarScene implements GameScene {
     this.updateCircuit();
     this.updateTeach(dt);
     this.updateFuse();
+    this.updateHint();
     this.updateTray();
     this.updateTip();
     // The keyboard cursor, for tests and tools (the gold ring is drawn on the GPU).
@@ -1524,8 +1643,13 @@ export class AltarScene implements GameScene {
     if (dx !== 0 || dy !== 0) {
       this.keyPlaced = null;
       if (this.keyboard) {
-        this.cursor.x = Math.max(0, Math.min(L.cols - 1, this.cursor.x + dx));
-        this.cursor.y = Math.max(0, Math.min(L.rows - 1, this.cursor.y + dy));
+        // Arrows never stop on carved stone: nothing can go there.
+        this.cursor = stepCursor(
+          { cols: L.cols, rows: L.rows, isBlocked: (c) => this.board.isBlocked(c) },
+          this.cursor,
+          dx,
+          dy,
+        );
       } else if (this.hoverCell) {
         this.cursor = { x: this.hoverCell.x, y: this.hoverCell.y };
       }
@@ -1540,6 +1664,7 @@ export class AltarScene implements GameScene {
         this.cursorOn();
       }
     }
+    if (input.pressed('jump')) this.jumpToOpenEnd();
     if (input.pressed('trayNext')) {
       this.cycleTray();
       if (!this.hoverCell) this.keyboard = true;
@@ -1575,6 +1700,28 @@ export class AltarScene implements GameScene {
       if (this.hand) this.dropHand();
       else this.back();
     }
+  }
+
+  /**
+   * G: the cursor goes to the wire's open end (the empty socket the bolt would reach next),
+   * then on to the next open end with each press. Nothing open: a soft deny.
+   */
+  private jumpToOpenEnd(): void {
+    this.keyPlaced = null;
+    this.updateCircuit();
+    const ends = this.openEnds.filter(
+      (c) =>
+        this.inBounds(c) && !this.board.at(c) && !this.board.fixedAt(c) && !this.board.isBlocked(c),
+    );
+    const from = this.keyboard ? this.cursor : (this.hoverCell ?? this.cursor);
+    const to = jumpCursor(from, ends);
+    if (!to) {
+      this.ctx.sound.sfx.play('socketBlocked', { gain: 0.6 });
+      return;
+    }
+    this.cursor = to;
+    this.keyboard = true;
+    this.ctx.sound.sfx.play('uiHover', { gain: 0.5 });
   }
 
   /**
@@ -1837,5 +1984,40 @@ export class AltarScene implements GameScene {
 
   render(frame: Frame): void {
     this.view.render(frame);
+  }
+}
+
+type HintMode = 'mouse' | 'keys' | 'strike';
+
+/** The key-hint line for each mode. Short enough to sit under the tray at 150% text. */
+function hintLine(mode: HintMode): (Node | string)[] {
+  const b = (t: string) => h('b', null, t);
+  switch (mode) {
+    case 'mouse':
+      return [
+        b('Click'),
+        ' a gem, then a socket · ',
+        b('Scroll'),
+        ' or ',
+        b('R'),
+        ' turns · ',
+        b('Right-click'),
+        ' removes',
+      ];
+    case 'keys':
+      return [
+        b('1–6'),
+        ' take · ',
+        b('Arrows'),
+        ' move · ',
+        b('G'),
+        " wire's end · ",
+        b('Enter'),
+        ' place / pick up · ',
+        b('R'),
+        ' turn',
+      ];
+    case 'strike':
+      return ['Hold ', b('F'), ' to fast-forward · ', b('Click'), ' or ', b('Enter'), ' skips'];
   }
 }

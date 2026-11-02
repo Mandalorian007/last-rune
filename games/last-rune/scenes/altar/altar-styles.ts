@@ -2,6 +2,8 @@
  * Altar + solve-moment overlay styles (design px, 1920×1080). Kept with the scene so the
  * shared `ui/styles.ts` stays untouched; injected once per document.
  */
+import { scaleFontSizes } from '../../ui/text-scale';
+
 const CSS = /* css */ `
 .tc-overlay .lr-altar { position: absolute; inset: 0; pointer-events: none; }
 .tc-overlay .lr-altar button { pointer-events: auto; }
@@ -19,6 +21,14 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-altar-actions .lr-stone-button { min-width: 0; min-height: 56px; font-size: 24px; padding: 0 20px; }
 .tc-overlay .lr-altar-actions .lr-gold-button { min-width: 0; min-height: 70px; font-size: 34px; padding: 0 34px; }
+/* Bigger text makes the key-hint line taller and wider: FUSE's caption card sits just above
+   it rather than squeezing beside it. */
+.tc-overlay[data-text-scale]:has(.lr-altar) .tc-caption[data-corner^="bottom"] { bottom: 50px; }
+/* Bigger text: the action row tightens so the title keeps its room. */
+.tc-overlay[data-text-scale] .lr-altar-actions { right: 20px; gap: 8px; }
+.tc-overlay[data-text-scale] .lr-altar-actions .lr-stone-button { padding: 0 12px; }
+.tc-overlay[data-text-scale] .lr-altar-actions .lr-gold-button { padding: 0 20px; }
+.tc-overlay[data-text-scale] .lr-altar kbd { margin-left: 6px; }
 .tc-overlay .lr-altar-actions button:disabled { opacity: 0.45; cursor: default; filter: saturate(0.4); }
 
 .tc-overlay .lr-altar-count {
@@ -135,10 +145,14 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-tag[data-tone="info"] { color: #f4e6c4; background: rgba(20,16,12,0.9); border-color: rgba(232,192,106,0.6); }
 .tc-overlay .lr-altar-tag[data-tone="info"]::after { border-top-color: rgba(232,192,106,0.6); }
 
+/* The key-hint line sits under the tray, between FUSE (x ≤ 410) and his caption card: centred
+   on the tray (430–1090), growing to the right if bigger text needs more room. The caption
+   card measures it and keeps clear (altar-scene avoidTray). */
 .tc-overlay .lr-altar-hint {
-  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); white-space: nowrap;
-  font-size: 19px; color: rgba(232,220,192,0.9); text-shadow: 0 1px 4px #000;
-  padding: 6px 80px; background: radial-gradient(closest-side, #05060ab0, #05060a70 60%, #05060a00);
+  position: absolute; left: 430px; bottom: 4px; width: max-content; min-width: 660px; box-sizing: border-box;
+  text-align: center; white-space: nowrap; font-size: 19px; line-height: 1.25; color: rgba(232,220,192,0.92);
+  text-shadow: 0 1px 4px #000, 0 0 2px #000; padding: 2px 20px; pointer-events: none;
+  background: radial-gradient(closest-side, #05060ab0, #05060a70 70%, #05060a00);
 }
 .tc-overlay .lr-altar-hint b { color: #e8c06a; font-weight: 600; }
 [data-reduced-motion] .tc-overlay .lr-altar-verdict,
@@ -158,6 +172,9 @@ const CSS = /* css */ `
   position: absolute; left: 40px; top: 170px; width: 500px; display: flex; flex-direction: column;
   align-items: stretch; gap: 26px; pointer-events: none;
 }
+/* Bigger text: a wider, tighter column so card, page and Continue still fit above the floor. */
+.tc-overlay[data-text-scale] .lr-solve { width: 580px; gap: 14px; }
+.tc-overlay[data-text-scale] .lr-solve-card { padding: 18px 28px 22px; }
 .tc-overlay .lr-solve-card {
   padding: 24px 34px 28px; border-radius: 18px; text-align: left;
   background: linear-gradient(180deg, rgba(255,241,181,0.97) 0%, rgba(232,192,106,0.97) 40%, rgba(168,122,44,0.97) 100%);
@@ -187,6 +204,6 @@ export function ensureAltarStyles(doc: Document = document): void {
   injected.add(doc);
   const el = doc.createElement('style');
   el.dataset.lr = 'altar';
-  el.textContent = CSS;
+  el.textContent = scaleFontSizes(CSS);
   doc.head.append(el);
 }

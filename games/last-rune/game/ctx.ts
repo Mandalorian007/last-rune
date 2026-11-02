@@ -40,6 +40,7 @@ import { Fuse } from '../ui/fuse';
 import { Hud } from '../ui/hud';
 import { openSettings } from '../ui/settings-panel';
 import { ensureGameStyles } from '../ui/styles';
+import { applyTextScale } from '../ui/text-scale';
 import { type Action, BINDINGS } from './actions';
 import { GameFlow, type SolveMoment } from './flow';
 import { GraphicsController } from './graphics';
@@ -230,6 +231,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
         graphics.setPreference(e.graphics);
         applyParticles();
         surface.root.toggleAttribute('data-reduced-motion', e.reducedMotion);
+        applyTextScale(ui.root, e.textScale, (t) => ui.setTheme(t));
       },
     },
     prefersReducedMotion(),

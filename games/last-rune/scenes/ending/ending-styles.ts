@@ -3,6 +3,7 @@
  * The chat mock is deliberately "a very different kind of screen": flat, dark,
  * system UI type. Everything after it returns to the game's gold.
  */
+import { scaleFontSizes } from '../../ui/text-scale';
 import { HAND_FONT } from '../journal/journal-styles';
 
 const CSS = /* css */ `
@@ -97,6 +98,9 @@ const CSS = /* css */ `
 .tc-overlay .lr-end-credits span { font-family: var(--tc-font-display); font-size: 40px; }
 
 /* ── End card ──────────────────────────────────────────────────────────── */
+/* Bigger text: a wider safety record (fewer lines) and the card a little lower, so they never meet. */
+.tc-overlay[data-text-scale] .lr-end-safety { width: 1240px; margin-left: -620px; padding: 20px 40px; }
+.tc-overlay[data-text-scale] .lr-end-card { top: 660px; gap: 16px; }
 .tc-overlay .lr-end-card { position: absolute; left: 0; right: 0; top: 610px; display: flex; flex-direction: column; align-items: center; gap: 22px; opacity: 0; transition: opacity 1200ms ease; }
 .tc-overlay .lr-end-card[data-in] { opacity: 1; }
 .tc-overlay .lr-end-row { display: flex; gap: 28px; }
@@ -151,6 +155,6 @@ export function ensureEndingStyles(doc: Document): void {
   if (doc.getElementById('lr-ending-styles')) return;
   const el = doc.createElement('style');
   el.id = 'lr-ending-styles';
-  el.textContent = CSS;
+  el.textContent = scaleFontSizes(CSS);
   doc.head.append(el);
 }
