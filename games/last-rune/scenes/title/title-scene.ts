@@ -140,6 +140,7 @@ export class TitleScene implements GameScene {
         h('p', null, 'A gem-circuit puzzle'),
       ),
       menu,
+      ...(releaseLabel() ? [h('p', { class: 'lr-release' }, releaseLabel())] : []),
     );
   }
 
@@ -168,4 +169,11 @@ export class TitleScene implements GameScene {
       this.ctx.flow.newGame();
     });
   }
+}
+
+/** Build label stamped by the Pages workflow (`alpha-1`, `v1.0.0`, or `main-<sha>`), shortened. */
+function releaseLabel(): string {
+  const raw = (import.meta.env.VITE_RELEASE_LABEL as string | undefined) ?? '';
+  const m = /^main-([0-9a-f]{7})[0-9a-f]*$/.exec(raw);
+  return m ? `build ${m[1]}` : raw;
 }

@@ -50,6 +50,11 @@ const CSS = /* css */ `
   margin: 18px 0 0; font-size: 30px; color: #c9b9e6; letter-spacing: 8px; text-transform: uppercase;
   text-shadow: 0 2px 8px #000;
 }
+.tc-overlay .lr-release {
+  position: absolute; right: 24px; top: 20px; margin: 0;
+  font: 500 14px/1 var(--tc-font-ui, system-ui, sans-serif); letter-spacing: 0.08em;
+  color: rgb(255 255 255 / 0.45); text-transform: uppercase; pointer-events: none;
+}
 .tc-overlay .lr-title-menu {
   position: absolute; left: 50%; top: 610px; transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 22px; pointer-events: auto;

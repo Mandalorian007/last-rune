@@ -33,7 +33,7 @@ A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 t
 | 1 Foundations | engine-render, engine-systems, rules-puzzles, progression-content, ship-ops | ✅ merged |
 | 2 Playable vertical | game-shell, art-materials, audio-design, difficulty-fun (phase 1), art-props | ✅ merged |
 | 3 Content complete | altar-scene, hall-art, story-scenes | ✅ merged |
-| 4 Alpha + verify | hall-floor ✅, altar-clarity ✅, full-run ✅ (keyboard e2e through all 16 + playtest report), engine-cleanup ✅, engine-adoption ✅, then the playtest fixes before alpha: caption-layout 🟡, altar-polish 🟡; then release label and M3α pre-release | 🟡 running |
+| 4 Alpha + verify | hall-floor ✅, altar-clarity ✅, full-run ✅ (keyboard e2e through all 16 + playtest report), engine-cleanup ✅, engine-adoption ✅, then the playtest fixes before alpha: caption-layout ✅, altar-polish ✅; release label on title ✅; then the M3α pre-release | ✅ merged |
 | 5 Polish | fixes from the playtest report, perf on integrated GPU, a11y, difficulty-fun phase 2 from alpha feedback, bug bash | ⏳ |
 | 6 Ship | v1.0.0 release, tags, itch kit | ⏳ |
 
@@ -44,27 +44,29 @@ Each item stays here until it is verified in a merged build. The owning workstre
 |---|---|---|---|
 | 2026-11-02 | Get the real puzzles in (the live build still has stubs) | altar-scene | ✅ all 16 playable (cebe8a7) |
 | 2026-11-02 | Machines are plain boxes; make them machines/buildings with more flavour on the factory floor | hall-art ✅ silhouettes; hall-floor ✅ pipes, cables, lamps, crates, puddles; readable alcove states | ✅ (4a0b76b) |
-| 2026-11-02 | UI/UX must be clear, clean and intuitive (hall and altar) | ✅ altar-clarity (board reads as a circuit, machines at the exits, charge badges, first-time teaching); ✅ hall-floor; playtest findings → caption-layout, altar-polish | 🟡 |
+| 2026-11-02 | UI/UX must be clear, clean and intuitive (hall and altar) | ✅ altar-clarity, hall-floor, caption-layout, altar-polish; confirm with the user on alpha-1 | ✅ pending user check |
 | 2026-11-02 | "Touch only that" leaves players unsure what to touch, and "touch nothing but that" makes them afraid of mistakes, now that many things glow | PM: hall first-entry, intake-desk arrive and teach nudge rewritten to name the gold doorway / tray / bright socket and say mistakes are free (77f61c5); pitch and script updated | ✅ |
 | 2026-11-02 | Auto-formatting on | PM | ✅ D-024 |
 
 ## Playtest findings (full-run report, docs/design/playtest-report.md)
 | Sev | Finding | Owner |
 |---|---|---|
-| S1 | FUSE's caption covers tray slot 6 (control-booth) and the machine label (intake-desk) | caption-layout |
-| S2 | Caption cuts text mid-word at 960×540; covers right-hand hall alcoves; sits over the settings dialog | caption-layout |
-| S2 | Big boards: blocked vs open sockets hard to tell; board very dark before first strike | altar-polish |
-| S2 | Last rune: "Needs N" labels float far from the board | altar-polish |
+| S1 | FUSE's caption covers tray slot 6 (control-booth) and the machine label (intake-desk) | ✅ altar-polish lanes + altar `fuse.avoid(tray)` |
+| S2 | Caption cuts text mid-word at 960×540 (was mid-typing, not clipped); covers right-hand hall alcoves; sits over the settings dialog | ✅ caption-layout |
+| S2 | Big boards: blocked vs open sockets hard to tell; board very dark before first strike | ✅ altar-polish (X caps may be too loud on dense boards: alpha feedback) |
+| S2 | Last rune: "Needs N" labels float far from the board | ✅ altar-polish |
 | S2 | Hall first entry: nothing marked the intake desk; locked alcoves near black | ✅ hall-floor (gold doorway, backlit locked alcoves); recheck in alpha |
-| S3 | Settings key hint "O" reads as "0" | caption-layout |
-| S3 | Enter on a placed gem rotates some gems, picks up others | altar-polish |
-| S3 | Fizzle tag over the board; gem tooltip over FUSE; 114 key presses for 20 gems on archive | altar-polish |
-| — | Splitter-mill: storm stand overlaps the west machine's roof | altar-polish |
-| — | No first-appearance FUSE line for Channel | altar-polish |
+| S3 | Settings key hint "O" reads as "0" | ✅ caption-layout |
+| S3 | Enter on a placed gem rotates some gems, picks up others | ✅ altar-polish |
+| S3 | Fizzle tag over the board; gem tooltip over FUSE; 114 key presses for 20 gems on archive | ✅ tags, tooltip; 🟡 presses 861→808 overall, archive still ~109 (wave 5: 2-step move modifier or route-ordered solutions) |
+| — | Splitter-mill: storm stand overlaps the west machine's roof | ✅ altar-polish |
+| — | No first-appearance FUSE line for Channel | ✅ altar-polish |
 
 **Decisions (PM):** altar route preview stays on (direction only, never charge), revisited in difficulty-fun phase 2 with alpha data. The exact line goes in the verdict banner, not FUSE's caption, so the solve moment doesn't cut him off.
 
 ## Polish backlog (wave 5 unless picked up earlier)
+- Altar: FUSE's caption still covers the tail of the bottom key-hint line; move or shorten the hints.
+- Intake-desk now has four FUSE lines on first visit (arrive, Bend, Channel, idle teach); check it doesn't feel chatty.
 - Hall: capacitor-bay washes out under its own glow when available; puddles subtle; optional vignette lift. 16 light slots: two are used by the wing lamps.
 - ✅ Ending credits backing, door bloom, eased post (engine-adoption).
 - HUD buttons still blur after panels close: the panel stack returns focus to the opener, which would swallow arrows/Enter. Fix needs an engine option (no focus restore for HUD openers) or Input treating arrows/Enter/Space as global on non-text buttons. Low priority; the workaround is documented in `ui/hud.ts`.

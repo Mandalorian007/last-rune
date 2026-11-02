@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M3 ✅ content complete. Wave 4: hall-floor, altar-clarity, full-run and engine-cleanup merged; engine-adoption merged; caption-layout and altar-polish running; then M3α alpha. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
+**Current milestone:** M3 ✅ content complete. Wave 4 ✅ all merged (hall-floor, altar-clarity, full-run, engine-cleanup, engine-adoption, caption-layout, altar-polish). Release label on the title. Next: M3α labelled Pages run `alpha-1` + GitHub pre-release. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
@@ -23,8 +23,8 @@ _Last updated: 2026-11-02 by PM_
 | hall-floor | ws/hall-floor | ✅ merged | pipes, risers, cables, lamps, ore cart, crates, steam, puddles; locked alcoves backlit, available most inviting (gold doorway), restored pilot lamp. 60fps, 13–14 draws |
 | altar-clarity | ws/altar-clarity | ✅ merged | board reads as a circuit (live sockets bright, rest covered), bigger machines at the exits with Needs/got labels, charge badges on the bolt, shorter verdicts, first-appearance teaching, FUSE nudges + exact lines |
 | full-run | ws/full-run | ✅ merged | keyboard-only e2e title → all 16 machines → ending (16/16 e2e, 3 runs no flakes); playtest report docs/design/playtest-report.md; `scripts/playtest/` |
-| caption-layout | ws/caption-layout | 🟡 in progress | playtest S1/S2: FUSE caption never covers puzzle info, dialogs or alcoves; no mid-word cut; O/0 hint |
-| altar-polish | ws/altar-polish | 🟡 in progress | playtest: blocked vs open sockets, dark board, last-rune labels, Enter consistency, splitter overlap, Channel nudge, particles.clear |
+| caption-layout | ws/caption-layout | ✅ merged | caption compact bottom-right, never clips, hides under modals and resumes; `fuse.avoid(rects)` API (altar uses it for the tray); keycap HUD hints (O ≠ 0) |
+| altar-polish | ws/altar-polish | ✅ merged | caption lane; blocked sockets sealed with an X cap; lit boards before the first strike; labels notched to machines; Enter always picks up; fizzle tags fade; splitter-mill overlap fixed; Channel line; cursor jumps to the route's open end |
 | engine-adoption | ws/engine-adoption | ✅ merged | ending eases with post.blendTo; Builder's mark readable through the door; credits backed over the gold; storm on PingPong; linear emboss mask; global C/O/J; ending Fuse leak fixed. 60fps, draws unchanged |
 | engine-cleanup | ws/engine-cleanup | ✅ merged | particles clear, bolt timing from trace, Fuse.destroy, per-draw uniforms, texture uploads, PingPong, global keys, queued taps, master limiter + reverb, post.blendTo. 60fps, no new churn |
 
