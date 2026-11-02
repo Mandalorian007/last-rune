@@ -95,13 +95,17 @@ anything, else `under`.
 
 - **One bolt per gem per strike.** Every gem except the Gate handles at most one bolt per
   strike. A second bolt that reaches an already-used gem fizzles there (the first bolt's work
-  stands). If two bolts reach the same unused gem on the same tick, both fizzle (short).
+  stands). If two bolts reach the same unused gem on the same tick, both fizzle (short), and
+  the gem is used.
+- A bolt that hits a side a gem does not accept (the back of a Bend, a Gate's output or back
+  side) bounces off and fizzles **without** using the gem up; a later bolt from a proper side
+  still works.
 - **Gate:** each of its two input sides accepts one bolt per strike; a second bolt on the same
   side fizzles. Once fired, any further bolt fizzles.
 - Because each gem is used at most once (twice for a Gate) per strike, every strike ends; there
   are no infinite loops. A bolt that loops back into its own path simply fizzles.
-- Several bolts reaching the same machine in one strike add up (that is how two half-bolts can
-  wake one machine, or overload it).
+- A machine's edge socket handles one bolt per strike, so at most one bolt reaches a machine
+  per strike. Combining charge is the Gate's job (or the Capacitor's, across strikes).
 - **Determinism.** Within a tick, bolts are processed in the order they were created; the two
   halves of a Split are created left side first, then right side (relative to travel).
 
