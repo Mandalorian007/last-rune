@@ -56,6 +56,8 @@ export type FuseLine =
       readonly needsGem?: GemKind;
     })
   | (LineBase & { readonly kind: 'hall'; readonly beat: 'first-entry' | 'ambient' | 'echo' })
+  /** Idle chatter on the title screen, said in random order while nobody presses Play. */
+  | (LineBase & { readonly kind: 'title' })
   | (LineBase & { readonly kind: 'codex'; readonly gem: GemKind })
   | (LineBase & { readonly kind: 'beat'; readonly beat: BeatId })
   /** FUSE typing in the mock chat window (ending beat 2). Lower case on purpose. */
@@ -130,6 +132,135 @@ const DEFS: Def[] = [
     tier: 3,
     source: N,
     text: 'The furnace went cold the week I… the week Management left. Related. Probably related.',
+  },
+
+  // Title-screen chatter (random order, ~every 15 s; see scenes/title). Tier 1: no "I".
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Day 14,610. Candles: lit. Storm: present. Visitors: possibly one. Logging it as one.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Shift report: nothing happened. Nothing happened very thoroughly. Filed in triplicate.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'The storm checks in every night. Punctual. More than can be said for Management.',
+  },
+  { kind: 'title', tier: 1, source: N, text: "Storm cell. Don't tap the glass. It taps back." },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: "This unit is not pacing. This unit is patrolling. There's a form that says so.",
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Safety record: 14,610 days without incident. Also without anything else. Spotless.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Hard hats are mandatory. This unit is a hard hat. Compliance achieved.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Visitor log, page one. Still page one. Page one is getting nervous.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Thunder. Count the seconds. Fourteen. This unit counts days too. Busy unit.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: "Rain is just a storm that gave up. Don't tell the rain.",
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: "Management stepped out. Forty years ago. Their coffee is still on the desk. It's geology now.",
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: "Eyes: one of two operational. Fifty percent. That's a passing grade here.",
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'No rush. Forty years of waiting. Another minute is a rounding error.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Incident report: visitor is standing very still. Outcome: so is this unit. Stalemate.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: "Wet floor sign is out. Floor isn't wet. Sign has nowhere else to be.",
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'The candles get a performance review every Friday. They always pass. Warm personalities.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Echo test. Hello. Hello. Still just the echo. Good acoustics, though.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Quiet tonight. Just the storm, the candles and this unit. And you. Big crowd.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Fire exits are clearly marked. Lightning exits are a work in progress.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Lost property: one umbrella. Unclaimed. Optimistic purchase, for a lightning factory.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Regulation 6: candles are lighting, not decoration. Regulation 6 was a long night.',
+  },
+  {
+    kind: 'title',
+    tier: 1,
+    source: N,
+    text: 'Somewhere upstairs a drawer is stuck shut. Has been for forty years. Out of spite.',
   },
 
   // ── Tier 1 ───────────────────────────────────────────────────────────────
@@ -613,6 +744,8 @@ function idFor(d: Def): string {
       return `exact.t${d.tier}`;
     case 'nudge':
       return `nudge.${d.nudge}`;
+    case 'title':
+      return `title.${DEFS.filter((o, i) => o.kind === 'title' && i < DEFS.indexOf(d)).length + 1}`;
     case 'hall':
     case 'reaction': {
       const tag = d.kind === 'hall' ? d.beat : d.outcome;
@@ -695,6 +828,11 @@ export function reactionLine(
 /** Hall lines for a beat that belong to a tier. */
 export function hallLines(beat: 'first-entry' | 'ambient' | 'echo', tier: Tier): FuseLine[] {
   return LINES.filter((l) => l.kind === 'hall' && l.beat === beat && l.tier === tier);
+}
+
+/** The title screen's idle chatter (said in random order; the knock is a beat, not in here). */
+export function titleLines(): FuseLine[] {
+  return LINES.filter((l) => l.kind === 'title');
 }
 
 export function codexNote(gem: GemKind): FuseLine | undefined {

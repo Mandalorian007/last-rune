@@ -60,6 +60,7 @@ Last Rune he says nothing until the final gem. Tested "I" counts: Tier 1 = 0 < T
 | 3 | Nobody sits in the booth | booth locked, 10×8 socket (and the chair is adjusted for him) |
 | 4 | Nowhere is not a destination | Tier 1 dead-bolt reaction |
 | 5 | Greed trips breakers | amplify codex |
+| 6 | Candles are lighting, not decoration | title chatter (the title has no lamps, only candles) |
 | 7 | Floors are not filing | page 1 plate |
 | 8 | Don't ask where Management went | relay solve, crane solve, archive solve, booth arrive, page 8 plate |
 | 9 | Two signatures | relay arrive, gate codex, page 4 (the Builder wrote it) |
@@ -77,6 +78,77 @@ screen (`safetyRecordLine`) closes it.
 
 > Oh. Someone's at the door. Nobody's at the door. Nobody's been at the door for forty years.  
 > <sub>`beat.title-knock` · 17w</sub>
+
+*Title screen, idle chatter.* While nobody presses anything, FUSE potters about and says one of
+these every 12 to 20 seconds, shuffled, no repeats until all have been said (`titleLines`,
+`scenes/title/chatter.ts`). Tier 1 rules: no "I". Nothing about the Builder, the door or the
+ending. They stop the moment the player starts.
+
+> Day 14,610. Candles: lit. Storm: present. Visitors: possibly one. Logging it as one. **[NEW]**  
+> <sub>`title.1` · 13w</sub>
+
+> Shift report: nothing happened. Nothing happened very thoroughly. Filed in triplicate. **[NEW]**  
+> <sub>`title.2` · 11w</sub>
+
+> The storm checks in every night. Punctual. More than can be said for Management. **[NEW]**  
+> <sub>`title.3` · 14w</sub>
+
+> Storm cell. Don't tap the glass. It taps back. **[NEW]**  
+> <sub>`title.4` · 9w</sub>
+
+> This unit is not pacing. This unit is patrolling. There's a form that says so. **[NEW]**  
+> <sub>`title.5` · 15w</sub>
+
+> Safety record: 14,610 days without incident. Also without anything else. Spotless. **[NEW]**  
+> <sub>`title.6` · 11w</sub>
+
+> Hard hats are mandatory. This unit is a hard hat. Compliance achieved. **[NEW]**  
+> <sub>`title.7` · 12w</sub>
+
+> Visitor log, page one. Still page one. Page one is getting nervous. **[NEW]**  
+> <sub>`title.8` · 12w</sub>
+
+> Thunder. Count the seconds. Fourteen. This unit counts days too. Busy unit. **[NEW]**  
+> <sub>`title.9` · 12w</sub>
+
+> Rain is just a storm that gave up. Don't tell the rain. **[NEW]**  
+> <sub>`title.10` · 12w</sub>
+
+> Management stepped out. Forty years ago. Their coffee is still on the desk. It's geology now. **[NEW]**  
+> <sub>`title.11` · 16w</sub>
+
+> Eyes: one of two operational. Fifty percent. That's a passing grade here. **[NEW]**  
+> <sub>`title.12` · 12w</sub>
+
+> No rush. Forty years of waiting. Another minute is a rounding error. **[NEW]**  
+> <sub>`title.13` · 12w</sub>
+
+> Incident report: visitor is standing very still. Outcome: so is this unit. Stalemate. **[NEW]**  
+> <sub>`title.14` · 13w</sub>
+
+> Wet floor sign is out. Floor isn't wet. Sign has nowhere else to be. **[NEW]**  
+> <sub>`title.15` · 14w</sub>
+
+> The candles get a performance review every Friday. They always pass. Warm personalities. **[NEW]**  
+> <sub>`title.16` · 13w</sub>
+
+> Echo test. Hello. Hello. Still just the echo. Good acoustics, though. **[NEW]**  
+> <sub>`title.17` · 11w</sub>
+
+> Quiet tonight. Just the storm, the candles and this unit. And you. Big crowd. **[NEW]**  
+> <sub>`title.18` · 14w</sub>
+
+> Fire exits are clearly marked. Lightning exits are a work in progress. **[NEW]**  
+> <sub>`title.19` · 12w</sub>
+
+> Lost property: one umbrella. Unclaimed. Optimistic purchase, for a lightning factory. **[NEW]**  
+> <sub>`title.20` · 11w</sub>
+
+> Regulation 6: candles are lighting, not decoration. Regulation 6 was a long night. **[NEW]**  
+> <sub>`title.21` · 13w</sub>
+
+> Somewhere upstairs a drawer is stuck shut. Has been for forty years. Out of spite. **[NEW]**  
+> <sub>`title.22` · 15w</sub>
 
 *first-entry*
 

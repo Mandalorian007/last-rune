@@ -1,7 +1,10 @@
 /**
  * Title backdrop (pitch screen 1): the name embossed in gold on a storm-lit stone wall, two tall
- * lancet windows with lightning, a storm cell humming in the dark, candles, and FUSE idling by
- * the menu. The menu buttons (and an accessible copy of the title) stay DOM.
+ * lancet windows with lightning, a storm cell humming in the dark, candles, and FUSE pottering
+ * about on the left: he strolls between a few spots (by the storm cell, the window, the candles),
+ * looks at things, and turns to the player when he talks. He never crosses under the menu.
+ * Under reduced motion he stays put and only glances. The menu buttons (and an accessible copy
+ * of the title) stay DOM.
  *
  * Shares the hall's baked stone, window material and FUSE rig (per-renderer kit), so going
  * title → hall → title never rebakes or leaks.
@@ -12,6 +15,8 @@ import { HALL_WINDOW_UNIFORM_FLOATS } from '../../shaders/hall-shaders';
 import { type CandleInstance, CandleRenderer } from '../materials/candles';
 import { EmbossLabel, EmbossRenderer } from '../materials/emboss';
 import { LightSet } from '../materials/lights';
+import { DEFAULT_FUSE_SPEED } from '../props/fuse';
+import { FuseStroll, type StrollSpot } from '../props/fuse-stroll';
 import { PROP_LIGHT_FLOATS } from '../props/lighting';
 import { pitch } from '../props/palette';
 import { StormCell } from '../props/storm';
@@ -24,6 +29,10 @@ const FLOOR_Y = 880;
 const FUSE_X = 700;
 const FUSE_GROUND = 968;
 const STORM = { x: 520, y: 690, size: 440 } as const;
+/** Stroll speed, FUSE units per second (an unhurried ~130 px/s at the title's scale). */
+const STROLL_SPEED = 1.4;
+/** After the knock he stays and stares at the storm cell this long. */
+const KNOCK_STARE = 6;
 const TITLE_Y = 228;
 const WINDOWS = [
   { x: 250, y: 420, w: 150, h: 520 },
@@ -32,6 +41,22 @@ const WINDOWS = [
 const COOL: readonly number[] = [0.45, 0.56, 0.95];
 const FLASH: readonly number[] = [0.7, 0.8, 1.0];
 const GOLD = pitch('gold');
+
+/**
+ * Where FUSE potters. All left of the menu (its buttons start near x 780 and his head reaches
+ * y ~760), so he never stands or rolls under Play / Continue, and right of the left candles.
+ * `null` looks out at the player.
+ */
+const STORM_CORE = { x: STORM.x, y: STORM.y } as const;
+const LEFT_WINDOW = { x: WINDOWS[0].x, y: WINDOWS[0].y } as const;
+const TALL_CANDLE = { x: 150, y: 800 } as const;
+const SHORT_CANDLE = { x: 236, y: 905 } as const;
+const TITLE_NAME = { x: W / 2, y: TITLE_Y + 40 } as const;
+const STROLL_SPOTS: readonly StrollSpot[] = [
+  { x: FUSE_X, looks: [STORM_CORE, TITLE_NAME, null, STORM_CORE] },
+  { x: 560, looks: [STORM_CORE, null, LEFT_WINDOW] },
+  { x: 390, looks: [TALL_CANDLE, LEFT_WINDOW, SHORT_CANDLE, null] },
+];
 
 interface TitleKit {
   readonly title: EmbossLabel;
@@ -75,6 +100,7 @@ export class StormTitleView implements TitleView {
   private readonly windowDp: { dp: DrawParams; params: Float32Array }[];
   private time = 0;
   private knockAt = -10;
+  private readonly stroll = new FuseStroll(STROLL_SPOTS);
   private readonly lit: CandleInstance[] = [
     candle(150, 1040, 230, 11, 0.6),
     candle(1780, 1040, 250, 12, 0.4),
@@ -102,6 +128,7 @@ export class StormTitleView implements TitleView {
     fuse.rollTo(FUSE_X);
     fuse.facing = -1;
     fuse.mood = 'idle';
+    fuse.maxSpeed = STROLL_SPEED;
     this.lightning.onStrike = (near) => {
       vc.cue?.(near ? 'thunderNear' : 'thunder');
       this.storm.surge(near ? 0.8 : 0.4);
@@ -124,13 +151,7 @@ export class StormTitleView implements TitleView {
     const storm = this.storm;
     storm.reduceFlashes = calm;
     storm.update(dt);
-    const fuse = this.hall.fuse;
-    // FUSE watches the storm; after the knock he leans in toward it.
-    const since = this.time - this.knockAt;
-    const sph = storm.sphere;
-    fuse.lookAt(since < 6 ? sph.x : sph.x + 260, sph.y);
-    if (s.speaking) fuse.speak(0.3);
-    fuse.update(dt);
+    this.updateFuse(dt, s);
     const k = this.kit.candles;
     k.reducedMotion = s.reducedMotion;
     k.update(this.all, this.time);
@@ -159,8 +180,42 @@ export class StormTitleView implements TitleView {
   }
 
   dispose(): void {
+    // The rig is shared with the hall: hand it back at its usual speed.
+    this.hall.fuse.maxSpeed = DEFAULT_FUSE_SPEED;
     this.lightning.onStrike = null;
     this.storm.destroy();
+  }
+
+  /** Stroll, glance, and turn to the player while talking. Right after the knock: stare. */
+  private updateFuse(dt: number, s: TitleViewFrame): void {
+    const fuse = this.hall.fuse;
+    const stroll = this.stroll;
+    const staring = this.time - this.knockAt < KNOCK_STARE;
+    const speaking = !!s.speaking;
+    stroll.update(dt, { hold: staring || speaking, still: s.reducedMotion, rolling: fuse.rolling });
+    fuse.rollTo(stroll.x);
+    let lx: number | null;
+    let ly: number | undefined;
+    if (staring) {
+      const sph = this.storm.sphere;
+      lx = sph.x;
+      ly = sph.y;
+    } else if (fuse.rolling) {
+      // Eyes on where he's going.
+      lx = stroll.x + Math.sign(stroll.x - fuse.x) * 400;
+      ly = fuse.y - 2.2 * fuse.scale;
+    } else if (speaking) {
+      lx = null;
+    } else {
+      const look = stroll.look;
+      lx = look ? look.x : null;
+      ly = look?.y;
+    }
+    if (fuse.rolling) fuse.facing = stroll.x > fuse.x ? 1 : -1;
+    else if (lx !== null && Math.abs(lx - fuse.x) > 30) fuse.facing = lx > fuse.x ? 1 : -1;
+    fuse.lookAt(lx, ly);
+    if (speaking) fuse.speak(0.3);
+    fuse.update(dt);
   }
 
   private buildLights(): LightSet {
