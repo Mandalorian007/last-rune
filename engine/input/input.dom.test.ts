@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Input, isInteractiveTarget } from './input';
+import { Input, isInteractiveTarget, isTextEntryTarget } from './input';
 
 function key(type: 'keydown' | 'keyup', code: string, init: KeyboardEventInit = {}) {
   return new KeyboardEvent(type, { code, bubbles: true, cancelable: true, ...init });
@@ -107,6 +107,65 @@ describe('Input DOM attachment', () => {
     window.dispatchEvent(key('keydown', 'Space'));
     input.update();
     expect(input.pressed('jump')).toBe(false);
+  });
+
+  it('registers global keys on buttons but not in text entry', () => {
+    input.setGlobalKeys(['KeyC', 'Space']);
+    const button = document.createElement('button');
+    const text = document.createElement('input');
+    document.body.append(button, text);
+    const onButton = key('keydown', 'KeyC');
+    button.dispatchEvent(onButton);
+    expect(input.keyHeld('KeyC')).toBe(true);
+    expect(onButton.defaultPrevented).toBe(false);
+    // Bound + global on a button: counts, but the button keeps its default action.
+    const space = key('keydown', 'Space');
+    button.dispatchEvent(space);
+    expect(space.defaultPrevented).toBe(false);
+    input.update();
+    expect(input.pressed('jump')).toBe(true);
+    window.dispatchEvent(key('keyup', 'Space'));
+    window.dispatchEvent(key('keyup', 'KeyC'));
+    text.dispatchEvent(key('keydown', 'KeyC'));
+    expect(input.keyHeld('KeyC')).toBe(false);
+    // Non-global keys on a button are still ignored.
+    button.dispatchEvent(key('keydown', 'KeyQ'));
+    expect(input.keyHeld('KeyQ')).toBe(false);
+    button.remove();
+    text.remove();
+  });
+
+  it('accepts global keys from options', () => {
+    const other = new Input(
+      { codex: [{ key: 'KeyC' }] },
+      {
+        getGamepads: () => [],
+        globalKeys: ['KeyC'],
+      },
+    );
+    const el = document.createElement('a');
+    other.attach({ pointerTarget: canvas, keyTarget: el });
+    el.dispatchEvent(key('keydown', 'KeyC'));
+    other.update();
+    expect(other.pressed('codex')).toBe(true);
+    other.detach();
+  });
+
+  it('classifies text-entry targets', () => {
+    const t = (tag: string, type?: string) => {
+      const el = document.createElement(tag);
+      if (type) el.setAttribute('type', type);
+      return isTextEntryTarget(el);
+    };
+    expect(t('input')).toBe(true);
+    expect(t('input', 'search')).toBe(true);
+    expect(t('input', 'checkbox')).toBe(false);
+    expect(t('textarea')).toBe(true);
+    expect(t('button')).toBe(false);
+    expect(t('a')).toBe(false);
+    const ce = document.createElement('div');
+    ce.contentEditable = 'true';
+    expect(isTextEntryTarget(ce)).toBe(ce.isContentEditable);
   });
 
   it('classifies interactive targets', () => {

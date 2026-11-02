@@ -1,4 +1,10 @@
-export { type AttachOptions, Input, type InputOptions, isInteractiveTarget } from './input';
+export {
+  type AttachOptions,
+  Input,
+  type InputOptions,
+  isInteractiveTarget,
+  isTextEntryTarget,
+} from './input';
 export type {
   ActionState,
   Binding,
