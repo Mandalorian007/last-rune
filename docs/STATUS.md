@@ -1,0 +1,23 @@
+# Status board
+
+_Last updated: 2026-11-02 by PM_
+
+**Current milestone:** M1 Foundations (wave 1)
+
+| Workstream | Branch | State | Notes |
+|---|---|---|---|
+| scaffold | main | ✅ done | pnpm, TS7, Vite 8, Vitest, Biome, Playwright, docs |
+| engine-render | ws/engine-render | 🟡 in progress | |
+| engine-systems | ws/engine-systems | 🟡 in progress | |
+| rules-puzzles | ws/rules-puzzles | 🟡 in progress | |
+| progression-content | ws/progression-content | 🟡 in progress | |
+| ship-ops | ws/ship-ops | 🟡 in progress | |
+
+## Blocked / needs user
+- Discord invite URL (placeholder until provided). D-005
+- itch.io page and account details at ship time (M5)
+
+## Risks
+- WebGPU inside the itch iframe (permissions policy). ship-ops is verifying.
+- Puzzle quality: 16 puzzles must be interesting, not just solvable. The solver gives difficulty metrics, and the PM reviews.
+- Procedural art reaching "painterly" quality: art R&D is front-loaded in wave 2.

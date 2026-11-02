@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+*.zip
+.DS_Store
+.env
+.env.*
+test-results/
+playwright-report/
+.vite/
+coverage/
+.claude/worktrees/
