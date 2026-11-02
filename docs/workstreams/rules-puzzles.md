@@ -24,3 +24,11 @@ Puzzle quality matters most here. Prefer elegant small puzzles with one clear in
 
 ## Log
 _(agent appends progress, decisions, open issues here)_
+
+### 2026-11-02 (rules-puzzles agent)
+
+- **Spec**: `docs/design/rules.md` (committed before the code). 1 bolt = 4 sparks; storms 1×/2×/4× = 4/8/16. Empty or blocked socket = fizzle; leaving the altar anywhere but a machine = ground. Gate: the rotation is its output side, the inputs are the two perpendicular sides, it fires once both are live in the same strike and outputs their sum, and a lone input fizzles at the end of the strike. Capacitor: when empty it stores the bolt (no output); when charged it releases stored + incoming; the charge carries across strikes. Machines latch on exact; any over trips the breaker and ends the attempt.
+- **Code**: `rules/sim.ts` (simulate + render trace), `rules/solver.ts` (bolt-driven DFS, canonical counting, dead-gem prune, lower-bound prune), `rules/model.ts` (local types: PuzzleDef, Placement, Rot, MachineTarget), `rules/validate.ts`, `rules/ascii.ts` (ASCII boards for puzzles and tests), `rules/index.ts`.
+- **Puzzles**: all 16 are in `content/puzzles/`, and `docs/design/puzzles.md` has the table. The capability graph from the PM update is applied: Split is pre-set in relay-tower, crane, archive and foundry, where Split isn't guaranteed; capacitor-bay's Capacitor is pre-set; 10×8 is used only by the-last-rune.
+- **Tests**: 234 tests, about 3.5 s. The finale's full solution count (72, about 10 s) only runs with `FULL=1`.
+- **Open**: (1) The finale's count of 72 comes mostly from route variations; playtest whether it feels too loose. (2) The canonical `isSolvable` ignores solutions that need an idle gem (rules.md §9). (3) I worked on branch `worktree-agent-…`, not `ws/rules-puzzles`. (4) Proposed `types.ts` additions: none required. PuzzleDef/Placement/Rot live in `rules/model.ts` until the PM wants to promote them.
