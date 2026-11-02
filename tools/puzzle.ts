@@ -63,10 +63,10 @@ function trayLine(p: PuzzleDef): string {
     .join(', ');
 }
 
-function metricsBlock(m: DifficultyMetrics): string {
+function metricsBlock(m: DifficultyMetrics, design: number): string {
   const t = TARGETS[m.id as MachineId];
   return [
-    `score ${m.score} (target ${t.score[0]}–${t.score[1]})   est. ${m.minutes} min (target ${t.minutes})`,
+    `score ${m.score} (target ${t.score[0]}–${t.score[1]})   est. ${m.minutes} min (design ${design})`,
     `solutions ${m.solutions}${m.capped ? '+' : ''}   min gems ${m.minGems}   tray ${m.trayTotal} (slack ${m.slack})   decoy kinds ${m.decoyKinds.join(', ') || '-'}`,
     `solver nodes ${m.nodes}   search bits ${m.searchBits}   informative fails ${Math.round(m.informative * 100)}%`,
     `novice bot: solved ${m.bot.solved}/${m.bot.sessions} sessions, median ${m.bot.expected} tries; fails dead ${m.bot.fails.dead} / under ${m.bot.fails.under} / over ${m.bot.fails.over}`,
@@ -87,7 +87,7 @@ function show(id: MachineId, opts: { json: boolean; solutions: number }): void {
   console.log(`insight: ${p.design.insight}\n`);
   console.log(render(p));
   console.log(`\ntray: ${trayLine(p)}\n`);
-  console.log(metricsBlock(m));
+  console.log(metricsBlock(m, p.design.minutes));
   const r = simulate(p, p.design.intended);
   console.log(
     `\nintended solution (${p.design.intended.length} gems, ${r.outcome}; readings ${r.machines.map((x) => x.readings.join('/')).join(', ')}):\n`,
@@ -105,7 +105,7 @@ function show(id: MachineId, opts: { json: boolean; solutions: number }): void {
 function table(ids: readonly MachineId[] = MACHINE_IDS, json = false): void {
   const all: DifficultyMetrics[] = [];
   const rows: string[] = [
-    '| # | Machine | Target | Score | Min (target / est.) | Solutions | Min gems | Slack | Bot tries | Bits | Concepts | Required ideas |',
+    '| # | Machine | Target | Score | Min (design / est.) | Solutions | Min gems | Slack | Bot tries | Bits | Concepts | Required ideas |',
     '|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   let total = 0;
@@ -116,7 +116,7 @@ function table(ids: readonly MachineId[] = MACHINE_IDS, json = false): void {
     const t = TARGETS[id];
     total += m.minutes;
     rows.push(
-      `| ${MACHINE_IDS.indexOf(id) + 1} | ${id} | ${t.score[0]}–${t.score[1]} | ${m.score} | ${t.minutes} / ${m.minutes} | ${m.solutions}${m.capped ? '+' : ''} | ${m.minGems} | ${m.slack} | ${m.bot.expected} | ${m.searchBits} | ${m.concepts} | ${m.required.join(', ') || '-'} |`,
+      `| ${MACHINE_IDS.indexOf(id) + 1} | ${id} | ${t.score[0]}–${t.score[1]} | ${m.score} | ${PUZZLES[id].design.minutes} / ${m.minutes} | ${m.solutions}${m.capped ? '+' : ''} | ${m.minGems} | ${m.slack} | ${m.bot.expected} | ${m.searchBits} | ${m.concepts} | ${m.required.join(', ') || '-'} |`,
     );
     process.stderr.write(`${id}: ${Date.now() - t0} ms\n`);
   }

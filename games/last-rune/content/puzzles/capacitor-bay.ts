@@ -1,17 +1,37 @@
-import { definePuzzle, gem, machineAt, storm2, stormAt } from './define';
+import { altar8x6, definePuzzle, gem, machineAt, storm2, stormAt } from './define';
 
-/** Teaches Capacitor (granted here) with a pre-set one and two strikes. */
+/**
+ * Teaches Capacitor (granted here) with a pre-set one and two strikes. The pre-set ice sits on
+ * the straight line to the big machine, so the first try (storm straight through it) reads
+ * double on the second strike: over. Halving first fixes it, and the spare half has to be
+ * halved again for the small machine.
+ */
 export default definePuzzle({
   id: 'capacitor-bay',
-  altar: '6x4',
-  board: ['# # . # # #', '. . . . . #', '# . . . *C .', '# # . . . #'],
-  storm: stormAt('W', 1, '6x4', 2),
-  machines: [machineAt('N', 2, '6x4', 4), machineAt('E', 2, '6x4', 8)],
-  tray: { channel: 5, bend: 3, split: 1, gate: 1 },
+  altar: '8x6',
+  board: [
+    '# # # . # # # #',
+    '# . . . . # # #',
+    '. . . . . *C . .',
+    '# . . . . # # #',
+    '# # # # # # # #',
+    '# # # # # # # #',
+  ],
+  storm: stormAt('W', 2, '8x6', 2),
+  machines: [machineAt('N', 3, '8x6', 2), machineAt('E', 2, '8x6', 8)],
+  tray: { channel: 8, bend: 4, split: 2, gate: 1 },
   pulses: 2,
-  insight: 'The ice keeps a half from the first strike and adds it to the second.',
-  minutes: 4,
-  assumes: [gem('bend'), gem('split'), gem('gate'), storm2],
+  insight:
+    'The ice hands its whole first strike to the second: give it half, and it gives the machine double.',
+  minutes: 5,
+  assumes: [gem('bend'), gem('split'), gem('gate'), storm2, altar8x6],
   essential: ['split'],
-  solution: ['# # = # # #', '= = S . . #', '# . └ = *C =', '# # . . . #'],
+  solution: [
+    '# # # = # # # #',
+    '# ┌ = S . # # #',
+    '= S . . ┌ *C = =',
+    '# └ = = ┘ # # #',
+    '# # # # # # # #',
+    '# # # # # # # #',
+  ],
 });

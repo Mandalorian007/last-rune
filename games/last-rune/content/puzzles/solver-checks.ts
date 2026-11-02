@@ -5,7 +5,7 @@ import type { MachineId } from '../../rules/types';
 import { FIXED_ESSENTIAL, SLOW, SOLUTION_COUNT } from './expectations';
 import { PUZZLES } from './index';
 
-// Set FULL=1 to also count the finale's solutions (about 10 s).
+// Set FULL=1 to also count the finale's solutions (a few seconds).
 const FULL = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env
   .FULL;
 
