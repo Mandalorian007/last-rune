@@ -14,8 +14,7 @@ _Last updated: 2026-11-02 by PM_
 | ship-ops | ws/ship-ops | 🟡 in progress | |
 
 ## Blocked / needs user
-- Discord invite URL (placeholder until provided). D-005
-- itch.io page and account details at ship time (M5)
+- itch.io launch is manual with the user after M5 (D-012)
 - (Planned) Enable GitHub Pages "Source: GitHub Actions" in repo settings at M3α. PM can do it via `gh api`.
 
 ## Risks

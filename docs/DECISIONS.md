@@ -13,3 +13,5 @@ Format: `D-NNN · date · decision · why · who`.
 - **D-009** · 2026-11-02 · Logical resolution **1920×1080 design space, 16:9 letterboxed**; itch embed 960×540 with fullscreen button. UI text is DOM overlay (crisp, accessible); world is the WebGPU canvas. · PM
 - **D-010** · 2026-11-02 · **GitHub Pages is the first release location** (alpha), at `mandalorian007.github.io/last-rune/`, deployed from `main` by GitHub Actions once the alpha is playable. itch.io remains the launch target (M5). Pages saves are separate from itch saves (different origins). · Free HTTPS static hosting; top-level page avoids iframe WebGPU risk; live playtest link. · User
 - **D-011** · 2026-11-02 · **No ship date.** Work proceeds milestone by milestone until the goal is met; the pitch's one-week schedule is no longer a constraint. · User direction. · User
+- **D-012** · 2026-11-02 · **PM's finish line is the GitHub Pages release (M5).** The itch.io launch is done manually by the user with the PM, using the prepared zip and runbook. · User direction. · User
+- **D-013** · 2026-11-02 · Discord invite URL: `https://discord.gg/thunderclap` (single constant in content). · User

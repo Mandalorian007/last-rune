@@ -20,7 +20,8 @@
 | M3 | Content complete (wave 3) | All 16 machines, Journal, FUSE lines, Ending and Discord door, audio, mist/candles/storm |
 | M3α | **Alpha release: GitHub Pages** | First public release location. Actions workflow deploys `main` → `https://mandalorian007.github.io/last-rune/` on push; alpha label in-game; playtest link shared |
 | M4 | Polish + playtest | Automated playtest (solver-driven full run), perf pass, a11y pass, bug bash |
-| M5 | Ship | itch zip, page copy, devlog draft, `engine-v0.1` tag |
+| M5 | **Release: GitHub Pages v1.0** (PM's finish line) | Polished build live on Pages, GitHub Release + `v1.0.0` and `engine-v0.1` tags, itch zip + page copy + devlog draft prepared for the user |
+| — | itch.io launch (manual, with user) | User uploads with PM's runbook; not an agent task (D-012) |
 
 ## Waves (max 5 parallel top-level agents)
 
