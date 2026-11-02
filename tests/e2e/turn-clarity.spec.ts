@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import type { Cell, MachineId } from '../../games/last-rune/rules/types';
 import { cellCenter, computeLayout } from '../../games/last-rune/scenes/altar/layout';
+import { cursorKeys } from './altar-keys';
 import { DEV_URL, readSave, waitFrames } from './helpers';
 
 // One input rule at the altar (docs/design/altar-ux.md "Controls"): a click picks up and sets
@@ -94,13 +95,13 @@ test('R over a fixed Split with a Bend in hand: the Split says why, the Bend is 
   await click(page);
   await hover(page, SPLIT);
   // With a gem in hand, hovering the fixed gem already says it will not land there.
-  await expect(page.locator('.lr-altar-tag')).toContainText('Part of the machine');
+  await expect(page.locator('.lr-altar-tag')).toContainText("can't be moved");
   await page.keyboard.press('KeyR');
   await waitFrames(page, 4);
-  await expect(page.locator('.lr-altar-tag')).toContainText("Splits don't turn");
+  await expect(page.locator('.lr-altar-tag')).toContainText("Can't turn: the bolt splits");
   await page.mouse.wheel(0, 120);
   await waitFrames(page, 4);
-  await expect(page.locator('.lr-altar-tag')).toContainText("Splits don't turn");
+  await expect(page.locator('.lr-altar-tag')).toContainText("Can't turn: the bolt splits");
   // Set down in an open socket: it lands unturned.
   await hover(page, OPEN);
   await click(page);
@@ -126,4 +127,96 @@ test('scrolling over a placed Bend turns it', async ({ page }) => {
   await expect
     .poll(async () => (await readSave(page))?.puzzles[ID]?.placements[0], { timeout: 5_000 })
     .toMatchObject({ gem: 'bend', cell: OPEN, rot: 1 });
+});
+
+// turn-2: a turn you see is a turn that sticks. Placing a gem keeps that kind in hand; R or
+// scroll over the gem just placed turns the placed gem at once (saved, no click or Enter), and
+// the hand is not turned.
+
+/** Poll the save until the gem at `c` has turn `rot`. */
+async function expectRot(page: Page, c: Cell, rot: number) {
+  await expect
+    .poll(
+      async () =>
+        ((await readSave(page))?.puzzles[ID]?.placements as Saved[] | undefined)?.find(
+          (q) => q.cell.x === c.x && q.cell.y === c.y,
+        )?.rot,
+      { timeout: 5_000 },
+    )
+    .toBe(rot);
+}
+
+const OPEN2: Cell = { x: 1, y: 3 };
+
+test('with a Bend in hand, R and scroll over a placed Bend turn the placed one, and it sticks', async ({
+  page,
+}) => {
+  await open(page, []);
+  const slot = L.tray.find((s) => s.gem === 'bend')!;
+  await moveTo(page, slot.x, slot.y);
+  await click(page);
+  await hover(page, OPEN);
+  await click(page); // placed; a Bend is still in hand
+  await expectRot(page, OPEN, 0);
+  await page.keyboard.press('KeyR');
+  await expectRot(page, OPEN, 1);
+  await page.mouse.wheel(0, 120);
+  await expectRot(page, OPEN, 2);
+  // The card is the placed Bend's (R turns it), not the hand's.
+  await expect(page.locator('.lr-altar-tip .lr-info-tag')).toHaveText('R or scroll to turn');
+  // Looking away keeps the turn: nothing waits for a click or Enter.
+  await hover(page, OPEN2);
+  await waitFrames(page, 10);
+  await expectRot(page, OPEN, 2);
+  // The hand was never turned: the next Bend lands as it was taken.
+  await click(page);
+  const all = await placements(page, 2);
+  expect(all.find((q) => q.cell.x === OPEN2.x && q.cell.y === OPEN2.y)).toMatchObject({
+    gem: 'bend',
+    rot: 0,
+  });
+  expect(all.find((q) => q.cell.x === OPEN.x && q.cell.y === OPEN.y)).toMatchObject({
+    gem: 'bend',
+    rot: 2,
+  });
+  // Clicking the placed Bend with a Bend in hand never turns it back.
+  await hover(page, OPEN);
+  await click(page);
+  await expect(page.locator('.lr-altar-tag')).toContainText('Bend already here');
+  await expectRot(page, OPEN, 2);
+});
+
+test('keyboard: R and Q over a placed Bend at the cursor turn it in place, no Enter', async ({
+  page,
+}) => {
+  await open(page, []);
+  const cursor = async (): Promise<Cell> => {
+    const [x, y] = (await page.locator('.lr-altar').getAttribute('data-cursor'))!
+      .split(',')
+      .map(Number);
+    return { x: x!, y: y! };
+  };
+  await page.keyboard.press(`Digit${L.tray.findIndex((s) => s.gem === 'bend') + 1}`);
+  await waitFrames(page, 4);
+  for (const k of cursorKeys(P, [], await cursor(), OPEN)) {
+    await page.keyboard.press(k);
+    await waitFrames(page, 2);
+  }
+  expect(await cursor()).toEqual(OPEN);
+  await page.keyboard.press('Enter');
+  await expectRot(page, OPEN, 0);
+  await page.keyboard.press('KeyR');
+  await expectRot(page, OPEN, 1);
+  // One key per frame: the game reads presses once a frame.
+  await page.keyboard.press('KeyQ');
+  await waitFrames(page, 3);
+  await page.keyboard.press('KeyQ');
+  await expectRot(page, OPEN, 3);
+  // Move the cursor off: the turn stays.
+  await page.keyboard.press('ArrowLeft');
+  await waitFrames(page, 6);
+  await expectRot(page, OPEN, 3);
+  // The hand is unchanged: the next Bend goes down unturned.
+  await page.keyboard.press('Enter');
+  await expectRot(page, { x: OPEN.x - 1, y: OPEN.y }, 0);
 });
