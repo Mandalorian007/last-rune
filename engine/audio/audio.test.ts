@@ -33,8 +33,8 @@ class FakeNode {
     this.outputs.push(n);
     return n;
   }
-  disconnect() {
-    this.outputs = [];
+  disconnect(target?: FakeNode) {
+    this.outputs = target ? this.outputs.filter((o) => o !== target) : [];
   }
 }
 
@@ -101,6 +101,44 @@ class FakeContext {
   get played() {
     return this.sources.filter((s) => !s.isSilentUnlock);
   }
+}
+
+/** Adds the nodes the limiter and reverb need (a plain FakeContext lacks them, like old browsers). */
+class FullFakeContext extends FakeContext {
+  convolvers: (FakeNode & { buffer: unknown; normalize: boolean })[] = [];
+  createDynamicsCompressor() {
+    return Object.assign(new FakeNode(), {
+      threshold: new FakeParam(-24),
+      knee: new FakeParam(30),
+      ratio: new FakeParam(12),
+      attack: new FakeParam(0.003),
+      release: new FakeParam(0.25),
+    });
+  }
+  createConvolver() {
+    const c = Object.assign(new FakeNode(), { buffer: null as unknown, normalize: false });
+    this.convolvers.push(c);
+    return c;
+  }
+  override createBuffer(channels: number, length: number) {
+    const data = Array.from({ length: channels }, () => new Float32Array(length));
+    return {
+      length,
+      numberOfChannels: channels,
+      data,
+      copyToChannel(src: Float32Array, ch: number) {
+        data[ch]!.set(src);
+      },
+    };
+  }
+}
+
+/** Every node reachable from `from` (depth-first). */
+function reachable(from: FakeNode, seen = new Set<FakeNode>()): Set<FakeNode> {
+  if (seen.has(from)) return seen;
+  seen.add(from);
+  for (const o of from.outputs) reachable(o, seen);
+  return seen;
 }
 
 const fakeBuffer = { duration: 1, length: 48000 } as unknown as AudioBuffer;
@@ -340,5 +378,98 @@ describe('recipes', () => {
     expect(errs.join('\n')).toMatch(/sustain/);
     expect(errs.join('\n')).toMatch(/pan/);
     expect(validateSpec({ duration: 0, layers: [] }).length).toBe(2);
+  });
+});
+
+describe('master limiter and reverb', () => {
+  function full(opts: Partial<ConstructorParameters<typeof AudioEngine>[0]> = {}) {
+    const ctx = new FullFakeContext();
+    const audio = new AudioEngine({ createContext: () => ctx as unknown as AudioContext, ...opts });
+    return { ctx, audio };
+  }
+
+  it('puts a limiter between master and the output by default', async () => {
+    const { ctx, audio } = full();
+    await audio.unlock();
+    const lim = audio.limiter as unknown as FakeNode & { threshold: FakeParam; ratio: FakeParam };
+    expect(lim).not.toBeNull();
+    expect((audio.busNode('master') as unknown as FakeNode).outputs).toEqual([lim]);
+    expect(lim.outputs).toEqual([ctx.destination]);
+    expect(lim.threshold.value).toBe(-1);
+    expect(lim.ratio.value).toBe(20);
+  });
+
+  it('honours limiter options and limiter: false', async () => {
+    const a = full({ limiter: { threshold: -3 } });
+    await a.audio.unlock();
+    expect((a.audio.limiter as unknown as { threshold: FakeParam }).threshold.value).toBe(-3);
+    const b = full({ limiter: false });
+    await b.audio.unlock();
+    expect(b.audio.limiter).toBeNull();
+    expect((b.audio.busNode('master') as unknown as FakeNode).outputs).toEqual([b.ctx.destination]);
+  });
+
+  it('skips the limiter where DynamicsCompressor is missing', async () => {
+    const { ctx, audio } = setup();
+    await audio.unlock();
+    expect(audio.limiter).toBeNull();
+    expect((audio.busNode('master') as unknown as FakeNode).outputs[0]).toBe(ctx.destination);
+  });
+
+  it('has no reverb unless asked', async () => {
+    const { ctx, audio } = full();
+    await audio.unlock();
+    expect(ctx.convolvers).toHaveLength(0);
+    expect(audio.reverb).toBeNull();
+  });
+
+  it('routes bus sends through a procedural convolver back into master', async () => {
+    const { ctx, audio } = full({ reverb: { seconds: 0.5, sends: { ui: 0.1 } } });
+    await audio.unlock();
+    expect(ctx.convolvers).toHaveLength(1);
+    const conv = ctx.convolvers[0]!;
+    const buf = conv.buffer as { numberOfChannels: number; length: number; data: Float32Array[] };
+    expect(buf.numberOfChannels).toBe(2);
+    expect(buf.length).toBe(24000);
+    expect(buf.data[0]!.some((v) => v !== 0)).toBe(true);
+    const master = audio.busNode('master') as unknown as FakeNode;
+    expect(reachable(conv).has(master)).toBe(true);
+    for (const bus of ['music', 'sfx', 'ui'] as const) {
+      const node = audio.busNode(bus) as unknown as FakeNode;
+      expect(node.outputs[0]).toBe(master); // dry path first
+      const send = node.outputs[1] as FakeGain;
+      expect(send.outputs).toEqual([conv]);
+    }
+    expect(audio.reverbSendLevels).toEqual({ music: 0.2, sfx: 0.25, ui: 0.1 });
+    const sfxSend = (audio.busNode('sfx') as unknown as FakeNode).outputs[1] as FakeGain;
+    audio.setReverbSend('sfx', 0.6);
+    expect(sfxSend.gain.value).toBeCloseTo(0.6);
+  });
+
+  it('can be turned on after unlock, rebuilt and turned off', async () => {
+    const { ctx, audio } = full();
+    audio.setReverbSend('music', 0.5); // remembered while off
+    await audio.unlock();
+    audio.setReverb({ seconds: 0.2 });
+    expect(ctx.convolvers).toHaveLength(1);
+    const music = audio.busNode('music') as unknown as FakeNode;
+    expect((music.outputs[1] as FakeGain).gain.value).toBe(0.5);
+    audio.setReverb({ seconds: 0.3, decay: 5 });
+    expect(ctx.convolvers).toHaveLength(2);
+    expect(music.outputs).toHaveLength(2); // old send disconnected
+    audio.setReverb(null);
+    expect(music.outputs).toEqual([audio.busNode('master')]);
+    expect(ctx.convolvers[1]!.outputs).toEqual([]);
+  });
+
+  it('is a no-op where ConvolverNode is missing', async () => {
+    const ctx = new FakeContext();
+    const audio = new AudioEngine({
+      createContext: () => ctx as unknown as AudioContext,
+      reverb: {},
+    });
+    await audio.unlock();
+    expect((audio.busNode('music') as unknown as FakeNode).outputs).toHaveLength(1);
+    audio.setReverbSend('music', 1);
   });
 });
