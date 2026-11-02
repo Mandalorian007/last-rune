@@ -2,17 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>The Last Rune</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Cpath d=%22M16 2 28 12 16 30 4 12z%22 fill=%22%23f2b632%22/%3E%3Cpath d=%22M16 2 28 12H4z%22 fill=%22%23ffd77a%22/%3E%3C/svg%3E" />
     <style>
-      html, body { margin: 0; height: 100%; background: #0b0d14; overflow: hidden; }
+      html, body { margin: 0; height: 100%; background: #0b0d14; overflow: hidden; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
       #app { position: fixed; inset: 0; }
-      canvas { display: block; width: 100%; height: 100%; }
+      canvas { display: block; width: 100%; height: 100%; touch-action: none; }
     </style>
   </head>
   <body>
     <main id="app"></main>
+    <script>
+      // Game input, not a document: stop double-tap / pinch / trackpad smart-zoom from zooming the page.
+      // Keyboard zoom (Cmd/Ctrl +/-) is left alone for accessibility.
+      for (const t of ['gesturestart', 'gesturechange', 'dblclick'])
+        document.addEventListener(t, (e) => e.preventDefault(), { passive: false });
+      document.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+    </script>
     <script type="module" src="/games/last-rune/main.ts"></script>
   </body>
 </html>

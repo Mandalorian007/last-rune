@@ -15,6 +15,9 @@
 
 | # | Milestone | State | Exit criteria |
 |---|---|---|---|
+| 2026-11-02 | "Browser double tap zoom should be disabled, it messes with gameplay" | PM: viewport no-scale, touch-action, block dblclick/gesture/ctrl-wheel zoom (keyboard zoom kept) | ✅ merged; awaiting user check |
+| 2026-11-02 | "Codex should use proper images"; "unlock the entry when you see it, not after you unlock it" (showing locked/unlocked is fine) | codex-2 | 🟡 |
+| 2026-11-02 | "Smooth gameplay up to unlocking capacitor. How it works is not super clear with the double striking thing" | capacitor-clarity | 🟡 |
 | 2026-11-02 | "Is storm cell 2 even winnable without being able to rotate splitters?" (it is: 1 solution, Splits take any side and fork perpendicular, so the player read Split as directional) | split-rotate: user chose "one input and rotate like everything else" (D-031) | ✅ merged; awaiting user check |
 | 2026-11-02 | After turn-clarity: "rotate should save rotation without enter key and should be more intuitive on text" | turn-2 | ✅ merged; awaiting user check |
 | 2026-11-02 | Re-check after onboarding-2: intake desk "great and clear and intuitive", but "maybe some bugs on rotating vs selecting". Second stage (splitter-mill, probably) "confusing as all hell with the layout and rotating desired… I thought I would rotate the splitter, but then the rotate looked like the piece I was placing" | turn-clarity | ✅ merged; awaiting user check |
