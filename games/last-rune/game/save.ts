@@ -43,6 +43,8 @@ export const ReducedMotionPref = s.literal('system', 'reduce', 'full');
 export const CaptionSpeed = s.literal('normal', 'fast', 'instant');
 /** `auto` follows the effective reduced-motion setting. */
 export const ReduceFlashesPref = s.literal('auto', 'on', 'off');
+/** `auto` picks a tier from measured frame time (see game/graphics.ts). */
+export const GraphicsPref = s.literal('auto', 'high', 'low');
 
 const Settings = s.object({
   /** `system` follows `prefers-reduced-motion`. */
@@ -54,6 +56,8 @@ const Settings = s.object({
    * written before it existed still validate (missing = `auto`).
    */
   reduceFlashes: s.optional(ReduceFlashesPref),
+  /** Graphics quality tier (game/graphics.ts). Optional: missing = `auto`. */
+  graphics: s.optional(GraphicsPref),
 });
 
 const Stats = s.object({

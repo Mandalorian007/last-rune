@@ -22,6 +22,7 @@ import { type Frame, Renderer } from '@engine/render';
 import { createOverlay, type Overlay, PadNav } from '@engine/ui';
 import { cathedralHallView } from '../art/hall/hall-view';
 import { stormTitleView } from '../art/hall/title-view';
+import { lightBudget } from '../art/materials/lights';
 import { createFusePortrait } from '../art/props/fuse-portrait';
 import {
   createGameAudio,
@@ -41,6 +42,7 @@ import { openSettings } from '../ui/settings-panel';
 import { ensureGameStyles } from '../ui/styles';
 import { type Action, BINDINGS } from './actions';
 import { GameFlow, type SolveMoment } from './flow';
+import { GraphicsController } from './graphics';
 import { createGameSave, type GameSave, progressOf, repairSave, SAVE_GAME_ID } from './save';
 import { SettingsController } from './settings';
 
@@ -78,6 +80,8 @@ export interface GameCtx {
   readonly ui: Overlay;
   readonly save: GameSave;
   readonly settings: SettingsController;
+  /** Quality tier and resolution control (game/graphics.ts). */
+  readonly graphics: GraphicsController;
   readonly fuse: Fuse;
   readonly codex: Codex;
   readonly hud: Hud;
@@ -112,6 +116,15 @@ function defineUiSounds(audio: AudioEngine): void {
   audio.define('solve.chime', recipes.chime({ pitch: 660, length: 1.4, level: 0.7 }));
 }
 
+/** `GPUAdapter.info.isFallbackAdapter` (newer) or the older `adapter.isFallbackAdapter`. */
+function isFallbackAdapter(adapter: GPUAdapter): boolean {
+  const a = adapter as GPUAdapter & {
+    isFallbackAdapter?: boolean;
+    info?: { isFallbackAdapter?: boolean };
+  };
+  return !!(a.info?.isFallbackAdapter ?? a.isFallbackAdapter);
+}
+
 export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFactories): GameCtx {
   // ── GPU ────────────────────────────────────────────────────────────────
   const renderer = new Renderer(gpu, { logicalWidth: DESIGN_W, logicalHeight: DESIGN_H });
@@ -121,6 +134,31 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   });
   renderer.post = post;
   const particles = new ParticleSystem(renderer, { capacity: 32768, floorY: 1040 });
+
+  // ── Graphics quality (Settings → Graphics; see game/graphics.ts) ───────
+  let reducedMotion = prefersReducedMotion();
+  let particleTier = 1;
+  const applyParticles = () => {
+    particles.spawnScale = (reducedMotion ? 0.25 : 1) * particleTier;
+  };
+  const graphics = new GraphicsController(
+    {
+      setResolution: (o) => renderer.setResolution(o),
+      setPostQuality: (q) => post.setQuality(q),
+      setLightCap: (n) => {
+        lightBudget.max = n;
+      },
+      setParticleScale: (k) => {
+        particleTier = k;
+        applyParticles();
+      },
+      setTiming: (every) => {
+        renderer.timingEvery = every;
+      },
+    },
+    { fallbackAdapter: isFallbackAdapter(gpu.adapter) },
+  );
+  renderer.onGpuTime((ms) => graphics.sample(ms, performance.now()));
 
   // ── Save + overlay ─────────────────────────────────────────────────────
   const save = createGameSave();
@@ -188,7 +226,9 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
       apply: (e) => {
         ui.caption.reducedMotion = e.reducedMotion;
         ui.caption.cps = e.captionCps > 0 ? e.captionCps : 100000;
-        particles.spawnScale = e.reducedMotion ? 0.25 : 1;
+        reducedMotion = e.reducedMotion;
+        graphics.setPreference(e.graphics);
+        applyParticles();
         surface.root.toggleAttribute('data-reduced-motion', e.reducedMotion);
       },
     },
@@ -333,6 +373,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     ui,
     save,
     settings,
+    graphics,
     fuse,
     codex,
     hud,

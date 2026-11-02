@@ -92,7 +92,9 @@ ${WGSL_POST_UNIFORMS}
 @group(0) @binding(1) var samp: sampler;
 @group(0) @binding(2) var bloomTex: texture_2d<f32>;
 
-const SAMPLES: i32 = 64;
+// Reference sample count: decay and weight are tuned per step at 64 samples. With fewer
+// samples (P.quality.x) each step covers more distance, so decay and weight are rescaled.
+const REF_SAMPLES: f32 = 64.0;
 
 fn source(uv: vec2f) -> vec3f {
   let aspect = P.frame.y;
@@ -109,14 +111,18 @@ fn source(uv: vec2f) -> vec3f {
   var coord = in.uv;
   // Small per-pixel jitter hides the step pattern.
   let jitter = engine_hash21(in.pos.xy + fract(P.frame.x) * 61.0);
-  let delta = (coord - P.rays.xy) * (P.rays2.x / f32(SAMPLES));
+  let n = i32(clamp(P.quality.x, 8.0, 64.0));
+  let k = REF_SAMPLES / f32(n);
+  let delta = (coord - P.rays.xy) * (P.rays2.x / f32(n));
   coord -= delta * jitter;
+  let decay = pow(P.rays.w, k);
+  let weight = P.rays2.y * k;
   var illum = 1.0;
   var acc = vec3f(0.0);
-  for (var i = 0; i < SAMPLES; i++) {
+  for (var i = 0; i < n; i++) {
     coord -= delta;
-    acc += source(coord) * illum * P.rays2.y;
-    illum *= P.rays.w;
+    acc += source(coord) * illum * weight;
+    illum *= decay;
   }
   return vec4f(acc * P.rays.z, 1.0);
 }
@@ -164,8 +170,14 @@ fn to_srgb(c: vec3f) -> vec3f {
     if (h > 0.0) {
       let p = vec2f(uv.x * aspect, uv.y * 2.2) * P.fog.z;
       let t = time * P.fog.w;
-      let n1 = engine_fbm(p + vec2f(t * 6.0, t * 0.7), 5);
-      let n2 = engine_fbm(p * 1.9 + vec2f(-t * 9.0, t * 1.3) + vec2f(13.7, 4.1), 4);
+      // Fewer octaves (P.quality.y < 5) lose fine wisps; add back the dropped octaves' mean
+      // (0.5 each) so the mist keeps its density.
+      let o1 = i32(clamp(P.quality.y, 2.0, 5.0));
+      let o2 = max(o1 - 1, 1);
+      let m1 = 0.5 * (pow(0.5, f32(o1)) - pow(0.5, 5.0));
+      let m2 = 0.5 * (pow(0.5, f32(o2)) - pow(0.5, 4.0));
+      let n1 = engine_fbm(p + vec2f(t * 6.0, t * 0.7), o1) + m1;
+      let n2 = engine_fbm(p * 1.9 + vec2f(-t * 9.0, t * 1.3) + vec2f(13.7, 4.1), o2) + m2;
       let wisps = smoothstep(0.2, 0.85, n1 * 0.6 + n2 * 0.55);
       let amount = clamp(h * P.fogColor.w * (0.3 + 1.1 * wisps), 0.0, 1.0);
       let lit = P.fogColor.rgb * (0.6 + 0.8 * wisps) + bloom * P.fog2.x;

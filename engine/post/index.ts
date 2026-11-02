@@ -5,10 +5,11 @@ export type {
   FogSettings,
   GodRaySettings,
   GradeSettings,
+  PostQuality,
   PostSettings,
   PostSettingsPatch,
   RGB,
   Tonemap,
   VignetteSettings,
 } from './settings';
-export { applyPostPatch, defaultPostSettings } from './settings';
+export { applyPostPatch, defaultPostQuality, defaultPostSettings } from './settings';

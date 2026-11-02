@@ -65,6 +65,59 @@ export interface RenderStats {
   drawables: number;
 }
 
+/**
+ * Internal resolution of the scene targets relative to the output (the canvas backbuffer).
+ * The post stack (or the built-in present pass) upscales to the full output, so DOM UI and
+ * the final composite stay at native resolution.
+ */
+export interface ResolutionOptions {
+  /** Linear scale of the scene targets vs the output, 0.25..1. Default 1. */
+  scale?: number;
+  /** Cap on scene-target pixels (width × height). Default unlimited. */
+  maxPixels?: number;
+}
+
+/**
+ * Frame timing, filled in when `Renderer.timingEvery > 0`.
+ *
+ * `gpuMs` is the time from submit to `queue.onSubmittedWorkDone()`. With vsync the queue is
+ * normally idle at submit, so this approximates the GPU cost of the frame; when the GPU falls
+ * behind it also includes queueing, which still reads as "over budget". It needs no
+ * `timestamp-query` feature.
+ */
+export interface FrameTiming {
+  /** Last GPU sample (ms). */
+  gpuMs: number;
+  /** CPU time of the last frame, `beginFrame` → `endFrame` returning (ms). */
+  cpuMs: number;
+  /** GPU samples taken so far. */
+  samples: number;
+}
+
+/** Smallest scale `setResolution` accepts (a quarter of the output in each direction). */
+export const MIN_RESOLUTION_SCALE = 0.25;
+
+/**
+ * Effective scene-target size for an output size and resolution options. Pure (unit-tested).
+ * Sizes are rounded to even numbers so the half-res bloom/ray targets stay pixel aligned.
+ */
+export function sceneSize(
+  outW: number,
+  outH: number,
+  opts: Required<ResolutionOptions>,
+): { width: number; height: number; scale: number } {
+  const w = Math.max(1, Math.floor(outW));
+  const h = Math.max(1, Math.floor(outH));
+  let k = Math.min(1, Math.max(MIN_RESOLUTION_SCALE, opts.scale));
+  const px = w * h * k * k;
+  if (px > opts.maxPixels) k *= Math.sqrt(opts.maxPixels / px);
+  if (k >= 0.999) return { width: w, height: h, scale: 1 };
+  const even = (x: number) => Math.max(2, 2 * Math.round(x / 2));
+  const width = Math.min(w, even(w * k));
+  const height = Math.min(h, even(h * k));
+  return { width, height, scale: width / w };
+}
+
 interface DrawCmd {
   material: Material | null;
   mesh: Mesh | null;
@@ -107,12 +160,23 @@ export class Renderer implements FrameSink {
   /** Built-in sprite material bound to `white` (solid colour quads via tint). */
   readonly defaultSprite: Material;
   readonly stats: RenderStats = { drawCalls: 0, instances: 0, drawables: 0 };
+  /** See `FrameTiming`. Only updated while `timingEvery > 0`. */
+  readonly timing: FrameTiming = { gpuMs: 0, cpuMs: 0, samples: 0 };
+  /**
+   * Sample GPU time every N frames (0 = off). One sample is in flight at a time; each costs one
+   * `onSubmittedWorkDone` promise.
+   */
+  timingEvery = 0;
 
   /** Final stage. Defaults to a plain tonemap + sRGB present; set to a `PostStack`. */
   post: PostProcessor | null = null;
 
+  /** Scene-target size (internal resolution). The post stack reads these. */
   width = 1;
   height = 1;
+  /** Output (canvas backbuffer) size, as passed to `resize`. */
+  outputWidth = 1;
+  outputHeight = 1;
   sceneColor!: Texture;
   sceneEmissive!: Texture;
 
@@ -135,8 +199,25 @@ export class Renderer implements FrameSink {
   private readonly colorAtt: GPURenderPassColorAttachment;
   private readonly emissiveAtt: GPURenderPassColorAttachment;
   private readonly resizeListeners = new Set<(w: number, h: number) => void>();
+  private readonly resolution: Required<ResolutionOptions> = {
+    scale: 1,
+    maxPixels: Number.POSITIVE_INFINITY,
+  };
   private inFrame = false;
   private destroyed = false;
+  private frameStart = 0;
+  private timingFrame = 0;
+  private timingPending = false;
+  private timingSubmit = 0;
+  private readonly timingListeners = new Set<(gpuMs: number) => void>();
+  private readonly onTimingDone = (): void => {
+    this.timingPending = false;
+    if (this.destroyed) return;
+    const ms = performance.now() - this.timingSubmit;
+    this.timing.gpuMs = ms;
+    this.timing.samples++;
+    for (const fn of this.timingListeners) fn(ms);
+  };
 
   constructor(gpu: RendererGpu, opts: RendererOptions = {}) {
     this.device = gpu.device;
@@ -216,10 +297,40 @@ export class Renderer implements FrameSink {
     this.resize(1, 1);
   }
 
-  /** Resize the HDR targets (backbuffer pixels). Cheap no-op when unchanged. */
+  /**
+   * Set the output size (canvas backbuffer pixels). The HDR scene targets follow it, scaled
+   * by `setResolution`. Cheap no-op when nothing changes.
+   */
   resize(width: number, height: number): void {
-    const w = Math.max(1, Math.floor(width));
-    const h = Math.max(1, Math.floor(height));
+    this.outputWidth = Math.max(1, Math.floor(width));
+    this.outputHeight = Math.max(1, Math.floor(height));
+    this.applyResolution();
+  }
+
+  /**
+   * Render the scene below output resolution: `scale` (0.25..1, linear) and/or a `maxPixels`
+   * budget. The final pass upscales to the canvas. Only the given fields change. Changing it
+   * reallocates the scene and post targets, so do it rarely (a resolution controller should
+   * step, not track every frame).
+   */
+  setResolution(opts: ResolutionOptions): void {
+    if (opts.scale !== undefined) this.resolution.scale = opts.scale;
+    if (opts.maxPixels !== undefined) this.resolution.maxPixels = opts.maxPixels;
+    this.applyResolution();
+  }
+
+  /** Current resolution settings (scale as requested, before the pixel budget). */
+  get resolutionOptions(): Readonly<Required<ResolutionOptions>> {
+    return this.resolution;
+  }
+
+  /** Effective linear scale of the scene targets vs the output (after the pixel budget). */
+  get resolutionScale(): number {
+    return this.width / this.outputWidth;
+  }
+
+  private applyResolution(): void {
+    const { width: w, height: h } = sceneSize(this.outputWidth, this.outputHeight, this.resolution);
     if (this.sceneColor && w === this.width && h === this.height) return;
     this.width = w;
     this.height = h;
@@ -250,7 +361,13 @@ export class Renderer implements FrameSink {
     for (const fn of this.resizeListeners) fn(w, h);
   }
 
-  /** Called after every resize with backbuffer size. Returns unsubscribe. */
+  /** Called with every GPU time sample (see `timingEvery`). Returns unsubscribe. */
+  onGpuTime(fn: (gpuMs: number) => void): () => void {
+    this.timingListeners.add(fn);
+    return () => this.timingListeners.delete(fn);
+  }
+
+  /** Called after the scene targets change size, with the scene size. Returns unsubscribe. */
   onResize(fn: (width: number, height: number) => void): () => void {
     this.resizeListeners.add(fn);
     return () => this.resizeListeners.delete(fn);
@@ -442,6 +559,7 @@ export class Renderer implements FrameSink {
   beginFrame(time: number, dt: number): Frame {
     if (this.inFrame) throw new Error('beginFrame called twice without endFrame');
     this.inFrame = true;
+    if (this.timingEvery > 0) this.frameStart = performance.now();
     this.instanceCount = 0;
     this.cmdCount = 0;
     this.prePasses.length = 0;
@@ -556,6 +674,17 @@ export class Renderer implements FrameSink {
       });
     }
     device.queue.submit([enc.finish()]);
+    if (this.timingEvery > 0) this.sampleTiming();
+  }
+
+  private sampleTiming(): void {
+    const now = performance.now();
+    this.timing.cpuMs = now - this.frameStart;
+    if (this.timingPending || ++this.timingFrame < this.timingEvery) return;
+    this.timingFrame = 0;
+    this.timingPending = true;
+    this.timingSubmit = now;
+    this.device.queue.onSubmittedWorkDone().then(this.onTimingDone, this.onTimingDone);
   }
 
   destroy(): void {

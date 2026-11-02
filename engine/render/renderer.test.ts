@@ -218,3 +218,46 @@ describe('PingPong', () => {
     pp.destroy();
   });
 });
+
+describe('resolution', () => {
+  it('sizes scene targets from the output size and resolution options', () => {
+    const { fake, r } = setup();
+    const sizes: [number, number][] = [];
+    r.onResize((w, h) => sizes.push([w, h]));
+    r.resize(2560, 1440);
+    expect([r.width, r.height]).toEqual([2560, 1440]);
+    r.setResolution({ maxPixels: 1280 * 720 });
+    expect([r.outputWidth, r.outputHeight]).toEqual([2560, 1440]);
+    expect([r.width, r.height]).toEqual([1280, 720]);
+    expect(r.resolutionScale).toBe(0.5);
+    r.setResolution({ maxPixels: 1280 * 720 }); // unchanged: no realloc
+    r.resize(1280, 720); // output now fits the budget: still 1280×720, no realloc
+    expect([r.width, r.height]).toEqual([1280, 720]);
+    r.setResolution({ scale: 0.5 });
+    expect([r.width, r.height]).toEqual([640, 360]);
+    expect(sizes.slice(-3)).toEqual([
+      [2560, 1440],
+      [1280, 720],
+      [640, 360],
+    ]);
+    const live = fake.textures.filter(
+      (t) => t.label === 'scene-color' && !(t as unknown as { destroyed: boolean }).destroyed,
+    );
+    expect(live.map((t) => [t.width, t.height])).toEqual([[640, 360]]);
+  });
+
+  it('samples GPU time when enabled', async () => {
+    const { r } = setup();
+    r.resize(64, 64);
+    const got: number[] = [];
+    r.onGpuTime((ms) => got.push(ms));
+    r.timingEvery = 2;
+    for (let i = 0; i < 4; i++) {
+      r.beginFrame(i / 60, 1 / 60);
+      r.endFrame();
+      await Promise.resolve();
+    }
+    expect(got.length).toBe(2);
+    expect(r.timing.samples).toBe(2);
+  });
+});

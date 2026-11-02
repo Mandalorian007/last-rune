@@ -9,6 +9,7 @@
  */
 import { hex } from '@engine/render';
 import { LIGHT_SET_FLOATS, MAX_LIGHTS } from '../../shaders/lights-wgsl';
+import { lightBudget } from '../materials/lights';
 import { PITCH, PROP } from './palette';
 
 export const PROP_MAX_LIGHTS = MAX_LIGHTS;
@@ -50,7 +51,9 @@ export class PropLightRig implements PropLightSource {
     intensity: number,
     height = radius * 0.35,
   ): this {
-    if (this.count >= PROP_MAX_LIGHTS || intensity <= 0) return this;
+    if (this.count >= PROP_MAX_LIGHTS || this.count >= lightBudget.max || intensity <= 0) {
+      return this;
+    }
     const d = this.data;
     const p = 8 + this.count * 4;
     const c = 8 + PROP_MAX_LIGHTS * 4 + this.count * 4;

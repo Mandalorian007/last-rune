@@ -3,8 +3,10 @@ import type { PostInputs, PostProcessor, Renderer } from '@engine/render/rendere
 import { type Ease, easeInOut, PostBlender } from './blend';
 import {
   applyPostPatch,
+  defaultPostQuality,
   defaultPostSettings,
   POST_UNIFORM_FLOATS,
+  type PostQuality,
   type PostSettings,
   type PostSettingsPatch,
   packPostUniforms,
@@ -23,6 +25,11 @@ const HDR: GPUTextureFormat = 'rgba16float';
  */
 export class PostStack implements PostProcessor {
   readonly settings: PostSettings;
+  /**
+   * Cost caps (bloom levels, ray samples, fog octaves). Independent of `settings`, so scene
+   * presets and blends keep working under a lower quality tier. Change with `setQuality`.
+   */
+  readonly quality: PostQuality = defaultPostQuality();
 
   private readonly renderer: Renderer;
   private readonly uniforms = new Float32Array(POST_UNIFORM_FLOATS);
@@ -37,6 +44,8 @@ export class PostStack implements PostProcessor {
   private raysTex: GPUTexture | null = null;
   private raysView: GPUTextureView | null = null;
   private levels = 0;
+  /** Levels asked for at the last resize (before the size clamp), to detect real changes. */
+  private requestedLevels = 0;
   private width = 0;
   private height = 0;
   private boundColor: GPUTextureView | null = null;
@@ -96,6 +105,18 @@ export class PostStack implements PostProcessor {
     this.resize(renderer.width, renderer.height);
   }
 
+  /** Change the cost caps. Bloom level changes reallocate the mip chain on the next frame. */
+  setQuality(patch: Partial<PostQuality>): this {
+    Object.assign(this.quality, patch);
+    return this;
+  }
+
+  /** Bloom levels actually used: the setting, capped by quality, clamped to 2..8. */
+  private wantLevels(): number {
+    const want = Math.min(this.settings.bloom.levels, this.quality.maxBloomLevels);
+    return Math.max(2, Math.min(8, Math.floor(want)));
+  }
+
   /** Patch settings section by section. */
   set(patch: PostSettingsPatch): this {
     this.blender.cancel(patch);
@@ -138,8 +159,9 @@ export class PostStack implements PostProcessor {
   }
 
   resize(width: number, height: number): void {
-    const levels = Math.max(2, Math.min(8, Math.floor(this.settings.bloom.levels)));
-    if (width === this.width && height === this.height && levels === this.levels) return;
+    const levels = this.wantLevels();
+    if (width === this.width && height === this.height && levels === this.requestedLevels) return;
+    this.requestedLevels = levels;
     this.width = width;
     this.height = height;
     const device = this.renderer.device;
@@ -182,7 +204,7 @@ export class PostStack implements PostProcessor {
     this.advanceBlend(inputs.time);
     const s = this.settings;
     const r = this.renderer;
-    if (Math.max(2, Math.min(8, Math.floor(s.bloom.levels))) !== this.levels && this.levels > 1) {
+    if (this.wantLevels() !== this.requestedLevels) {
       this.resize(this.width, this.height);
     }
     this.bindInputs(inputs.color.view, inputs.emissive.view);
@@ -195,6 +217,7 @@ export class PostStack implements PostProcessor {
       this.height,
       r.logicalWidth,
       r.logicalHeight,
+      this.quality,
     );
     const needBloomChain = s.bloom.enabled || (s.godRays.enabled && s.godRays.bloomSource > 0);
     this.composite.setUniforms(this.uniforms);
