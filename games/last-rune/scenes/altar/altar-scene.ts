@@ -21,7 +21,7 @@ import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
 import type { BoltHandle, StormCellHandle } from '../../audio';
-import { machineLine, reactionLine } from '../../content/lines';
+import { machineLine, reactionLine, TEACH_NUDGE } from '../../content/lines';
 import { puzzleFor } from '../../content/puzzles';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { BoltOutcome } from '../../game/flow';
@@ -90,7 +90,6 @@ const DENY_REASON: Record<string, string> = {
  * First-altar idle nudge. PROVISIONAL instruction copy, not story text: content/lines.ts has no
  * teaching line yet (reported as a line gap). Replace with a FUSE line when one lands.
  */
-const TEACH_NUDGE = 'Take a gem from the tray. Put it in the glowing socket.';
 /** Seconds without a board change before the first altar nudges. */
 const TEACH_IDLE = 9;
 const TEACH_MACHINE: MachineId = 'intake-desk';

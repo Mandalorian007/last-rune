@@ -59,7 +59,11 @@ export type FuseLine =
   | (LineBase & { readonly kind: 'codex'; readonly gem: GemKind })
   | (LineBase & { readonly kind: 'beat'; readonly beat: BeatId })
   /** FUSE typing in the mock chat window (ending beat 2). Lower case on purpose. */
-  | (LineBase & { readonly kind: 'chat'; readonly order: number });
+  | (LineBase & { readonly kind: 'chat'; readonly order: number })
+  /** The altar verdict when a machine wakes on an exact solve (one per tier). */
+  | (LineBase & { readonly kind: 'exact' })
+  /** Idle nudges at the altar: 'teach' on the first puzzle, or a gem's first appearance. */
+  | (LineBase & { readonly kind: 'nudge'; readonly nudge: 'teach' | Exclude<GemKind, 'channel'> });
 
 type Def = FuseLine extends infer L
   ? L extends FuseLine
@@ -527,6 +531,59 @@ const DEFS: Def[] = [
     source: N,
     text: "Keeps a bolt for later. Ice keeps things. That's what ice is for.",
   },
+
+  // ── Altar: exact solves and idle nudges (written for the altar; same voice) ──
+  { kind: 'exact', tier: 1, source: N, text: 'Exactly right. Look at it go. Paperwork can wait.' },
+  {
+    kind: 'exact',
+    tier: 2,
+    source: N,
+    text: 'Right on the number. Management would call that adequate. Management is wrong.',
+  },
+  { kind: 'exact', tier: 3, source: N, text: "Exact. Not a spark wasted. I've signed worse." },
+  { kind: 'exact', tier: 4, source: N, text: 'Exact. Mind the door on your way through.' },
+  {
+    kind: 'nudge',
+    nudge: 'teach',
+    tier: 1,
+    source: N,
+    text: 'Gem from the tray. Into the glowing socket. The form is very clear on this.',
+  },
+  {
+    kind: 'nudge',
+    nudge: 'bend',
+    tier: 1,
+    source: N,
+    text: 'New gem in the tray. It has opinions about straight lines.',
+  },
+  {
+    kind: 'nudge',
+    nudge: 'amplify',
+    tier: 1,
+    source: N,
+    text: 'Amber in the tray. Handle it like the meter is watching.',
+  },
+  {
+    kind: 'nudge',
+    nudge: 'split',
+    tier: 1,
+    source: N,
+    text: "Magenta's in the tray now. It's been waiting all morning.",
+  },
+  {
+    kind: 'nudge',
+    nudge: 'gate',
+    tier: 1,
+    source: N,
+    text: "New one in the tray. It won't work alone. Nobody here does.",
+  },
+  {
+    kind: 'nudge',
+    nudge: 'capacitor',
+    tier: 3,
+    source: N,
+    text: "Ice in the tray. I'd use it. Eventually. That's rather the point.",
+  },
 ];
 
 function idFor(d: Def): string {
@@ -545,6 +602,10 @@ function idFor(d: Def): string {
       return `beat.${d.beat}`;
     case 'chat':
       return `chat.${d.order}`;
+    case 'exact':
+      return `exact.t${d.tier}`;
+    case 'nudge':
+      return `nudge.${d.nudge}`;
     case 'hall':
     case 'reaction': {
       const tag = d.kind === 'hall' ? d.beat : d.outcome;
@@ -643,6 +704,23 @@ export function chatLines(): FuseLine[] {
   return LINES.filter((l) => l.kind === 'chat').sort(
     (a, b) => (a.kind === 'chat' ? a.order : 0) - (b.kind === 'chat' ? b.order : 0),
   );
+}
+
+/** The altar's exact-solve line for a story tier (falls back to lower tiers). */
+export function exactLine(tier: Tier): FuseLine {
+  for (let t = tier; t >= 1; t--) {
+    const l = LINES.find((x) => x.kind === 'exact' && x.tier === t);
+    if (l) return l;
+  }
+  throw new Error('No exact line');
+}
+
+/** Idle nudge on the first puzzle (intake-desk). */
+export const TEACH_NUDGE: FuseLine = lineById('nudge.teach');
+
+/** One-line nudge for the first puzzle that offers this gem (altar-clarity hooks). */
+export function gemNudge(gem: GemKind): FuseLine | undefined {
+  return LINES.find((l) => l.kind === 'nudge' && l.nudge === gem);
 }
 
 // ─── Text utilities ──────────────────────────────────────────────────────────
