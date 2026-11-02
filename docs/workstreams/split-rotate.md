@@ -41,3 +41,8 @@ This means `games/last-rune/rules/` (model, sim, solver, `isRotational`, `types.
 - **Docs.** Updated `design/rules.md` §4/§6 and `design/altar-ux.md`.
 - **Playtest.** New spec `scripts/playtest/split-rotate.spec.ts` covers every Split altar: arrive, fixed hover and R, the tray Split in hand at rot 0–3, placed, route, strike. The glyph sheet adds the-last-rune.
 - **Checks.** `pnpm check`, `pnpm build` and `pnpm test:e2e` all pass (25, full-run included).
+- **PM review (D-027).** The trillion cut was the dominant shape and its apex pointed back at the input, so a fed Split read like an arrow against the flow. Fixes:
+  - The Split is now an octagon with flat sides on all four sides, so the cut points nowhere.
+  - The T is bold, heavier than the other glyphs: a stem from the input rim to the centre, a rim-to-rim crossbar and wide outward arrowheads. Nothing points at the input.
+  - The route preview now puts a small red ✕ where it stops at a wrong-facing Bend, Gate or Split, on the side the bolt meets (`updateNoGo`, `.lr-altar-nogo`).
+  - Updated the docs (`altar-ux.md` and the materials README).

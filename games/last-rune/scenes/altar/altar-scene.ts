@@ -316,6 +316,9 @@ export class AltarScene implements GameScene {
   /** The route preview with the held gem tried where it would land (cell, rot, kind). */
   private ghostKey = '';
   private previewSim: SimResult | null = null;
+  /** Where the preview's first strike meets a gem from a side it doesn't take: a small ✕. */
+  private noGoEls: HTMLElement[] = [];
+  private noGoKey = '';
 
   constructor(readonly machine: MachineId) {}
 
@@ -400,6 +403,7 @@ export class AltarScene implements GameScene {
     this.dom.remove();
     this.chipEls.length = 0;
     this.previewChipEls.length = 0;
+    this.noGoEls.length = 0;
     this.pins.length = 0;
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
     this.ctx.particles.clear();
@@ -834,6 +838,7 @@ export class AltarScene implements GameScene {
       this.realPreview = null;
       this.previewSim = null;
       this.updatePreviewChips();
+      this.updateNoGo([], null);
     }
     this.updateFirstTime();
     this.liveMask = liveSockets(this.puzzle, placements, this.openEnds, this.liveMask);
@@ -903,12 +908,14 @@ export class AltarScene implements GameScene {
     const v = this.view;
     let hops = this.realPreview.hops;
     let sim = this.realPreview.sim;
+    let placements = this.board.serialise();
     if (ghost) {
       const at = (q: Placement) => q.cell.x === ghost.cell.x && q.cell.y === ghost.cell.y;
-      const placements = [...this.board.serialise().filter((q) => !at(q)), ghost];
+      placements = [...placements.filter((q) => !at(q)), ghost];
       sim = simulate(this.puzzle, placements);
       hops = previewPath(this.puzzle, placements, sim).hops;
     }
+    this.updateNoGo(placements, sim);
     // Straight-through glyphs face the way the bolt will really come in, with the held gem
     // where it would land. Bend, Gate and Split keep the turn they were set at.
     v.faceAlong(hops, true);
@@ -2353,6 +2360,43 @@ export class AltarScene implements GameScene {
       );
       this.dom.insertBefore(el, this.tip);
       this.previewChipEls.push(el);
+    }
+  }
+
+  /**
+   * Where the route preview stops at a Bend, Gate or Split facing the wrong way, a small ✕ on
+   * the side the bolt meets it, so a stopped preview says why (same cause as the strike's
+   * `Faces the wrong way`).
+   */
+  private updateNoGo(placements: readonly Placement[], sim: SimResult | null): void {
+    const hops: { from: Cell; to: Cell }[] = [];
+    if (sim && PREVIEW_PATH && !this.teaching) {
+      for (const seg of sim.trace) {
+        if (seg.pulse !== 0 || seg.end !== 'fizzle') continue;
+        const one = fizzles(this.puzzle, placements, { ...sim, trace: [seg] });
+        if (one[0]?.cause === 'facing') hops.push(seg);
+      }
+    }
+    const key = hops.map((c) => `${c.from.x},${c.from.y}>${c.to.x},${c.to.y}`).join(';');
+    if (key === this.noGoKey) return;
+    this.noGoKey = key;
+    for (const el of this.noGoEls) el.remove();
+    this.noGoEls.length = 0;
+    const L = this.view.layout;
+    const a = { x: 0, y: 0 };
+    const b = { x: 0, y: 0 };
+    for (const c of hops) {
+      anchorOf(L, c.from, a);
+      anchorOf(L, c.to, b);
+      // On the gem's rim, where the bolt is turned away.
+      const t = 0.62;
+      const el = h('div', {
+        class: 'lr-altar-nogo',
+        'aria-hidden': 'true',
+        style: { left: `${a.x + (b.x - a.x) * t}px`, top: `${a.y + (b.y - a.y) * t}px` },
+      });
+      this.dom.insertBefore(el, this.tip);
+      this.noGoEls.push(el);
     }
   }
 

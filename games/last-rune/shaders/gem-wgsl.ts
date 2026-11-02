@@ -68,18 +68,18 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     d = min(d, g_seg(p, vec2f(e, -0.16), vec2f(e, 0.16)));
   } else if (kind == 2) {
     // Split (rules rot 0): one way in, from the south; out both sides (west and east), never
-    // straight on. A T: the stem ends in a wide door bar at its one input, a node at the fork,
-    // and each arm ends in an arrowhead pointing out, like the Gate's output (D-031).
-    let y = -0.16;
-    let e = 0.66;
-    d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, y));
-    d = min(d, g_seg(p, vec2f(-e, y), vec2f(e, y)));
-    d = min(d, max(length(p - vec2f(0.0, y)) - 0.1, 0.0));
-    d = min(d, g_seg(p, vec2f(-0.2, 0.72), vec2f(0.2, 0.72)));
-    d = min(d, g_seg(p, vec2f(-e + 0.15, y - 0.15), vec2f(-e, y)));
-    d = min(d, g_seg(p, vec2f(-e + 0.15, y + 0.15), vec2f(-e, y)));
-    d = min(d, g_seg(p, vec2f(e - 0.15, y - 0.15), vec2f(e, y)));
-    d = min(d, g_seg(p, vec2f(e - 0.15, y + 0.15), vec2f(e, y)));
+    // straight on. A bold T: the stem runs from the input rim to the centre, the crossbar runs
+    // rim to rim, and each arm ends in a wide arrowhead pointing out (D-031). Drawn heavier
+    // than the other glyphs so it, not the cut, is what reads; nothing points at the input.
+    let e = 0.7;
+    let h = 0.24;
+    d = g_seg(p, vec2f(0.0, 0.74), vec2f(0.0, 0.0));
+    d = min(d, g_seg(p, vec2f(-e, 0.0), vec2f(e, 0.0)));
+    d = min(d, g_seg(p, vec2f(-e + h, -h), vec2f(-e, 0.0)));
+    d = min(d, g_seg(p, vec2f(-e + h, h), vec2f(-e, 0.0)));
+    d = min(d, g_seg(p, vec2f(e - h, -h), vec2f(e, 0.0)));
+    d = min(d, g_seg(p, vec2f(e - h, h), vec2f(e, 0.0)));
+    d -= 0.035;
   } else if (kind == 3) {
     // Amplify: straight through, two stacked chevrons pointing the way out.
     d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.3));
@@ -121,8 +121,8 @@ fn g_cut(kind: i32) -> Cut {
     c.sides = 6.0; c.phase = -TAU / 4.0; c.scale = vec2f(0.66, 1.0);
   } else if (kind == 1) {   // square cushion
     c.sides = 4.0; c.phase = TAU / 8.0; c.scale = vec2f(1.08);
-  } else if (kind == 2) {   // trillion: apex at the input (south), flat side across the outputs
-    c.sides = 3.0; c.phase = TAU / 4.0; c.scale = vec2f(1.12); c.offset = vec2f(0.0, 0.28);
+  } else if (kind == 2) {   // octagon, flats on the four sides: points nowhere, so the T leads
+    c.sides = 8.0; c.phase = TAU / 16.0; c.scale = vec2f(1.02);
   } else if (kind == 3) {   // round brilliant
     c.sides = 12.0; c.phase = 0.0; c.scale = vec2f(0.97);
   } else if (kind == 4) {   // shield

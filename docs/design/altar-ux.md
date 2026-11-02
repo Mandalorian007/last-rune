@@ -128,9 +128,10 @@ It sits between FUSE (x ≤ 410) and his caption card; the altar passes its meas
   `R or scroll to turn` with a gem in hand). Held over an empty socket it fits, the gem is tried
   there in the route preview, so the preview swings as it turns. Linking and Strike-ready ignore
   the held gem.
-- **Split.** A Split turns like a Bend or Gate (D-031). Its glyph is a T: a stem with a door
-  bar on the one input side (the trillion's apex), and two arms with arrowheads on the sides the
-  halves leave by (rules.md section 4). The tray Split shows rot 0 (in from below, out left and
+- **Split.** A Split turns like a Bend or Gate (D-031). Its glyph is a bold T on a
+  non-directional octagon cut: a stem from the one input side to the centre, and a crossbar
+  whose arms end in arrowheads on the sides the halves leave by (rules.md section 4). Nothing on
+  the gem points at its input (the old trillion's apex did, and read as an arrow backwards). The tray Split shows rot 0 (in from below, out left and
   right). A fixed Split met for the first time gets guide stubs into its stem and out of both
   arms. Its card reads the Codex rule (`Takes the bolt in at its stem and sends it out both
   arms, half charge each.`). A bolt into any other side fizzles with `Faces the wrong way`.
