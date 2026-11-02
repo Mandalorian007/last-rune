@@ -52,7 +52,7 @@ import {
 import { jumpCursor, stepCursor } from './cursor';
 import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
 import { setHintTarget } from './hints';
-import { anchorOf, cellAt, cellCenter, traySlotAt, trayTipX } from './layout';
+import { anchorOf, cellAt, cellCenter, TRAY_CENTER_X, traySlotAt, trayTipX } from './layout';
 import {
   type Arrival,
   buildTimeline,
@@ -80,6 +80,16 @@ interface Press {
   y: number;
   dragging: boolean;
 }
+
+/** Where a gem on the info card is: hovered in the tray, on the board, fixed, or newly turnable. */
+type InfoHow = 'tray' | 'turnsTray' | 'board' | 'fixed' | 'turns';
+const INFO_TAG: Record<InfoHow, string> = {
+  tray: '',
+  turnsTray: 'Turns: R or scroll',
+  board: '',
+  fixed: 'Fixed in place',
+  turns: 'Turns: R or scroll',
+};
 
 const GEM_NAME: Record<GemKind, string> = {
   channel: 'Channel',
@@ -120,11 +130,16 @@ function listText(items: readonly string[]): string {
 const PREVIEW_PATH = true;
 /** Seconds without a board change before the first altar nudges. */
 const TEACH_IDLE = 9;
+/** Seconds a new gem's card shows on arrival (less if the player places a gem first). */
+const INTRO_SECS = 7;
+/** The card fades over its last this-many seconds. */
+const INTRO_FADE = 0.5;
 const TEACH_MACHINE: MachineId = 'intake-desk';
 
 const SLOT_ACTIONS = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6'] as const;
 const CYAN: RGBA = [0.25, 1.3, 1.8, 1];
-const FIXED_RING: RGBA = [GOLD[0] * 0.8, GOLD[1] * 0.8, GOLD[2] * 0.8, 1];
+/** Fixed gems wear cold iron, not gold: gold marks where the player acts. */
+const FIXED_RING: RGBA = [1.05, 1.15, 1.35, 1];
 const WHITE_HOT: RGBA = [2, 2, 2, 1];
 const OPEN_END: RGBA = [1.5, 1.05, 0.5, 1];
 /** Conduit colours by outcome (match the need label's CSS colours). */
@@ -206,8 +221,17 @@ export class AltarScene implements GameScene {
   private validRev = -1;
   private validKind: GemKind | null = null;
   private rules = {} as Record<GemKind, string>;
+  /** The gem info card: off the board, over the tray band (see `updateInfo`). */
   private tip!: HTMLElement;
-  private tipSlot = -2;
+  private tipKey = '';
+  /** Iron brackets on fixed (and hint-locked) gems, rebuilt when the board changes. */
+  private pins: HTMLElement[] = [];
+  private pinsRev = -1;
+  /** Turn arrow on a held Bend or Gate, until the player has turned one here. */
+  private turnBadge!: HTMLElement;
+  private turned = false;
+  /** Board gem the keyboard cursor last announced. */
+  private focusKey = '';
 
   // DOM
   private dom!: HTMLElement;
@@ -241,15 +265,28 @@ export class AltarScene implements GameScene {
   private strikeReadings: number[][] = [];
 
   // First-appearance teaching
-  private news: NewGems = { fixed: [], tray: [] };
+  private news: NewGems = { fixed: [], tray: [], turns: [] };
   /** New fixed gems still pulsing (until hovered, turned, or the first strike). */
   private teachFixed: { gem: GemKind; cell: Cell }[] = [];
   /** Stubs on the sides each new fixed gem joins (see `guideHops`). */
   private guide: PathHop[] = [];
   /** New tray kinds not yet picked up. */
   private teachTray = new Set<GemKind>();
-  private teachTags: HTMLElement[] = [];
   private spoken = new Set<GemKind>();
+  /** New gems FUSE has yet to name, said one at a time when he is free (see `updateNudges`). */
+  private pendingNudges: GemKind[] = [];
+  /** Seconds left on the arrival card for this altar's new gems (0 = gone). */
+  private introLeft = 0;
+  /** Charge read-outs on the route preview through a new fixed gem (see `updatePreviewChips`). */
+  private previewChipEls: HTMLElement[] = [];
+  private previewChipKey = '';
+  /** Charge read-outs on the preview through new gems, until the first strike here. */
+  private teachChips = false;
+  /** Turning kinds this altar teaches to turn (show the turn arrow when held). */
+  private turnTeach = new Set<GemKind>();
+  /** The route preview with the held gem tried where it would land (cell, rot, kind). */
+  private ghostKey = '';
+  private previewSim: SimResult | null = null;
 
   constructor(readonly machine: MachineId) {}
 
@@ -285,6 +322,8 @@ export class AltarScene implements GameScene {
       this.news = newGems(this.puzzle, solved);
       this.teachFixed = this.news.fixed.map((f) => ({ gem: f.gem, cell: f.cell }));
       this.teachTray = new Set(this.news.tray);
+      this.teachChips = this.news.fixed.length + this.news.tray.length > 0;
+      this.turnTeach = new Set([...this.news.turns, ...this.news.tray.filter(isRotational)]);
       this.guide = guideHops(
         this.puzzle,
         this.teachFixed.map((f) => f.cell),
@@ -294,6 +333,7 @@ export class AltarScene implements GameScene {
     ensureAltarStyles(ctx.ui.root.ownerDocument);
     this.buildDom();
     this.refreshHud();
+    this.introLeft = this.introRows().length > 0 ? INTRO_SECS : 0;
     this.announce(this.briefing());
 
     this.updateHint(); // also keeps the caption off the tray and the hint
@@ -301,10 +341,9 @@ export class AltarScene implements GameScene {
     if (!saved || saved.attempts === 0) {
       const arrive = machineLine(this.machine, 'arrive');
       if (arrive) void ctx.fuse.say(arrive, { interrupt: true });
-      // New fixed gems: one hint each, queued after the arrive line.
-      for (const g of nudgeGems({ fixed: this.news.fixed, tray: [] })) this.speak(g);
+      // New gems: one line each once FUSE is free, unless the player is already using it.
+      this.pendingNudges = nudgeGems(this.news);
     }
-    this.buildTeachTags();
     setHintTarget({
       machine: this.machine,
       highlight: (cell) => this.hintHighlight(cell),
@@ -331,7 +370,8 @@ export class AltarScene implements GameScene {
     if (this.announceTimer !== null) clearTimeout(this.announceTimer);
     this.dom.remove();
     this.chipEls.length = 0;
-    this.teachTags.length = 0;
+    this.previewChipEls.length = 0;
+    this.pins.length = 0;
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
     this.ctx.particles.clear();
     emitPuzzleEvent({
@@ -464,7 +504,13 @@ export class AltarScene implements GameScene {
       'aria-live': 'polite',
       'aria-atomic': 'true',
     });
-    this.tip = h('div', { class: 'lr-altar-tip', role: 'tooltip', hidden: true });
+    // The info card is read through the announcer (on focus), not as a live tooltip.
+    this.tip = h('div', { class: 'lr-altar-tip', 'aria-hidden': 'true', hidden: true });
+    this.turnBadge = h(
+      'div',
+      { class: 'lr-altar-turn', 'aria-hidden': 'true', hidden: true },
+      h('span', { class: 'lr-turn-arrow' }, '\u21bb'),
+    );
     this.counts = L.tray.map((s) =>
       h('div', {
         class: 'lr-altar-count',
@@ -484,24 +530,22 @@ export class AltarScene implements GameScene {
         style: { left: `${m.label.x}px`, top: `${m.label.y}px` },
       }),
     );
-    // First altar: the storm says what it gives, in the same card as the machine's need, so
-    // "Gives 4" and "Needs 4" read as one quantity before anything is placed.
-    this.stormLabel = this.teachCell
-      ? h(
-          'div',
-          {
-            class: 'lr-altar-need lr-altar-storm',
-            'data-align': L.storm.label.align,
-            style: { left: `${L.storm.label.x}px`, top: `${L.storm.label.y}px` },
-          },
-          h(
-            'span',
-            { class: 'lr-need-row' },
-            'Gives ',
-            h('b', null, String(stormCharge(this.puzzle.storm.strength))),
-          ),
-        )
-      : null;
+    // The storm says what it gives, in the same card as the machines' needs, so "Gives 4" and
+    // "Needs 4" read as one quantity before anything is placed.
+    this.stormLabel = h(
+      'div',
+      {
+        class: 'lr-altar-need lr-altar-storm',
+        'data-align': L.storm.label.align,
+        style: { left: `${L.storm.label.x}px`, top: `${L.storm.label.y}px` },
+      },
+      h(
+        'span',
+        { class: 'lr-need-row' },
+        'Gives ',
+        h('b', null, String(stormCharge(this.puzzle.storm.strength))),
+      ),
+    );
     this.titleEl = h(
       'div',
       { class: 'lr-altar-title', style: { left: `${L.titleX}px` } },
@@ -529,6 +573,7 @@ export class AltarScene implements GameScene {
       ...this.needs,
       ...(this.stormLabel ? [this.stormLabel] : []),
       this.tip,
+      this.turnBadge,
       this.hint,
     );
     this.dom.toggleAttribute('data-first', !!this.teachCell);
@@ -601,6 +646,7 @@ export class AltarScene implements GameScene {
     this.verdict.toggleAttribute('data-narrow', verdictW < 600);
     if (!this.verdict.hidden) place(this.verdict, verdictW);
     for (const el of this.needs) this.clearOfActions(el);
+    if (this.stormLabel) this.clearOfActions(this.stormLabel);
     // The verdict sits under the title, however many lines the title took.
     const titleBottom = this.titleEl.offsetTop + this.titleEl.offsetHeight;
     this.verdict.style.top = `${Math.max(96, titleBottom + 6)}px`;
@@ -639,7 +685,11 @@ export class AltarScene implements GameScene {
         : `${needs.length} machines need exactly ${listText(needs.map(String))}.`;
     const strikes = p.pulses > 1 ? `, ${p.pulses} strikes` : '';
     const gives = stormCharge(p.storm.strength);
-    return `${getMachine(this.machine).name} altar. Storm ×${p.storm.strength} gives ${gives}${strikes}. ${ask}`;
+    const intro = this.introRows().map((r) => `New: ${this.infoText(r)}`);
+    return [
+      `${getMachine(this.machine).name} altar. Storm ×${p.storm.strength} gives ${gives}${strikes}. ${ask}`,
+      ...intro,
+    ].join(' ');
   }
 
   /** The strike result for screen readers: the verdict plus every machine's reading. */
@@ -724,24 +774,39 @@ export class AltarScene implements GameScene {
   /** Live sockets and the route preview, recomputed when the board or mode changes. */
   private updateCircuit(): void {
     const rev = this.board.revision;
-    if (rev === this.circuitRev && this.mode === this.circuitMode) return;
+    const ghost = this.ghost();
+    const ghostKey = ghost ? `${ghost.gem}@${ghost.cell.x},${ghost.cell.y}r${ghost.rot}` : '';
+    if (rev === this.circuitRev && this.mode === this.circuitMode) {
+      if (ghostKey !== this.ghostKey) this.updateGhost(ghost, ghostKey);
+      return;
+    }
     const first = this.circuitRev < 0;
     this.circuitRev = rev;
     this.circuitMode = this.mode;
     const v = this.view;
     const placements = this.board.serialise();
     if (this.mode === 'edit') {
-      const pv = previewPath(this.puzzle, placements, simulate(this.puzzle, placements));
+      const sim = simulate(this.puzzle, placements);
+      const pv = previewPath(this.puzzle, placements, sim);
       this.openEnds = pv.openEnds;
-      v.preview = pv.hops;
-      v.previewTarget = PREVIEW_PATH ? 1 : 0;
       // Glyphs face the way the bolt will really come in, before any strike.
       v.faceAlong(pv.hops, true);
+      // Linked (and Strike-ready) by what is on the board, never by the gem in hand. A route
+      // that reaches a machine only on a later strike (a Capacitor's release) still reaches it.
+      const at = (c: Cell, m: Cell) => c.x === m.x && c.y === m.y;
       this.puzzle.machines.forEach((m, i) => {
-        v.machineLinked[i] = pv.hops.some((q) => q.to.x === m.at.x && q.to.y === m.at.y);
+        v.machineLinked[i] =
+          pv.hops.some((q) => at(q.to, m.at)) || sim.trace.some((q) => at(q.to, m.at));
       });
+      this.realPreview = { hops: pv.hops, sim };
+      this.ghostKey = '#';
+      this.updateGhost(ghost, ghostKey);
     } else {
       v.previewTarget = 0;
+      this.ghostKey = '';
+      this.realPreview = null;
+      this.previewSim = null;
+      this.updatePreviewChips();
     }
     this.updateFirstTime();
     this.liveMask = liveSockets(this.puzzle, placements, this.openEnds, this.liveMask);
@@ -765,10 +830,49 @@ export class AltarScene implements GameScene {
     const v = this.view;
     const edit = this.mode === 'edit';
     const linked = v.machineLinked.every(Boolean);
-    v.beckonTarget = edit && !!this.teachCell && !linked ? 1 : 0;
+    v.beckonTarget = edit && this.teachCell && !linked ? 1 : 0;
     v.guide = this.teachFixed.length > 0 ? this.guide : [];
     v.guideTarget = edit && this.teachFixed.length > 0 ? 1 : 0;
-    this.strikeBtn.toggleAttribute('data-ready', edit && !!this.teachCell && linked);
+    // Every altar: Strike glows once the route reaches every machine. Reaching is not exact
+    // (the charge may still be wrong); the glow only says the bolt has somewhere to go.
+    this.strikeBtn.toggleAttribute('data-ready', edit && linked);
+  }
+
+  /** The route preview of the board as it is (no held gem), cached per revision. */
+  private realPreview: { hops: PathHop[]; sim: SimResult } | null = null;
+
+  /**
+   * The held gem, tried where it would land: an empty socket it fits, under the pointer or
+   * the cursor. The preview shows the route with it there, so turning a Bend in hand swings
+   * the route before it is set down.
+   */
+  private ghost(): Placement | null {
+    const hand = this.hand;
+    if (this.mode !== 'edit' || !hand || hand.from) return null;
+    const cell = this.keyboard ? this.cursor : this.hoverCell;
+    if (!cell || this.board.at(cell) || !this.board.check(cell, hand.kind).ok) return null;
+    return {
+      gem: hand.kind,
+      cell: { x: cell.x, y: cell.y },
+      rot: (hand.rot & 3) as Placement['rot'],
+    };
+  }
+
+  private updateGhost(ghost: Placement | null, key: string): void {
+    if (key === this.ghostKey || !this.realPreview) return;
+    this.ghostKey = key;
+    const v = this.view;
+    let hops = this.realPreview.hops;
+    let sim = this.realPreview.sim;
+    if (ghost) {
+      const placements = [...this.board.serialise(), ghost];
+      sim = simulate(this.puzzle, placements);
+      hops = previewPath(this.puzzle, placements, sim).hops;
+    }
+    v.preview = hops;
+    v.previewTarget = PREVIEW_PATH ? 1 : 0;
+    this.previewSim = sim;
+    this.updatePreviewChips();
   }
 
   private isLive(c: Cell): boolean {
@@ -846,7 +950,7 @@ export class AltarScene implements GameScene {
 
   // ── First-appearance teaching ───────────────────────────────────────────
 
-  /** FUSE's nudge for a gem's first appearance (queued, never interrupting). */
+  /** FUSE's nudge for a gem's first appearance (never interrupting). */
   private speak(gem: GemKind): void {
     if (this.spoken.has(gem)) return;
     this.spoken.add(gem);
@@ -854,40 +958,74 @@ export class AltarScene implements GameScene {
     if (line) void this.ctx.fuse.say(line);
   }
 
-  /** Rule cards pinned above new fixed gems until the first strike. */
-  private buildTeachTags(): void {
-    for (const t of this.teachTags) t.remove();
-    this.teachTags.length = 0;
-    const L = this.view.layout;
-    const pt = { x: 0, y: 0 };
-    for (const f of this.teachFixed) {
-      cellCenter(L, f.cell, pt);
-      const el = h(
-        'div',
-        {
-          class: 'lr-altar-teach',
-          style: { left: `${pt.x}px`, top: `${pt.y - L.pitch * 0.5}px` },
-        },
-        h('b', null, GEM_NAME[f.gem]),
-        ` ${firstSentence(this.rules[f.gem] ?? '')}`,
-      );
-      el.dataset.gem = f.gem;
-      this.dom.append(el);
-      this.teachTags.push(el);
+  /** Seconds FUSE has been quiet in edit mode (so a nudge never lands on another line). */
+  private quiet = 0;
+
+  /**
+   * New-gem lines, one at a time, each when FUSE is free. A line is skipped once its gem is
+   * in use: a new fixed gem the route already reaches (or has been struck through), a new tray
+   * gem already on the board. The player who has it working needs no introduction.
+   */
+  private updateNudges(dt: number): void {
+    if (this.pendingNudges.length === 0) return;
+    if (this.mode !== 'edit' || this.ctx.fuse.speaking) {
+      this.quiet = 0;
+      return;
+    }
+    this.quiet += dt;
+    if (this.quiet < 0.6) return;
+    const gem = this.pendingNudges.shift()!;
+    if (!this.inUse(gem)) {
+      this.speak(gem);
+      this.quiet = 0;
     }
   }
 
-  /** New fixed gems have been struck through: stop pulsing them and drop their cards. */
+  /** The player is already using `gem` here (see `updateNudges`). */
+  private inUse(gem: GemKind): boolean {
+    const fixed = this.news.fixed.find((f) => f.gem === gem);
+    if (fixed) {
+      if (!this.teachFixed.some((f) => f.gem === gem)) return true;
+      const c = fixed.cell;
+      return (this.realPreview?.hops ?? []).some((q) => q.to.x === c.x && q.to.y === c.y);
+    }
+    return this.board.serialise().some((q) => q.gem === gem);
+  }
+
+  /** What this altar introduces, for the arrival card and the briefing. */
+  private introRows(): { gem: GemKind; how: InfoHow }[] {
+    return [
+      ...this.news.fixed.map((f) => ({ gem: f.gem, how: 'fixed' as const })),
+      ...this.news.tray.map((gem) => ({ gem, how: 'tray' as const })),
+      ...this.news.turns.map((gem) => ({ gem, how: 'turns' as const })),
+    ];
+  }
+
+  /** One gem's card text: what it does, and whether it is fixed or turns. */
+  private infoText(r: { gem: GemKind; how: InfoHow }): string {
+    const tag = INFO_TAG[r.how];
+    return `${GEM_NAME[r.gem]}${tag ? ` (${tag})` : ''}: ${this.infoRule(r)}`;
+  }
+
+  private infoRule(r: { gem: GemKind; how: InfoHow }): string {
+    if (r.how === 'turns') return 'Yours to place now. Turn it in hand to choose its two sides.';
+    const rule = this.rules[r.gem] ?? '';
+    return r.how === 'tray' || r.how === 'turnsTray' ? rule : firstSentence(rule);
+  }
+
+  /** New fixed gems have been struck through: stop pulsing them, close the arrival card. */
   private learnFixed(): void {
-    if (this.teachFixed.length === 0) return;
     this.teachFixed = [];
-    this.buildTeachTags();
+    this.introLeft = 0;
+    this.teachChips = false;
   }
 
   // ── Edits ───────────────────────────────────────────────────────────────
 
   private changed(placed: Cell | null = null): void {
     if (this.mode === 'result') this.backToEdit();
+    // The arrival card has done its job once the player starts building: let it fade.
+    if (placed && this.introLeft > INTRO_FADE) this.introLeft = INTRO_FADE;
     this.view.syncBoard(this.board, placed);
     this.ctx.flow.savePlacements(this.machine, this.board.serialise());
     if (this.hand && !this.hand.from && this.board.remaining(this.hand.kind) <= 0) this.hand = null;
@@ -932,9 +1070,9 @@ export class AltarScene implements GameScene {
     }
     const rot = keepRot && this.hand?.kind === kind ? this.hand.rot : 0;
     this.hand = { kind, rot, from: null };
-    if (this.teachTray.delete(kind)) {
-      for (const g of nudgeGems({ fixed: [], tray: [kind] })) this.speak(g);
-    }
+    this.teachTray.delete(kind);
+    const turns = isRotational(kind) ? ' Turn it with R or Q.' : '';
+    this.announce(`${GEM_NAME[kind]} in hand. ${this.rules[kind] ?? ''}${turns}`);
     this.ctx.sound.sfx.play('gemPick', { gem: kind });
     this.refreshHud();
   }
@@ -1606,10 +1744,15 @@ export class AltarScene implements GameScene {
 
     this.updateCircuit();
     this.updateTeach(dt);
+    this.updateNudges(dt);
     this.updateFuse();
     this.updateHint();
     this.updateTray();
-    this.updateTip();
+    if (this.introLeft > 0 && this.mode === 'edit')
+      this.introLeft = Math.max(0, this.introLeft - dt);
+    this.updateInfo();
+    this.updatePins();
+    this.updateTurnBadge();
     // The keyboard cursor, for tests and tools (the gold ring is drawn on the GPU).
     const ck = `${this.cursor.x},${this.cursor.y}`;
     if (ck !== this.cursorKey) {
@@ -1743,6 +1886,7 @@ export class AltarScene implements GameScene {
     if (turn !== 0) {
       if (this.hand && isRotational(this.hand.kind)) {
         this.hand.rot = (this.hand.rot + turn + 4) & 3;
+        this.turned = true;
         this.ctx.sound.sfx.play('gemRotate');
       } else if (!this.hand && target) this.rotateAt(target, turn);
     }
@@ -1873,28 +2017,204 @@ export class AltarScene implements GameScene {
     return this.validCells;
   }
 
-  /** One-line gem rule above the hovered (or held) tray gem. */
-  private updateTip(): void {
+  /**
+   * The gem info card. It never covers the board: it sits over the tray band, just above the
+   * slots. What it says, first match wins:
+   *   1. the hovered or held tray gem (its full rule; the notch points at its slot);
+   *   2. the board gem under the pointer, or under the keyboard cursor (first sentence, and
+   *      "Fixed in place" for a gem that is part of the machine);
+   *   3. on arrival, this altar's new gems, for a few seconds or until the first placement.
+   * Keyboard and screen-reader players get the same text through the announcer.
+   */
+  private updateInfo(): void {
     const L = this.view.layout;
-    let slot = this.mode === 'strike' ? -1 : this.hoverSlot;
-    if (slot < 0 && this.hand && !this.hand.from && this.mode !== 'strike') {
+    const strike = this.mode === 'strike';
+    let rows: { gem: GemKind; how: InfoHow }[] = [];
+    let slotX: number | null = null;
+    let key = '';
+    let slot = strike ? -1 : this.hoverSlot;
+    if (slot < 0 && this.hand && !this.hand.from && !strike) {
       slot = L.tray.findIndex((t) => t.gem === this.hand!.kind);
     }
-    if (slot === this.tipSlot) return;
-    this.tipSlot = slot;
     const s = slot >= 0 ? L.tray[slot] : undefined;
-    if (!s) {
+    const focus = !strike && !this.hand ? (this.keyboard ? this.cursor : this.hoverCell) : null;
+    const fixedHere = focus ? this.board.fixedAt(focus) : undefined;
+    const onBoard = focus ? (this.board.at(focus) ?? fixedHere) : undefined;
+    if (s) {
+      rows = [{ gem: s.gem, how: this.turnTeach.has(s.gem) ? 'turnsTray' : 'tray' }];
+      slotX = s.x;
+      key = `t${slot}`;
+    } else if (focus && onBoard) {
+      const fixed = !!fixedHere;
+      rows = [{ gem: onBoard.gem, how: fixed ? 'fixed' : 'board' }];
+      key = `b${focus.x},${focus.y}${fixed ? 'f' : ''}`;
+    } else if (this.introLeft > 0 && !strike) {
+      rows = this.introRows();
+      key = 'intro';
+    }
+    // Keyboard focus on a board gem: say what it is (once per gem).
+    const fk = this.keyboard && key.startsWith('b') ? key : '';
+    if (fk !== this.focusKey) {
+      this.focusKey = fk;
+      if (fk && rows[0]) this.announce(this.infoText(rows[0]));
+    }
+    const fade =
+      key === 'intro' && !this.ctx.settings.reducedMotion
+        ? Math.min(1, this.introLeft / INTRO_FADE)
+        : 1;
+    this.tip.style.opacity = fade < 1 ? fade.toFixed(3) : '';
+    if (key === this.tipKey) return;
+    this.tipKey = key;
+    if (rows.length === 0) {
       this.tip.hidden = true;
       return;
     }
-    this.tip.replaceChildren(h('b', null, GEM_NAME[s.gem]), ` ${this.rules[s.gem] ?? ''}`);
-    this.tip.style.top = `${s.y - s.size * 0.62}px`;
+    this.tip.dataset.source = key === 'intro' ? 'intro' : key[0] === 't' ? 'tray' : 'board';
+    this.tip.replaceChildren(
+      ...rows.map((r) => {
+        const tag = INFO_TAG[r.how];
+        return h(
+          'div',
+          { class: 'lr-info-row', 'data-how': r.how },
+          h('b', null, GEM_NAME[r.gem]),
+          tag ? h('span', { class: 'lr-info-tag', 'data-how': r.how }, tag) : null,
+          ` ${this.infoRule(r)}`,
+        );
+      }),
+    );
+    // Bottom edge just above the tray slots (translate -100%), clear of the board's sockets.
+    const s0 = L.tray[0];
+    const size = s0?.size ?? 92;
+    this.tip.style.top = `${L.trayY - size * 0.62}px`;
     this.tip.hidden = false;
-    // Over its slot, but never over FUSE (left) or into the caption's corner (right).
-    const x = trayTipX(s.x, this.tip.offsetWidth);
+    // Over its slot (or the tray's middle), never over FUSE (left) or the caption (right).
+    const x = trayTipX(slotX ?? TRAY_CENTER_X, this.tip.offsetWidth);
     this.tip.style.left = `${x}px`;
-    // The pointer under the tip still points at the slot.
-    this.tip.style.setProperty('--lr-tip-dx', `${s.x - x}px`);
+    // The notch points at the slot; the card for a board gem or the arrival has none.
+    if (slotX !== null) this.tip.style.setProperty('--lr-tip-dx', `${slotX - x}px`);
+  }
+
+  /**
+   * Iron brackets and a bolt head on every fixed gem (and a hint-locked one): part of the
+   * machine, not the player's to move or turn. Drawn in the overlay over the socket corners.
+   */
+  private updatePins(): void {
+    const rev = this.board.revision;
+    if (rev === this.pinsRev) return;
+    this.pinsRev = rev;
+    for (const el of this.pins) el.remove();
+    this.pins.length = 0;
+    const L = this.view.layout;
+    const pt = { x: 0, y: 0 };
+    const cells = [
+      ...this.puzzle.fixed.map((f) => f.cell),
+      ...this.board.lockedPlacements.map((f) => f.cell),
+    ];
+    for (const c of cells) {
+      cellCenter(L, c, pt);
+      const el = h(
+        'div',
+        {
+          class: 'lr-altar-pin',
+          'aria-hidden': 'true',
+          style: {
+            left: `${pt.x}px`,
+            top: `${pt.y}px`,
+            width: `${L.pitch * 0.9}px`,
+            height: `${L.pitch * 0.9}px`,
+          },
+        },
+        h('i', { class: 'lr-pin-bolt' }),
+      );
+      el.dataset.cell = `${c.x},${c.y}`;
+      this.dom.insertBefore(el, this.tip);
+      this.pins.push(el);
+    }
+  }
+
+  /**
+   * A held Bend or Gate shows it turns: a turn arrow by the gem, with the keys, until the
+   * player has turned one here. Only where the altar teaches turning (its first tray Bend or
+   * Gate); the preview swings with each turn (see `ghost`).
+   */
+  private updateTurnBadge(): void {
+    const held = this.view.held;
+    const show =
+      this.mode === 'edit' &&
+      !!this.hand &&
+      !!held &&
+      !this.turned &&
+      this.turnTeach.has(this.hand.kind);
+    if (this.turnBadge.hidden === show) this.turnBadge.hidden = !show;
+    if (!show || !held) return;
+    const r = this.view.layout.gemSize * 0.5;
+    this.turnBadge.style.left = `${held.x + r}px`;
+    this.turnBadge.style.top = `${held.y - r}px`;
+    const keys = this.keyboard ? 'R / Q' : 'R / Scroll';
+    if (this.turnBadge.dataset.keys !== keys) {
+      this.turnBadge.dataset.keys = keys;
+      this.turnBadge.replaceChildren(
+        h('span', { class: 'lr-turn-arrow' }, '\u21bb'),
+        h('span', { class: 'lr-turn-keys' }, keys),
+      );
+    }
+  }
+
+  /**
+   * Until the first strike on an altar that introduces a gem, the route preview carries the
+   * charge into and out of each new gem on it, so its effect reads before anything fires.
+   */
+  private updatePreviewChips(): void {
+    const sim = this.teachChips && this.mode === 'edit' ? this.previewSim : null;
+    const L = this.view.layout;
+    const kinds = new Set<GemKind>([...this.news.fixed.map((f) => f.gem), ...this.news.tray]);
+    const chips: { from: Cell; to: Cell; charge: number }[] = [];
+    if (sim) {
+      const ghost = this.ghost();
+      const kindAt = (c: Cell): GemKind | undefined =>
+        ghost && ghost.cell.x === c.x && ghost.cell.y === c.y
+          ? ghost.gem
+          : (this.board.at(c) ?? this.board.fixedAt(c))?.gem;
+      const touches = (c: Cell): boolean => {
+        const k = kindAt(c);
+        return !!k && kinds.has(k);
+      };
+      for (const seg of sim.trace) {
+        if (seg.pulse !== 0) continue;
+        if (touches(seg.from) || touches(seg.to)) chips.push(seg);
+      }
+    }
+    const key = chips
+      .map((c) => `${c.from.x},${c.from.y}>${c.to.x},${c.to.y}=${c.charge}`)
+      .join(';');
+    if (key === this.previewChipKey) return;
+    this.previewChipKey = key;
+    for (const el of this.previewChipEls) el.remove();
+    this.previewChipEls.length = 0;
+    const a = { x: 0, y: 0 };
+    const b = { x: 0, y: 0 };
+    const chipPx = Math.max(16, Math.min(24, Math.round(L.pitch * 0.3)));
+    for (const c of chips) {
+      anchorOf(L, c.from, a);
+      anchorOf(L, c.to, b);
+      const el = h(
+        'div',
+        {
+          class: 'lr-altar-chip',
+          'data-preview': '',
+          'aria-hidden': 'true',
+          style: {
+            left: `${(a.x + b.x) / 2}px`,
+            top: `${(a.y + b.y) / 2}px`,
+            fontSize: scalePxCss(chipPx),
+            lineHeight: `calc(${scalePxCss(chipPx)} + 6px)`,
+          },
+        },
+        String(c.charge),
+      );
+      this.dom.insertBefore(el, this.tip);
+      this.previewChipEls.push(el);
+    }
   }
 
   private updateFuse(): void {

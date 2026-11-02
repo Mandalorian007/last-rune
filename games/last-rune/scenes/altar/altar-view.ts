@@ -184,7 +184,8 @@ export class AltarView {
       size: s.size,
       state: 'idle' as GemState,
       lift: 0,
-      rot: 0,
+      // As it will sit on the board: Channel and friends face the bolt, Bend and Gate as held.
+      rot: this.restRot({ gem: s.gem, cell: { x: 0, y: 0 }, rot: 0 }),
       seed: 40 + i,
     }));
     this.trayLift = L.tray.map(() => 0);

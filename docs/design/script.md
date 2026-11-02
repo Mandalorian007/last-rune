@@ -745,22 +745,22 @@ Heard at the altar itself, not in the hall. Written for the altar in the same vo
 > Gem from the tray. Onto a bright socket. Wrong spot? Pick it up again. The form allows this. **[NEW]**  
 > <sub>`nudge.teach` · 15w</sub>
 
-**New-gem nudges** (idle, the first puzzle that offers the gem, `gemNudge(gem)`)
+**New-gem nudges** (the first altar that shows the gem, said when FUSE is free and skipped once the gem is in use, `gemNudge(gem)`)
 
 > Plain blue. In one side, out the other. Like the paperwork. **[NEW]**  
 > <sub>`nudge.channel` · 11w</sub>
 
-> New gem in the tray. It has opinions about straight lines. **[NEW]**  
+> New gem on the altar. It has opinions about straight lines. **[NEW]**  
 > <sub>`nudge.bend` · 10w</sub>
 
-> Amber in the tray. Handle it like the meter is watching. **[NEW]**  
+> Amber on the altar. Handle it like the meter is watching. **[NEW]**  
 > <sub>`nudge.amplify` · 10w</sub>
 
-> Magenta's in the tray now. It's been waiting all morning. **[NEW]**  
+> Magenta's on the altar now. It's been waiting all morning. **[NEW]**  
 > <sub>`nudge.split` · 10w</sub>
 
-> New one in the tray. It won't work alone. Nobody here does. **[NEW]**  
+> New one on the altar. It won't work alone. Nobody here does. **[NEW]**  
 > <sub>`nudge.gate` · 12w</sub>
 
-> Ice in the tray. I'd use it. Eventually. That's rather the point. **[NEW]**  
+> Ice on the altar. I'd use it. Eventually. That's rather the point. **[NEW]**  
 > <sub>`nudge.capacitor` · 12w</sub>

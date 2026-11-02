@@ -81,16 +81,35 @@ It sits between FUSE (x ≤ 410) and his caption card; the altar passes its meas
   socket under the pointer or cursor hums brighter. An illegal socket glows red and gets a
   short tag explaining why (`Carved stone: nothing fits here`, `Part of the machine: it stays`,
   `None left in the tray`).
-- Fixed gems and hint-locked gems wear a gold ring.
+- **Fixed gems** (and hint-locked gems) are part of the machine: iron corner brackets with a
+  hex bolt head over the socket, and a cold iron ring (gold marks where the player acts).
+  Hovering one, or putting the keyboard cursor on it, shows its card with a `Fixed in place`
+  tag; the cursor also reads it through the announcer.
+- **Gem info card** (one card, `.lr-altar-tip`). It never covers the board: it sits over the
+  tray band, just above the slots, between FUSE and the caption. It shows, first match wins:
+  the hovered or held tray gem (full rule, notch at its slot); the board gem under the pointer
+  or cursor (first sentence, `Fixed in place` when fixed); on arrival, this altar's new gems for
+  7 s, cut to a 0.5 s fade by the first placement (no fade under reduced motion). The briefing
+  read on arrival ends with the same text; taking a gem announces its rule.
+- **Turning.** A held Bend or Gate on the altar that first puts one in the tray (`turns` in
+  `teach.ts`) wears a turn arrow with `R / Scroll` (`R / Q` on keys) until the player turns
+  it once. Its card is tagged `Turns: R or scroll`. Held over a socket it fits, the gem is tried
+  there in the route preview, so the preview swings as it turns. Linking and Strike-ready
+  ignore the held gem.
+- **Storm and needs.** Every altar shows `Gives N` by the storm and `Needs N` by each machine.
+- **Strike-ready.** Strike glows on any altar once the route (over all strikes) reaches every
+  machine. Reaching is not exact: the glow says the bolt has somewhere to go, not that the
+  charge is right. Steady under reduced motion.
 - **First altar (`intake-desk`, until it is solved):** the socket next to the storm pulses gold
   and the first tray gem bobs, until a gem goes into that socket. After 9 s with no board change
   on an empty board, FUSE nudges once (`TEACH_NUDGE`, `nudge.teach`).
 - **First appearance of a gem** (any altar, `teach.ts`). A kind is new when no solved altar had
-  it. A new fixed gem pulses and wears a card with its rule's first sentence (`Bend Turns the
-  bolt 90° between its two joined sides.`) until the first strike. A new tray gem bobs until
-  it is first picked up. FUSE says `gemNudge(gem)` (`nudge.<gem>`) once, queued after the
-  arrival line, for fixed gems on arrival and for tray gems on first pickup. Channel's line is
-  `nudge.channel`.
+  it. A new fixed gem pulses (with guide stubs for Bend and Gate) until the first strike; a new
+  tray gem bobs until first picked up. Until the first strike the route preview carries charge
+  chips (dashed) into and out of each new gem it passes through, e.g. `4 → Amplify → 8`. FUSE
+  says `gemNudge(gem)` (`nudge.<gem>`) once per new gem, one at a time when he is free after
+  the arrival line, and skips it if the gem is already in use (the route reaches the new fixed
+  gem, or a new tray gem is on the board). Channel's line is `nudge.channel`.
 
 ## Strike
 

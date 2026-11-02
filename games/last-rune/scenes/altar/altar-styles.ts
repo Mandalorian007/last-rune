@@ -40,7 +40,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-count[data-held] { border-color: var(--lr-gold); color: #fff6dd; box-shadow: 0 0 14px rgba(232,192,106,0.5); }
 .tc-overlay .lr-altar-count .lr-k { opacity: 0.55; margin-right: 6px; }
 .tc-overlay .lr-altar-tip {
-  position: absolute; transform: translate(-50%, -100%); max-width: 360px; padding: 6px 14px; border-radius: 10px;
+  position: absolute; transform: translate(-50%, -100%); max-width: 600px; padding: 6px 14px; border-radius: 10px;
   font-family: var(--tc-font-body, serif); font-size: 20px; line-height: 1.3; color: #f4e6c4; text-align: center;
   background: rgba(20,16,12,0.92); border: 1px solid rgba(232,192,106,0.55); box-shadow: 0 6px 16px rgba(0,0,0,0.6);
   pointer-events: none; white-space: normal; width: max-content;
@@ -51,6 +51,13 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-altar-tip[hidden] { display: none; }
 .tc-overlay .lr-altar-tip b { color: var(--lr-gold); font-weight: 600; margin-right: 4px; }
+.tc-overlay .lr-altar-tip:not([data-source="tray"])::after { display: none; }
+.tc-overlay .lr-altar-tip .lr-info-row + .lr-info-row { margin-top: 3px; }
+.tc-overlay .lr-altar-tip .lr-info-tag {
+  display: inline-block; margin-right: 6px; padding: 0 8px; border-radius: 6px; font-size: 16px; line-height: 1.4;
+  vertical-align: 1px; color: #dfe6f2; background: rgba(150,165,190,0.22); border: 1px solid rgba(196,208,226,0.6);
+}
+.tc-overlay .lr-altar-tip .lr-info-tag:is([data-how="turns"], [data-how="turnsTray"]) { color: #f4e6c4; background: rgba(232,192,106,0.16); border-color: rgba(232,192,106,0.7); }
 
 .tc-overlay .lr-altar-need {
   position: absolute; display: flex; flex-direction: column; align-items: center; gap: 0;
@@ -114,18 +121,45 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-chip[data-state="over"] { border-color: #ff5a3c; color: #ffd7cc; box-shadow: 0 0 14px rgba(255,90,60,0.6); }
 @keyframes lr-chip-in { from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } to { opacity: 1; } }
 
-/* First appearance of a gem: its rule, pinned above it until the first strike. */
-.tc-overlay .lr-altar-teach {
-  position: absolute; transform: translate(-50%, -100%); max-width: 300px; width: max-content; padding: 5px 12px;
-  border-radius: 10px; font-family: var(--tc-font-body, serif); font-size: 19px; line-height: 1.25; text-align: center;
-  color: #f4e6c4; background: rgba(20,16,12,0.9); border: 1px solid rgba(232,192,106,0.6);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6); pointer-events: none; animation: lr-altar-pop 260ms var(--tc-easing) both;
+/* Preview chips: the charge into and out of a new gem on the route, before the first strike. */
+.tc-overlay .lr-altar-chip[data-preview] {
+  background: rgba(10,18,26,0.78); border-style: dashed; border-color: rgba(120,200,255,0.6); box-shadow: none;
 }
-.tc-overlay .lr-altar-teach b { color: var(--lr-gold); font-weight: 600; margin-right: 4px; }
-.tc-overlay .lr-altar-teach::after {
-  content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -6px;
-  border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(232,192,106,0.6);
+
+/* Fixed gems: iron corner brackets and a bolt head. Part of the machine, not the player's. */
+.tc-overlay .lr-altar-pin {
+  position: absolute; transform: translate(-50%, -50%); pointer-events: none; box-sizing: border-box;
+  --lr-pin: rgba(196,208,226,0.9);
+  background:
+    linear-gradient(var(--lr-pin), var(--lr-pin)) top left / 22% 4px no-repeat,
+    linear-gradient(var(--lr-pin), var(--lr-pin)) top left / 4px 22% no-repeat,
+    linear-gradient(var(--lr-pin), var(--lr-pin)) top right / 22% 4px no-repeat,
+    linear-gradient(var(--lr-pin), var(--lr-pin)) top right / 4px 22% no-repeat,
+    linear-gradient(var(--lr-pin), var(--lr-pin)) bottom left / 22% 4px no-repeat,
+    linear-gradient(var(--lr-pin), var(--lr-pin)) bottom left / 4px 22% no-repeat,
+    linear-gradient(var(--lr-pin), var(--lr-pin)) bottom right / 22% 4px no-repeat,
+    linear-gradient(var(--lr-pin), var(--lr-pin)) bottom right / 4px 22% no-repeat;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.9));
 }
+.tc-overlay .lr-pin-bolt {
+  position: absolute; right: -4px; top: -4px; width: 18px; height: 18px;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%);
+  background: radial-gradient(circle at 50% 50%, #2a3039 0 22%, #c9d2e0 26%, #8a96a8 70%, #4a5260);
+}
+
+/* A held Bend or Gate turns: an arrow by the gem, with its keys, until the first turn. */
+.tc-overlay .lr-altar-turn {
+  position: absolute; transform: translate(-30%, -70%); display: flex; align-items: center; gap: 6px;
+  padding: 2px 10px 2px 6px; border-radius: 999px; pointer-events: none; white-space: nowrap;
+  font-family: var(--tc-font-body, serif); font-size: 18px; color: #f4e6c4;
+  background: rgba(20,16,12,0.9); border: 1px solid rgba(232,192,106,0.7); box-shadow: 0 3px 10px rgba(0,0,0,0.6);
+}
+.tc-overlay .lr-altar-turn[hidden] { display: none; }
+.tc-overlay .lr-turn-arrow {
+  font-size: 28px; line-height: 1; color: var(--lr-gold); display: inline-block;
+  animation: lr-turn-nudge 1.6s ease-in-out infinite;
+}
+@keyframes lr-turn-nudge { 0%, 60%, 100% { transform: rotate(0deg); } 30% { transform: rotate(90deg); } }
 
 .tc-overlay .lr-altar-verdict {
   position: absolute; left: 50%; top: 96px; transform: translateX(-50%); padding: 10px 30px; border-radius: 12px;
@@ -168,7 +202,7 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-altar-hint b { color: #e8c06a; font-weight: 600; }
 [data-reduced-motion] .tc-overlay .lr-altar-verdict,
-[data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-altar-teach,
+[data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-turn-arrow,
 [data-reduced-motion] .tc-overlay .lr-altar-tag { animation: none; }
 /* Reduced motion: no pop or fade, but fizzle tags still step aside after a few seconds. */
 [data-reduced-motion] .tc-overlay .lr-altar-tag:not([data-tone]) { animation: lr-altar-tag-fade 1ms linear 3.6s forwards; }
