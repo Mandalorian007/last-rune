@@ -112,3 +112,39 @@ export async function itchGameFrame(page: Page): Promise<Frame> {
   }
   throw new Error('itch-sim game frame never loaded');
 }
+
+// ── Gameplay helpers (full-run, playtest) ─────────────────────────────────────
+
+/** localStorage key of the main save slot (engine/save envelope). */
+export const SAVE_KEY = 'thunderclap:last-rune:main';
+
+export interface SaveDataView {
+  progress: { solved: string[] };
+  puzzles: Record<string, { attempts: number; placements: unknown[] }>;
+  journal?: { found: number[] };
+  stats?: { attempts: number; breakersTripped: number; playSeconds: number };
+}
+
+/** Read the save as the game wrote it (read-only: tests never seed saves). */
+export async function readSave(target: Page | Frame): Promise<SaveDataView | null> {
+  const raw = await target.evaluate((k) => localStorage.getItem(k), SAVE_KEY);
+  return raw ? (JSON.parse(raw) as { d: SaveDataView }).d : null;
+}
+
+/** Wait `n` real animation frames in the page (game state advances per frame, not per ms). */
+export async function waitFrames(target: Page | Frame, n = 3) {
+  await target.evaluate(async (n) => {
+    for (let i = 0; i < n; i++) await new Promise((r) => requestAnimationFrame(r));
+  }, n);
+}
+
+/**
+ * Press a key `times` times. Input collapses repeat taps of one key inside a single tick, so
+ * wait three real frames (at least one fixed-step tick) between presses.
+ */
+export async function pressKey(page: Page, key: string, times = 1) {
+  for (let i = 0; i < times; i++) {
+    await page.keyboard.press(key, { delay: 50 });
+    await waitFrames(page, 3);
+  }
+}
