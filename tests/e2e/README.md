@@ -27,6 +27,3 @@ Flags are chosen per OS in `playwright.config.ts` (override with `E2E_CHROMIUM_A
 
 On Linux, leaving out `--use-angle=swiftshader` still gives an adapter, but canvas screenshots come back all black. That combination passed 140/140 runs in `mcr.microsoft.com/playwright:v1.64.1-noble` (arm64).
 
-## Tests that wait on other workstreams
-
-Until engine-render's WebGPU boot merges, `games/last-rune/main.ts` shows a "scaffolding" placeholder. Tests that need the canvas or the unsupported-WebGPU screen call `test.fixme(isScaffoldPlaceholder(...))`, so they report as skipped now and become strict automatically once the placeholder is gone. After the merge, delete those `fixme` lines. All 7 tests were checked to pass against a stand-in WebGPU boot.

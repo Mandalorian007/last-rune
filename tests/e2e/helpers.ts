@@ -1,5 +1,5 @@
 /// <reference types="@webgpu/types" />
-import type { Frame, Locator, Page } from '@playwright/test';
+import type { Frame, Page } from '@playwright/test';
 
 // Keep in sync with playwright.config.ts.
 export const PREVIEW_URL = 'http://localhost:4173';
@@ -34,15 +34,6 @@ export function trackProblems(page: Page) {
     }
   });
   return problems;
-}
-
-/**
- * True while games/last-rune/main.ts is still the scaffold placeholder (before engine-render
- * merges the WebGPU boot). Tests that need the real boot use this with test.fixme so they
- * become strict automatically once the placeholder is gone.
- */
-export async function isScaffoldPlaceholder(app: Locator) {
-  return /scaffolding/i.test((await app.textContent()) ?? '');
 }
 
 /** Wait until the game has put something into #app (text placeholder, canvas or a screen). */

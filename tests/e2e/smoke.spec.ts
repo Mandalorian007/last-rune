@@ -36,8 +36,6 @@ test.describe('production build', () => {
   });
 
   test('renders a canvas with non-black pixels', async ({ page }) => {
-    // PENDING(game-shell): production boot draws no frames until the Title scene lands.
-    test.fixme(true, 'Pending game-shell Title scene in production build');
     const problems = trackProblems(page);
     await page.goto(PREVIEW_URL);
 
@@ -117,8 +115,6 @@ test.describe('itch.io embed (itch-sim)', () => {
   });
 
   test('click-to-launch flow starts the game at 960x540', async ({ page }) => {
-    // PENDING(game-shell): production boot draws no frames until the Title scene lands.
-    test.fixme(true, 'Pending game-shell Title scene in production build');
     await page.goto(ITCH_SIM_URL);
     await page.getByRole('button', { name: /Run game/ }).click();
     const frame = await itchGameFrame(page);
