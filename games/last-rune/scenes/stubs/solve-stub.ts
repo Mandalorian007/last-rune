@@ -69,12 +69,6 @@ export class SolveStubScene implements GameScene {
       h('div', { class: 'lr-stub-card', style: { top: '560px', width: '640px' } }, cont),
     );
     ctx.ui.layers.hud.append(this.dom);
-    if (m.complete) {
-      ctx.ui.toasts.show('Every machine restored. (Ending scene not built yet.)', {
-        tone: 'success',
-        duration: 6000,
-      });
-    }
     const line = machineLine(m.machine, 'solve');
     if (line && m.firstTime) void ctx.fuse.say(line, { interrupt: true });
     cont.focus();

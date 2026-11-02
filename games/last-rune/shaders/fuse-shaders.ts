@@ -12,6 +12,9 @@ export const FUSE_UNIFORM_FLOATS = PROP_LIGHT_FLOATS + 16;
 
 /** Shared painting code, used by both the in-scene material and the portrait pass. */
 export const FUSE_PAINT_WGSL = /* wgsl */ `
+// 1 once FUSE has dropped his clipboard (in-scene material sets it from params.x; the portrait never does).
+var<private> fuse_dropped: f32 = 0.0;
+
 ${PROP_COMMON_WGSL}
 
 struct FuseState {
@@ -269,14 +272,16 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
                          sdg_union(sdg_circle(pb - shL, 0.075), sdg_circle(pb - shR, 0.075)));
   put(&acc, joints.x, aa, fuse_lit(L, world, p, dome(joints, 0.07), C_BRASS * 1.1, 0.9, 0.7, s, eyeP),
       vec3f(0.0), 1.0);
+  // Pushed off the SDF when the clipboard has been dropped (story-scenes ending).
+  let gone = fuse_dropped * 10.0;
   let cbc = vec2f(-0.36, 0.64 + raise * 0.12);
   let cq = rot2(0.14 - raise * 0.1) * (pb - cbc);
-  let board = sdg_box(cq, vec2f(0.2, 0.27), 0.025);
+  let board = sdg_box(cq, vec2f(0.2, 0.27), 0.025) + vec3f(gone, 0.0, 0.0);
   put_shadow(&acc, board.x - 0.02, 0.04, 0.5);
   let wood = 0.75 + 0.35 * engine_fbm(cq * vec2f(4.0, 40.0), 3);
   put(&acc, board.x, aa, fuse_lit(L, world, p, pillow(board, 0.015), C_BOARD * wood, 0.0, 0.3, s, eyeP),
       vec3f(0.0), 1.2);
-  let paper = sdg_box(cq - vec2f(0.0, -0.025), vec2f(0.165, 0.215), 0.006);
+  let paper = sdg_box(cq - vec2f(0.0, -0.025), vec2f(0.165, 0.215), 0.006) + vec3f(gone, 0.0, 0.0);
   let paperTone = C_PARCHMENT * (0.82 + 0.18 * engine_fbm(cq * 18.0, 3));
   put(&acc, paper.x, aa, fuse_lit(L, world, p, vec3f(0.0, 0.0, 1.0), paperTone, 0.0, 0.2, s, eyeP),
       vec3f(0.0), 0.0);
@@ -285,9 +290,9 @@ fn fuse_paint(p_in: vec2f, aa: f32, world: vec2f, L: PropLights, s: FuseState) -
   let lineLen = 0.1 + 0.03 * engine_hash21(vec2f(ly, 2.0));
   let line = sdg_box(cq - vec2f(0.02 + lineLen * 0.5 - 0.08, -0.02 + ly * 0.042), vec2f(lineLen * 0.5, 0.004), 0.002);
   let box = abs(sdg_box(cq - vec2f(-0.12, -0.02 + ly * 0.042), vec2f(0.013, 0.013), 0.002).x) - 0.003;
-  let ink = min(line.x, box);
+  let ink = min(line.x, box) + gone;
   put(&acc, ink, aa, C_INK * 1.5 + vec3f(0.03, 0.02, 0.05), vec3f(0.0), 0.0);
-  let clip = sdg_box(cq - vec2f(0.0, 0.25), vec2f(0.075, 0.035), 0.02);
+  let clip = sdg_box(cq - vec2f(0.0, 0.25), vec2f(0.075, 0.035), 0.02) + vec3f(gone, 0.0, 0.0);
   put(&acc, clip.x, aa, fuse_lit(L, world, p, pillow(clip, 0.025), C_IRON * 1.6, 0.9, 0.85, s, eyeP),
       vec3f(0.0), 0.8);
   put(&acc, faL.x, aa, fuse_lit(L, world, p, pillow(faL, 0.045), C_IRON * 1.1, 0.75, 0.55, s, eyeP),
@@ -321,6 +326,7 @@ struct FuseU { L: PropLights, s: FuseState };
 @fragment fn fs_main(in: VSOut) -> FragOut {
   var p = vec2f((in.local.x - 0.5) * 2.2, (1.0 - in.local.y) * 2.5 - 0.12);
   p.x *= U.s.d.x;
+  fuse_dropped = in.params.x;
   let aa = max(fwidth(p.x), fwidth(p.y)) * 1.0;
   let acc = fuse_paint(p, aa, in.world, U.L, U.s);
   var o: FragOut;

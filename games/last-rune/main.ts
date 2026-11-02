@@ -4,6 +4,7 @@
 import { boot } from '@engine/platform';
 import { installGpuErrorLogging } from '@engine/render';
 import { createGameCtx, type GameCtx, type SceneFactories } from './game/ctx';
+import { EndingScene } from './scenes/ending/ending-scene';
 import { HallScene } from './scenes/hall/hall-scene';
 import { JournalScene } from './scenes/journal/journal-scene';
 import { PuzzleStubScene } from './scenes/stubs/puzzle-stub';
@@ -22,7 +23,7 @@ const SCENES: SceneFactories = {
   puzzle: (machine) => new PuzzleStubScene(machine),
   solve: (moment) => new SolveStubScene(moment),
   journal: () => new JournalScene(),
-  ending: (moment) => new SolveStubScene(moment),
+  ending: (moment) => new EndingScene(moment),
 };
 
 async function main(): Promise<void> {
