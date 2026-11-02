@@ -63,8 +63,10 @@ white), cut and frost, not hue alone.
 2. **Warm from the edges, cool from the centre.** Candles sit at the frame edges and low;
    gems and the storm sit in the middle. Where they overlap, stone picks up both: warm
    rims on one side of a chip, cyan on the other.
-3. **Every light source has a colour.** No white lights. Ambient is a dim ink-blue
-   (`~0.03, 0.035, 0.06`), never grey.
+3. **Every light source has a colour.** No white lights. Ambient is a dim slate-blue
+   (linear `0.06, 0.062, 0.085`), never grey. A wide, soft cool light from above the
+   centre (`[0.5, 0.62, 0.95]`, intensity ~0.45) stands in for the storm through the roof.
+   Pushing it harder turns the stone cartoon-blue.
 4. **Shadows are ink, not black.** Darkest values sit around `#0a0c13`. The vignette and
    the floor take the scene down to ink, never to `#000`.
 5. **Emissive is explicit.** Only flames, gem cores/glyphs, gold highlights, sparks and the
@@ -76,6 +78,11 @@ white), cut and frost, not hue alone.
    whatever glows near it (post `fog.lightScatter`).
 8. **Saturated on purpose.** Grade saturation 1.1–1.25. Gem colours are not toned down to
    match the stone; the stone is toned down to make room for them.
+
+**Reference rig** (`?demo=art`, altar view): ambient as above, 4–6 candles at the frame
+edges (intensity 1.6, radius 650–720), the cool roof light, then gems: energised first at
+full strength, then the rest at 0.7, until the 16 slots are full. Pale gems (capacitor)
+have their bloom normalised by luminance so they don't out-glow the saturated ones.
 
 The game-side light set (`art/materials/lights.ts`, `LightSet`) carries up to 16 coloured
 point lights per scene. Every lit material reads the same set: stone, sockets, gems (for
