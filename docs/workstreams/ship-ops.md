@@ -21,3 +21,29 @@ Accuracy over speed: cite sources for every itch claim. Nothing in the repo need
 
 ## Log
 _(agent appends progress, decisions, open issues here)_
+
+### 2026-11-02 — ship-ops wave 1
+
+**Done**
+- `scripts/package-itch.mjs` builds `dist/`, checks it against itch's upload rules (`scripts/lib/itch-validate.mjs`) and writes `build/last-rune-itch-<version>.zip` with a deterministic zip writer that needs no dependencies (`scripts/lib/zip.mjs`). 11 unit tests run under `pnpm check`.
+- `scripts/itch-sim/` and `pnpm itch:sim` run a local itch page. The game loads in a cross-site iframe (localhost → 127.0.0.1) with itch's exact `allow` attribute at 960×540.
+- `playwright.config.ts` and `tests/e2e/` hold the WebGPU smoke tests:
+  - flags are chosen per OS (macOS: `--enable-unsafe-webgpu --use-angle=metal`; Linux: SwiftShader)
+  - the suite covers console errors, canvas pixels, the unsupported screen and the itch iframe
+  - canvas and unsupported-screen tests are `fixme` while `main.ts` is the scaffold placeholder
+  - all 7 tests passed against a stand-in WebGPU boot
+- `.github/workflows/ci.yml` runs check, build and package, then uploads the `dist` and `itch-zip` artifacts. It needs no secrets.
+- `.github/workflows/e2e.yml` runs e2e by hand only (`workflow_dispatch`) on `ubuntu-24.04-arm`.
+- Docs: `docs/research/itch-webgpu.md`, `docs/shipping-itch.md`, `tests/e2e/README.md`.
+
+**Decisions**
+- WebGPU works inside itch's iframe. No browser has a `webgpu` permissions-policy feature, and live itch frames passed in Chromium and WebKit. Embed setting: "Embed in page".
+- Recommended embed settings: 960×540, Click to Play on, fullscreen button on, scrollbars off, Mobile Friendly off, SharedArrayBuffer **off**.
+- E2E is not a merge gate. Linux SwiftShader passed 140/140 in the Playwright container on arm64, but the suite hasn't run on real GitHub runners, and x86 emulation couldn't launch Chromium.
+
+**Open issues / for PM**
+- engine-systems: all itch games share one `localStorage` (itch.io + html-classic.itch.zone). Prefix keys with `last-rune:`, never call `clear()`, and wrap access in try/catch with an in-memory fallback. Proposed as a DECISIONS entry.
+- Proposed DECISIONS entry: the itch embed settings above, and SharedArrayBuffer must never be turned on (doing so wipes saves).
+- Firefox is untested: Playwright Firefox won't launch on this Mac. Test it by hand on the live page before announcing.
+- After engine-render merges: delete the `fixme` lines in `tests/e2e/smoke.spec.ts`, run the e2e workflow a few times, then consider adding it to push/PR.
+- Shared files changed: `vite.config.ts` (vitest include `scripts/**/*.test.ts`) and `package.json` (`itch:sim` script).
