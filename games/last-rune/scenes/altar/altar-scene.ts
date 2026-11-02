@@ -256,6 +256,7 @@ export class AltarScene implements GameScene {
     this.buildDom();
     this.refreshHud();
 
+    this.avoidTray();
     const saved = ctx.save.get().puzzles[this.machine];
     if (!saved || saved.attempts === 0) {
       const arrive = machineLine(this.machine, 'arrive');
@@ -279,6 +280,7 @@ export class AltarScene implements GameScene {
   }
 
   exit(): void {
+    this.ctx.fuse.avoid(null);
     setHintTarget(null);
     this.ctx.flow.savePlacements(this.machine, this.board.serialise());
     this.boltSound?.stop(0.2);
@@ -306,10 +308,27 @@ export class AltarScene implements GameScene {
 
   pause(): void {
     this.ctx.fuse.hush();
+    this.ctx.fuse.avoid(null);
   }
 
   resume(): void {
     this.setMood();
+    this.avoidTray();
+  }
+
+  /** Keep FUSE's caption card off the tray band (slots, counts, tooltips). */
+  private avoidTray(): void {
+    const L = this.view.layout;
+    const xs = L.tray.map((s) => s.x);
+    if (!xs.length) return;
+    const left = Math.min(...xs) - 80;
+    const right = Math.max(...xs) + 80;
+    this.ctx.fuse.avoid({
+      x: left,
+      y: L.trayY - 90,
+      width: right - left,
+      height: 1080 - (L.trayY - 90),
+    });
   }
 
   private setMood(): void {

@@ -229,7 +229,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   const hud = new Hud(ui.layers.hud, {
     codex: () => {
       sfx('ui.click');
-      if (!codex.isOpen) fuse.hush(); // the caption card sits above panels
+      if (!codex.isOpen) fuse.hush(); // a fresh line after the codex, not a resumed one
       codex.toggle();
     },
     settings: () => {
@@ -248,6 +248,8 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     return j.found.filter((p) => !j.read.includes(p)).length;
   };
   flow.onChange((state) => {
+    // Scenes own their caption avoid regions; leaving the altar must never strand one.
+    if (state !== 'puzzle') fuse.avoid(null);
     hud.visible = state === 'hall' || state === 'puzzle' || state === 'solve';
     hud.journalShown(state === 'hall', unreadPages());
     hud.plate(null);
