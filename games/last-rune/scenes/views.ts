@@ -20,12 +20,24 @@ export interface ViewContext {
   /** Design size of the logical canvas. */
   readonly width: number;
   readonly height: number;
+  /**
+   * Optional sound cues for moments the view owns (a lightning flash it drew, a door it opened).
+   * Wired to the game sound bank in game/ctx.ts; views must work without it.
+   */
+  readonly cue?: (name: ViewCue) => void;
 }
+
+/** Sounds a view can ask for, timed to its own pixels. */
+export type ViewCue = 'thunder' | 'thunderNear' | 'doorUnlock';
 
 export interface ViewFrame {
   /** Seconds since the scene was entered. */
   readonly time: number;
   readonly reducedMotion: boolean;
+  /** Photosensitivity setting: no sudden full-frame brightness changes, no strobing. */
+  readonly reduceFlashes?: boolean;
+  /** FUSE's caption is typing a line (animate his mouth / portrait). */
+  readonly speaking?: boolean;
 }
 
 // ─── Hall ────────────────────────────────────────────────────────────────────
@@ -59,6 +71,8 @@ export interface TitleViewFrame extends ViewFrame {
 }
 
 export interface TitleView {
+  /** The view draws the game's name itself; the scene keeps its DOM heading for screen readers only. */
+  readonly drawsTitle?: boolean;
   update(dt: number, s: TitleViewFrame): void;
   render(frame: Frame, s: TitleViewFrame): void;
   /** The title-knock beat: something hits the gem from inside. Optional. */

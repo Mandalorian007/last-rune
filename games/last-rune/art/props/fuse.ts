@@ -113,6 +113,7 @@ export class Fuse {
   private readonly dp: DrawParams = { x: 0, y: 0, w: 1, h: 1, tint: [1, 1, 1, 1], emissive: 1.4 };
   private targetX: number;
   private vx = 0;
+  private readonly look = { x: 0, y: 0 };
   private lookTarget: { x: number; y: number } | null = null;
   private blinkIn = 2.5;
   private blinkT = -1;
@@ -135,7 +136,11 @@ export class Fuse {
   /** Look at a logical point, or `null` to look out at the player. */
   lookAt(x: number | null, y?: number): void {
     if (x === null) this.lookTarget = null;
-    else this.lookTarget = { x, y: y ?? this.y - 2 * this.scale };
+    else {
+      this.look.x = x;
+      this.look.y = y ?? this.y - 2 * this.scale;
+      this.lookTarget = this.look;
+    }
   }
 
   /** Roll to a floor x (logical px). Use an off-screen x to roll in/out. */

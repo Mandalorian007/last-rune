@@ -2,11 +2,13 @@
  * The 16 machines (contract C4). The capability graph is justified in
  * docs/design/progression.md; the API that reads it is rules/progression.ts.
  *
- * Hall layout (1920×1080): intake desk at the front (bottom centre), the Last
- * Rune on the floor at the centre, the control booth on the back wall above it.
- * Heat wing on the left wall, Storm wing on the right wall, Signal wing along
- * the back wall either side of the booth. The lift shaft sits in the top-right
- * corner beside the roof array.
+ * Hall layout (1920×1080, set by hall-art): three tiers of alcoves on the back
+ * wall (rows y = 170, 415, 660) in two columns each side: x = 200/450 for the
+ * Heat wing (left) and 1470/1720 for the Storm wing (right). The Signal wing
+ * and the control booth run along the top row. The Last Rune is the great round
+ * seal at the centre of the wall between the windows, and the intake desk sits
+ * at the front. The bottom-right (FUSE's caption card) and the top-left (HUD)
+ * stay clear.
  */
 import type { MachineDef } from '../rules/progression';
 import type { Capability, MachineId } from '../rules/types';
@@ -49,7 +51,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [],
     grants: bend,
     puzzleId: 'intake-desk',
-    alcove: { x: 960, y: 960 },
+    alcove: { x: 960, y: 930 },
   },
   {
     id: 'furnace',
@@ -59,7 +61,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [bend],
     grants: amplify,
     puzzleId: 'furnace',
-    alcove: { x: 200, y: 840 },
+    alcove: { x: 200, y: 660 },
   },
   {
     id: 'splitter-mill',
@@ -69,7 +71,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [bend],
     grants: split,
     puzzleId: 'splitter-mill',
-    alcove: { x: 1720, y: 840 },
+    alcove: { x: 1470, y: 660 },
   },
   {
     id: 'relay-tower',
@@ -79,7 +81,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [bend],
     grants: gate,
     puzzleId: 'relay-tower',
-    alcove: { x: 420, y: 150 },
+    alcove: { x: 450, y: 170 },
   },
   {
     id: 'conveyor-a',
@@ -89,7 +91,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [bend],
     grants: null,
     puzzleId: 'conveyor-a',
-    alcove: { x: 500, y: 900 },
+    alcove: { x: 450, y: 660 },
   },
   // ── Tier 2 ────────────────────────────────────────────────────────────────
   {
@@ -100,7 +102,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [amplify, split],
     grants: null,
     puzzleId: 'press-unit-4',
-    alcove: { x: 200, y: 580 },
+    alcove: { x: 450, y: 415 },
   },
   {
     id: 'storm-cell-2',
@@ -110,7 +112,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [split],
     grants: storm2,
     puzzleId: 'storm-cell-2',
-    alcove: { x: 1720, y: 580 },
+    alcove: { x: 1720, y: 660 },
   },
   {
     id: 'crane',
@@ -120,7 +122,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [gate],
     grants: altar8x6,
     puzzleId: 'crane',
-    alcove: { x: 680, y: 150 },
+    alcove: { x: 705, y: 170 },
   },
   {
     id: 'boiler-room',
@@ -130,7 +132,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [storm2],
     grants: null,
     puzzleId: 'boiler-room',
-    alcove: { x: 1420, y: 900 },
+    alcove: { x: 1470, y: 415 },
   },
   {
     id: 'archive',
@@ -140,7 +142,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [altar8x6],
     grants: null,
     puzzleId: 'archive',
-    alcove: { x: 1240, y: 150 },
+    alcove: { x: 1215, y: 170 },
   },
   {
     id: 'foundry',
@@ -150,7 +152,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [amplify, gate],
     grants: null,
     puzzleId: 'foundry',
-    alcove: { x: 200, y: 320 },
+    alcove: { x: 200, y: 415 },
   },
   // ── Tier 3 ────────────────────────────────────────────────────────────────
   {
@@ -162,7 +164,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [storm2, altar8x6],
     grants: capacitor,
     puzzleId: 'capacitor-bay',
-    alcove: { x: 1720, y: 340 },
+    alcove: { x: 1720, y: 415 },
   },
   {
     id: 'lift-shaft',
@@ -172,7 +174,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [capacitor],
     grants: null,
     puzzleId: 'lift-shaft',
-    alcove: { x: 1740, y: 130 },
+    alcove: { x: 1720, y: 170 },
   },
   {
     id: 'roof-array',
@@ -183,7 +185,7 @@ export const MACHINES: readonly MachineDef[] = [
     requires: [altar8x6, gate, capacitor],
     grants: storm4,
     puzzleId: 'roof-array',
-    alcove: { x: 1500, y: 150 },
+    alcove: { x: 1470, y: 170 },
   },
   {
     id: 'control-booth',
@@ -194,7 +196,7 @@ export const MACHINES: readonly MachineDef[] = [
     requiresSolved: REGULAR,
     grants: altar10x8,
     puzzleId: 'control-booth',
-    alcove: { x: 960, y: 150 },
+    alcove: { x: 960, y: 170 },
   },
   // ── Finale ────────────────────────────────────────────────────────────────
   {
