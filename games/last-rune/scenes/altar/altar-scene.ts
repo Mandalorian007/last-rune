@@ -94,6 +94,19 @@ const DENY_REASON: Record<string, string> = {
  * It shows direction only, never charge. Off = the board shows only the storm and machine
  * conduits. PM decision (difficulty): see docs/workstreams/altar-clarity.md.
  */
+const OUTCOME_WORD: Record<string, string> = {
+  exact: 'exact',
+  under: 'not enough',
+  over: 'too much, breaker tripped',
+  dead: 'no charge',
+};
+
+/** "a", "a and b", "a, b and c". */
+function listText(items: readonly string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+}
+
 const PREVIEW_PATH = true;
 /** Seconds without a board change before the first altar nudges. */
 const TEACH_IDLE = 9;
@@ -190,6 +203,9 @@ export class AltarScene implements GameScene {
   private dom!: HTMLElement;
   private subtitle!: HTMLElement;
   private verdict!: HTMLElement;
+  /** Screen-reader announcements (sr-only, always in the DOM so changes are read). */
+  private announcer!: HTMLElement;
+  private announceTimer: ReturnType<typeof setTimeout> | null = null;
   private strikeBtn!: HTMLButtonElement;
   private undoBtn!: HTMLButtonElement;
   private clearBtn!: HTMLButtonElement;
@@ -255,6 +271,7 @@ export class AltarScene implements GameScene {
     ensureAltarStyles(ctx.ui.root.ownerDocument);
     this.buildDom();
     this.refreshHud();
+    this.announce(this.briefing());
 
     this.avoidTray();
     const saved = ctx.save.get().puzzles[this.machine];
@@ -288,6 +305,7 @@ export class AltarScene implements GameScene {
     this.hum?.stop(0.4);
     this.hum = null;
     this.view.dispose();
+    if (this.announceTimer !== null) clearTimeout(this.announceTimer);
     this.dom.remove();
     this.chipEls.length = 0;
     this.teachTags.length = 0;
@@ -358,14 +376,20 @@ export class AltarScene implements GameScene {
     this.strikeBtn = btn('Strike', 'F', () => this.strike(), true, 'strike');
     const back = btn('Back', 'Esc', () => this.back(), false, 'back');
     this.subtitle = h('small');
+    // The visible verdict is not a live region: it is unhidden and filled in the same frame,
+    // which screen readers miss. `announcer` speaks it (and the needs) instead.
     this.verdict = h('div', {
       class: 'lr-altar-verdict',
-      role: 'status',
-      'aria-live': 'polite',
       hidden: true,
       style: { left: `${L.titleX}px`, maxWidth: `${L.titleMax}px` },
     });
     if (L.titleMax < 600) this.verdict.dataset.narrow = '';
+    this.announcer = h('div', {
+      class: 'tc-sr-only lr-altar-announce',
+      role: 'status',
+      'aria-live': 'polite',
+      'aria-atomic': 'true',
+    });
     this.tip = h('div', { class: 'lr-altar-tip', role: 'tooltip', hidden: true });
     this.counts = L.tray.map((s) =>
       h('div', { class: 'lr-altar-count', style: { left: `${s.x}px`, top: `${s.y + 40}px` } }),
@@ -406,6 +430,7 @@ export class AltarScene implements GameScene {
       ),
       h('div', { class: 'lr-altar-actions' }, this.undoBtn, this.clearBtn, back, this.strikeBtn),
       this.verdict,
+      this.announcer,
       ...this.counts,
       ...this.needs,
       this.tip,
@@ -450,6 +475,53 @@ export class AltarScene implements GameScene {
     this.verdict.textContent = text;
     this.verdict.dataset.outcome = outcome;
     this.verdict.hidden = false;
+  }
+
+  /**
+   * Say `text` through the sr-only live region. It is set a beat after clearing, so a repeat
+   * of the same line (the same miss twice) is announced again.
+   */
+  private announce(text: string): void {
+    if (this.announceTimer !== null) clearTimeout(this.announceTimer);
+    this.announcer.textContent = '';
+    this.announceTimer = setTimeout(() => {
+      this.announceTimer = null;
+      this.announcer.textContent = text;
+    }, 80);
+  }
+
+  /** What the altar asks for, read when it opens: storm, strikes and every machine's need. */
+  private briefing(): string {
+    const p = this.puzzle;
+    const needs = p.machines.map((m) => m.need);
+    const ask =
+      needs.length === 1
+        ? `The machine needs exactly ${needs[0]}.`
+        : `${needs.length} machines need exactly ${listText(needs.map(String))}.`;
+    const strikes = p.pulses > 1 ? `, ${p.pulses} strikes` : '';
+    return `${getMachine(this.machine).name} altar. Storm ×${p.storm.strength}${strikes}. ${ask}`;
+  }
+
+  /** The strike result for screen readers: the verdict plus every machine's reading. */
+  private resultText(verdict: string): string {
+    const res = this.result!;
+    const parts = [verdict.endsWith('.') ? verdict : `${verdict}.`];
+    const multi = res.machines.length > 1;
+    res.machines.forEach((m, i) => {
+      const reads = this.strikeReadings[i] ?? [];
+      const got =
+        this.puzzle.pulses > 1 && reads.length > 0
+          ? `strikes gave ${listText(reads.map(String))}`
+          : `got ${this.lastReading(m)}`;
+      if (multi || this.puzzle.pulses > 1) {
+        const who = multi ? `Machine ${i + 1}` : 'The machine';
+        parts.push(`${who}: needs ${m.need}, ${got}, ${OUTCOME_WORD[m.outcome] ?? 'no charge'}.`);
+      }
+    });
+    if (this.tags.length > 0) {
+      parts.push(`Fizzled: ${this.tags.map((t) => t.textContent ?? '').join('; ')}.`);
+    }
+    return parts.join(' ');
   }
 
   private addTag(x: number, y: number, text: string, tone: 'bad' | 'info' = 'bad'): void {
@@ -1250,6 +1322,10 @@ export class AltarScene implements GameScene {
     }
     this.subtitle.textContent =
       o === 'exact' ? 'Restored' : `Attempt ${this.attempts} · change anything to try again`;
+    this.announce(
+      this.resultText(this.verdict.textContent ?? '') +
+        (o === 'exact' ? '' : ' Change anything to try again.'),
+    );
     this.refreshHud();
   }
 

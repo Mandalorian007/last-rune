@@ -323,7 +323,7 @@ export class JournalScene implements GameScene {
     const st = L.stack;
     let y = st.y;
     let lastTier = m.slots[0]?.tier ?? 1;
-    const list = h('div', { class: 'lr-j-stack', role: 'list', 'aria-label': 'Journal pages' });
+    const list = h('div', { class: 'lr-j-stack', role: 'group', 'aria-label': 'Journal pages' });
     this.slips = m.slots.map((slot, i) => {
       if (slot.tier !== lastTier) {
         y += st.tierGap;
@@ -335,7 +335,6 @@ export class JournalScene implements GameScene {
         {
           type: 'button',
           class: 'lr-j-slip',
-          role: 'listitem',
           style: {
             left: `${st.x}px`,
             top: `${y}px`,

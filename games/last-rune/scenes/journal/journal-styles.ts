@@ -32,10 +32,10 @@ const CSS = /* css */ `
   transition: transform 220ms ease, opacity 220ms ease;
 }
 .tc-overlay .lr-j-slip b { font-size: 30px; min-width: 38px; font-weight: 700; }
-.tc-overlay .lr-j-slip span { opacity: 0.85; }
-.tc-overlay .lr-journal .lr-j-slip[data-blank] { cursor: default; color: #a88d66; border: 2px dashed #a8875a66; border-radius: 4px; font-family: var(--tc-font-ui); font-size: 18px; letter-spacing: 2px; text-transform: uppercase; }
-.tc-overlay .lr-j-slip[data-blank] b { font-family: var(--lr-hand); font-size: 26px; letter-spacing: 0; text-transform: none; opacity: 0.7; }
-.tc-overlay .lr-j-slip[data-blank] span { opacity: 0.55; }
+.tc-overlay .lr-j-slip span { opacity: 1; }
+.tc-overlay .lr-journal .lr-j-slip[data-blank] { cursor: default; color: #c9ad82; border: 2px dashed #a8875a66; border-radius: 4px; font-family: var(--tc-font-ui); font-size: 18px; letter-spacing: 2px; text-transform: uppercase; }
+.tc-overlay .lr-j-slip[data-blank] b { font-family: var(--lr-hand); font-size: 26px; letter-spacing: 0; text-transform: none; opacity: 0.9; }
+.tc-overlay .lr-j-slip[data-blank] span { opacity: 0.9; }
 .tc-overlay .lr-j-slip .lr-j-new {
   margin-left: auto; font-family: var(--tc-font-ui); font-size: 15px; letter-spacing: 2px; text-transform: uppercase;
   color: #fff3d0; background: radial-gradient(circle at 40% 35%, #b8322a, #6e120e); border-radius: 14px; padding: 4px 10px;
@@ -50,7 +50,7 @@ const CSS = /* css */ `
   column-count: 2; column-fill: auto; text-wrap: pretty; text-shadow: 0 0 1px #24170f55;
 }
 .tc-overlay .lr-j-body[data-long] { font-size: 31px; }
-.tc-overlay .lr-j-folio { position: absolute; font-family: var(--lr-hand); font-size: 26px; color: #5a4128; width: 120px; text-align: center; }
+.tc-overlay .lr-j-folio { position: absolute; font-family: var(--lr-hand); font-size: 26px; color: #3d2818; width: 120px; text-align: center; }
 .tc-overlay .lr-j-sketch { position: absolute; overflow: visible; }
 .tc-overlay .lr-j-sketch path { fill: none; stroke: #2a1d14; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.78; }
 .tc-overlay .lr-j-sketch circle { fill: none; stroke: #5a3a1c; stroke-width: 5; opacity: 0.16; }

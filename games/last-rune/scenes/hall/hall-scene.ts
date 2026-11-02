@@ -18,6 +18,7 @@ import {
   ALCOVE_HIT,
   type AlcoveModel,
   alcoveAt,
+  alcoveNote,
   deriveHall,
   focusOrder,
   type HallModel,
@@ -29,12 +30,6 @@ type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 const DWELL = 0.35;
 const AMBIENT_EVERY = 75;
-
-const STATUS_NOTE: Record<AlcoveModel['status'], string> = {
-  solved: 'Restored',
-  unlocked: 'Open · click to restore',
-  locked: 'Locked',
-};
 
 export class HallScene implements GameScene {
   readonly name = 'hall';
@@ -197,7 +192,7 @@ export class HallScene implements GameScene {
       x: a.x,
       y: top ? a.y + half + 14 : a.y - half - 80,
       name: a.name,
-      note: STATUS_NOTE[a.status],
+      note: alcoveNote(a),
     });
   }
 

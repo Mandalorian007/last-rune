@@ -105,7 +105,7 @@ export class TitleScene implements GameScene {
       );
     const menu = h(
       'div',
-      { class: 'lr-title-menu', role: 'menu', 'aria-label': 'Main menu' },
+      { class: 'lr-title-menu', role: 'group', 'aria-label': 'Main menu' },
       gold(
         this.returning ? 'Continue' : 'Play',
         () => this.primary(),

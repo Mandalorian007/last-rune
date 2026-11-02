@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Input, isInteractiveTarget, isTextEntryTarget } from './input';
+import { Input, isButtonTarget, isInteractiveTarget, isTextEntryTarget } from './input';
 
 function key(type: 'keydown' | 'keyup', code: string, init: KeyboardEventInit = {}) {
   return new KeyboardEvent(type, { code, bubbles: true, cancelable: true, ...init });
@@ -175,5 +175,63 @@ describe('Input DOM attachment', () => {
     div.setAttribute('role', 'button');
     expect(isInteractiveTarget(div)).toBe(true);
     expect(isInteractiveTarget(null)).toBe(false);
+  });
+
+  it('lets button keys through on buttons and links but not on form controls', () => {
+    const other = new Input(
+      { back: [{ key: 'Escape' }], next: [{ key: 'ArrowRight' }] },
+      { getGamepads: () => [], buttonKeys: ['Escape', 'ArrowRight'] },
+    );
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    other.attach({ pointerTarget: canvas, keyTarget: host });
+    const fire = (el: HTMLElement, code: string) => {
+      host.appendChild(el);
+      const ev = key('keydown', code);
+      el.dispatchEvent(ev);
+      el.dispatchEvent(key('keyup', code));
+      return ev;
+    };
+    const press = (el: HTMLElement, code: string, action: 'back' | 'next') => {
+      fire(el, code);
+      other.update();
+      const hit = other.pressed(action);
+      other.update();
+      return hit;
+    };
+    const btn = document.createElement('button');
+    expect(press(btn, 'Escape', 'back')).toBe(true);
+    // Not preventDefaulted on the control.
+    expect(fire(document.createElement('button'), 'ArrowRight').defaultPrevented).toBe(false);
+    expect(press(document.createElement('a'), 'ArrowRight', 'next')).toBe(true);
+    const range = document.createElement('input');
+    range.type = 'range';
+    expect(press(range, 'ArrowRight', 'next')).toBe(false);
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    expect(press(checkbox, 'Escape', 'back')).toBe(false);
+    expect(press(document.createElement('select'), 'Escape', 'back')).toBe(false);
+    other.detach();
+    host.remove();
+  });
+
+  it('classifies button targets', () => {
+    const t = (tag: string, type?: string) => {
+      const el = document.createElement(tag);
+      if (type) el.setAttribute('type', type);
+      return isButtonTarget(el);
+    };
+    expect(t('button')).toBe(true);
+    expect(t('a')).toBe(true);
+    expect(t('input', 'submit')).toBe(true);
+    expect(t('input', 'range')).toBe(false);
+    expect(t('input')).toBe(false);
+    expect(t('select')).toBe(false);
+    const div = document.createElement('div');
+    div.setAttribute('role', 'slider');
+    expect(isButtonTarget(div)).toBe(false);
+    div.setAttribute('role', 'button');
+    expect(isButtonTarget(div)).toBe(true);
+    expect(isButtonTarget(null)).toBe(false);
   });
 });

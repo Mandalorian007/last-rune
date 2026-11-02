@@ -19,7 +19,7 @@ import {
 } from '@engine/platform';
 import { PostStack } from '@engine/post';
 import { type Frame, Renderer } from '@engine/render';
-import { createOverlay, type Overlay } from '@engine/ui';
+import { createOverlay, type Overlay, PadNav } from '@engine/ui';
 import { cathedralHallView } from '../art/hall/hall-view';
 import { stormTitleView } from '../art/hall/title-view';
 import { createFusePortrait } from '../art/props/fuse-portrait';
@@ -125,7 +125,12 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   // ── Save + overlay ─────────────────────────────────────────────────────
   const save = createGameSave();
   ensureGameStyles(surface.root.ownerDocument);
-  const ui = createOverlay({ parent: surface.root });
+  // When a panel closes and its opener can't (or, for the HUD's shortcut buttons, shouldn't)
+  // take focus back, focus returns to the canvas so keys keep reaching the game.
+  const ui = createOverlay({ parent: surface.root, focusHome: () => surface.canvas });
+  // Input is blocked while a modal panel is up, so the pad drives panels through this:
+  // d-pad moves focus, A activates, B closes (as Tab, Enter and Esc do).
+  const padNav = new PadNav(ui.stack);
   surface.onResize(({ rect, backbuffer }) => {
     renderer.resize(backbuffer.width, backbuffer.height);
     ui.setRect(rect);
@@ -166,10 +171,12 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
 
   // ── Input (blocked under modal panels) ─────────────────────────────────
   // The HUD shortcuts (Codex, Settings, Journal) also work while a button or link has focus,
-  // e.g. the ending's "Back to the hall".
+  // e.g. the ending's "Back to the hall". Back (Esc) and the arrows work on a focused button
+  // too, so a clicked or Tabbed-to button never strands a keyboard player.
   const input = new Input<Action>(BINDINGS, {
     blocked: () => ui.stack.hasModal,
     globalKeys: ['KeyC', 'KeyO', 'KeyJ'],
+    buttonKeys: ['Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'],
   });
   input.attach({ pointerTarget: surface.canvas });
   input.setPointerTransform((x, y) => surface.clientToLogical(x, y));
@@ -272,6 +279,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   const loop = new GameLoop({
     update: (dt: number) => {
       input.update();
+      padNav.update();
       if (!ui.stack.hasModal && flow.state !== 'ending') {
         if (input.pressed('journal') && flow.state === 'hall') {
           sfx('ui.click');

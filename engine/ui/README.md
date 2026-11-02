@@ -40,6 +40,17 @@ p.close();
   closes the panel unless `closeOnBackdrop: false`.
 - On open, focus moves to `initialFocus`, otherwise to the first focusable element, otherwise to the
   panel itself. On close, focus goes back to whatever had it before.
+- **Focus home.** `createOverlay({ focusHome: () => canvas })` names where focus goes when a
+  panel closes and its opener can't take it back: the opener is gone or inert, or nothing was
+  focused (`<body>`). Mark openers that double as keyboard shortcuts, or their container (a HUD
+  bar), with `NO_RESTORE_FOCUS_ATTR` (`data-tc-no-restore-focus`). Those never get focus back,
+  because a focused button would swallow the game's keys. Focus goes to the next panel down,
+  else home. A bare `PanelStack` takes `{ home }` as its third argument.
+- **Gamepad in panels.** Game input is usually blocked while a modal is up, so a pad can't reach
+  a panel through the input map. `new PadNav(overlay.stack)` with `update()` once a frame fixes
+  that: the d-pad or left stick moves focus through the top modal's controls, A clicks the
+  focused one, B closes the panel (`stack.dismissTop()`, the same as Esc), and left/right step a
+  focused range slider or select. It does nothing while no modal is open.
 - Use `modal: false` for side panels such as a journal that stays open during play. They don't
   block input or trap focus.
 - `chrome: 'none'` drops the card styling, for full-bleed custom panels. Pass `label` when there is

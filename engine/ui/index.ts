@@ -11,7 +11,15 @@ export {
 } from './caption';
 export { append, type Child, focusableWithin, h } from './dom';
 export { createOverlay, type Overlay, type OverlayOptions, type Rect } from './overlay';
-export { type CloseReason, type PanelHandle, type PanelOptions, PanelStack } from './stack';
+export { type PadLike, PadNav, type PadNavOptions } from './padnav';
+export {
+  type CloseReason,
+  NO_RESTORE_FOCUS_ATTR,
+  type PanelHandle,
+  type PanelOptions,
+  PanelStack,
+  type PanelStackFocusOptions,
+} from './stack';
 export { BASE_CSS, ensureStyles, prefersReducedMotion } from './styles';
 export {
   applyTheme,

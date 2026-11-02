@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CaptionCard, cornerOrder, overlapArea, readingTimeMs, revealDelayMs } from './caption';
 import { h } from './dom';
 import { createOverlay, type Overlay } from './overlay';
+import { type PadLike, PadNav } from './padnav';
+import { NO_RESTORE_FOCUS_ATTR } from './stack';
 import { themeToCss, tokenVar } from './theme';
 import { Toaster } from './toast';
 import { button, slider } from './widgets';
@@ -87,6 +89,81 @@ describe('overlay', () => {
     expect(ov.stack.hasModal).toBe(false);
     expect(ov.layers.hud.inert).toBe(false);
     expect(document.activeElement).toBe(opener);
+  });
+
+  it('focus home: openers marked no-restore send focus home instead', () => {
+    ov.destroy();
+    document.body.innerHTML = '';
+    parent = h('div');
+    const home = h('canvas', { tabindex: '0' });
+    parent.append(home);
+    document.body.append(parent);
+    ov = createOverlay({ parent, focusHome: () => home });
+    const bar = h('div', { [NO_RESTORE_FOCUS_ATTR]: '' });
+    const opener = button('open', () => {});
+    bar.append(opener);
+    ov.layers.hud.append(bar);
+    opener.focus();
+    ov.stack.push({ title: 'Codex', content: button('x', () => {}) });
+    key('Escape');
+    expect(document.activeElement).toBe(home);
+
+    // A stacked panel still gets focus back from the one above it.
+    const lower = ov.stack.push({ title: 'One', content: button('low', () => {}) });
+    ov.stack.push({ title: 'Two', content: button('up', () => {}) });
+    key('Escape');
+    expect(document.activeElement?.textContent).toBe('low');
+    lower.close();
+    expect(document.activeElement).toBe(home);
+
+    // Nothing focused before opening (body) also goes home.
+    (document.activeElement as HTMLElement).blur();
+    ov.stack.push({ title: 'T', content: button('t', () => {}) }).close();
+    expect(document.activeElement).toBe(home);
+
+    // Unmarked openers are restored as usual, in the hud layer too.
+    const other = button('other', () => {});
+    ov.layers.hud.append(other);
+    other.focus();
+    ov.stack.push({ title: 'T', content: button('t', () => {}) }).close();
+    expect(document.activeElement).toBe(other);
+  });
+
+  it('pad nav: d-pad moves focus in the top modal, A clicks, sliders step, B closes', () => {
+    const held = new Set<number>();
+    const pad: PadLike = {
+      get buttons() {
+        return Array.from({ length: 16 }, (_, i) => ({ pressed: held.has(i) }));
+      },
+      axes: [0, 0],
+    };
+    const nav = new PadNav(ov.stack, { getGamepads: () => [pad] });
+    const tap = (b: number) => {
+      held.add(b);
+      nav.update();
+      held.delete(b);
+      nav.update();
+    };
+    tap(13); // nothing open: ignored
+    const clicked = vi.fn();
+    const vol = slider('Vol', 5, () => {}, { min: 0, max: 10, step: 1 });
+    const range = vol.input;
+    const closed = vi.fn();
+    ov.stack.push({
+      title: 'P',
+      content: h('div', {}, button('a', clicked), vol.element),
+      onClose: closed,
+    });
+    expect(document.activeElement?.textContent).toBe('a');
+    tap(0);
+    expect(clicked).toHaveBeenCalledTimes(1);
+    tap(13);
+    expect(document.activeElement).toBe(range);
+    tap(15);
+    expect(range.value).toBe('6');
+    tap(1);
+    expect(closed).toHaveBeenCalledWith('escape');
+    expect(ov.stack.size).toBe(0);
   });
 
   it('stacks panels: lower ones go inert; non-dismissible ignores Esc', () => {
