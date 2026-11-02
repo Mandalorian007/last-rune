@@ -88,6 +88,7 @@ export class ParticleSystem implements Drawable {
   private pendingDt = 0;
   private time = 0;
   private warnedOverflow = false;
+  private clearPending = false;
 
   constructor(renderer: Renderer, opts: ParticleSystemOptions = {}) {
     const device = renderer.device;
@@ -101,7 +102,8 @@ export class ParticleSystem implements Drawable {
     this.particleBuffer = device.createBuffer({
       label: 'particles',
       size: this.capacity * PARTICLE_BYTES,
-      usage: GPUBufferUsage.STORAGE,
+      // COPY_DST: `clear()` zeroes it with `encoder.clearBuffer`.
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
     this.spawnData = new Float32Array(this.maxSpawns * SPAWN_FLOATS);
     this.spawnBuffer = device.createBuffer({
@@ -268,6 +270,10 @@ export class ParticleSystem implements Drawable {
     s[7] = 0;
     const q = this.device.queue;
     q.writeBuffer(this.simBuffer, 0, s);
+    if (this.clearPending) {
+      encoder.clearBuffer(this.particleBuffer);
+      this.clearPending = false;
+    }
     const pass = encoder.beginComputePass({ label: 'particles' });
     pass.setBindGroup(0, this.computeGroup);
     if (this.spawnCount > 0) {
@@ -297,13 +303,16 @@ export class ParticleSystem implements Drawable {
     pass.draw(6, this.capacity);
   }
 
-  /** Kill every particle (e.g. on scene change). */
+  /**
+   * Kill every particle (e.g. on scene change), including emits queued earlier this frame.
+   * The buffer is zeroed on the GPU at the start of the next `prepare` (no CPU allocation);
+   * particles emitted after `clear()` survive.
+   */
   clear(): void {
-    this.device.queue.writeBuffer(
-      this.particleBuffer,
-      0,
-      new Float32Array((this.capacity * PARTICLE_BYTES) / 4),
-    );
+    this.clearPending = true;
+    this.spawnCount = 0;
+    this.maxSpawnInCmd = 0;
+    this.head = 0;
   }
 
   destroy(): void {
