@@ -2,16 +2,27 @@
  * Title: the Last Rune on its plinth (view), the name in gold (DOM), and
  * Play / Continue + New game / Settings. On the very first visit something
  * knocks inside the gem and FUSE notices (beat `title-knock`).
+ *
+ * While nobody presses anything FUSE potters about (the view) and says something now and then
+ * (`titleLines`, shuffled, see `chatter.ts`). His card keeps off the menu, holds while a panel is
+ * open, and stops the moment the player starts.
  */
 
 import type { Frame } from '@engine/render';
+import type { Rect } from '@engine/ui';
 import { h } from '@engine/ui';
-import { beatLine } from '../../content/lines';
+import { beatLine, type FuseLine, titleLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { hasProgress } from '../../game/save';
 import type { TitleView, TitleViewFrame } from '../views';
+import { ChatterClock, ShuffleBag } from './chatter';
 
 const KNOCK_DELAY = 1.6;
+/** Design px kept clear around the menu and the release label when FUSE's card moves. */
+const AVOID_PAD = 24;
+
+/** One bag per session, so coming back to the title carries on through the pool. */
+let chatterBag: ShuffleBag<FuseLine> | null = null;
 
 export class TitleScene implements GameScene {
   readonly name = 'title';
@@ -21,6 +32,7 @@ export class TitleScene implements GameScene {
   private time = 0;
   private returning = false;
   private knockPending = false;
+  private chatter = new ChatterClock();
 
   enter(ctx: GameCtx): void {
     this.ctx = ctx;
@@ -28,6 +40,7 @@ export class TitleScene implements GameScene {
     const data = ctx.save.get();
     this.returning = hasProgress(data);
     this.knockPending = !data.flags.titleKnock;
+    this.chatter = new ChatterClock();
     this.dom = this.buildDom();
     ctx.ui.layers.hud.append(this.dom);
     ctx.post.set({
@@ -42,6 +55,7 @@ export class TitleScene implements GameScene {
     this.dom = null;
     this.view.dispose();
     this.ctx.fuse.hush();
+    this.ctx.fuse.avoid(null);
   }
 
   update(dt: number): void {
@@ -50,12 +64,16 @@ export class TitleScene implements GameScene {
       this.knockPending = false;
       this.view.knock?.();
       this.ctx.sfx('ui.deny', 0.8);
+      this.ctx.fuse.avoid(this.menuRegions());
       void this.ctx.fuse.say(beatLine('title-knock'));
       this.ctx.save.update((d) => {
         d.flags.titleKnock = true;
         return undefined;
       });
     }
+    const speaking = this.ctx.fuse.speaking;
+    const paused = this.knockPending || this.ctx.ui.stack.hasModal;
+    if (this.chatter.tick(dt, { paused, speaking })) this.chat();
     if (this.ctx.input.pressed('confirm')) this.primary();
     this.view.update(dt, this.frameState());
   }
@@ -83,7 +101,37 @@ export class TitleScene implements GameScene {
     return s;
   }
 
+  /** One idle line, from the bag, with the card kept clear of the menu. */
+  private chat(): void {
+    chatterBag ??= new ShuffleBag(titleLines());
+    const line = chatterBag.next();
+    if (!line) return;
+    this.ctx.fuse.avoid(this.menuRegions());
+    void this.ctx.fuse.say(line);
+  }
+
+  /** The menu and release label, measured (text size moves them), in design px. */
+  private menuRegions(): Rect[] {
+    const ui = this.ctx.ui;
+    if (!this.dom?.isConnected) return [];
+    const o = ui.root.getBoundingClientRect();
+    const out: Rect[] = [];
+    for (const el of this.dom.querySelectorAll<HTMLElement>('.lr-title-menu, .lr-release')) {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0) continue;
+      out.push({
+        x: (r.left - o.left) / ui.scale - AVOID_PAD,
+        y: (r.top - o.top) / ui.scale - AVOID_PAD,
+        width: r.width / ui.scale + AVOID_PAD * 2,
+        height: r.height / ui.scale + AVOID_PAD * 2,
+      });
+    }
+    return out;
+  }
+
   private primary(): void {
+    // He stops mid-sentence: the player has started.
+    this.ctx.fuse.hush();
     this.ctx.sfx('ui.click');
     if (this.returning) this.ctx.flow.continueGame();
     else this.ctx.flow.newGame();
@@ -166,6 +214,7 @@ export class TitleScene implements GameScene {
     no.addEventListener('click', () => handle.close('programmatic'));
     yes.addEventListener('click', () => {
       handle.close('programmatic');
+      this.ctx.fuse.hush();
       this.ctx.flow.newGame();
     });
   }

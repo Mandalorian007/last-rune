@@ -30,6 +30,7 @@ import {
   machineLine,
   reactionLine,
   socketLine,
+  titleLines,
   wordCount,
 } from './lines';
 
@@ -193,6 +194,29 @@ describe('lines', () => {
   it('new Tier 2 lines leave the "I" to the pitch', () => {
     const t2new = fuseUtterances.filter((u) => u.tier === 2 && u.source === 'new');
     expect(t2new.reduce((n, u) => n + countI(u.text), 0)).toBe(0);
+  });
+});
+
+describe('title chatter', () => {
+  const lines = titleLines();
+
+  it('is a pool of 15–25 new, short Tier 1 lines', () => {
+    expect(lines.length).toBeGreaterThanOrEqual(15);
+    expect(lines.length).toBeLessThanOrEqual(25);
+    for (const l of lines) {
+      expect(l.tier, l.id).toBe(1);
+      expect(l.source, l.id).toBe('new');
+      // Idle captions on a menu: shorter than the card limit.
+      expect(wordCount(l.text), l.text).toBeLessThanOrEqual(16);
+      expect(countI(l.text), l.text).toBe(0);
+    }
+    expect(new Set(lines.map((l) => l.text)).size).toBe(lines.length);
+  });
+
+  it('gives nothing away: no ending, no Builder, no Discord', () => {
+    const banned =
+      /discord|builder|upload|day 1\b|the door|for you|key|journal|page sixteen|cot\b|chat|lights on until/i;
+    for (const l of lines) expect(l.text, l.id).not.toMatch(banned);
   });
 });
 

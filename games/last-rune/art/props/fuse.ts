@@ -34,6 +34,9 @@ const HEAD_PIVOT_Y = 1.24;
 const EYE_X = 0.205;
 const EYE_Y = 1.57;
 
+/** Default top rolling speed, FUSE units per second. */
+export const DEFAULT_FUSE_SPEED = 9;
+
 function approach(v: number, target: number, rate: number, dt: number): number {
   return v + (target - v) * (1 - Math.exp(-rate * dt));
 }
@@ -86,6 +89,8 @@ export class Fuse {
   opacity = 1;
   /** False once he has dropped the clipboard (the ending). */
   clipboard = true;
+  /** Top rolling speed in FUSE units per second (`DEFAULT_FUSE_SPEED`; lower for a stroll). */
+  maxSpeed = DEFAULT_FUSE_SPEED;
   /** Seconds left of an automatic talk burst (see `speak`). */
   private talkTimer = 0;
 
@@ -187,7 +192,7 @@ export class Fuse {
 
     // Rolling: critically-damped-ish spring on x, speed-capped.
     const dx = this.targetX - this.x;
-    const maxV = 9 * this.scale;
+    const maxV = this.maxSpeed * this.scale;
     const desired = Math.max(-maxV, Math.min(maxV, dx * 3.2));
     const prevV = this.vx;
     this.vx = approach(this.vx, desired, 5, dt);
@@ -195,7 +200,8 @@ export class Fuse {
     const accel = (this.vx - prevV) / Math.max(dt, 1e-4);
     s.wheel -= (this.vx * dt) / (0.095 * this.scale);
     const leanTarget =
-      (this.vx / (9 * this.scale)) * 0.12 + (accel / (60 * this.scale)) * 0.06 * this.facing;
+      (this.vx / (DEFAULT_FUSE_SPEED * this.scale)) * 0.12 +
+      (accel / (60 * this.scale)) * 0.06 * this.facing;
     s.lean = approach(s.lean, leanTarget * this.facing, 8, dt);
 
     // Mood blend.
