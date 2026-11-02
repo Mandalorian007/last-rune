@@ -4,7 +4,7 @@ This folder tracks all work on **The Last Rune**. The project manager (Claude, P
 
 | File | Purpose |
 |---|---|
-| [PLAN.md](PLAN.md) | Milestones, waves, ship date, scope |
+| [PLAN.md](PLAN.md) | Roadmap: milestones with state, wave plan, user feedback backlog, known engine gaps. PM updates it on every merge and every piece of user feedback |
 | [STATUS.md](STATUS.md) | Live board: what's in flight, done, blocked |
 | [DECISIONS.md](DECISIONS.md) | Decision log (ADR-lite). Any deviation from the pitch goes here |
 | [architecture.md](architecture.md) | Module boundaries, contracts between workstreams, engine promotion rule |

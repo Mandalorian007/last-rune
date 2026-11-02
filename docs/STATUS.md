@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M2 Playable vertical (wave 3)
+**Current milestone:** M2 → M3 (wave 3 running). Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
@@ -17,9 +17,9 @@ _Last updated: 2026-11-02 by PM_
 | audio-design | ws/audio-design | ✅ merged | 59 procedural sounds (0 problems, peak −1.5 dBFS), 13 moods by tier, FUSE voice; ~0.9 s pre-render after first click. PM wired `ctx.sound`, `ctx.setMood`, FUSE voice, codex/UI sounds |
 | difficulty-fun | ws/difficulty-fun | ✅ phase 1 merged · ⏸ phase 2 after alpha | score model + novice bot, curve (D-022), 5 puzzles retuned, finale 72 → 4 solutions; `pnpm puzzle <id>` viewer |
 | story-scenes | ws/story-scenes | 🟡 in progress | wave 3: journal desk, ending + Discord door, codex content |
-| altar-scene | ws/altar-scene | 🟡 in progress | wave 3: playable altar puzzle + solve moment |
+| altar-scene | ws/altar-scene | 🟡 in progress | wave 3: playable altar puzzle + solve moment. User priority: all 16 puzzles in, intuitive altar UI |
 | art-props | ws/art-props | ✅ merged | FUSE (rig + caption portrait), storm cell (fluid sim), bolt ribbon (trace adapter, exact/over/under), machine gauge + breaker, alcove lock/unlock/restore; `?demo=props` |
-| hall-art | ws/hall-art | 🟡 in progress | wave 3: the hall dressed with real props and lighting; title art; palette/light-rig unification |
+| hall-art | ws/hall-art | 🟡 in progress | wave 3: the hall dressed with real props and lighting; title art; palette/light-rig unification. User priority: machines as distinct machines/buildings, floor flavour, clear state UI |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
