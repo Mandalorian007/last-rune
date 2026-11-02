@@ -13,17 +13,10 @@
  *   hall, solve(moment)         (solve replaces the puzzle; pop returns to hall)
  */
 import { type JournalPage, pagesUnlockedBy } from '../content/journal';
-import {
-  type Capability,
-  getMachine,
-  isComplete,
-  isSolved,
-  isUnlocked,
-  solveMachine,
-} from '../rules/progression';
-import type { MachineId } from '../rules/types';
+import { getMachine, isComplete, isSolved, isUnlocked, solveMachine } from '../rules/progression';
+import type { Capability, MachineId } from '../rules/types';
 import { newlyUnlocked } from '../scenes/hall/hall-state';
-import { type GameSave, newGameData, progressOf, type SavedPlacement } from './save';
+import { type GameSave, newGameData, progressOf, type SaveData, type SavedPlacement } from './save';
 
 export type FlowState = 'boot' | 'title' | 'hall' | 'puzzle' | 'solve';
 
@@ -112,6 +105,14 @@ export class GameFlow<S> {
     this.enterHall();
   }
 
+  /** Settings → Reset progress: wipe (settings kept) and return to the title. */
+  resetProgress(): void {
+    this.pendingPlay = 0;
+    this.save.set(newGameData(this.save.get(), 0));
+    this.save.flush();
+    this.start();
+  }
+
   continueGame(): void {
     if (this.save.get().stats.startedAt === 0) {
       this.save.update((d) => {
@@ -155,7 +156,7 @@ export class GameFlow<S> {
   /** Persist the altar as the player leaves it, so it reopens the same way. */
   savePlacements(machine: MachineId, placements: readonly SavedPlacement[]): void {
     this.save.update((d) => {
-      const p = (d.puzzles[machine] ??= { placements: [], attempts: 0 });
+      const p = puzzleEntry(d, machine);
       p.placements = placements.map((x) => ({ gem: x.gem, cell: { ...x.cell }, rot: x.rot }));
     });
   }
@@ -167,7 +168,7 @@ export class GameFlow<S> {
   /** Count a fired bolt. `over` trips a breaker (safety record). */
   recordAttempt(machine: MachineId, outcome: BoltOutcome): void {
     this.save.update((d) => {
-      const p = (d.puzzles[machine] ??= { placements: [], attempts: 0 });
+      const p = puzzleEntry(d, machine);
       p.attempts++;
       d.stats.attempts++;
       if (outcome === 'over') d.stats.breakersTripped++;
@@ -237,4 +238,13 @@ export class GameFlow<S> {
     this._machine = machine;
     for (const fn of this.listeners) fn(state, prev);
   }
+}
+
+function puzzleEntry(d: SaveData, machine: MachineId): SaveData['puzzles'][string] {
+  let p = d.puzzles[machine];
+  if (!p) {
+    p = { placements: [], attempts: 0 };
+    d.puzzles[machine] = p;
+  }
+  return p;
 }

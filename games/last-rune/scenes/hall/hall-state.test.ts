@@ -12,7 +12,8 @@ import {
   newlyUnlocked,
 } from './hall-state';
 
-const after = (...ids: MachineId[]) => ids.reduce((s, id) => solveMachine(s, id), initialState());
+const solvedAfter = (...ids: MachineId[]) =>
+  ids.reduce((s, id) => solveMachine(s, id), initialState());
 const byId = (m: HallModel, id: MachineId) => m.alcoves.find((a) => a.id === id)!;
 
 describe('hall state', () => {
@@ -30,7 +31,7 @@ describe('hall state', () => {
   });
 
   it('missing sockets shrink as capabilities arrive; conduits light from restored machines', () => {
-    const m = deriveHall(after('intake-desk', 'furnace'));
+    const m = deriveHall(solvedAfter('intake-desk', 'furnace'));
     expect(byId(m, 'press-unit-4').missing.map((s) => s.capability)).toEqual(['gem:split']);
     expect(byId(m, 'furnace').status).toBe('solved');
     const lit = m.conduits.filter((c) => c.lit);
@@ -48,7 +49,7 @@ describe('hall state', () => {
   });
 
   it('newlyUnlocked lists doors opened by a solve', () => {
-    expect(newlyUnlocked(initialState(), after('intake-desk')).sort()).toEqual(
+    expect(newlyUnlocked(initialState(), solvedAfter('intake-desk')).sort()).toEqual(
       ['conveyor-a', 'furnace', 'relay-tower', 'splitter-mill'].sort(),
     );
   });
@@ -65,7 +66,7 @@ describe('hall state', () => {
     expect(lineForAlcove(byId(m, 'intake-desk'))!.kind).toBe('arrive');
     expect(lineForAlcove(byId(m, 'press-unit-4'))!.kind).toBe('locked');
     expect(lineForAlcove(byId(m, 'furnace'))!.kind).toBe('socket');
-    const solved = deriveHall(after('intake-desk'));
+    const solved = deriveHall(solvedAfter('intake-desk'));
     expect(lineForAlcove(byId(solved, 'intake-desk'))!.kind).toBe('solve');
   });
 

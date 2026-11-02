@@ -156,6 +156,23 @@ describe('GameFlow', () => {
     expect(f.save.get().progress.solved).toEqual([]);
   });
 
+  it('reset progress wipes the run, keeps settings, and returns to the title', () => {
+    const f = setup();
+    f.flow.start();
+    f.flow.newGame();
+    f.save.update((d) => {
+      d.settings.captionSpeed = 'fast';
+      return undefined;
+    });
+    solve(f, 'intake-desk');
+    f.flow.resetProgress();
+    expect(f.kinds()).toEqual(['title']);
+    expect(f.flow.state).toBe('title');
+    expect(f.save.get().progress.solved).toEqual([]);
+    expect(f.save.get().journal.found).toEqual([]);
+    expect(f.save.get().settings.captionSpeed).toBe('fast');
+  });
+
   it('a full run through every machine completes the facility', () => {
     const f = setup();
     f.flow.start();

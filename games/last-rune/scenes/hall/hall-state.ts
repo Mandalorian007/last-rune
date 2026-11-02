@@ -8,13 +8,9 @@
  * sockets in the colours they need, plus a padlock. Cyan conduits run between
  * what you've woken.
  */
+
+import { type FuseLine, lockedLineFor, machineLine, socketLine } from '../../content/lines';
 import { MACHINES } from '../../content/machines';
-import {
-  type FuseLine,
-  lockedLineFor,
-  machineLine,
-  socketLine,
-} from '../../content/lines';
 import {
   type CapabilityKey,
   capabilityKey,
@@ -76,7 +72,11 @@ export interface HallModel {
 /** Hit box around an alcove centre, design px. Views should draw within it. */
 export const ALCOVE_HIT = { w: 200, h: 170 } as const;
 
-export function alcoveStatus(m: MachineDef, state: ProgressState, graph: MachineGraph): AlcoveStatus {
+export function alcoveStatus(
+  m: MachineDef,
+  state: ProgressState,
+  graph: MachineGraph,
+): AlcoveStatus {
   if (isSolved(m.id, state)) return 'solved';
   return isUnlocked(m, state, graph) ? 'unlocked' : 'locked';
 }
@@ -143,8 +143,7 @@ export function newlyUnlocked(
 ): MachineId[] {
   return graph
     .filter(
-      (m) =>
-        !isSolved(m.id, after) && isUnlocked(m, after, graph) && !isUnlocked(m, before, graph),
+      (m) => !isSolved(m.id, after) && isUnlocked(m, after, graph) && !isUnlocked(m, before, graph),
     )
     .map((m) => m.id);
 }
