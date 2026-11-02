@@ -16,7 +16,7 @@
 |---|---|---|---|
 | M0 | Scaffold | ✅ done | Repo, tooling, docs, CI, GitHub public |
 | M1 | Foundations (wave 1) | ✅ done | WebGPU renderer and post stack demo; engine systems; charge sim, solver and 16 puzzles verified; progression and content data; itch pipeline and CI |
-| M2 | Playable vertical (wave 2) | 🟡 closes when altar-scene merges | Title → Hall → Puzzle → Solve loop with real data and save/continue; Codex; procedural gem and stone art |
+| M2 | Playable vertical (wave 2) | ✅ done | Title → Hall → Puzzle → Solve loop with real data and save/continue; Codex; procedural gem and stone art |
 | M3 | Content complete (wave 3) | 🟡 in progress | All 16 machines playable at the altar; dressed hall with distinct machine silhouettes; Journal, FUSE lines, Ending and Discord door; audio; storm/mist/candles |
 | M3α | **Alpha release: GitHub Pages** | ⏳ after M3 | Pages already deploys on every push (D-023). Alpha = labelled run (`alpha-1`), `VITE_RELEASE_LABEL` on the title, GitHub pre-release, playtest link to the user |
 | M4 | Polish + playtest | ⏳ | Solver-driven full-run playtest, perf pass (incl. integrated GPU), a11y pass, difficulty-fun phase 2, bug bash, user feedback items closed |
@@ -32,9 +32,9 @@ A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 t
 |---|---|---|
 | 1 Foundations | engine-render, engine-systems, rules-puzzles, progression-content, ship-ops | ✅ merged |
 | 2 Playable vertical | game-shell, art-materials, audio-design, difficulty-fun (phase 1), art-props | ✅ merged |
-| 3 Content complete | altar-scene (16 puzzles playable, clear altar UI), hall-art (machine silhouettes, floor dressing, state-at-a-glance UI), story-scenes (journal, ending + Discord door, codex) | 🟡 running |
-| 4 Alpha + verify | full-run playtest (solver-driven e2e through all 16 + ending), UX/onboarding review of the whole flow, release label + M3α pre-release | ⏳ next |
-| 5 Polish | perf/cleanup (engine gaps below), a11y, difficulty-fun phase 2 from alpha feedback, bug bash | ⏳ |
+| 3 Content complete | altar-scene ✅, hall-art ✅, story-scenes (journal, ending + Discord door, codex) 🟡 | 🟡 story-scenes running |
+| 4 Alpha + verify | hall-floor, altar-clarity, full-run (real-input e2e through all 16 + playtest report), engine-cleanup; then the ending e2e, release label and M3α pre-release | 🟡 running |
+| 5 Polish | fixes from the playtest report, perf on integrated GPU, a11y, difficulty-fun phase 2 from alpha feedback, bug bash | ⏳ |
 | 6 Ship | v1.0.0 release, tags, itch kit | ⏳ |
 
 ## User feedback backlog
@@ -42,10 +42,10 @@ Each item stays here until it is verified in a merged build. The owning workstre
 
 | Date | Feedback | Owner | State |
 |---|---|---|---|
-| 2026-11-02 | Get the real puzzles in (the live build still has stubs) | altar-scene | 🟡 |
-| 2026-11-02 | Machines are plain boxes; make them machines/buildings with more flavour on the factory floor | hall-art | 🟡 |
-| 2026-11-02 | UI/UX must be clear, clean and intuitive (hall and altar) | altar-scene, hall-art; wave 4 UX review | 🟡 |
+| 2026-11-02 | Get the real puzzles in (the live build still has stubs) | altar-scene | ✅ all 16 playable (cebe8a7) |
+| 2026-11-02 | Machines are plain boxes; make them machines/buildings with more flavour on the factory floor | hall-art ✅ silhouettes; hall-floor 🟡 floor dressing | 🟡 half done |
+| 2026-11-02 | UI/UX must be clear, clean and intuitive (hall and altar) | first pass ✅ (altar-scene, hall-art); altar-clarity, hall-floor, full-run report 🟡 | 🟡 |
 | 2026-11-02 | Auto-formatting on | PM | ✅ D-024 |
 
-## Known engine gaps (for wave 5 cleanup)
-Per-draw uniforms; linear texture upload; ping-pong render-target helper; global keys in Input; master limiter/reverb; export `OfflineContextFactory`.
+## Known engine gaps (engine-cleanup, wave 4)
+Per-draw uniforms; linear texture upload; ping-pong render-target helper; global keys in Input; master limiter/reverb; export `OfflineContextFactory`. Bugs: `ParticleSystem.clear()` lacks COPY_DST; `boltSegmentsFromTrace` timing differs from the sim trace; `Fuse` has no `destroy()`.
