@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M3 ✅ content complete (whole game playable title → 16 machines → ending). Wave 4 running; then M3α alpha. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
+**Current milestone:** M3 ✅ content complete. Wave 4: hall-floor, altar-clarity, full-run and engine-cleanup merged; engine-adoption, caption-layout and altar-polish running; then M3α alpha. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
@@ -20,9 +20,11 @@ _Last updated: 2026-11-02 by PM_
 | altar-scene | ws/altar-scene | ✅ merged | all 16 puzzles play at the real altar (stubs gone); first-time clarity pass, keyboard play, intake-desk teaches itself; e2e solves intake-desk + furnace. UX: docs/design/altar-ux.md |
 | art-props | ws/art-props | ✅ merged | FUSE (rig + caption portrait), storm cell (fluid sim), bolt ribbon (trace adapter, exact/over/under), machine gauge + breaker, alcove lock/unlock/restore; `?demo=props` |
 | hall-art | ws/hall-art | ✅ merged | 15 distinct machine silhouettes, locked/available/restored states, 3-tier hall + seal, storm windows, FUSE roams; title art; one palette + light rig; Reduce flashes setting. 60fps, 11–12 draws |
-| hall-floor | ws/hall-floor | 🟡 in progress | wave 4: floor dressing, locked alcoves readable, available machine most inviting |
-| altar-clarity | ws/altar-clarity | 🟡 in progress | wave 4: less board noise, output visibly feeds the machine, readable strikes, onboarding for the first 3 gems |
-| full-run | ws/full-run | 🟡 in progress | wave 4: real-input e2e through all 16 puzzles + player-eye playtest report |
+| hall-floor | ws/hall-floor | ✅ merged | pipes, risers, cables, lamps, ore cart, crates, steam, puddles; locked alcoves backlit, available most inviting (gold doorway), restored pilot lamp. 60fps, 13–14 draws |
+| altar-clarity | ws/altar-clarity | ✅ merged | board reads as a circuit (live sockets bright, rest covered), bigger machines at the exits with Needs/got labels, charge badges on the bolt, shorter verdicts, first-appearance teaching, FUSE nudges + exact lines |
+| full-run | ws/full-run | ✅ merged | keyboard-only e2e title → all 16 machines → ending (16/16 e2e, 3 runs no flakes); playtest report docs/design/playtest-report.md; `scripts/playtest/` |
+| caption-layout | ws/caption-layout | 🟡 in progress | playtest S1/S2: FUSE caption never covers puzzle info, dialogs or alcoves; no mid-word cut; O/0 hint |
+| altar-polish | ws/altar-polish | 🟡 in progress | playtest: blocked vs open sockets, dark board, last-rune labels, Enter consistency, splitter overlap, Channel nudge, particles.clear |
 | engine-adoption | ws/engine-adoption | 🟡 in progress | wave 4: callers adopt engine-cleanup's APIs; ending eases with post.blendTo; credits backing; door bloom |
 | engine-cleanup | ws/engine-cleanup | ✅ merged | particles clear, bolt timing from trace, Fuse.destroy, per-draw uniforms, texture uploads, PingPong, global keys, queued taps, master limiter + reverb, post.blendTo. 60fps, no new churn |
 
@@ -33,7 +35,6 @@ _Last updated: 2026-11-02 by PM_
 ## Risks
 - e2e flake (fixed twice over): repeat taps now queue in Input, and each worktree runs e2e on its own ports (tests/e2e/ports.ts).
 - The master limiter is now on by default (above −1 dBFS only). Needs a human listen along with the rest of the audio.
-- FUSE altar lines exist (`exactLine`, `TEACH_NUDGE`, `gemNudge`); altar-clarity wires `exactLine`/`gemNudge` (verdict still hard-coded).
 - Invented UI copy in the ending (credits, chat server/channel, 6 reactor handles, labels) awaits user confirmation: `docs/design/ending.md`.
 - Audio is only objectively checked (levels, clicks, loops). Needs a human listen; 52 MiB decoded audio may matter on low-memory devices.
 - Photosensitivity: the breaker flash whites out most of the frame for ~0.3 s. hall-art adds a "Reduce flashes" setting (on with reduced motion).
