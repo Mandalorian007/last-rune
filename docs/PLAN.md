@@ -18,7 +18,7 @@
 | M1 | Foundations (wave 1) | ✅ done | WebGPU renderer and post stack demo; engine systems; charge sim, solver and 16 puzzles verified; progression and content data; itch pipeline and CI |
 | M2 | Playable vertical (wave 2) | ✅ done | Title → Hall → Puzzle → Solve loop with real data and save/continue; Codex; procedural gem and stone art |
 | M3 | Content complete (wave 3) | ✅ done | All 16 machines playable at the altar; dressed hall with distinct machine silhouettes; Journal, FUSE lines, Ending and Discord door; audio; storm/mist/candles |
-| M3α | **Alpha release: GitHub Pages** | ⏳ after M3 | Pages already deploys on every push (D-023). Alpha = labelled run (`alpha-1`), `VITE_RELEASE_LABEL` on the title, GitHub pre-release, playtest link to the user |
+| M3α | **Alpha release: GitHub Pages** | ✅ alpha-1 (2026-11-02) | Pages already deploys on every push (D-023). Alpha = labelled run (`alpha-1`), `VITE_RELEASE_LABEL` on the title, GitHub pre-release, playtest link to the user |
 | M4 | Polish + playtest | ⏳ | Solver-driven full-run playtest, perf pass (incl. integrated GPU), a11y pass, difficulty-fun phase 2, bug bash, user feedback items closed |
 | M5 | **Release: GitHub Pages v1.0** (PM's finish line) | ⏳ | Polished build live on Pages, GitHub Release + `v1.0.0` and `engine-v0.1` tags, itch zip + page copy + devlog draft prepared for the user |
 | — | itch.io launch (manual, with user) | ⏳ | User uploads with PM's runbook; not an agent task (D-012) |

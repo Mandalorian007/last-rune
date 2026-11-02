@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M3 ✅ content complete. Wave 4 ✅ all merged (hall-floor, altar-clarity, full-run, engine-cleanup, engine-adoption, caption-layout, altar-polish). Release label on the title. Next: M3α labelled Pages run `alpha-1` + GitHub pre-release. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
+**Current milestone:** M3 ✅ content complete. Wave 4 ✅ all merged (hall-floor, altar-clarity, full-run, engine-cleanup, engine-adoption, caption-layout, altar-polish). Release label on the title. M3α ✅ alpha-1 live (pre-release `alpha-1` at 1215ca0). Next: user playtest of alpha-1, then wave 5 polish. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
