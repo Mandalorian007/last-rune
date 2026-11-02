@@ -16,6 +16,7 @@ _Last updated: 2026-11-02 by PM_
 | art-materials | ws/art-materials | ✅ merged | light set, 6 gem cuts × 5 states, baked stone, altar slab, candles, gold emboss, post presets; `?demo=art` 60fps (stress 9 draws). Screens in docs/design/screens/ |
 | audio-design | ws/audio-design | ✅ merged | 59 procedural sounds (0 problems, peak −1.5 dBFS), 13 moods by tier, FUSE voice; ~0.9 s pre-render after first click. PM wired `ctx.sound`, `ctx.setMood`, FUSE voice, codex/UI sounds |
 | difficulty-fun | ws/difficulty-fun | 🟡 in progress | difficulty model, novice bot, target curve, puzzle retunes (D-021) |
+| story-scenes | ws/story-scenes | 🟡 in progress | wave 3: journal desk, ending + Discord door, codex content |
 | altar-scene | ws/altar-scene | 🟡 in progress | wave 3: playable altar puzzle + solve moment |
 | art-props | ws/art-props | ✅ merged | FUSE (rig + caption portrait), storm cell (fluid sim), bolt ribbon (trace adapter, exact/over/under), machine gauge + breaker, alcove lock/unlock/restore; `?demo=props` |
 | hall-art | ws/hall-art | 🟡 in progress | wave 3: the hall dressed with real props and lighting; title art; palette/light-rig unification |
