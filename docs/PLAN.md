@@ -43,6 +43,7 @@ Each item stays here until it is verified in a merged build. The owning workstre
 
 | Date | Feedback | Owner | State |
 |---|---|---|---|
+| 2026-11-02 | Re-check after first-altar: gem helper cards ("new item") block the grid; they should fade and be hover/focus pop-ups. "Is the bend a fixed direction? Should it be rotated?" (fixed vs rotatable gems not readable) | onboarding-2 | 🟡 |
 | 2026-11-02 | alpha-1 playtest, intake desk: "didn't know what the target was, how to place, and the purple indicator had a shape I followed but the lightning went the other way. Confusing for a new user; address this first." | PM (glyph) + first-altar | ✅ Bend/Gate glyphs match rules (811f25c); ✅ first-time flow (first-altar); awaiting user re-check |
 | 2026-11-02 | Get the real puzzles in (the live build still has stubs) | altar-scene | ✅ all 16 playable (cebe8a7) |
 | 2026-11-02 | Machines are plain boxes; make them machines/buildings with more flavour on the factory floor | hall-art ✅ silhouettes; hall-floor ✅ pipes, cables, lamps, crates, puddles; readable alcove states | ✅ (4a0b76b) |
