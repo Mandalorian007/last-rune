@@ -28,8 +28,8 @@ export default definePuzzle({
   essential: ['split'],
   solution: [
     '# # # = # # # #',
-    '# ┌ = S . # # #',
-    '= S . . ┌ *C = =',
+    '# ┌ = S1 . # # #',
+    '= S1 . . ┌ *C = =',
     '# └ = = ┘ # # #',
     '# # # # # # # #',
     '# # # # # # # #',

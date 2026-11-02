@@ -42,6 +42,14 @@ const SHEETS: { machine: MachineId; gems: { gem: GemKind; rot: Rot }[] }[] = [
       { gem: 'bend', rot: 1 },
     ],
   },
+  {
+    machine: 'the-last-rune',
+    gems: [
+      { gem: 'split', rot: 1 },
+      { gem: 'split', rot: 2 },
+      { gem: 'split', rot: 3 },
+    ],
+  },
 ];
 
 /** Free cells, spaced out (every other column), away from storm/machine sockets. */

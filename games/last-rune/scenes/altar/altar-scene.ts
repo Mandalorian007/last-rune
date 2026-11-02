@@ -98,29 +98,25 @@ const INFO_TAG: Record<InfoHow, string> = {
 
 /**
  * Why a gem will not turn, shown at that gem (R, Q, scroll or RB over it). Straight-through
- * gems need no turning; a Split forks whichever side feeds it; a fixed Bend or Gate is part of
- * the machine.
+ * gems need no turning; a fixed Bend, Gate or Split is part of the machine.
  */
 const NO_TURN: Record<GemKind, string> = {
   channel: "Can't turn: the bolt goes straight through",
   amplify: "Can't turn: the bolt goes straight through",
   capacitor: "Can't turn: the bolt goes straight through",
-  split: "Can't turn: the bolt splits left and right",
+  split: "Can't turn: fixed in place",
   bend: "Can't turn: fixed in place",
   gate: "Can't turn: fixed in place",
 };
 
-/** The board card's line for a Split: what it does whichever way it is fed. */
-const SPLIT_CARD =
-  'The bolt can come in any side. It splits left and right, half the charge each way.';
-
 const SIDE_NAME = ['north', 'east', 'south', 'west'] as const;
 
-/** Which sides a Bend or Gate at `rot` uses, for the announcer (rules.md section 4). */
+/** Which sides a Bend, Gate or Split at `rot` uses, for the announcer (rules.md section 4). */
 function sidesText(gem: GemKind, rot: number): string {
   const s = (k: number) => SIDE_NAME[(((rot + k) % 4) + 4) % 4]!;
   if (gem === 'bend') return `joins ${s(0)} and ${s(1)}`;
   if (gem === 'gate') return `in from ${s(3)} and ${s(1)}, out ${s(0)}`;
+  if (gem === 'split') return `in from ${s(2)}, out ${s(3)} and ${s(1)}`;
   return '';
 }
 
@@ -260,11 +256,8 @@ export class AltarScene implements GameScene {
   /** Iron brackets on fixed (and hint-locked) gems, rebuilt when the board changes. */
   private pins: HTMLElement[] = [];
   private pinsRev = -1;
-  /** Turn arrow on a held Bend or Gate, until the player has turned one here. */
+  /** Turn arrow on a held Bend, Gate or Split, until the player has turned one here. */
   private turnBadge!: HTMLElement;
-  /** "in" pills at each Split's input side (where the bolt comes in, or would). */
-  private splitIns!: HTMLElement;
-  private splitInsKey = '';
   private turned = false;
   /** Board gem the keyboard cursor last announced. */
   private focusKey = '';
@@ -323,6 +316,9 @@ export class AltarScene implements GameScene {
   /** The route preview with the held gem tried where it would land (cell, rot, kind). */
   private ghostKey = '';
   private previewSim: SimResult | null = null;
+  /** Where the preview's first strike meets a gem from a side it doesn't take: a small ✕. */
+  private noGoEls: HTMLElement[] = [];
+  private noGoKey = '';
 
   constructor(readonly machine: MachineId) {}
 
@@ -407,6 +403,7 @@ export class AltarScene implements GameScene {
     this.dom.remove();
     this.chipEls.length = 0;
     this.previewChipEls.length = 0;
+    this.noGoEls.length = 0;
     this.pins.length = 0;
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
     this.ctx.particles.clear();
@@ -612,8 +609,6 @@ export class AltarScene implements GameScene {
       this.turnBadge,
       this.hint,
     );
-    this.splitIns = h('div', { class: 'lr-altar-ins', 'aria-hidden': 'true' });
-    this.dom.append(this.splitIns);
     this.dom.toggleAttribute('data-first', !!this.teachCell);
     this.ctx.ui.layers.hud.append(this.dom);
   }
@@ -843,6 +838,7 @@ export class AltarScene implements GameScene {
       this.realPreview = null;
       this.previewSim = null;
       this.updatePreviewChips();
+      this.updateNoGo([], null);
     }
     this.updateFirstTime();
     this.liveMask = liveSockets(this.puzzle, placements, this.openEnds, this.liveMask);
@@ -912,14 +908,16 @@ export class AltarScene implements GameScene {
     const v = this.view;
     let hops = this.realPreview.hops;
     let sim = this.realPreview.sim;
+    let placements = this.board.serialise();
     if (ghost) {
       const at = (q: Placement) => q.cell.x === ghost.cell.x && q.cell.y === ghost.cell.y;
-      const placements = [...this.board.serialise().filter((q) => !at(q)), ghost];
+      placements = [...placements.filter((q) => !at(q)), ghost];
       sim = simulate(this.puzzle, placements);
       hops = previewPath(this.puzzle, placements, sim).hops;
     }
-    // Glyphs face the way the bolt will really come in, with the held gem where it would land:
-    // a fixed Split swings to show its real input and outputs as the player aims at it.
+    this.updateNoGo(placements, sim);
+    // Straight-through glyphs face the way the bolt will really come in, with the held gem
+    // where it would land. Bend, Gate and Split keep the turn they were set at.
     v.faceAlong(hops, true);
     v.preview = hops;
     v.previewTarget = PREVIEW_PATH ? 1 : 0;
@@ -1059,7 +1057,7 @@ export class AltarScene implements GameScene {
     return `${GEM_NAME[r.gem]}${tag ? ` (${tag})` : ''}: ${this.infoRule(r)}`;
   }
 
-  /** The card's tag; a placed Bend or Gate names the keys in use (mouse or keyboard). */
+  /** The card's tag; a placed Bend, Gate or Split names the keys in use (mouse or keyboard). */
   private tagOf(how: InfoHow): string {
     if (how === 'boardTurns') {
       // With a gem in hand a click does not pick this one up, so the card only says how to turn.
@@ -1071,7 +1069,6 @@ export class AltarScene implements GameScene {
 
   private infoRule(r: { gem: GemKind; how: InfoHow }): string {
     if (r.how === 'turns') return 'Yours to place now. Turn it to face the way you need.';
-    if (r.gem === 'split' && (r.how === 'board' || r.how === 'fixed')) return SPLIT_CARD;
     const rule = this.rules[r.gem] ?? '';
     return r.how === 'tray' || r.how === 'turnsTray' ? rule : firstSentence(rule);
   }
@@ -1253,7 +1250,7 @@ export class AltarScene implements GameScene {
     }
   }
 
-  /** " Joins north and east. R or Q turns it." for a Bend or Gate; nothing for other gems. */
+  /** " Joins north and east. R or Q turns it." for a Bend, Gate or Split; nothing for others. */
   private turnNote(gem: GemKind, rot: number): string {
     if (!isRotational(gem)) return '';
     const s = sidesText(gem, rot);
@@ -1308,7 +1305,7 @@ export class AltarScene implements GameScene {
 
   /**
    * A gem that will not turn says why, at that gem (or at the held gem), with the deny sound.
-   * A fixed Split names what it does instead; other fixed gems say they are part of the machine.
+   * Fixed gems say they are part of the machine.
    */
   private denyTurn(cell: Cell | null, gem: GemKind, fixed: boolean): void {
     const text = fixed && isRotational(gem) ? NO_TURN.bend : NO_TURN[gem];
@@ -1900,7 +1897,6 @@ export class AltarScene implements GameScene {
     this.updateInfo();
     this.updatePins();
     this.updateTurnBadge();
-    this.updateSplitIns();
     // The keyboard cursor, for tests and tools (the gold ring is drawn on the GPU).
     const ck = `${this.cursor.x},${this.cursor.y}`;
     if (ck !== this.cursorKey) {
@@ -2280,7 +2276,7 @@ export class AltarScene implements GameScene {
   }
 
   /**
-   * A held Bend or Gate shows it turns: a turn arrow by the gem, with the keys, until the
+   * A held Bend, Gate or Split shows it turns: a turn arrow by the gem, with the keys, until the
    * player has turned one here. Only where the altar teaches turning (its first tray Bend or
    * Gate); the preview swings with each turn (see `ghost`).
    */
@@ -2308,38 +2304,6 @@ export class AltarScene implements GameScene {
         h('span', { class: 'lr-turn-keys' }, keys),
       );
     }
-  }
-
-  /**
-   * A Split reads without turning it: a small "in" sits on the side its bolt comes in by (the
-   * real feed, the held gem's would-be feed, or the storm's way when nothing reaches it yet).
-   * Its glyph's two arms point at the sides the halves leave by.
-   */
-  private updateSplitIns(): void {
-    const L = this.view.layout;
-    const parts: string[] = [];
-    const at: { x: number; y: number }[] = [];
-    if (this.mode === 'edit') {
-      for (const b of this.view.board) {
-        if (b.g.kind !== 'split' || b.hidden) continue;
-        const q = (((Math.round(b.rotTarget) + 2) % 4) + 4) % 4;
-        const pt = { x: 0, y: 0 };
-        cellCenter(L, b.cell, pt);
-        const d = L.pitch * 0.5;
-        pt.x += q === 1 ? d : q === 3 ? -d : 0;
-        pt.y += q === 0 ? -d : q === 2 ? d : 0;
-        at.push(pt);
-        parts.push(`${Math.round(pt.x)},${Math.round(pt.y)}`);
-      }
-    }
-    const key = parts.join(';');
-    if (key === this.splitInsKey) return;
-    this.splitInsKey = key;
-    this.splitIns.replaceChildren(
-      ...at.map((pt) =>
-        h('div', { class: 'lr-altar-in', style: { left: `${pt.x}px`, top: `${pt.y}px` } }, 'in'),
-      ),
-    );
   }
 
   /**
@@ -2396,6 +2360,43 @@ export class AltarScene implements GameScene {
       );
       this.dom.insertBefore(el, this.tip);
       this.previewChipEls.push(el);
+    }
+  }
+
+  /**
+   * Where the route preview stops at a Bend, Gate or Split facing the wrong way, a small ✕ on
+   * the side the bolt meets it, so a stopped preview says why (same cause as the strike's
+   * `Faces the wrong way`).
+   */
+  private updateNoGo(placements: readonly Placement[], sim: SimResult | null): void {
+    const hops: { from: Cell; to: Cell }[] = [];
+    if (sim && PREVIEW_PATH && !this.teaching) {
+      for (const seg of sim.trace) {
+        if (seg.pulse !== 0 || seg.end !== 'fizzle') continue;
+        const one = fizzles(this.puzzle, placements, { ...sim, trace: [seg] });
+        if (one[0]?.cause === 'facing') hops.push(seg);
+      }
+    }
+    const key = hops.map((c) => `${c.from.x},${c.from.y}>${c.to.x},${c.to.y}`).join(';');
+    if (key === this.noGoKey) return;
+    this.noGoKey = key;
+    for (const el of this.noGoEls) el.remove();
+    this.noGoEls.length = 0;
+    const L = this.view.layout;
+    const a = { x: 0, y: 0 };
+    const b = { x: 0, y: 0 };
+    for (const c of hops) {
+      anchorOf(L, c.from, a);
+      anchorOf(L, c.to, b);
+      // On the gem's rim, where the bolt is turned away.
+      const t = 0.62;
+      const el = h('div', {
+        class: 'lr-altar-nogo',
+        'aria-hidden': 'true',
+        style: { left: `${a.x + (b.x - a.x) * t}px`, top: `${a.y + (b.y - a.y) * t}px` },
+      });
+      this.dom.insertBefore(el, this.tip);
+      this.noGoEls.push(el);
     }
   }
 

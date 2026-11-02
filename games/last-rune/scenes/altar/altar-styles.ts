@@ -126,6 +126,18 @@ const CSS = /* css */ `
   background: rgba(10,18,26,0.78); border-style: dashed; border-color: rgba(120,200,255,0.6); box-shadow: none;
 }
 
+/* Preview: a wrong-facing gem turns the bolt away here (a small ✕ on its rim). */
+.tc-overlay .lr-altar-nogo {
+  position: absolute; width: 28px; height: 28px; transform: translate(-50%, -50%); border-radius: 50%;
+  background: rgba(30,6,4,0.9); border: 2px solid #ff5a3c; box-shadow: 0 0 10px rgba(255,90,60,0.7);
+  pointer-events: none; animation: lr-chip-in 180ms var(--tc-easing) both;
+}
+.tc-overlay .lr-altar-nogo::before, .tc-overlay .lr-altar-nogo::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 16px; height: 3px; background: #ffb4a4;
+  border-radius: 2px; transform: translate(-50%, -50%) rotate(45deg);
+}
+.tc-overlay .lr-altar-nogo::after { transform: translate(-50%, -50%) rotate(-45deg); }
+
 /* Fixed gems: iron corner brackets and a bolt head. Part of the machine, not the player's. */
 .tc-overlay .lr-altar-pin {
   position: absolute; transform: translate(-50%, -50%); pointer-events: none; box-sizing: border-box;
@@ -147,7 +159,7 @@ const CSS = /* css */ `
   background: radial-gradient(circle at 50% 50%, #2a3039 0 22%, #c9d2e0 26%, #8a96a8 70%, #4a5260);
 }
 
-/* A held Bend or Gate turns: an arrow by the gem, with its keys, until the first turn. */
+/* A held Bend, Gate or Split turns: an arrow by the gem, with its keys, until the first turn. */
 .tc-overlay .lr-altar-turn {
   position: absolute; transform: translate(-30%, -70%); display: flex; align-items: center; gap: 6px;
   padding: 2px 10px 2px 6px; border-radius: 999px; pointer-events: none; white-space: nowrap;
@@ -172,13 +184,6 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-verdict[data-outcome="over"] { border-color: #ff5a3c; }
 .tc-overlay .lr-altar-verdict[data-outcome="under"] { border-color: #ffb03f; }
 .tc-overlay .lr-altar-verdict[data-outcome="exact"] { border-color: #3fe0ff; color: #dff9ff; }
-
-/* A Split's input side: a small pill on the socket edge the bolt comes in by. */
-.tc-overlay .lr-altar-in {
-  position: absolute; transform: translate(-50%, -50%); padding: 0 7px; border-radius: 9px;
-  font-size: 16px; line-height: 20px; letter-spacing: 0.04em; color: #ffe6f6;
-  background: rgba(40,10,32,0.88); border: 1px solid rgba(255,120,210,0.75); pointer-events: none;
-}
 
 .tc-overlay .lr-altar-tag {
   position: absolute; transform: translate(-50%, -100%); padding: 4px 12px; border-radius: 8px; white-space: nowrap;

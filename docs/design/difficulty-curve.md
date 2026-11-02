@@ -128,11 +128,18 @@ What changed and why:
   Everything else is forced: 4 solutions (amber/ice order × the small machine's last turn),
   down from 72 variations of where the gems sat on long runs. Still the top of the curve.
 
+**After D-031 (one-input Split).** Every Split now has a turn; fixed Splits were set to the
+turn their intended route needs. Scores move by 0.2 at most, all inside their bands
+(splitter-mill 2.2, relay-tower 2.0, conveyor-a 2.2, crane 3.5, boiler-room 3.6, foundry 3.3,
+the-last-rune 6.1; the rest unchanged). conveyor-a drops from 8 to 4 solutions: the fixed
+Split no longer takes its bolt from either side. Total: 52.5 min. The solver and bot only try
+turns that accept the incoming bolt, so the cost of choosing a tray Split's turn is not scored.
+
 ## 5. Open issues
 
 - Bands are on a by-hand minutes scale. Phase 2 playtests (time to solve, fires per solve,
   hint use) should refit the weights; `scoreOf` is the only place to change.
-- conveyor-a (8) and press-unit-4 (9) are still loose for Tier 1/2; the looseness is mostly
+- conveyor-a (4 since D-031; was 8) and press-unit-4 (9) are still loose for Tier 1/2; the looseness is mostly
   where along a run the pre-set gems sit. Fine for now; candidates for rails if playtests say
   they feel aimless.
 - capacitor-bay has 11 solutions because the 8×6 maze leaves several ways to the small machine.

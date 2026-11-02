@@ -10,7 +10,8 @@
  * - emissive = glow multiplier (1 = default for the state)
  *
  * Rotation 0 matches rules.md rot 0: straight gems run south→north; Bend joins N–E; Gate takes
- * W + E and outputs N. Keep glyphs in step with the rules: players read them as the wiring.
+ * W + E and outputs N; Split takes S and outputs W + E. Keep glyphs in step with the rules:
+ * players read them as the wiring.
  *
  * Look: flat table + two rows of crown facets per side, a dark girdle. The inner glyph is lit
  * from inside and seen through each facet with a different refraction offset (per-channel,
@@ -66,15 +67,19 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     d = min(d, g_seg(p, vec2f(-0.16, -e), vec2f(0.16, -e)));
     d = min(d, g_seg(p, vec2f(e, -0.16), vec2f(e, 0.16)));
   } else if (kind == 2) {
-    // Split: in from the south, out both sides (west and east), never straight on. A T with a
-    // node at the fork and a door on each of the three sides it uses.
-    let y = -0.16;
-    d = g_seg(p, vec2f(0.0, 0.7), vec2f(0.0, y));
-    d = min(d, g_seg(p, vec2f(-0.56, y), vec2f(0.56, y)));
-    d = min(d, max(length(p - vec2f(0.0, y)) - 0.1, 0.0));
-    d = min(d, g_seg(p, vec2f(-0.14, 0.7), vec2f(0.14, 0.7)));
-    d = min(d, g_seg(p, vec2f(-0.56, y - 0.14), vec2f(-0.56, y + 0.14)));
-    d = min(d, g_seg(p, vec2f(0.56, y - 0.14), vec2f(0.56, y + 0.14)));
+    // Split (rules rot 0): one way in, from the south; out both sides (west and east), never
+    // straight on. A bold T: the stem runs from the input rim to the centre, the crossbar runs
+    // rim to rim, and each arm ends in a wide arrowhead pointing out (D-031). Drawn heavier
+    // than the other glyphs so it, not the cut, is what reads; nothing points at the input.
+    let e = 0.7;
+    let h = 0.24;
+    d = g_seg(p, vec2f(0.0, 0.74), vec2f(0.0, 0.0));
+    d = min(d, g_seg(p, vec2f(-e, 0.0), vec2f(e, 0.0)));
+    d = min(d, g_seg(p, vec2f(-e + h, -h), vec2f(-e, 0.0)));
+    d = min(d, g_seg(p, vec2f(-e + h, h), vec2f(-e, 0.0)));
+    d = min(d, g_seg(p, vec2f(e - h, -h), vec2f(e, 0.0)));
+    d = min(d, g_seg(p, vec2f(e - h, h), vec2f(e, 0.0)));
+    d -= 0.035;
   } else if (kind == 3) {
     // Amplify: straight through, two stacked chevrons pointing the way out.
     d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.3));
@@ -116,8 +121,8 @@ fn g_cut(kind: i32) -> Cut {
     c.sides = 6.0; c.phase = -TAU / 4.0; c.scale = vec2f(0.66, 1.0);
   } else if (kind == 1) {   // square cushion
     c.sides = 4.0; c.phase = TAU / 8.0; c.scale = vec2f(1.08);
-  } else if (kind == 2) {   // trillion: apex at the input (south), flat side across the outputs
-    c.sides = 3.0; c.phase = TAU / 4.0; c.scale = vec2f(1.12); c.offset = vec2f(0.0, 0.28);
+  } else if (kind == 2) {   // octagon, flats on the four sides: points nowhere, so the T leads
+    c.sides = 8.0; c.phase = TAU / 16.0; c.scale = vec2f(1.02);
   } else if (kind == 3) {   // round brilliant
     c.sides = 12.0; c.phase = 0.0; c.scale = vec2f(0.97);
   } else if (kind == 4) {   // shield

@@ -128,7 +128,7 @@ describe('split', () => {
   it('sends half out of each perpendicular side', () => {
     const r = run(bench({ machines: two }), [
       '. . . = . .',
-      '= = = S . .',
+      '= = = S1 . .',
       '. . . = . .',
       '. . . = . .',
     ]);
@@ -136,14 +136,46 @@ describe('split', () => {
     expect(r.machines.map((m) => m.readings[0])).toEqual([2, 2]);
   });
 
+  it('takes a bolt only through its one input side (rot 0: from the S)', () => {
+    // Storm W, split at (3,1). Only S1 (input W) passes; every other turn fizzles there.
+    for (const rot of [0, 1, 2, 3] as const) {
+      const r = run(bench({ machines: two }), [
+        '. . . = . .',
+        `= = = S${rot} . .`,
+        '. . . = . .',
+        '. . . = . .',
+      ]);
+      expect(r.outcome).toBe(rot === 1 ? 'exact' : 'dead');
+      const into = r.trace.find((s) => s.to.x === 3 && s.to.y === 1)!;
+      expect(into.end).toBe(rot === 1 ? 'gem' : 'fizzle');
+    }
+  });
+
+  it('rot 0 takes from the S and sends halves W then E', () => {
+    // Storm from below at column 2; S0 at (2,1) sends 2 west and 2 east.
+    const p: PuzzleDef = {
+      ...bench({
+        machines: [
+          { at: { x: -1, y: 1 }, need: 2 },
+          { at: { x: 6, y: 1 }, need: 2 },
+        ],
+      }),
+      storm: { at: { x: 2, y: 4 }, dir: 'N', strength: 1 },
+    };
+    const r = run(p, ['. . . . . .', '= = S0 = = =', '. . = . . .', '. . = . . .']);
+    expect(r.outcome).toBe('exact');
+    const out = r.trace.filter((s) => s.from.x === 2 && s.from.y === 1);
+    expect(out.map((s) => s.to.x)).toEqual([1, 3]);
+  });
+
   it('nothing goes straight on', () => {
-    const r = run(bench(), ['. . . . . .', '= = = S = =', '. . . . . .', '. . . . . .']);
+    const r = run(bench(), ['. . . . . .', '= = = S1 = =', '. . . . . .', '. . . . . .']);
     expect(r.outcome).toBe('dead');
   });
 
   it('halves meeting again at one machine add back up', () => {
     // split at (1,1): halves go N and S, loop round to the machine row via bends
-    const r = run(bench(), ['. ┌ = = ┐ .', '= S . . └ =', '. └ = = ┐ .', '. . . . . .']);
+    const r = run(bench(), ['. ┌ = = ┐ .', '= S1 . . └ =', '. └ = = ┐ .', '. . . . . .']);
     // the south half reaches (4,2) ┐ entered from W -> leaves S: grounds. Only 2 arrives.
     expect(r.machines[0]!.readings).toEqual([2]);
     expect(r.outcome).toBe('under');
@@ -152,13 +184,13 @@ describe('split', () => {
   it('an odd charge into a split fizzles there', () => {
     // 1x storm, split twice to make 1, then a third split.
     const p = bench({ machines: [{ at: { x: 6, y: 2 }, need: 1 }] });
-    const ok = run(p, ['. . . . . .', '= = S . . .', '. . ┘ . . .', '. . . . . .']);
+    const ok = run(p, ['. . . . . .', '= = S1 . . .', '. . ┘ . . .', '. . . . . .']);
     expect(ok.outcome).toBe('dead');
     // Build 4 -> S(2,1): 2 south -> (2,2) S: 1 east -> (3,2) = ... machine at (6,2) needs 1
-    const ok2 = run(p, ['. . . . . .', '= = S . . .', '. . S = = =', '. . . . . .']);
+    const ok2 = run(p, ['. . . . . .', '= = S1 . . .', '. . S2 = = =', '. . . . . .']);
     expect(ok2.outcome).toBe('exact');
     // 1 -> another split shorts
-    const bad = run(p, ['. . . . . .', '= = S . . .', '. . S = S =', '. . . . . .']);
+    const bad = run(p, ['. . . . . .', '= = S1 . . .', '. . S2 = S1 =', '. . . . . .']);
     expect(bad.outcome).toBe('dead');
     expect(bad.trace.find((s) => s.to.x === 4 && s.to.y === 2)!.end).toBe('fizzle');
   });
@@ -195,7 +227,7 @@ describe('amplify', () => {
   it('amber before magenta: amplify then split gives 4 + 4', () => {
     const r = run(bench({ machines: two }), [
       '. . . . = .',
-      '= A = = S .',
+      '= A = = S1 .',
       '. . . . = .',
       '. . . . = .',
     ]);
@@ -205,7 +237,7 @@ describe('amplify', () => {
   it('never after: split then amplify gives 4 + 2', () => {
     const r = run(bench({ machines: two }), [
       '. . . . A .',
-      '= = = = S .',
+      '= = = = S1 .',
       '. . . . = .',
       '. . . . = .',
     ]);
@@ -216,7 +248,7 @@ describe('amplify', () => {
   it('halves of an amplified bolt stay marked', () => {
     const r = run(bench({ machines: two }), [
       '. . . . A .',
-      '= A = = S .',
+      '= A = = S1 .',
       '. . . . A .',
       '. . . . = .',
     ]);
@@ -226,7 +258,7 @@ describe('amplify', () => {
 
 describe('gate', () => {
   // 4 -> split at (1,1) -> halves loop round into a gate at (3,1) facing E (rot 1).
-  const loop = ['. ┌ = ┐ . .', '= S . G1 = =', '. └ = ┘ . .', '. . . . . .'];
+  const loop = ['. ┌ = ┐ . .', '= S1 . G1 = =', '. └ = ┘ . .', '. . . . . .'];
 
   it('fires when both inputs are live, sending the sum', () => {
     const r = run(bench(), loop);
@@ -238,7 +270,7 @@ describe('gate', () => {
   });
 
   it('a lone input does nothing', () => {
-    const r = run(bench(), ['. ┌ = ┐ . .', '= S . G1 = =', '. └ = . . .', '. . . . . .']);
+    const r = run(bench(), ['. ┌ = ┐ . .', '= S1 . G1 = =', '. └ = . . .', '. . . . . .']);
     expect(r.outcome).toBe('dead');
     expect(r.trace.filter((s) => s.end === 'wait')).toHaveLength(0);
     expect(r.trace.filter((s) => s.to.x === 3 && s.to.y === 1)[0]!.end).toBe('fizzle');
@@ -253,7 +285,7 @@ describe('gate', () => {
 
   it('waits for a late input within the same strike', () => {
     // the south half takes a longer route (arrives tick 8, north arrives tick 6)
-    const r = run(bench(), ['. ┌ = ┐ . .', '= S . G1 = =', '. = . = . .', '. └ = ┘ . .']);
+    const r = run(bench(), ['. ┌ = ┐ . .', '= S1 . G1 = =', '. = . = . .', '. └ = ┘ . .']);
     expect(r.outcome).toBe('exact');
     const inputs = r.trace.filter((s) => s.to.x === 3 && s.to.y === 1);
     expect(inputs.map((s) => [s.tick + 1, s.end])).toEqual([
@@ -265,14 +297,14 @@ describe('gate', () => {
 
   it('re-joins an asymmetric split: amber on one branch makes 6', () => {
     const p = bench({ machines: [{ at: { x: 6, y: 1 }, need: 6 }] });
-    const r = run(p, ['. ┌ A ┐ . .', '= S . G1 = =', '. └ = ┘ . .', '. . . . . .']);
+    const r = run(p, ['. ┌ A ┐ . .', '= S1 . G1 = =', '. └ = ┘ . .', '. . . . . .']);
     expect(r.machines[0]!.readings).toEqual([6]);
     expect(r.outcome).toBe('exact');
   });
 
   it('carries the amber mark if either input had it', () => {
     const p = bench({ machines: [{ at: { x: 6, y: 1 }, need: 6 }] });
-    const r = run(p, ['. ┌ A ┐ . .', '= S . G1 A =', '. └ = ┘ . .', '. . . . . .']);
+    const r = run(p, ['. ┌ A ┐ . .', '= S1 . G1 A =', '. └ = ┘ . .', '. . . . . .']);
     expect(r.machines[0]!.readings).toEqual([6]);
   });
 });
@@ -333,7 +365,7 @@ describe('capacitor and strikes', () => {
         { at: { x: 3, y: 4 }, need: 4 },
       ],
     });
-    const r = run(p, ['. . . = . .', '= = = S . .', '. . . C . .', '. . . = . .']);
+    const r = run(p, ['. . . = . .', '= = = S1 . .', '. . . C . .', '. . . = . .']);
     expect(r.outcome).toBe('exact');
     expect(r.machines[0]!.readings).toEqual([2]);
     expect(r.machines[1]!.readings).toEqual([0, 4]);
@@ -346,7 +378,7 @@ describe('capacitor and strikes', () => {
         { at: { x: 3, y: 4 }, need: 2 },
       ],
     });
-    const r2 = run(q, ['. . . = . .', '= = = S . .', '. . . C . .', '. . . = . .']);
+    const r2 = run(q, ['. . . = . .', '= = = S1 . .', '. . . C . .', '. . . = . .']);
     expect(r2.outcome).toBe('over');
     expect(r2.pulsesRun).toBe(2);
     expect(r2.machines[1]!.outcome).toBe('over');
@@ -356,7 +388,7 @@ describe('capacitor and strikes', () => {
 describe('collisions and loops', () => {
   it('a bolt looping back into its own path fizzles; the strike ends', () => {
     // 4 -> split at (2,1): north half loops ┌┐ back down into the split.
-    const r = run(bench(), ['. . ┌ ┐ . .', '= = S ┘ . .', '. . . . . .', '. . . . . .']);
+    const r = run(bench(), ['. . ┌ ┐ . .', '= = S1 ┘ . .', '. . . . . .', '. . . . . .']);
     expect(r.outcome).toBe('dead');
     expect(r.trace.length).toBeLessThan(20);
   });
@@ -365,7 +397,7 @@ describe('collisions and loops', () => {
     // North half reaches channel (5,0) on tick 7 and exits to the machine; the south half
     // winds round and reaches (5,0) from below on tick 9: already used, so it fizzles.
     const p = bench({ machines: [{ at: { x: 6, y: 0 }, need: 2 }] });
-    const r = run(p, ['. ┌ = = = =', '= S . . ┌ ┘', '. └ = = ┘ .', '. . . . . .']);
+    const r = run(p, ['. ┌ = = = =', '= S1 . . ┌ ┘', '. └ = = ┘ .', '. . . . . .']);
     expect(r.outcome).toBe('exact');
     const hits = r.trace.filter((s) => s.to.x === 5 && s.to.y === 0);
     expect(hits.map((s) => [s.tick + 1, s.end])).toEqual([
@@ -377,7 +409,7 @@ describe('collisions and loops', () => {
   it('two bolts reaching the same gem on the same tick both fizzle', () => {
     const p = bench({ machines: [{ at: { x: 3, y: 4 }, need: 2 }] });
     // halves: north via (1,0) east, south via (1,2) east, both turn into column 3 toward (3,1)
-    const r = run(p, ['. ┌ = ┐ . .', '= S . = . .', '. └ = ┘ . .', '. . . . . .']);
+    const r = run(p, ['. ┌ = ┐ . .', '= S1 . = . .', '. └ = ┘ . .', '. . . . . .']);
     // Both halves reach (3,1) channel on the same tick: short.
     const hits = r.trace.filter((s) => s.to.x === 3 && s.to.y === 1);
     expect(hits).toHaveLength(2);
@@ -388,7 +420,7 @@ describe('collisions and loops', () => {
 
 describe('render trace', () => {
   const p = bench({ machines: [{ at: { x: 6, y: 1 }, need: 6 }] });
-  const rows = ['. ┌ A ┐ . .', '= S . G1 = =', '. └ = ┘ . .', '. . . . . .'];
+  const rows = ['. ┌ A ┐ . .', '= S1 . G1 = =', '. └ = ┘ . .', '. . . . . .'];
 
   it('is well-formed: adjacent hops, normalised times, colours from the last gem', () => {
     const r = run(p, rows);

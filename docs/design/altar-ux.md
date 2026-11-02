@@ -56,9 +56,8 @@ sides. It fits every puzzle from 4×4 up to the 10×8 finale.
   the turn arrow badge hides. Placing keeps the same kind in hand (stamping a route stays one
   click per socket); a turn made right after placing turns the gem just placed.
 - **A gem that cannot turn says so, at that gem**, with the deny sound and the announcer, and
-  nothing else turns in its place: Split `Can't turn: the bolt splits left and right`; Channel,
-  Amplify, Capacitor `Can't turn: the bolt goes straight through`; a fixed Bend or Gate
-  `Can't turn: fixed in place`. Over a fixed gem this holds even with a Bend in hand.
+  nothing else turns in its place: Channel, Amplify, Capacitor `Can't turn: the bolt goes
+  straight through`; a fixed Bend, Gate or Split `Can't turn: fixed in place`. Over a fixed gem this holds even with a Bend in hand.
 - **A socket that will not take the held gem** (fixed gem, carved stone) shows why in a tag above
   it while hovered, and the held gem is drawn beside the socket, not on it, so the gem or stone
   underneath stays in sight. The turn arrow badge hides there, since R would not turn the hand.
@@ -122,18 +121,20 @@ It sits between FUSE (x ≤ 410) and his caption card; the altar passes its meas
   or cursor (first sentence, `Fixed in place` when fixed); on arrival, this altar's new gems for
   7 s, cut to a 0.5 s fade by the first placement (no fade under reduced motion). The briefing
   read on arrival ends with the same text; taking a gem announces its rule.
-- **Turning.** A held Bend or Gate on the altar that first puts one in the tray (`turns` in
-  `teach.ts`) wears a turn arrow with `R / Scroll` (`R / Q` on keys) until the player turns
-  it once. Its card is tagged `R or scroll to turn`; a placed Bend or Gate's card is tagged
+- **Turning.** A held Bend, Gate or Split on the altar that first puts one in the tray (`turns`
+  in `teach.ts`) wears a turn arrow with `R / Scroll` (`R / Q` on keys) until the player turns
+  it once. Its card is tagged `R or scroll to turn`; a placed Bend, Gate or Split's card is tagged
   `R or scroll to turn · Click to pick up` (`R or Q to turn · Enter to pick up` on keys; only
   `R or scroll to turn` with a gem in hand). Held over an empty socket it fits, the gem is tried
-  there in the route preview, so the preview and every Split's glyph swing as it turns. Linking
-  and Strike-ready ignore the held gem.
-- **Split input.** A Split never turns, so it shows how it is fed: its glyph's apex and a small
-  `in` pill sit on the side the bolt comes in by (the real feed, the held gem's would-be feed,
-  or the storm's travel when nothing reaches it yet); the halves leave by the two sides beside
-  it (rules.md section 4). Its card reads `The bolt can come in any side. It splits left and
-  right, half the charge each way.`
+  there in the route preview, so the preview swings as it turns. Linking and Strike-ready ignore
+  the held gem.
+- **Split.** A Split turns like a Bend or Gate (D-031). Its glyph is a bold T on a
+  non-directional octagon cut: a stem from the one input side to the centre, and a crossbar
+  whose arms end in arrowheads on the sides the halves leave by (rules.md section 4). Nothing on
+  the gem points at its input (the old trillion's apex did, and read as an arrow backwards). The tray Split shows rot 0 (in from below, out left and
+  right). A fixed Split met for the first time gets guide stubs into its stem and out of both
+  arms. Its card reads the Codex rule (`Takes the bolt in at its stem and sends it out both
+  arms, half charge each.`). A bolt into any other side fizzles with `Faces the wrong way`.
 - **Storm and needs.** Every altar shows `Gives N` by the storm and `Needs N` by each machine.
 - **Strike-ready.** Strike glows on any altar once the route (over all strikes) reaches every
   machine. Reaching is not exact: the glow says the bolt has somewhere to go, not that the

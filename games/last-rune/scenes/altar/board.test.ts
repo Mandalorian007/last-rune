@@ -31,7 +31,7 @@ describe('BoardState', () => {
     expect(b.trayKinds).toEqual(['channel', 'bend']);
   });
 
-  it('rotates only Bend and Gate, wrapping 3 → 0', () => {
+  it('rotates only Bend, Gate and Split, wrapping 3 → 0', () => {
     const b = new BoardState(bench());
     b.place({ x: 1, y: 2 }, 'bend', 3);
     b.place({ x: 2, y: 2 }, 'channel', 3);

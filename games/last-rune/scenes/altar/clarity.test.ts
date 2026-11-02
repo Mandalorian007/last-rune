@@ -100,7 +100,7 @@ describe('new gems', () => {
     expect(newGems(puzzleFor('furnace'), all)).toEqual({ fixed: [], tray: [], turns: [] });
   });
 
-  it('teaches turning on the first altar that puts a Bend (or Gate) in the hand', () => {
+  it('teaches turning on the first altar that puts a Bend, Gate or Split in the hand', () => {
     const furnace = newGems(puzzleFor('furnace'), solvedOf(['intake-desk']));
     // Bend was met fixed at intake; furnace's tray Bend is the first one the player can turn.
     expect(furnace.turns).toEqual(['bend']);
@@ -108,7 +108,7 @@ describe('new gems', () => {
     expect(later.turns).toEqual([]);
     // Turning is never taught for kinds that do not turn.
     for (const p of Object.values(PUZZLES)) {
-      for (const g of newGems(p, []).turns) expect(['bend', 'gate']).toContain(g);
+      for (const g of newGems(p, []).turns) expect(['bend', 'gate', 'split']).toContain(g);
     }
   });
 
@@ -220,10 +220,10 @@ describe('guide stubs (first meeting a fixed gem)', () => {
     expect(ends(hops)).toEqual(ends(guideHops(p, [bend.cell])));
   });
 
-  it('gives a Gate two inputs and one output, a Bend two sides, other gems none', () => {
+  it('gives a Gate two inputs and one output, a Split one input and two, a Bend two sides', () => {
     for (const p of Object.values(PUZZLES)) {
       for (const f of p.fixed) {
-        const n = f.gem === 'bend' ? 2 : f.gem === 'gate' ? 3 : 0;
+        const n = f.gem === 'bend' ? 2 : f.gem === 'gate' || f.gem === 'split' ? 3 : 0;
         expect(guideHops(p, [f.cell]).length, `${p.id} ${f.gem}`).toBe(n);
       }
     }

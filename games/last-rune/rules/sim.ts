@@ -10,6 +10,7 @@ import {
   DX,
   DY,
   dirIndex,
+  isRotational,
   type Placement,
   type PuzzleDef,
   stormCharge,
@@ -88,7 +89,7 @@ export const S_EMPTY = -1;
 export const S_BLOCKED = -2;
 /** Solver only: not decided yet. */
 export const S_UNKNOWN = -3;
-/** Solver only: bolts have bounced off it so far; it is empty or a Bend/Gate facing away. */
+/** Solver only: bolts have bounced off it so far; it is empty or a Bend/Gate/Split facing away. */
 export const S_DEFERRED = -4;
 
 export interface Board {
@@ -105,6 +106,8 @@ export interface Board {
 export function acceptMask(code: number, rot: number): number {
   if (code === C_BEND) return (1 << rot) | (1 << ((rot + 1) & 3));
   if (code === C_GATE) return (1 << ((rot + 1) & 3)) | (1 << ((rot + 3) & 3));
+  // Split: one input side, opposite `rot` (rot 0 takes a bolt from the S, travelling N).
+  if (code === C_SPLIT) return 1 << ((rot + 2) & 3);
   return 15;
 }
 
@@ -116,7 +119,7 @@ export function emptyBoard(p: PuzzleDef, fill: number): Board {
   for (const f of p.fixed) {
     const i = f.cell.y * w + f.cell.x;
     kind[i] = GEM_CODE[f.gem];
-    rot[i] = f.gem === 'bend' || f.gem === 'gate' ? f.rot : 0;
+    rot[i] = isRotational(f.gem) ? f.rot : 0;
   }
   return { w, h, kind, rot, excl: new Uint8Array(w * h) };
 }
@@ -401,6 +404,7 @@ export function runCore(p: PuzzleDef, board: Board, wantTrace: boolean): CoreRes
               endSeg(b, 'fizzle');
               break;
             }
+            // Only the input side is accepted, so travel is `rot`: halves leave left, then right.
             emit(x, y, (b.d + 3) & 3, b.charge / 2, b.amber, anc, colour, tick);
             emit(x, y, (b.d + 1) & 3, b.charge / 2, b.amber, anc, colour, tick);
             break;
@@ -487,7 +491,7 @@ export function boardFor(p: PuzzleDef, placements: readonly Placement[]): Board 
     if (pl.cell.x < 0 || pl.cell.y < 0 || pl.cell.x >= board.w || pl.cell.y >= board.h) continue;
     if (board.kind[i] !== S_EMPTY) continue; // blocked or fixed: ignore
     board.kind[i] = GEM_CODE[pl.gem];
-    board.rot[i] = pl.gem === 'bend' || pl.gem === 'gate' ? pl.rot : 0;
+    board.rot[i] = isRotational(pl.gem) ? pl.rot : 0;
   }
   return board;
 }

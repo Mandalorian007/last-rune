@@ -23,9 +23,9 @@ export default definePuzzle({
   essential: ['split', 'gate', 'capacitor'],
   solution: [
     '= # # # = # # #',
-    '└ S = = G0 ┐ # #',
+    '└ S0 = = G0 ┐ # #',
     '# = # # # = # #',
-    '= S # # # = # #',
+    '= S1 # # # = # #',
     '# └ = C = ┘ # #',
     '# # # # # # # #',
   ],

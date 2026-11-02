@@ -40,7 +40,7 @@ export const SOLUTION_COUNT: Record<MachineId, number> = {
   furnace: 3,
   'splitter-mill': 1,
   'relay-tower': 2,
-  'conveyor-a': 8,
+  'conveyor-a': 4,
   'press-unit-4': 9,
   'storm-cell-2': 1,
   crane: 2,

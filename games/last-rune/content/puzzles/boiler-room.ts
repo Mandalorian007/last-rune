@@ -17,5 +17,5 @@ export default definePuzzle({
   minutes: 4,
   assumes: [gem('bend'), gem('split'), storm2],
   essential: ['split'],
-  solution: ['# . └ S = ┘', '= = = S # #', '# . # = . #', '# # ┌ S = ='],
+  solution: ['# . └ S0 = ┘', '= = = S1 # #', '# . # = . #', '# # ┌ S2 = ='],
 });

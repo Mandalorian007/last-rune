@@ -33,3 +33,16 @@ This means `games/last-rune/rules/` (model, sim, solver, `isRotational`, `types.
 - `pnpm check`, `pnpm build` and `pnpm test:e2e` all green, including full-run (all 16 machines solvable by keyboard).
 - Fresh-eyes screenshots of splitter-mill, storm-cell-2, conveyor-a and press-unit-4, plus any other Split puzzle you changed: arrive, Split in hand turning, wired route. Put them in your scratchpad and list them.
 - Log progress here. Report the rule diff, the puzzle table and any text changes.
+
+## Progress log
+- **Rules.** The Split is rotational (`isRotational`). `acceptMask` = `1 << ((rot+2)&3)`: input from S/W/N/E for rot 0/1/2/3, outputs `rot+3` then `rot+1`. Any other side fizzles as `facing`. ASCII tokens are now `S0`–`S3`; a bare `S` is a parse error. Solver, difficulty bot, sim tests and strike tests are updated. New tests cover the one-input rule and the rot-0 halves going W then E.
+- **Puzzles.** All 14 Split puzzles are rotated using the old-rules trace, so every intended route is unchanged. Only conveyor-a's solution count moved (8 → 4). Every score is inside its band, so nothing was retuned. Total time is 52.5 min (was 53.5). There is a note in `design/difficulty-curve.md`.
+- **UI.** The Split glyph is now a T: a stem with a door bar, and two arms with outward arrowheads. The gem's apex points at the input. Turning shows the turn badge, the "R or scroll to turn" chip and the swinging preview. Removed the "in" pill and SPLIT_CARD. A fixed Split says "Can't turn: fixed in place". The announcer says "in from X, out Y and Z". `guideHops` draws stubs for Split input and outputs. The Codex rule is rewritten.
+- **Docs.** Updated `design/rules.md` §4/§6 and `design/altar-ux.md`.
+- **Playtest.** New spec `scripts/playtest/split-rotate.spec.ts` covers every Split altar: arrive, fixed hover and R, the tray Split in hand at rot 0–3, placed, route, strike. The glyph sheet adds the-last-rune.
+- **Checks.** `pnpm check`, `pnpm build` and `pnpm test:e2e` all pass (25, full-run included).
+- **PM review (D-027).** The trillion cut was the dominant shape and its apex pointed back at the input, so a fed Split read like an arrow against the flow. Fixes:
+  - The Split is now an octagon with flat sides on all four sides, so the cut points nowhere.
+  - The T is bold, heavier than the other glyphs: a stem from the input rim to the centre, a rim-to-rim crossbar and wide outward arrowheads. Nothing points at the input.
+  - The route preview now puts a small red ✕ where it stops at a wrong-facing Bend, Gate or Split, on the side the bolt meets (`updateNoGo`, `.lr-altar-nogo`).
+  - Updated the docs (`altar-ux.md` and the materials README).

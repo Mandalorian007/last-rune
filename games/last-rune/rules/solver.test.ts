@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { parseBoard } from './ascii';
-import { altarDims, type MachineTarget, type Placement, type PuzzleDef, type Rot } from './model';
+import {
+  altarDims,
+  isRotational,
+  type MachineTarget,
+  type Placement,
+  type PuzzleDef,
+  type Rot,
+} from './model';
 import { ancHas, boardFor, runCore, simulate } from './sim';
 import { essentialGems, fixedEssential, isSolvable, solve } from './solver';
 import { GEM_KINDS, type GemKind, type StormStrength } from './types';
@@ -48,7 +55,7 @@ function brute(p: PuzzleDef): { any: number; canonical: number } {
     for (const gem of GEM_KINDS) {
       if (!(left[gem] ?? 0)) continue;
       left[gem]!--;
-      const rots = gem === 'bend' || gem === 'gate' ? 4 : 1;
+      const rots = isRotational(gem) ? 4 : 1;
       for (let rot = 0; rot < rots; rot++) {
         pls.push({ gem, cell, rot: rot as Rot });
         go(k + 1);
@@ -72,7 +79,7 @@ const turns = mini(
 
 // Split and re-join: four open corners around a pre-set split, gate and channels.
 const rejoin = mini(
-  ['# # . *= *= .', '*= *= *S # # *G1', '# # . *= *= .', '# # # # # #'],
+  ['# # . *= *= .', '*= *= *S1 # # *G1', '# # . *= *= .', '# # # # # #'],
   [{ at: { x: 6, y: 1 }, need: 4 }],
   ALL,
 );

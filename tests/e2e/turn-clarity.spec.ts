@@ -98,10 +98,10 @@ test('R over a fixed Split with a Bend in hand: the Split says why, the Bend is 
   await expect(page.locator('.lr-altar-tag')).toContainText("can't be moved");
   await page.keyboard.press('KeyR');
   await waitFrames(page, 4);
-  await expect(page.locator('.lr-altar-tag')).toContainText("Can't turn: the bolt splits");
+  await expect(page.locator('.lr-altar-tag')).toContainText("Can't turn: fixed in place");
   await page.mouse.wheel(0, 120);
   await waitFrames(page, 4);
-  await expect(page.locator('.lr-altar-tag')).toContainText("Can't turn: the bolt splits");
+  await expect(page.locator('.lr-altar-tag')).toContainText("Can't turn: fixed in place");
   // Set down in an open socket: it lands unturned.
   await hover(page, OPEN);
   await click(page);

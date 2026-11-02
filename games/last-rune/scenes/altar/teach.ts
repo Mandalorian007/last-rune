@@ -7,7 +7,7 @@
  * it up, its rule card shows for a few seconds (off the board), and FUSE says the gem's nudge
  * line (`gemNudge(gem)` in content/lines.ts, id `nudge.<gem>`) unless it is already in use.
  *
- * A turning gem (Bend, Gate) first met fixed in place is **new to the hand** on the first
+ * A turning gem (Bend, Gate, Split) first met fixed in place is **new to the hand** on the first
  * altar that puts one in the tray: the player can now turn it, so that altar says so.
  */
 import { gemNudge } from '../../content/lines';
