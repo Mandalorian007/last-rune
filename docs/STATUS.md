@@ -7,7 +7,7 @@ _Last updated: 2026-11-02 by PM_
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
 | scaffold | main | ✅ done | pnpm, TS7, Vite 8, Vitest, Biome, Playwright, docs |
-| engine-render | ws/engine-render | 🟡 in progress | |
+| engine-render | ws/engine-render | ✅ merged | platform, loop, scene stack, HDR renderer, materials, post stack, GPU particles; demo at `?demo=render` (60fps, 20k sparks) |
 | engine-systems | ws/engine-systems | 🟡 in progress | |
 | rules-puzzles | ws/rules-puzzles | 🟡 in progress | |
 | progression-content | ws/progression-content | ✅ merged | 16-machine graph, 79 lines (31 new), 16 journal pages, ending data. D-014, D-015 |
