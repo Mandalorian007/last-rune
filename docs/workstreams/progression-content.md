@@ -22,3 +22,26 @@ The writing must match the pitch's voice: dry, procedural, funny, then not. New 
 
 ## Log
 _(agent appends progress, decisions, open issues here)_
+
+### 2026-11-02 · progression-content agent
+
+**Done.** Capability graph and C3 API (`rules/progression.ts`, `content/machines.ts`), with exhaustive reachability tests over all 293 reachable states. Content: `content/lines.ts` (79 lines: 48 pitch verbatim, 31 new), `content/journal.ts` (16 pages: 8 pitch, 8 new; 15 FUSE plates, all new), `content/ending.ts`. Docs: `docs/design/progression.md`, `docs/design/script.md`. 52 tests. `pnpm check` and `pnpm build` pass.
+
+**Decisions.**
+- Gaps: relay requires Bend; roof grants Storm ×4; booth grants Altar 10×8 and requires all 14 regular machines (so it is always 15th and page 16 comes last).
+- Added locks: capacitor bay also needs Altar 8×6, and the roof also needs Capacitor. Tier 3 opens only where the storm and signal wings meet. The pitch requirements are kept as subsets.
+- **"Always two doors" is mathematically impossible with AND-locks and unique grants.** The proof is in progression.md §3. What the tests enforce instead:
+  - 0 softlocks;
+  - 0 unexplained single-door states;
+  - the earliest gate pinch comes after 7 solves;
+  - there are never two single-door states in a row before the finale;
+  - 94.5% of open states have 2 or more doors.
+- Pitch lines over 20 words (13 of them) are kept verbatim and split at sentence boundaries into ≤ 20-word cards (`cardsOf`). Every new line is ≤ 20 words.
+- "I" count by tier (FUSE lines and plates): T1 0, T2 2, T3 16, finale 2. New Tier 2 lines add no "I".
+- `DISCORD_INVITE_URL = 'https://discord.gg/thunderclap'` (PM). Blank or non-https URLs hide the button. `TIP_JAR_URL` is empty, so its button is hidden.
+
+**Open issues.**
+- The relay puzzle (rules-puzzles) must produce two full signals without a player-owned Split.
+- The roof can be solved before the lift. Covered by FUSE's ladder joke.
+- The PM should accept the weakened two-choices invariant.
+- Optional types.ts proposal: move `CapabilityKey` and `Branch` into types.ts if other workstreams need them.
