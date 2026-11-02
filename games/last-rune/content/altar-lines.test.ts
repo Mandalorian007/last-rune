@@ -18,12 +18,15 @@ describe('altar lines (exact solve, nudges)', () => {
     expect(countI(TEACH_NUDGE.text)).toBe(0);
   });
 
-  it('has a one-card nudge for every earned gem, none for channel', () => {
-    expect(gemNudge('channel')).toBeUndefined();
-    for (const g of GEM_KINDS.filter((x) => x !== 'channel')) {
+  it('has a one-card nudge for every gem', () => {
+    for (const g of GEM_KINDS) {
       const l = gemNudge(g);
       expect(l?.id).toBe(`nudge.${g}`);
       expect(cardsOf(l!.text)).toHaveLength(1);
     }
+  });
+
+  it('the Channel nudge is Tier 1 voice: no "I"', () => {
+    expect(countI(gemNudge('channel')!.text)).toBe(0);
   });
 });

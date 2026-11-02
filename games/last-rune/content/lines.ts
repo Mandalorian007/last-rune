@@ -63,7 +63,7 @@ export type FuseLine =
   /** The altar verdict when a machine wakes on an exact solve (one per tier). */
   | (LineBase & { readonly kind: 'exact' })
   /** Idle nudges at the altar: 'teach' on the first puzzle, or a gem's first appearance. */
-  | (LineBase & { readonly kind: 'nudge'; readonly nudge: 'teach' | Exclude<GemKind, 'channel'> });
+  | (LineBase & { readonly kind: 'nudge'; readonly nudge: 'teach' | GemKind });
 
 type Def = FuseLine extends infer L
   ? L extends FuseLine
@@ -548,6 +548,13 @@ const DEFS: Def[] = [
     tier: 1,
     source: N,
     text: 'Gem from the tray. Onto a bright socket. Wrong spot? Pick it up again. The form allows this.',
+  },
+  {
+    kind: 'nudge',
+    nudge: 'channel',
+    tier: 1,
+    source: N,
+    text: 'Plain blue. In one side, out the other. Like the paperwork.',
   },
   {
     kind: 'nudge',

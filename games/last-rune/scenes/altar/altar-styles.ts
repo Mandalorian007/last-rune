@@ -35,6 +35,10 @@ const CSS = /* css */ `
   background: rgba(20,16,12,0.92); border: 1px solid rgba(232,192,106,0.55); box-shadow: 0 6px 16px rgba(0,0,0,0.6);
   pointer-events: none; white-space: normal; width: max-content;
 }
+.tc-overlay .lr-altar-tip::after {
+  content: ''; position: absolute; left: calc(50% + var(--lr-tip-dx, 0px)); bottom: -7px; margin-left: -6px;
+  border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(232,192,106,0.55);
+}
 .tc-overlay .lr-altar-tip[hidden] { display: none; }
 .tc-overlay .lr-altar-tip b { color: var(--lr-gold); font-weight: 600; margin-right: 4px; }
 
@@ -46,8 +50,19 @@ const CSS = /* css */ `
   border: 2px solid rgba(232,192,106,0.55); box-shadow: 0 6px 16px rgba(0,0,0,0.6);
   transition: border-color 200ms, color 200ms;
 }
-.tc-overlay .lr-altar-need[data-align="below"] { transform: translate(-50%, 0); }
-.tc-overlay .lr-altar-need[data-align="right"] { transform: translate(10px, -50%); }
+.tc-overlay .lr-altar-need[data-align="below"] { transform: translate(-50%, 12px); }
+.tc-overlay .lr-altar-need[data-align="right"] { transform: translate(14px, -50%); }
+/* A notch on the side facing the machine ties each label to its cabinet. */
+.tc-overlay .lr-altar-need::before {
+  content: ''; position: absolute; width: 14px; height: 14px; background: rgb(36,29,20);
+  border: 0 solid; border-color: inherit; transition: border-color 200ms;
+}
+.tc-overlay .lr-altar-need[data-align="right"]::before {
+  left: -9px; top: 50%; transform: translateY(-50%) rotate(45deg); border-left-width: 2px; border-bottom-width: 2px;
+}
+.tc-overlay .lr-altar-need[data-align="below"]::before {
+  left: 50%; top: -9px; transform: translateX(-50%) rotate(45deg); border-left-width: 2px; border-top-width: 2px;
+}
 .tc-overlay .lr-altar-need b { font-size: 40px; color: #ffe2a0; font-weight: 600; margin-left: 4px; }
 .tc-overlay .lr-altar-need .lr-need-got { font-size: 22px; }
 .tc-overlay .lr-altar-need .lr-need-got b { font-size: 32px; color: #f4e6c4; }
@@ -105,8 +120,14 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-tag {
   position: absolute; transform: translate(-50%, -100%); padding: 4px 12px; border-radius: 8px; white-space: nowrap;
   font-size: 20px; color: #ffe3dc; background: rgba(60,14,10,0.9); border: 1px solid rgba(255,110,80,0.7);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.6); animation: lr-altar-pop 220ms var(--tc-easing) both;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6); pointer-events: none;
+  animation: lr-altar-pop 220ms var(--tc-easing) both;
 }
+/* Fizzle tags name the cause, then fade so the board reads again; the red ring stays. */
+.tc-overlay .lr-altar-tag:not([data-tone]) {
+  animation: lr-altar-pop 220ms var(--tc-easing) both, lr-altar-tag-fade 700ms ease 3.2s forwards;
+}
+@keyframes lr-altar-tag-fade { to { opacity: 0; visibility: hidden; } }
 .tc-overlay .lr-altar-tag::after {
   content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -6px;
   border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(255,110,80,0.7);
@@ -119,8 +140,11 @@ const CSS = /* css */ `
   font-size: 19px; color: rgba(232,220,192,0.62); text-shadow: 0 1px 4px #000;
 }
 .tc-overlay .lr-altar-hint b { color: rgba(232,192,106,0.85); font-weight: 600; }
-[data-reduced-motion] .tc-overlay .lr-altar-verdict, [data-reduced-motion] .tc-overlay .lr-altar-tag,
-[data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-altar-teach { animation: none; }
+[data-reduced-motion] .tc-overlay .lr-altar-verdict,
+[data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-altar-teach,
+[data-reduced-motion] .tc-overlay .lr-altar-tag { animation: none; }
+/* Reduced motion: no pop or fade, but fizzle tags still step aside after a few seconds. */
+[data-reduced-motion] .tc-overlay .lr-altar-tag:not([data-tone]) { animation: lr-altar-tag-fade 1ms linear 3.6s forwards; }
 
 @keyframes lr-altar-pop { from { opacity: 0; transform: translate(-50%, -80%) scale(0.92); } to { opacity: 1; } }
 .tc-overlay .lr-altar-verdict { animation-name: lr-altar-drop; }

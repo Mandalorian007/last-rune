@@ -31,6 +31,8 @@ const W = DESIGN_W;
 const GOLD: RGBA = [LINEAR.gold[0] * 1.4, LINEAR.gold[1] * 1.4, LINEAR.gold[2] * 1.4, 1];
 const DANGER: RGBA = [2.2, 0.35, 0.22, 1];
 const ROOF: RGBA = [0.5, 0.62, 0.95, 1];
+/** Neutral, slightly cool work light over the slab and machines. */
+const WORK: RGBA = [0.62, 0.66, 0.8, 1];
 /** Storm conduit glow colour (the storm's own blue-white). */
 const STORM_GLOW: RGBA = [0.7, 1.1, 1.8, 1];
 /** Route preview glow: a faint warm trace in the groove. */
@@ -495,9 +497,13 @@ export class AltarView {
 
     // ── Lights ──
     const Ls = this.lights;
-    Ls.begin(0.06, 0.062, 0.085, 0.5, 0.75);
+    Ls.begin(0.075, 0.078, 0.105, 0.5, 0.75);
     a.candles.addLights(Ls, CANDLES);
     Ls.add(W / 2, 40, 1500, ROOF, 0.42 + this.wake * 0.6, 700);
+    // Work light over the slab: big boards sit far from the candles, and their lower rows
+    // must read before the first strike.
+    const span = Math.max(L.right - L.left, L.frontBottom - L.top);
+    Ls.add(L.cx, L.cy, span * 0.95, WORK, 0.5, span * 0.55);
     const st = this.storm.light;
     Ls.add(st.x, st.y, L.pitch * 6, st.color, 0.55 * st.intensity, 160);
     let bx = 0;
@@ -528,9 +534,13 @@ export class AltarView {
     a.gems.light(Ls);
     this.slab.light(Ls);
 
-    const rig = this.rig.begin(0.16, 0.17, 0.24);
+    const rig = this.rig.begin(0.19, 0.2, 0.27);
     rig.add(1812, 820, 1500, pitch('warm'), 1.4, 260);
     rig.add(96, 820, 1300, pitch('warm'), 1.2, 260);
+    // A lamp over each machine so its cabinet, not just its label, reads on every board.
+    for (const m of L.machines) {
+      rig.add(m.x, m.y - m.size * 0.45, m.size * 1.5, WORK, 0.75, m.size * 0.7);
+    }
     rig.add(st.x, st.y, 1100, st.color, 0.8 * st.intensity, 200);
     if (bc) rig.add(bx, by, 700, bc, 0.8 * Math.max(glow, 0.5), 80);
     const f = this.fuse;

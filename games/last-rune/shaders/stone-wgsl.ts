@@ -382,38 +382,6 @@ export const LIT_SURFACE_WGSL = /* wgsl */ `${LIGHTS_WGSL}
  * params.y = seed, params.z = intensity/pulse (0..1+). tint = highlight colour (linear).
  */
 export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
-fn sk_voronoi(p: vec2f) -> vec3f {
-  let ip = floor(p);
-  let fp = fract(p);
-  var best = 8.0;
-  var second = 8.0;
-  var id = 0.0;
-  for (var j = -1; j <= 1; j++) {
-    for (var i = -1; i <= 1; i++) {
-      let g = vec2f(f32(i), f32(j));
-      let o = engine_hash22(ip + g);
-      let r = g + o - fp;
-      let d = dot(r, r);
-      if (d < best) {
-        second = best;
-        best = d;
-        id = engine_hash21(ip + g);
-      } else if (d < second) {
-        second = d;
-      }
-    }
-  }
-  return vec3f(sqrt(best), sqrt(second), id);
-}
-
-fn rubble_h(p: vec2f, seed: f32) -> f32 {
-  let v = sk_voronoi(p * 3.2 + seed * 7.0);
-  let pebble = smoothstep(0.02, 0.16, v.y - v.x);
-  let r = length(p);
-  let dome = sqrt(max(1.0 - r * r, 0.0));
-  return (0.4 + 0.6 * pebble) * (0.6 + 0.4 * dome) + (engine_noise(p * 14.0) - 0.5) * 0.08;
-}
-
 @fragment fn fs_main(in: VSOut) -> FragOut {
   let p = (in.local * 2.0 - 1.0) * 1.3;   // socket radius = 1
   let r = length(p);
@@ -425,27 +393,53 @@ fn rubble_h(p: vec2f, seed: f32) -> f32 {
   o.emissive = vec4f(0.0);
 
   if (state == 1) {
-    // Blocked: a rubble plug of packed stones, cracked, sitting proud of the bowl.
-    let v = sk_voronoi(p * 3.2 + seed * 7.0);
-    let pebble = smoothstep(0.02, 0.16, v.y - v.x);
-    let h = rubble_h(p, seed);
-    let e = 0.02;
-    let hx = rubble_h(p + vec2f(e, 0.0), seed);
-    let hy = rubble_h(p + vec2f(0.0, e), seed);
-    let n = normalize(vec3f(-(hx - h) / e * 0.35, -(hy - h) / e * 0.35, 1.0));
-    let lit = lights_shade(in.world, h * 18.0, n, 12.0);
-    var c = vec3f(0.05, 0.058, 0.075) * (0.55 + 0.8 * v.z) * (0.7 + 0.5 * engine_fbm(p * 6.0, 3));
-    c = mix(c, vec3f(0.05, 0.1, 0.025), smoothstep(0.62, 0.8, engine_fbm(p * 4.0 + seed, 3)) * 0.7);
-    let ao = mix(0.25, 1.0, pebble) * mix(0.5, 1.0, smoothstep(1.0, 0.6, r));
-    var col = c * lit.diffuse * ao + lit.spec * 0.05;
+    // Blocked: the socket is sealed with a dressed capstone, flush with the slab and paler than
+    // it, with a deep X chiselled across. An open socket keeps its dark bowl and rim, so the
+    // two never read alike, even under a veil or in the dark.
+    let cap = 0.96;
+    let a = 1.0 - smoothstep(cap - 0.03, cap + 0.03, r);
+    // Bevelled edge: the rim rounds down into the seam.
+    let bevel = smoothstep(cap - 0.2, cap, r);
+    // Two grooves, V-section, stopping short of the rim.
+    let u = (p.x + p.y) * 0.70710678;
+    let v = (p.x - p.y) * 0.70710678;
+    let w = 0.11;
+    let reach = smoothstep(0.7, 0.6, r);
+    let g1 = max(1.0 - abs(u) / w, 0.0) * reach;
+    let g2 = max(1.0 - abs(v) / w, 0.0) * reach;
+    let groove = max(g1, g2);
+    // Height: flat top, bevel falling away, grooves cut in.
+    let h = 1.0 - bevel * bevel * 0.8 - groove * 0.7 + (engine_noise(p * 16.0 + seed) - 0.5) * 0.05;
+    // Normal from the analytic slopes (bevel radial, grooves across their axis).
+    var gx = 0.0;
+    var gy = 0.0;
+    if (r > 0.001) {
+      let rb = 1.6 * bevel / 0.2;
+      gx -= p.x / r * rb * smoothstep(cap - 0.2, cap - 0.18, r);
+      gy -= p.y / r * rb * smoothstep(cap - 0.2, cap - 0.18, r);
+    }
+    if (g1 >= g2 && g1 > 0.0) {
+      let s = sign(u) * 0.7 / w;
+      gx += s * 0.70710678;
+      gy += s * 0.70710678;
+    } else if (g2 > 0.0) {
+      let s = sign(v) * 0.7 / w;
+      gx += s * 0.70710678;
+      gy -= s * 0.70710678;
+    }
+    let n = normalize(vec3f(-gx * 0.12, -gy * 0.12, 1.0));
+    let lit = lights_shade(in.world, h * 10.0, n, 10.0);
+    let grain = 0.82 + 0.3 * engine_fbm(p * 5.0 + seed * 3.0, 3);
+    let stone = vec3f(0.16, 0.152, 0.142) * grain;
+    // Grooves hold soot; the lid gets a little lichen at the seam.
+    var c = mix(stone, vec3f(0.025, 0.024, 0.024), smoothstep(0.15, 0.75, groove));
+    c = mix(c, vec3f(0.06, 0.08, 0.04), bevel * 0.35 * smoothstep(0.55, 0.8, engine_fbm(p * 4.0 + seed, 3)));
+    var col = c * lit.diffuse * 1.4 + lit.spec * 0.04 * (1.0 - groove);
+    // A thin dark seam where the lid meets the slab.
+    col *= 1.0 - 0.75 * exp(-pow((r - cap) * 22.0, 2.0));
+    // Keep the cap legible in the dark: a faint floor of its own pale stone.
+    col = max(col, c * 0.07);
     col *= lights_floor(in.world);
-    // An iron bar across it reads as "blocked" at a glance.
-    let bar = smoothstep(0.13, 0.1, abs(p.y + p.x * 0.18)) * step(r, 0.98);
-    let barN = normalize(vec3f(0.0, (p.y + p.x * 0.18) * 5.0, 1.0));
-    let barLit = lights_shade(in.world, 20.0, barN, 30.0);
-    let iron = vec3f(0.068, 0.074, 0.091);
-    col = mix(col, iron * barLit.diffuse + barLit.spec * 0.6, bar);
-    let a = 1.0 - smoothstep(0.95, 1.02, r);
     o.color = vec4f(col, a);
     o.emissive = vec4f(0.0, 0.0, 0.0, a);
     return o;
