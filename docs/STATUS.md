@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M3 ✅ content complete. Wave 4 ✅ all merged (hall-floor, altar-clarity, full-run, engine-cleanup, engine-adoption, caption-layout, altar-polish). Release label on the title. M3α ✅ alpha-1 live (pre-release `alpha-1` at 1215ca0). Next: user playtest of alpha-1, then wave 5 polish. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
+**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 polish: perf-tiers ✅, a11y ✅. Next: user playtest of alpha-1 feeds difficulty-fun phase 2 + polish backlog. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
@@ -26,7 +26,7 @@ _Last updated: 2026-11-02 by PM_
 | caption-layout | ws/caption-layout | ✅ merged | caption compact bottom-right, never clips, hides under modals and resumes; `fuse.avoid(rects)` API (altar uses it for the tray); keycap HUD hints (O ≠ 0) |
 | altar-polish | ws/altar-polish | ✅ merged | caption lane; blocked sockets sealed with an X cap; lit boards before the first strike; labels notched to machines; Enter always picks up; fizzle tags fade; splitter-mill overlap fixed; Channel line; cursor jumps to the route's open end |
 | engine-adoption | ws/engine-adoption | ✅ merged | ending eases with post.blendTo; Builder's mark readable through the door; credits backed over the gold; storm on PingPong; linear emboss mask; global C/O/J; ending Fuse leak fixed. 60fps, draws unchanged |
-| perf-tiers | ws/perf-tiers | 🟡 in progress | wave 5: measure, dynamic resolution, Auto/High/Low quality |
+| perf-tiers | ws/perf-tiers | ✅ merged | fill-bound (CPU ≤1.2 ms p95 at 4× throttle); scene resolution decoupled from canvas, DynamicResolution with hysteresis, Auto/High/Low in Settings (High = today's image); bloom mip realloc bug fixed; budgets in engineering.md; `scripts/perf/` |
 | a11y | ws/a11y | ✅ merged | audit (docs/design/a11y-audit.md); S1: title menu role, gamepad stuck in panels (engine PadNav); HUD focus restore fixed in engine (blur workaround gone); altar briefing + verdict announced; locked doors say what they need; contrast ≥ 4.5:1; axe e2e |
 | engine-cleanup | ws/engine-cleanup | ✅ merged | particles clear, bolt timing from trace, Fuse.destroy, per-draw uniforms, texture uploads, PingPong, global keys, queued taps, master limiter + reverb, post.blendTo. 60fps, no new churn |
 
@@ -40,7 +40,7 @@ _Last updated: 2026-11-02 by PM_
 - Invented UI copy in the ending (credits, chat server/channel, 6 reactor handles, labels) awaits user confirmation: `docs/design/ending.md`.
 - Audio is only objectively checked (levels, clicks, loops). Needs a human listen; 52 MiB decoded audio may matter on low-memory devices.
 - Photosensitivity: the breaker flash whites out most of the frame for ~0.3 s. hall-art adds a "Reduce flashes" setting (on with reduced motion).
-- Perf not yet measured on an integrated PC GPU (only Apple M-series). Lights are the first knob.
+- Perf measured on Apple M4 only. The game is fill-bound; Auto scales resolution (floor 0.6) and drops to Low if needed. The ending flood at DPR 2 on High is over budget (~17–20 ms GPU); Auto/Low handle it. Still want a real integrated-PC-GPU check.
 - Difficulty curve is calibrated to designer estimates, not players (D-022). Risk: early/mid puzzles may still feel too easy. Phase 2 needs real playtest data; the novice bot can't plan gate merges (flat signal on gate puzzles). conveyor-a / press-unit-4 / capacitor-bay are still loose (8–11 solutions).
 - Firefox + WebGPU in the itch iframe untested (manual check at launch).
 - Puzzle quality: 16 puzzles must be interesting, not just solvable. The solver gives difficulty metrics, and the PM reviews.

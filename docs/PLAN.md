@@ -34,7 +34,7 @@ A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 t
 | 2 Playable vertical | game-shell, art-materials, audio-design, difficulty-fun (phase 1), art-props | ✅ merged |
 | 3 Content complete | altar-scene, hall-art, story-scenes | ✅ merged |
 | 4 Alpha + verify | hall-floor ✅, altar-clarity ✅, full-run ✅ (keyboard e2e through all 16 + playtest report), engine-cleanup ✅, engine-adoption ✅, then the playtest fixes before alpha: caption-layout ✅, altar-polish ✅; release label on title ✅; then the M3α pre-release | ✅ merged |
-| 5 Polish | perf-tiers 🟡, a11y ✅; then difficulty-fun phase 2 from alpha-1 feedback, polish backlog, bug bash | 🟡 running |
+| 5 Polish | perf-tiers ✅, a11y ✅; then difficulty-fun phase 2 from alpha-1 feedback, polish backlog, bug bash | 🟡 running |
 | 6 Ship | v1.0.0 release, tags, itch kit | ⏳ |
 
 ## User feedback backlog
@@ -70,7 +70,8 @@ Each item stays here until it is verified in a merged build. The owning workstre
 - Hall: capacitor-bay washes out under its own glow when available; puddles subtle; optional vignette lift. 16 light slots: two are used by the wing lamps.
 - ✅ Ending credits backing, door bloom, eased post (engine-adoption).
 - ✅ HUD focus restore fixed in engine (a11y): `focusHome` + `buttonKeys`.
-- Text size setting 100/125/150% (a11y S2: overlay body text ~12 CSS px at 1280×720): after perf-tiers lands (both touch settings-panel).
+- Text size setting 100/125/150% (a11y S2: overlay body text ~12 CSS px at 1280×720): unblocked now that perf-tiers merged.
+- Perf follow-ups: timestamp-query GPU timing (engine/platform), composite at scene resolution on Low (softer, cuts the ~4 ms floor), DPR 2 ending flood on High is over budget.
 - Optional altar board readout key for screen readers (a11y S3).
 - Ending UI copy (credits, chat names) pending user confirmation.
 
