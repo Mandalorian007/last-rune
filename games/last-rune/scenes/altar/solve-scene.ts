@@ -110,7 +110,8 @@ export class SolveScene implements GameScene {
     const grant = m.grants;
     if (m.firstTime && grant?.type === 'gem') {
       const L = view.layout;
-      this.showcaseY = L.top - 10;
+      // Hang just above the slab, but never past the top edge of the screen.
+      this.showcaseY = Math.max(L.top - 10, Math.round(L.pitch * 0.85) + 16);
       this.showcase = {
         kind: grant.gem,
         x: L.cx,

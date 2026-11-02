@@ -29,6 +29,14 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-count[data-empty] { opacity: 0.35; }
 .tc-overlay .lr-altar-count[data-held] { border-color: var(--lr-gold); color: #fff6dd; box-shadow: 0 0 14px rgba(232,192,106,0.5); }
 .tc-overlay .lr-altar-count .lr-k { opacity: 0.55; margin-right: 6px; }
+.tc-overlay .lr-altar-tip {
+  position: absolute; transform: translate(-50%, -100%); max-width: 360px; padding: 6px 14px; border-radius: 10px;
+  font-family: var(--tc-font-body, serif); font-size: 20px; line-height: 1.3; color: #f4e6c4; text-align: center;
+  background: rgba(20,16,12,0.92); border: 1px solid rgba(232,192,106,0.55); box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+  pointer-events: none; white-space: normal; width: max-content;
+}
+.tc-overlay .lr-altar-tip[hidden] { display: none; }
+.tc-overlay .lr-altar-tip b { color: var(--lr-gold); font-weight: 600; margin-right: 4px; }
 
 .tc-overlay .lr-altar-need {
   position: absolute; transform: translate(-50%, -100%); padding: 4px 14px; border-radius: 10px; white-space: nowrap;
@@ -43,7 +51,7 @@ const CSS = /* css */ `
 
 .tc-overlay .lr-altar-verdict {
   position: absolute; left: 50%; top: 96px; transform: translateX(-50%); padding: 10px 30px; border-radius: 12px;
-  font-family: var(--tc-font-display); font-size: 30px; letter-spacing: 1px; white-space: nowrap; color: #f4e6c4;
+  font-family: var(--tc-font-display); font-size: 30px; letter-spacing: 1px; width: max-content; text-align: center; color: #f4e6c4;
   background: rgba(16,13,10,0.9); border: 2px solid rgba(232,192,106,0.55); box-shadow: 0 8px 24px rgba(0,0,0,0.6);
   animation: lr-altar-pop 260ms var(--tc-easing) both;
 }

@@ -25,6 +25,7 @@ import { machineLine, reactionLine } from '../../content/lines';
 import { puzzleFor } from '../../content/puzzles';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { BoltOutcome } from '../../game/flow';
+import { progressOf } from '../../game/save';
 import {
   isRotational,
   type Placement,
@@ -34,6 +35,7 @@ import {
 } from '../../rules';
 import { getMachine } from '../../rules/progression';
 import type { Cell, GemKind, MachineId } from '../../rules/types';
+import { codexPages } from '../../ui/codex-data';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, DANGER, GOLD } from './altar-view';
 import { BoardState } from './board';
@@ -83,6 +85,15 @@ const DENY_REASON: Record<string, string> = {
   'out-of-bounds': 'Off the altar',
   occupied: 'Socket taken',
 };
+
+/**
+ * First-altar idle nudge. PROVISIONAL instruction copy, not story text: content/lines.ts has no
+ * teaching line yet (reported as a line gap). Replace with a FUSE line when one lands.
+ */
+const TEACH_NUDGE = 'Take a gem from the tray. Put it in the glowing socket.';
+/** Seconds without a board change before the first altar nudges. */
+const TEACH_IDLE = 9;
+const TEACH_MACHINE: MachineId = 'intake-desk';
 
 const SLOT_ACTIONS = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6'] as const;
 const CYAN: RGBA = [0.25, 1.3, 1.8, 1];
@@ -146,6 +157,20 @@ export class AltarScene implements GameScene {
   /** Socket the hint mechanism is pointing at, if any. */
   private hintCell: Cell | null = null;
 
+  // Teaching (first altar) + affordances
+  /** First socket to use on the first altar; pulses until something is placed. */
+  private teachCell: Cell | null = null;
+  private idle = 0;
+  private idleRev = -1;
+  private nudged = false;
+  /** Empty sockets the held gem may go in; cached per (board revision, gem). */
+  private validCells: Cell[] = [];
+  private validRev = -1;
+  private validKind: GemKind | null = null;
+  private rules = {} as Record<GemKind, string>;
+  private tip!: HTMLElement;
+  private tipSlot = -2;
+
   // DOM
   private dom!: HTMLElement;
   private subtitle!: HTMLElement;
@@ -180,6 +205,12 @@ export class AltarScene implements GameScene {
     this.bloomBase = ctx.post.settings.bloom.intensity;
     this.setMood();
     this.hum = ctx.sound.sfx.stormCell(this.puzzle.storm.strength, 0.8);
+
+    const save = ctx.save.get();
+    for (const page of codexPages(progressOf(save), [])) this.rules[page.gem] = page.rule;
+    if (this.machine === TEACH_MACHINE && !save.progress.solved.includes(this.machine)) {
+      this.teachCell = this.firstSocket();
+    }
 
     ensureAltarStyles(ctx.ui.root.ownerDocument);
     this.buildDom();
@@ -268,13 +299,27 @@ export class AltarScene implements GameScene {
       role: 'status',
       'aria-live': 'polite',
       hidden: true,
+      style: { left: `${L.titleX}px`, maxWidth: `${L.titleMax}px` },
     });
+    this.tip = h('div', { class: 'lr-altar-tip', role: 'tooltip', hidden: true });
     this.counts = L.tray.map((s) =>
       h('div', { class: 'lr-altar-count', style: { left: `${s.x}px`, top: `${s.y + 40}px` } }),
     );
     this.needs = L.machines.map((m) => {
       const k = m.size / 2;
-      const y = m.side === 2 ? m.y + 0.62 * k + 34 : m.y - 0.62 * k;
+      // North machines sit under the title, so their label goes beside the cabinet; everywhere
+      // else it hangs below, clear of the storm cell and the board.
+      if (m.side === 0) {
+        return h('div', {
+          class: 'lr-altar-need',
+          style: {
+            left: `${m.x + 0.95 * k}px`,
+            top: `${m.y + 17}px`,
+            transform: 'translate(0, -50%)',
+          },
+        });
+      }
+      const y = m.y + 0.62 * k + 34;
       return h('div', { class: 'lr-altar-need', style: { left: `${m.x}px`, top: `${y}px` } });
     });
     const hint = h(
@@ -296,7 +341,7 @@ export class AltarScene implements GameScene {
       { class: 'lr-altar', role: 'region', 'aria-label': `${getMachine(this.machine).name} altar` },
       h(
         'div',
-        { class: 'lr-altar-title' },
+        { class: 'lr-altar-title', style: { left: `${L.titleX}px` } },
         h('h2', null, getMachine(this.machine).name),
         this.subtitle,
       ),
@@ -304,6 +349,7 @@ export class AltarScene implements GameScene {
       this.verdict,
       ...this.counts,
       ...this.needs,
+      this.tip,
       hint,
     );
     this.ctx.ui.layers.hud.append(this.dom);
@@ -340,6 +386,8 @@ export class AltarScene implements GameScene {
   }
 
   private showVerdict(text: string, outcome: BoltOutcome): void {
+    // The verdict sits where the subtitle is; the subtitle steps aside until the next edit.
+    this.subtitle.style.visibility = 'hidden';
     this.verdict.textContent = text;
     this.verdict.dataset.outcome = outcome;
     this.verdict.hidden = false;
@@ -892,8 +940,10 @@ export class AltarScene implements GameScene {
     const L = this.view.layout;
     const o = res.outcome;
     const ms = res.machines;
-    const label = (i: number) =>
-      ms.length > 1 ? `${['First', 'Second', 'Third', 'Fourth'][i]} machine: ` : '';
+    const say = (i: number, text: string) =>
+      ms.length > 1
+        ? `${['First', 'Second', 'Third', 'Fourth'][i] ?? 'A'} machine: ${text[0]!.toLowerCase()}${text.slice(1)}`
+        : text;
     if (o === 'exact') {
       this.showVerdict('Exactly right. It wakes.', 'exact');
       this.wakeTimer = this.ctx.settings.reducedMotion ? 0.9 : 1.5;
@@ -905,13 +955,13 @@ export class AltarScene implements GameScene {
       if (o === 'over') {
         const m = ms[over]!;
         this.showVerdict(
-          `${label(over)}Breaker tripped: needs ${m.need}, got ${this.lastReading(m)}`,
+          say(over, `Breaker tripped (needs ${m.need}, got ${this.lastReading(m)})`),
           'over',
         );
       } else if (o === 'under') {
         const m = ms[under] ?? ms[0]!;
         this.showVerdict(
-          `${label(under)}Not enough: needs ${m.need}, got ${this.lastReading(m)}`,
+          say(under, `Not enough (needs ${m.need}, got ${this.lastReading(m)})`),
           'under',
         );
       } else {
@@ -953,6 +1003,7 @@ export class AltarScene implements GameScene {
   private backToEdit(): void {
     this.mode = 'edit';
     this.verdict.hidden = true;
+    this.subtitle.style.visibility = '';
     this.clearTags();
     this.view.deenergise();
     for (const b of this.view.bolts) b.fadeOut(0.35);
@@ -1039,8 +1090,10 @@ export class AltarScene implements GameScene {
     ctx.post.settings.bloom.intensity =
       this.bloomBase * (1 + this.bloomBoost + 0.6 * this.view.wake);
 
+    this.updateTeach(dt);
     this.updateFuse();
     this.updateTray();
+    this.updateTip();
     this.buildMarks();
     this.view.update(dt);
   }
@@ -1188,6 +1241,79 @@ export class AltarScene implements GameScene {
     this.ctx.sound.sfx.play('socketBlocked');
   }
 
+  // ── Teaching + affordances ──────────────────────────────────────────────
+
+  /** The intended placement nearest the storm cell: where the first gem obviously goes. */
+  private firstSocket(): Cell | null {
+    const at = this.puzzle.storm.at;
+    let best: Cell | null = null;
+    let bestD = Number.POSITIVE_INFINITY;
+    for (const q of this.puzzle.design.intended) {
+      const d = Math.abs(q.cell.x - at.x) + Math.abs(q.cell.y - at.y);
+      if (d < bestD) {
+        bestD = d;
+        best = q.cell;
+      }
+    }
+    return best ? { x: best.x, y: best.y } : null;
+  }
+
+  /** True while the first altar is still teaching its first move. */
+  private get teaching(): boolean {
+    return !!this.teachCell && this.mode === 'edit' && !this.board.at(this.teachCell);
+  }
+
+  private updateTeach(dt: number): void {
+    if (!this.teachCell) return;
+    if (this.board.revision !== this.idleRev) {
+      this.idleRev = this.board.revision;
+      this.idle = 0;
+    }
+    if (this.mode !== 'edit' || this.ctx.fuse.speaking) return;
+    this.idle += dt;
+    if (!this.nudged && this.idle > TEACH_IDLE && this.board.isEmpty) {
+      this.nudged = true;
+      void this.ctx.fuse.say(TEACH_NUDGE, { interrupt: true });
+    }
+  }
+
+  /** Empty sockets the held gem could go in (recomputed only when the board or gem changes). */
+  private validFor(kind: GemKind): readonly Cell[] {
+    if (this.validRev === this.board.revision && this.validKind === kind) return this.validCells;
+    this.validRev = this.board.revision;
+    this.validKind = kind;
+    this.validCells.length = 0;
+    const L = this.view.layout;
+    for (let y = 0; y < L.rows; y++) {
+      for (let x = 0; x < L.cols; x++) {
+        const c = { x, y };
+        if (this.board.at(c) || this.board.fixedAt(c) || this.board.isBlocked(c)) continue;
+        if (this.board.check(c, kind).ok) this.validCells.push(c);
+      }
+    }
+    return this.validCells;
+  }
+
+  /** One-line gem rule above the hovered (or held) tray gem. */
+  private updateTip(): void {
+    const L = this.view.layout;
+    let slot = this.mode === 'strike' ? -1 : this.hoverSlot;
+    if (slot < 0 && this.hand && !this.hand.from && this.mode !== 'strike') {
+      slot = L.tray.findIndex((t) => t.gem === this.hand!.kind);
+    }
+    if (slot === this.tipSlot) return;
+    this.tipSlot = slot;
+    const s = slot >= 0 ? L.tray[slot] : undefined;
+    if (!s) {
+      this.tip.hidden = true;
+      return;
+    }
+    this.tip.replaceChildren(h('b', null, GEM_NAME[s.gem]), ` ${this.rules[s.gem] ?? ''}`);
+    this.tip.style.left = `${s.x}px`;
+    this.tip.style.top = `${s.y - s.size * 0.62}px`;
+    this.tip.hidden = false;
+  }
+
   private updateFuse(): void {
     const f = this.view.fuse;
     f.mood = this.ctx.fuse.speaking ? 'talk' : this.ctx.tier() >= 3 ? 'quiet' : 'idle';
@@ -1213,8 +1339,12 @@ export class AltarScene implements GameScene {
       const held = this.hand && !this.hand.from && this.hand.kind === s.gem;
       t.state = n === 0 ? 'dim' : held || i === this.hoverSlot ? 'hover' : 'idle';
       const lift = this.view.trayLift[i]!;
+      const bob =
+        i === 0 && !this.hand && this.teaching && !this.view.reducedMotion
+          ? 0.35 + 0.35 * Math.sin(this.time * 4)
+          : 0;
       this.view.trayLift[i] =
-        lift < 0 ? Math.min(0, lift + 0.05) : held ? 1 : i === this.hoverSlot ? 0.6 : 0;
+        lift < 0 ? Math.min(0, lift + 0.05) : held ? 1 : i === this.hoverSlot ? 0.6 : bob;
     }
     // Held gem: follows the pointer, snaps to the socket it would land in.
     const hand = this.hand;
@@ -1271,6 +1401,15 @@ export class AltarScene implements GameScene {
         if (f.cell.x < 0 || f.cell.y < 0 || f.cell.x >= L.cols || f.cell.y >= L.rows) continue;
         v.mark(f.cell.x, f.cell.y, 'highlighted', DANGER, 1.1, 5);
       }
+    }
+    if (this.mode === 'edit' && this.hand && !this.hand.from) {
+      // Every socket the held gem would go in hums quietly, so legal moves read at a glance.
+      const kind = this.hand.kind;
+      for (const c of this.validFor(kind)) v.mark(c.x, c.y, 'highlighted', HUM[kind], 0.4, 0);
+    }
+    if (this.teaching) {
+      const c = this.teachCell!;
+      v.mark(c.x, c.y, 'highlighted', GOLD, 1.3, 3);
     }
     if (this.mode === 'edit') {
       const hand = this.hand;

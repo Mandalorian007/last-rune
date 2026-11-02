@@ -70,6 +70,9 @@ export interface AltarLayout {
   machines: PropSpot[];
   tray: TraySlot[];
   trayY: number;
+  /** Centre x of the title block and verdict, and the widest the verdict may grow. */
+  titleX: number;
+  titleMax: number;
 }
 
 /** Side of the altar an outside cell is on. */
@@ -179,6 +182,8 @@ export function computeLayout(p: PuzzleDef): AltarLayout {
     size: 92,
   }));
 
+  const { titleX, titleMax } = placeTitle([storm, ...machines]);
+
   return {
     cols,
     rows,
@@ -196,6 +201,43 @@ export function computeLayout(p: PuzzleDef): AltarLayout {
     machines,
     tray,
     trayY,
+    titleX,
+    titleMax,
+  };
+}
+
+/** Clear band for the title between the Codex/Settings buttons and the action buttons. */
+const TITLE_BAND = [220, 1180] as const;
+const TITLE_HALF = 210;
+/** Lowest y the title block and verdict reach. */
+const TITLE_BOTTOM = 160;
+
+/**
+ * Centre the title unless a north prop (gauge plus its need label) would sit under it; then
+ * use the widest clear gap in the band so the title and verdict never cover a gauge.
+ */
+function placeTitle(props: PropSpot[]): { titleX: number; titleMax: number } {
+  const mid = DESIGN_W / 2;
+  const blocks: [number, number][] = [];
+  for (const s of props) {
+    if (s.side !== 0 || s.y - s.size * 0.5 > TITLE_BOTTOM) continue;
+    const k = s.size / 2;
+    blocks.push([s.x - 0.6 * k, s.x + 0.95 * k + 150]);
+  }
+  if (!blocks.some(([a, b]) => a < mid + TITLE_HALF && b > mid - TITLE_HALF)) {
+    return { titleX: mid, titleMax: 900 };
+  }
+  blocks.sort((a, b) => a[0] - b[0]);
+  let best: [number, number] = [mid, mid];
+  let from: number = TITLE_BAND[0];
+  for (const [a, b] of [...blocks, [TITLE_BAND[1], TITLE_BAND[1]] as [number, number]]) {
+    const to = Math.min(a, TITLE_BAND[1]);
+    if (to - from > best[1] - best[0]) best = [from, to];
+    from = Math.max(from, b);
+  }
+  return {
+    titleX: Math.round((best[0] + best[1]) / 2),
+    titleMax: Math.round(best[1] - best[0] - 20),
   };
 }
 
