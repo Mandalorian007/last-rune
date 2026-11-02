@@ -37,7 +37,7 @@ export const GUARANTEED: Record<MachineId, Capability[]> = {
 /** Canonical solution counts (every placed gem carries charge to a machine). */
 export const SOLUTION_COUNT: Record<MachineId, number> = {
   'intake-desk': 1,
-  furnace: 4,
+  furnace: 3,
   'splitter-mill': 1,
   'relay-tower': 2,
   'conveyor-a': 8,
@@ -47,11 +47,11 @@ export const SOLUTION_COUNT: Record<MachineId, number> = {
   'boiler-room': 1,
   archive: 3,
   foundry: 2,
-  'capacitor-bay': 2,
-  'lift-shaft': 12,
+  'capacitor-bay': 11,
+  'lift-shaft': 3,
   'roof-array': 5,
-  'control-booth': 6,
-  'the-last-rune': 72,
+  'control-booth': 1,
+  'the-last-rune': 4,
 };
 
 /** Pre-set gems the puzzle is built around: removing them must make it unsolvable. */

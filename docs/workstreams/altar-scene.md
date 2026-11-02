@@ -16,3 +16,20 @@
 7. **Tests:** unit tests for the board state model (place/rotate/undo/serialise, pure TS where possible) and a Playwright e2e that solves `intake-desk` and `furnace` end to end in the production build using solver solutions, asserting the save updates.
 
 ## Log
+
+- **2026-11-02: playable altar and solve moment** (`8665963`, `d723bd4`, and this commit).
+  - `SCENES.puzzle` is now `AltarScene` and `SCENES.solve` is now `SolveScene`, replacing the stubs.
+  - All 16 puzzles open, build and solve through the altar (scripted check on the dev build).
+  - The e2e `tests/e2e/altar.spec.ts` solves intake-desk and then furnace by keyboard on the production build and asserts the save.
+- **First-time clarity pass (PM priority):**
+  - While a gem is held, every socket that will take it hums.
+  - Hovering or holding a tray gem shows its rule, taken from the codex.
+  - On the first altar the teach socket pulses, the tray gem bobs, and FUSE nudges once if the player is idle.
+  - Need labels sit next to their gauges, and the verdict names the machine and both numbers.
+  - The title and verdict move aside when a north gauge would sit under them.
+  - The FUSE caption keeps the bottom-right corner, below the board.
+  - UX notes are in `docs/design/altar-ux.md`; screens are `docs/design/screens/altar-*.png`.
+- **Line gaps for the PM:**
+  - No FUSE line covers an exact solve on the altar itself (the solve scene shows the codex line).
+  - No teaching or idle-nudge line exists. `TEACH_NUDGE` in `altar-scene.ts` is placeholder instruction text.
+- **Engine issue:** `ParticleSystem.clear()` writes to a buffer created without COPY_DST, so the altar does not call it.

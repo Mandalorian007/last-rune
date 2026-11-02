@@ -41,12 +41,19 @@ const PuzzleProgress = s.object({
 
 export const ReducedMotionPref = s.literal('system', 'reduce', 'full');
 export const CaptionSpeed = s.literal('normal', 'fast', 'instant');
+/** `auto` follows the effective reduced-motion setting. */
+export const ReduceFlashesPref = s.literal('auto', 'on', 'off');
 
 const Settings = s.object({
   /** `system` follows `prefers-reduced-motion`. */
   reducedMotion: ReducedMotionPref,
   /** FUSE caption typewriter speed. */
   captionSpeed: CaptionSpeed,
+  /**
+   * Photosensitivity: soften full-screen whiteouts and lightning flashes. Optional so saves
+   * written before it existed still validate (missing = `auto`).
+   */
+  reduceFlashes: s.optional(ReduceFlashesPref),
 });
 
 const Stats = s.object({
@@ -91,7 +98,7 @@ export type GameSettings = Infer<typeof Settings>;
 export type PlayStatsData = Infer<typeof Stats>;
 
 export function defaultSettings(): GameSettings {
-  return { reducedMotion: 'system', captionSpeed: 'normal' };
+  return { reducedMotion: 'system', captionSpeed: 'normal', reduceFlashes: 'auto' };
 }
 
 export function defaultSave(): SaveData {

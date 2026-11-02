@@ -7,7 +7,8 @@
  * R roll out/in · C caption · H hud.
  * URL: `&shot=fuse|storm|machine|alcove|bolt|portrait` close-ups, `&t=<s>` fast-forward,
  * `&strength=1|2|4`, `&mood=idle|talk|quiet`, `&mode=exact|over|under` (first bolt), `&hold`
- * (don't auto-cycle), `&nohud`, `&caption` (caption card with FUSE's portrait).
+ * (don't auto-cycle), `&nohud`, `&caption` (caption card with FUSE's portrait), `&calm`
+ * (reduce flashes).
  */
 import { GameLoop, type Scene, SceneStack, type Time } from '@engine/core';
 import { flicker, ParticleSystem } from '@engine/fx';
@@ -304,6 +305,10 @@ export function startPropsDemo(surface: Surface, gpu: GpuContext): void {
   const strength = Number(qs.get('strength'));
   if (strength === 1 || strength === 2 || strength === 4) scene.storm.strength = strength;
   if (qs.has('hold')) scene.auto = false;
+  if (qs.has('calm')) {
+    scene.bolt.reduceFlashes = true;
+    scene.storm.reduceFlashes = true;
+  }
   const first = (qs.get('mode') as BoltMode | null) ?? 'exact';
   scene.fire(MODES.includes(first) ? first : 'exact');
   const skip = Number(qs.get('t')) || 0;

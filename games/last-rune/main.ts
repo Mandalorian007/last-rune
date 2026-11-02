@@ -4,11 +4,11 @@
 import { boot } from '@engine/platform';
 import { installGpuErrorLogging } from '@engine/render';
 import { createGameCtx, type GameCtx, type SceneFactories } from './game/ctx';
+import { AltarScene } from './scenes/altar/altar-scene';
+import { SolveScene } from './scenes/altar/solve-scene';
 import { EndingScene } from './scenes/ending/ending-scene';
 import { HallScene } from './scenes/hall/hall-scene';
 import { JournalScene } from './scenes/journal/journal-scene';
-import { PuzzleStubScene } from './scenes/stubs/puzzle-stub';
-import { SolveStubScene } from './scenes/stubs/solve-stub';
 import { TitleScene } from './scenes/title/title-scene';
 
 const TITLE = 'The Last Rune';
@@ -20,8 +20,8 @@ const TITLE = 'The Last Rune';
 const SCENES: SceneFactories = {
   title: () => new TitleScene(),
   hall: () => new HallScene(),
-  puzzle: (machine) => new PuzzleStubScene(machine),
-  solve: (moment) => new SolveStubScene(moment),
+  puzzle: (machine) => new AltarScene(machine),
+  solve: (moment) => new SolveScene(moment),
   journal: () => new JournalScene(),
   ending: (moment) => new EndingScene(moment),
 };

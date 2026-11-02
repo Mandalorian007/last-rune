@@ -63,6 +63,12 @@ export interface SolveResult {
   gemUse: Record<GemKind, number>;
   /** log2(branch points per solution): a rough "how hard is it to stumble on" score. */
   searchBits: number;
+  /**
+   * Outcomes of the finished boards the search tried and rejected (leaves), plus branches cut
+   * because a machine was already over. `under`/`over` are informative failures; `dead` means no
+   * machine saw any charge.
+   */
+  leaves: { dead: number; under: number; over: number };
 }
 
 const CODES = [0, 1, 2, 3, 4, 5];
@@ -103,6 +109,7 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
   let branchSum = 0;
   let minGems = -1;
   let stopped = false;
+  const leaves = { dead: 0, under: 0, over: 0 };
 
   // 0-1 BFS: fewest undecided sockets on any path from the storm to each socket.
   const dist = new Int32Array(n);
@@ -193,7 +200,10 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
     }
     const r = runCore(p, board, false);
     if (r.status === 'done') {
-      if (r.outcome !== 'exact') return;
+      if (r.outcome !== 'exact') {
+        leaves[r.outcome]++;
+        return;
+      }
       if (canonical) {
         for (let i = 0; i < n; i++)
           if (board.kind[i]! >= 0 && !fixedMask[i] && !ancHas(r.useful, i)) return;
@@ -201,7 +211,10 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
       record();
       return;
     }
-    if (r.overSoFar) return;
+    if (r.overSoFar) {
+      leaves.over++;
+      return;
+    }
     if (canonical) {
       // A placed gem whose every bolt this strike has already died can never be useful.
       for (let i = 0; i < n; i++)
@@ -267,6 +280,7 @@ export function solve(p: PuzzleDef, opts: SolveOptions = {}): SolveResult {
     minGems,
     gemUse,
     searchBits: Math.log2(Math.max(1, decisions) / Math.max(1, count)),
+    leaves,
   };
 }
 

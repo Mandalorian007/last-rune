@@ -40,6 +40,12 @@ const CSS = /* css */ `
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 4px 0 #3b1d5e) drop-shadow(0 10px 18px rgba(120, 60, 200, 0.55));
 }
+/* The title view embosses the name in the canvas; keep the heading for screen readers. */
+.tc-overlay .lr-title[data-canvas] h1 {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+  white-space: nowrap;
+}
+.tc-overlay .lr-title[data-canvas] p { margin-top: 196px; }
 .tc-overlay .lr-title p {
   margin: 18px 0 0; font-size: 30px; color: #c9b9e6; letter-spacing: 8px; text-transform: uppercase;
   text-shadow: 0 2px 8px #000;

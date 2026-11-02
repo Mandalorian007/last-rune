@@ -44,15 +44,15 @@ fn gauge_angle(f: f32) -> f32 {
   // Shadow, feet.
   put_shadow(&acc, sdg_ellipse(p - vec2f(0.0, -0.9), vec2f(0.95, 0.07)).x, 0.07, 0.75);
   let ft = sdg_box(vec2f(abs(p.x) - 0.56, p.y + 0.8), vec2f(0.13, 0.09), 0.03);
-  put(&acc, ft.x, aa, prop_light(U.L, world, to_world_n(pillow(ft, 0.04), 1.0, 0.0),
+  put(&acc, ft.x, aa, prop_light(world, to_world_n(pillow(ft, 0.04), 1.0, 0.0),
       iron_albedo(p, seed + 2.0) * 0.8, 0.6, 0.4), vec3f(0.0), 1.0);
 
   // Exhaust pipe (behind the body, top right).
   let pipe = sdg_box(p - vec2f(0.5, 0.7), vec2f(0.075, 0.2), 0.02);
-  put(&acc, pipe.x, aa, prop_light(U.L, world, to_world_n(pillow(pipe, 0.07), 1.0, 0.0),
+  put(&acc, pipe.x, aa, prop_light(world, to_world_n(pillow(pipe, 0.07), 1.0, 0.0),
       iron_albedo(p * 1.5, seed + 4.0), 0.7, 0.5), vec3f(0.0), 1.0);
   let cap = sdg_box(p - vec2f(0.5, 0.9), vec2f(0.11, 0.035), 0.02);
-  put(&acc, cap.x, aa, prop_light(U.L, world, to_world_n(pillow(cap, 0.03), 1.0, 0.0),
+  put(&acc, cap.x, aa, prop_light(world, to_world_n(pillow(cap, 0.03), 1.0, 0.0),
       brass_albedo(p, 1.0, seed), 0.9, 0.7), vec3f(0.0), 1.0);
   // Pipe mouth glows when awake.
   add_glow(&acc, cy * glowA * 0.6 * exp(-length((p - vec2f(0.5, 0.95)) * vec2f(1.0, 2.5)) * 14.0), 1.5);
@@ -62,7 +62,7 @@ fn gauge_angle(f: f32) -> f32 {
   var ironC = iron_albedo(p, seed);
   ironC *= 1.0 - 0.25 * (1.0 - awake) * smoothstep(0.4, 0.7, engine_fbm(p * 4.0 + seed, 3));
   let bodyN = to_world_n(pillow(body, 0.09), 1.0, 0.0);
-  var bodyCol = prop_light(U.L, world, bodyN, ironC, 0.55, 0.45);
+  var bodyCol = prop_light(world, bodyN, ironC, 0.55, 0.45);
   put(&acc, body.x, aa, bodyCol, vec3f(0.0), 1.2);
   // Panel seams (inset rectangle) + awake light leaking through them.
   let panel = sdg_box(p - vec2f(0.0, -0.12), vec2f(0.66, 0.5), 0.04);
@@ -72,7 +72,7 @@ fn gauge_angle(f: f32) -> f32 {
   add_glow(&acc, cy * glowA * (seamK * 0.7 + exp(-abs(seam) * 160.0) * 0.08) * step(body.x, 0.0), 1.4);
   // Top band (brass).
   let band = sdg_box(p - vec2f(0.0, 0.52), vec2f(0.82, 0.055), 0.025);
-  put(&acc, band.x, aa, prop_light(U.L, world, to_world_n(pillow(band, 0.04), 1.0, 0.0),
+  put(&acc, band.x, aa, prop_light(world, to_world_n(pillow(band, 0.04), 1.0, 0.0),
       brass_albedo(p * 2.0, 1.0, seed + 1.0), 0.9, 0.7), vec3f(0.0), 1.0);
   // Rivets around the body and the band.
   {
@@ -82,23 +82,23 @@ fn gauge_angle(f: f32) -> f32 {
     let rv = sdg_circle(vec2f(rx, ry), 0.022);
     let inside = step(abs(p.x), 0.74);
     if (inside > 0.5) {
-      put(&acc, rv.x, aa, prop_light(U.L, world, to_world_n(dome(rv, 0.022), 1.0, 0.0),
+      put(&acc, rv.x, aa, prop_light(world, to_world_n(dome(rv, 0.022), 1.0, 0.0),
           mix(C_IRON, C_BRASS, step(rowY.x, rowY.y)) * 1.2, 0.8, 0.8), vec3f(0.0), 0.5);
     }
     let cy2 = (fract((p.y + 0.6) / 0.16 + 0.5) - 0.5) * 0.16;
     let rs = sdg_circle(vec2f(abs(p.x) - 0.73, cy2), 0.02);
     if (p.y > -0.62 && p.y < 0.42) {
-      put(&acc, rs.x, aa, prop_light(U.L, world, to_world_n(dome(rs, 0.02), 1.0, 0.0), C_IRON * 1.2, 0.8, 0.8),
+      put(&acc, rs.x, aa, prop_light(world, to_world_n(dome(rs, 0.02), 1.0, 0.0), C_IRON * 1.2, 0.8, 0.8),
           vec3f(0.0), 0.5);
     }
   }
 
   // Input terminal (left side): brass post with an insulator collar.
   let post = sdg_box(p - vec2f(-0.86, 0.18), vec2f(0.07, 0.035), 0.015);
-  put(&acc, post.x, aa, prop_light(U.L, world, to_world_n(pillow(post, 0.03), 1.0, 0.0),
+  put(&acc, post.x, aa, prop_light(world, to_world_n(pillow(post, 0.03), 1.0, 0.0),
       brass_albedo(p * 3.0, 1.0, seed + 3.0), 0.9, 0.7), vec3f(0.0), 1.0);
   let knob = sdg_circle(p - vec2f(-0.94, 0.18), 0.05);
-  put(&acc, knob.x, aa, prop_light(U.L, world, to_world_n(dome(knob, 0.05), 1.0, 0.0), C_BRASS * 1.2, 0.95, 0.85),
+  put(&acc, knob.x, aa, prop_light(world, to_world_n(dome(knob, 0.05), 1.0, 0.0), C_BRASS * 1.2, 0.95, 0.85),
       cy * glowA * 0.5, 0.8);
 
   // Vents (bottom): slots, dark when dead, cyan when awake.
@@ -116,12 +116,12 @@ fn gauge_angle(f: f32) -> f32 {
   let gq = p - G_C;
   let gr = length(gq);
   let bez = sdg_circle(gq, G_R + 0.06);
-  put(&acc, bez.x, aa, prop_light(U.L, world, to_world_n(pillow(bez, 0.05), 1.0, 0.0),
+  put(&acc, bez.x, aa, prop_light(world, to_world_n(pillow(bez, 0.05), 1.0, 0.0),
       brass_albedo(p * 2.0, 1.0, seed + 5.0) * 1.1, 0.9, 0.75), vec3f(0.0), 1.2);
   let face = sdg_circle(gq, G_R);
   var dial = C_DIAL * (0.8 + 0.2 * engine_fbm(p * 6.0 + seed, 3));
   dial *= 1.0 - 0.35 * smoothstep(G_R * 0.6, G_R, gr); // vignette / grime at the rim
-  var faceCol = prop_light(U.L, world, vec3f(0.0, 0.0, 1.0), dial, 0.0, 0.2);
+  var faceCol = prop_light(world, vec3f(0.0, 0.0, 1.0), dial, 0.0, 0.2);
   // Dial backlight when awake.
   faceCol += C_ICE * 0.06 * glowA;
   put(&acc, face.x, aa, faceCol, C_ICE * 0.05 * glowA, 1.0);
@@ -133,7 +133,7 @@ fn gauge_angle(f: f32) -> f32 {
     // Red zone band 100..125 %.
     let band = step(abs(gr - G_R * 0.83), G_R * 0.09) * step(1.0, f) * inSweep;
     let redC = C_DANGER * (0.7 + 0.3 * breaker * blink);
-    acc.col = vec4f(mix(acc.col.rgb, prop_light(U.L, world, vec3f(0.0, 0.0, 1.0), redC, 0.0, 0.2) + redC * 0.5 * breaker * blink, band), acc.col.a);
+    acc.col = vec4f(mix(acc.col.rgb, prop_light(world, vec3f(0.0, 0.0, 1.0), redC, 0.0, 0.2) + redC * 0.5 * breaker * blink, band), acc.col.a);
     acc.emi += redC * band * breaker * blink * 0.8;
     // Ticks every 5 %, long every 25 %.
     let minor = abs(fract(f / 0.05 + 0.5) - 0.5) * 0.05 * (gr * 0.0175 * 270.0 / ${MACHINE_GAUGE_MAX});
@@ -153,9 +153,9 @@ fn gauge_angle(f: f32) -> f32 {
   let needle = sdg_segment(gq, -nd * 0.07, nd * G_R * 0.86, 0.013);
   put_shadow(&acc, sdg_segment(gq - vec2f(0.015, -0.02), -nd * 0.07, nd * G_R * 0.86, 0.013).x, 0.02, 0.35);
   let needleC = mix(vec3f(0.55, 0.06, 0.03), vec3f(0.8, 0.1, 0.05), 0.5);
-  put(&acc, needle.x, aa, prop_light(U.L, world, vec3f(0.0, 0.0, 1.0), needleC, 0.2, 0.5), vec3f(0.0), 0.4);
+  put(&acc, needle.x, aa, prop_light(world, vec3f(0.0, 0.0, 1.0), needleC, 0.2, 0.5), vec3f(0.0), 0.4);
   let hub = sdg_circle(gq, 0.04);
-  put(&acc, hub.x, aa, prop_light(U.L, world, to_world_n(dome(hub, 0.04), 1.0, 0.0), C_BRASS * 1.2, 0.95, 0.85),
+  put(&acc, hub.x, aa, prop_light(world, to_world_n(dome(hub, 0.04), 1.0, 0.0), C_BRASS * 1.2, 0.95, 0.85),
       vec3f(0.0), 0.6);
   // Glass: a soft sheen and a crisp highlight.
   let sheen = smoothstep(0.02, 0.0, abs(gr - G_R * 0.78)) * smoothstep(0.2, 0.9, -gq.x * 0.7 + gq.y * 0.7) * step(gr, G_R);
@@ -165,7 +165,7 @@ fn gauge_angle(f: f32) -> f32 {
 
   // Nameplate under the gauge with engraved lines.
   let plate = sdg_box(p - vec2f(0.0, -0.3), vec2f(0.24, 0.05), 0.012);
-  put(&acc, plate.x, aa, prop_light(U.L, world, to_world_n(pillow(plate, 0.02), 1.0, 0.0),
+  put(&acc, plate.x, aa, prop_light(world, to_world_n(pillow(plate, 0.02), 1.0, 0.0),
       brass_albedo(p * 4.0, 1.0, seed + 8.0), 0.85, 0.7), vec3f(0.0), 0.8);
   let engr = step(abs(p.y + 0.3), 0.008) * step(abs(p.x), 0.18) * step(0.35, engine_noise(vec2f(p.x * 40.0, seed)));
   acc.col = vec4f(mix(acc.col.rgb, C_BRASS_DARK * 0.4, engr), acc.col.a);
@@ -173,7 +173,7 @@ fn gauge_angle(f: f32) -> f32 {
   // Status lamp (top left): cyan when awake, red blinking on breaker.
   let lampP = p - vec2f(-0.56, 0.36);
   let lampB = sdg_circle(lampP, 0.085);
-  put(&acc, lampB.x, aa, prop_light(U.L, world, to_world_n(pillow(lampB, 0.03), 1.0, 0.0), C_BRASS, 0.9, 0.7),
+  put(&acc, lampB.x, aa, prop_light(world, to_world_n(pillow(lampB, 0.03), 1.0, 0.0), C_BRASS, 0.9, 0.7),
       vec3f(0.0), 0.8);
   let lamp = sdg_circle(lampP, 0.06);
   let lampOff = vec3f(0.05, 0.08, 0.1) + 0.1 * smoothstep(0.03, 0.0, length(lampP - vec2f(-0.02, 0.02)));
@@ -183,7 +183,7 @@ fn gauge_angle(f: f32) -> f32 {
   // Second lamp (right): amber "ready" pilot.
   let lp2 = p - vec2f(0.56, 0.36);
   let lb2 = sdg_circle(lp2, 0.06);
-  put(&acc, lb2.x, aa, prop_light(U.L, world, to_world_n(pillow(lb2, 0.025), 1.0, 0.0), C_BRASS, 0.9, 0.7),
+  put(&acc, lb2.x, aa, prop_light(world, to_world_n(pillow(lb2, 0.025), 1.0, 0.0), C_BRASS, 0.9, 0.7),
       vec3f(0.0), 0.8);
   let l2 = sdg_circle(lp2, 0.04);
   let pilot = C_AMBER * 1.6 * (1.0 - breaker) * (0.3 + 0.7 * awake);

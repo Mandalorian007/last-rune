@@ -6,13 +6,14 @@
 - **Vite 8** dev server and build (`base: './'` for itch).
 - **Vitest 5** for unit tests, colocated as `*.test.ts`.
 - **Playwright** for browser/e2e smoke and the automated playtest (`tests/e2e/`).
-- **Biome** for lint and format (2-space indent, single quotes, width 100).
+- **Biome** for lint and format (2-space indent, single quotes, width 100). Auto-format is on (D-024): a checked-in Claude Code hook (`.claude/settings.json`) runs `biome check --write` on every file an agent edits, and `pnpm fix` does the whole repo. CI stays strict (`pnpm check` fails on unformatted code), so run `pnpm fix` before committing anything edited outside an agent.
 
 ## Commands
 ```
 pnpm install
 pnpm dev            # local dev server
 pnpm check          # typecheck + lint + unit tests  ← must pass before any merge
+pnpm fix            # format + safe lint fixes + organize imports, whole repo
 pnpm build          # typecheck + production build to dist/
 pnpm test:e2e       # Playwright
 pnpm package:itch   # build + zip for itch upload
