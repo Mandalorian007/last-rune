@@ -1,6 +1,6 @@
 // Entry point: mount the letterboxed canvas, bring up WebGPU, build the GameCtx
 // and boot into the title. Fatal screens (no WebGPU, device lost) come from
-// engine/platform. Dev routes: `?demo=render`, `?nogpu`.
+// engine/platform. Dev routes: `?demo=render|art|props`, `?nogpu`.
 import { boot } from '@engine/platform';
 import { installGpuErrorLogging } from '@engine/render';
 import { createGameCtx, type GameCtx, type SceneFactories } from './game/ctx';
@@ -42,6 +42,12 @@ async function main(): Promise<void> {
   if (import.meta.env.DEV && qs.get('demo') === 'art') {
     const { startArtDemo } = await import('./scenes/_demo/art-demo');
     startArtDemo(res.surface, res.gpu);
+    return;
+  }
+
+  if (import.meta.env.DEV && qs.get('demo') === 'props') {
+    const { startPropsDemo } = await import('./scenes/_demo/props-demo');
+    startPropsDemo(res.surface, res.gpu);
     return;
   }
 
