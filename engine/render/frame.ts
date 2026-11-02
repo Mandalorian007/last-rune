@@ -19,6 +19,11 @@ export interface DrawParams {
   params?: ArrayLike<number>;
   /** Emissive strength (`in.emissive`); the built-in sprite writes colour × this to bloom. */
   emissive?: number;
+  /**
+   * This draw's own uniform block (f32s, copied at call time) for a material created with
+   * `perDrawUniforms`. Lets many instances share one material, each with its own uniforms.
+   */
+  uniforms?: ArrayLike<number>;
 }
 
 /**

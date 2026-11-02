@@ -1,3 +1,4 @@
+import type { BindingSet } from './bindings';
 import { installGpuErrorLogging } from './diagnostics';
 import { type Drawable, type DrawParams, Frame, type FrameSink } from './frame';
 import { FullscreenPass, type FullscreenPassDesc } from './fullscreen';
@@ -9,8 +10,11 @@ import {
   SPRITE_WGSL,
 } from './material';
 import { Mesh, type MeshDesc, quadGeometry } from './mesh';
+import { PingPong } from './ping-pong';
 import {
+  bytesPerTexel,
   createSamplers,
+  type PixelData,
   type SamplerKind,
   Texture,
   type TextureDesc,
@@ -67,6 +71,8 @@ interface DrawCmd {
   drawable: Drawable | null;
   first: number;
   count: number;
+  /** Dynamic uniform offset for per-draw materials, else -1. */
+  offset: number;
 }
 
 const GLOBALS_FLOATS = 24;
@@ -119,6 +125,9 @@ export class Renderer implements FrameSink {
   private cmdCount = 0;
   private readonly prePasses: ((encoder: GPUCommandEncoder) => void)[] = [];
   private readonly prepared = new Set<Drawable>();
+  /** Per-draw uniform sets with blocks staged this frame. */
+  private readonly drawUniformSets: BindingSet[] = [];
+  private readonly dynamicOffsets = [0];
   private readonly frame: Frame;
   private readonly present: FullscreenPass;
   private presentGroup: GPUBindGroup | null = null;
@@ -307,11 +316,20 @@ export class Renderer implements FrameSink {
     );
   }
 
-  /** Upload an image/canvas/ImageData as an sRGB texture (sampled as linear). */
-  textureFromSource(source: TextureSource, label = 'image'): Texture {
+  /**
+   * Upload an image/canvas/ImageData. By default it is an sRGB colour texture (sampled as
+   * linear). Pass `{ linear: true }` for data (masks, normals, lookup tables): the bytes are
+   * stored as `rgba8unorm` and sampled exactly as written, with no sRGB decode.
+   */
+  textureFromSource(
+    source: TextureSource,
+    label = 'image',
+    opts: { linear?: boolean } = {},
+  ): Texture {
     const width = source.width;
     const height = source.height;
-    const tex = this.createTexture({ width, height, label, format: 'rgba8unorm-srgb' });
+    const format: GPUTextureFormat = opts.linear ? 'rgba8unorm' : 'rgba8unorm-srgb';
+    const tex = this.createTexture({ width, height, label, format });
     if (typeof ImageData !== 'undefined' && source instanceof ImageData) {
       this.device.queue.writeTexture(
         { texture: tex.texture },
@@ -327,6 +345,63 @@ export class Renderer implements FrameSink {
       );
     }
     return tex;
+  }
+
+  /**
+   * Upload raw texels. Default format `rgba8unorm` (linear data, no sRGB decode); any format
+   * from `bytesPerTexel` works, e.g. `r8unorm` masks or `rgba32float` lookup tables. `data`
+   * holds `width × height` tightly packed texels.
+   */
+  textureFromPixels(desc: {
+    width: number;
+    height: number;
+    data: PixelData;
+    format?: GPUTextureFormat;
+    label?: string;
+    usage?: GPUTextureUsageFlags;
+  }): Texture {
+    const tex = this.createTexture({
+      width: desc.width,
+      height: desc.height,
+      format: desc.format ?? 'rgba8unorm',
+      label: desc.label ?? 'pixels',
+      usage: desc.usage,
+    });
+    this.writePixels(tex, desc.data);
+    return tex;
+  }
+
+  /** Overwrite a whole texture with tightly packed texels (e.g. a CPU-updated data texture). */
+  writePixels(tex: Texture, data: PixelData): void {
+    const bpt = bytesPerTexel(tex.format);
+    const need = tex.width * tex.height * bpt;
+    if (data.byteLength < need) {
+      throw new Error(
+        `writePixels: ${data.byteLength} bytes, ${tex.width}×${tex.height} needs ${need}`,
+      );
+    }
+    this.device.queue.writeTexture(
+      { texture: tex.texture },
+      data,
+      { bytesPerRow: tex.width * bpt, rowsPerImage: tex.height },
+      [tex.width, tex.height],
+    );
+  }
+
+  /**
+   * Two render targets for feedback passes (see `PingPong`). Default format is the HDR
+   * scene format.
+   */
+  createPingPong(desc: TextureDesc): PingPong {
+    return new PingPong(this.device, {
+      format: SCENE_FORMAT,
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT |
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_SRC |
+        GPUTextureUsage.COPY_DST,
+      ...desc,
+    });
   }
 
   /**
@@ -371,6 +446,8 @@ export class Renderer implements FrameSink {
     this.cmdCount = 0;
     this.prePasses.length = 0;
     this.prepared.clear();
+    for (const b of this.drawUniformSets) b.discardDrawUniforms();
+    this.drawUniformSets.length = 0;
     const f = this.frame;
     f.time = time;
     f.dt = dt;
@@ -393,6 +470,8 @@ export class Renderer implements FrameSink {
       }
       device.queue.writeBuffer(this.instanceBuffer, 0, this.instanceData.buffer, 0, needed);
     }
+    for (const b of this.drawUniformSets) b.flushDrawUniforms();
+    this.drawUniformSets.length = 0;
 
     const enc = device.createCommandEncoder({ label: 'frame' });
     for (const fn of this.prePasses) fn(enc);
@@ -408,6 +487,7 @@ export class Renderer implements FrameSink {
     pass.setBindGroup(0, this.globalsBindGroup);
     let curPipeline: GPURenderPipeline | null = null;
     let curMaterial: Material | null = null;
+    let curOffset = -1;
     let curMesh: Mesh | null = null;
     let drawCalls = 0;
     let drawables = 0;
@@ -418,6 +498,7 @@ export class Renderer implements FrameSink {
         drawables++;
         curPipeline = null;
         curMaterial = null;
+        curOffset = -1;
         curMesh = null;
         pass.setBindGroup(0, this.globalsBindGroup);
         continue;
@@ -428,9 +509,15 @@ export class Renderer implements FrameSink {
         pass.setPipeline(m.pipeline);
         curPipeline = m.pipeline;
       }
-      if (m !== curMaterial) {
-        if (m.bindings) pass.setBindGroup(1, m.bindings.bindGroup);
+      if (m !== curMaterial || c.offset !== curOffset) {
+        if (c.offset >= 0) {
+          this.dynamicOffsets[0] = c.offset;
+          pass.setBindGroup(1, m.bindings!.bindGroup, this.dynamicOffsets);
+        } else if (m.bindings) {
+          pass.setBindGroup(1, m.bindings.bindGroup);
+        }
         curMaterial = m;
+        curOffset = c.offset;
       }
       if (mesh !== curMesh) {
         pass.setVertexBuffer(0, mesh.vertexBuffer);
@@ -484,6 +571,19 @@ export class Renderer implements FrameSink {
   // ---------------------------------------------------------------- FrameSink
 
   pushInstance(material: Material, mesh: Mesh, p: DrawParams): void {
+    let offset = -1;
+    const b = material.bindings;
+    if (b?.perDraw) {
+      if (p.uniforms) {
+        if (b.drawCount === 0) this.drawUniformSets.push(b);
+        offset = b.pushDrawUniforms(p.uniforms);
+      } else {
+        offset = 0;
+      }
+    } else if (p.uniforms) {
+      throw new Error(`material ${material.label}: DrawParams.uniforms needs perDrawUniforms`);
+    }
+
     const idx = this.instanceCount++;
     if (this.instanceCount * INSTANCE_FLOATS > this.instanceData.length) this.growInstances();
     const d = this.instanceData;
@@ -513,7 +613,13 @@ export class Renderer implements FrameSink {
     d[o++] = q ? (q[3] ?? 0) : 0;
 
     const last = this.cmdCount > 0 ? this.cmds[this.cmdCount - 1]! : null;
-    if (last && !last.drawable && last.material === material && last.mesh === mesh) {
+    if (
+      last &&
+      !last.drawable &&
+      last.material === material &&
+      last.mesh === mesh &&
+      last.offset === offset
+    ) {
       last.count++;
       return;
     }
@@ -523,6 +629,7 @@ export class Renderer implements FrameSink {
     c.drawable = null;
     c.first = idx;
     c.count = 1;
+    c.offset = offset;
   }
 
   pushDrawable(d: Drawable): void {
@@ -532,6 +639,7 @@ export class Renderer implements FrameSink {
     c.drawable = d;
     c.first = 0;
     c.count = 0;
+    c.offset = -1;
   }
 
   pushPrePass(fn: (encoder: GPUCommandEncoder) => void): void {
@@ -542,7 +650,14 @@ export class Renderer implements FrameSink {
 
   private nextCmd(): DrawCmd {
     if (this.cmdCount === this.cmds.length) {
-      this.cmds.push({ material: null, mesh: null, drawable: null, first: 0, count: 0 });
+      this.cmds.push({
+        material: null,
+        mesh: null,
+        drawable: null,
+        first: 0,
+        count: 0,
+        offset: -1,
+      });
     }
     return this.cmds[this.cmdCount++]!;
   }

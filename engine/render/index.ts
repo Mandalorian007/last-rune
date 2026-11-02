@@ -1,4 +1,4 @@
-export type { BindingDesc } from './bindings';
+export type { BindingDesc, BindingSetOptions } from './bindings';
 export { BindingSet } from './bindings';
 export type { BlendMode } from './blend';
 export { blendState } from './blend';
@@ -19,6 +19,8 @@ export {
 } from './material';
 export type { MeshDesc } from './mesh';
 export { Mesh, quadGeometry, VERTEX_BUFFER_LAYOUT, VERTEX_FLOATS, VERTEX_STRIDE } from './mesh';
+export type { PingPongStepOptions } from './ping-pong';
+export { PingPong } from './ping-pong';
 export type {
   Camera,
   PostInputs,
@@ -28,8 +30,8 @@ export type {
   RenderStats,
 } from './renderer';
 export { Renderer, SCENE_FORMAT } from './renderer';
-export type { SamplerKind, TextureDesc, TextureLike, TextureSource } from './texture';
-export { createSamplers, Texture } from './texture';
+export type { PixelData, SamplerKind, TextureDesc, TextureLike, TextureSource } from './texture';
+export { bytesPerTexel, createSamplers, Texture } from './texture';
 export {
   createShaderModule,
   WGSL_FULLSCREEN_PRELUDE,

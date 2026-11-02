@@ -7,6 +7,7 @@ import {
   midiToHz,
   normalize,
   peakOf,
+  reverbImpulse,
   rng,
   volumeToGain,
 } from './dsp';
@@ -186,5 +187,37 @@ describe('dsp', () => {
     expect(volumeToGain(0.5)).toBeCloseTo(0.25);
     expect(volumeToGain(2)).toBe(1);
     expect(volumeToGain(Number.NaN)).toBe(0);
+  });
+});
+
+describe('reverbImpulse', () => {
+  it('is deterministic, stereo-decorrelated and decays to silence', () => {
+    const a = reverbImpulse(8000, 1, 3, 7);
+    const b = reverbImpulse(8000, 1, 3, 7);
+    expect(a).toHaveLength(2);
+    expect(a[0]!.length).toBe(8000);
+    expect(a[0]).toEqual(b[0]);
+    expect(a[0]).not.toEqual(a[1]);
+    expect(reverbImpulse(8000, 1, 3, 8)[0]).not.toEqual(a[0]);
+    const energy = (ch: Float32Array, from: number, to: number) => {
+      let e = 0;
+      for (let i = from; i < to; i++) e += ch[i]! ** 2;
+      return e;
+    };
+    const ch = a[0]!;
+    expect(energy(ch, 0, 2000)).toBeGreaterThan(10 * energy(ch, 6000, 8000));
+    expect(Math.abs(ch[0]!)).toBeLessThan(0.1); // soft onset
+    expect(Math.abs(ch[7999]!)).toBeLessThan(1e-6);
+    expect(peakOf(a)).toBeLessThanOrEqual(1);
+  });
+
+  it('a higher decay gives a shorter tail', () => {
+    const tail = (d: number) => {
+      const [ch] = reverbImpulse(8000, 1, d, 1, 1);
+      let e = 0;
+      for (let i = 4000; i < 8000; i++) e += ch![i]! ** 2;
+      return e;
+    };
+    expect(tail(6)).toBeLessThan(tail(2));
   });
 });

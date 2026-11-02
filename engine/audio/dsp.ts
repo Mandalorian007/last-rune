@@ -139,3 +139,30 @@ export function volumeToGain(volume: number): number {
   const v = Math.min(1, Math.max(0, Number.isFinite(volume) ? volume : 0));
   return v * v;
 }
+
+/**
+ * Procedural reverb impulse response: decaying seeded noise, independent per channel (stereo
+ * width), with a short fade-in so the onset doesn't click. `decay` shapes the tail
+ * (`(1 - t)^decay`; higher = shorter, darker room). Same arguments, same samples.
+ */
+export function reverbImpulse(
+  sampleRate: number,
+  seconds = 2,
+  decay = 3,
+  seed = 1,
+  channels = 2,
+): Float32Array<ArrayBuffer>[] {
+  const n = Math.max(1, Math.round(sampleRate * Math.max(0.01, seconds)));
+  const fadeIn = Math.min(n, Math.max(1, Math.round(sampleRate * 0.002)));
+  const out: Float32Array<ArrayBuffer>[] = [];
+  for (let c = 0; c < channels; c++) {
+    const r = rng(seed * 7919 + c * 104729);
+    const ch = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const env = (1 - i / n) ** decay * Math.min(1, (i + 1) / fadeIn);
+      ch[i] = (r() * 2 - 1) * env;
+    }
+    out.push(ch);
+  }
+  return out;
+}

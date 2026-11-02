@@ -56,6 +56,86 @@ describe('Input action map', () => {
     expect(input.held('confirm')).toBe(false);
   });
 
+  it('queues repeat taps that land in one tick', () => {
+    const input = new Input(bindings, { getGamepads: () => [] });
+    for (let i = 0; i < 3; i++) {
+      input.keyDown('Enter');
+      input.keyUp('Enter');
+    }
+    const seen: boolean[] = [];
+    for (let i = 0; i < 5; i++) {
+      input.update();
+      seen.push(input.pressed('confirm'));
+    }
+    expect(seen).toEqual([true, true, true, false, false]);
+    expect(input.released('confirm')).toBe(false);
+    input.update();
+    expect(input.held('confirm')).toBe(false);
+  });
+
+  it('queues a repeat that arrives while the queue drains, and mouse taps', () => {
+    const input = new Input(bindings, { getGamepads: () => [] });
+    input.buttonDown(0);
+    input.buttonUp(0);
+    input.buttonDown(0);
+    input.buttonUp(0);
+    input.update();
+    expect(input.pressed('click')).toBe(true);
+    input.buttonDown(0);
+    input.buttonUp(0);
+    input.update();
+    expect(input.pressed('click')).toBe(true);
+    input.update();
+    expect(input.pressed('click')).toBe(true);
+    input.update();
+    expect(input.pressed('click')).toBe(false);
+  });
+
+  it('caps the queue and drops it while blocked or on releaseAll', () => {
+    const input = new Input(bindings, { getGamepads: () => [] });
+    for (let i = 0; i < 20; i++) {
+      input.keyDown('Enter');
+      input.keyUp('Enter');
+    }
+    let presses = 0;
+    for (let i = 0; i < 20; i++) {
+      input.update();
+      if (input.pressed('confirm')) presses++;
+    }
+    expect(presses).toBe(9); // first tap + 8 queued
+    let blocked = false;
+    input.blocked = () => blocked;
+    input.keyDown('Enter');
+    input.keyUp('Enter');
+    input.keyDown('Enter');
+    input.keyUp('Enter');
+    blocked = true;
+    input.update();
+    blocked = false;
+    input.update();
+    expect(input.pressed('confirm')).toBe(false);
+    input.keyDown('Enter');
+    input.keyUp('Enter');
+    input.keyDown('Enter');
+    input.keyUp('Enter');
+    input.releaseAll();
+    input.update();
+    input.update();
+    expect(input.pressed('confirm')).toBe(false);
+  });
+
+  it('queueTaps: false merges taps in one tick', () => {
+    const input = new Input(bindings, { getGamepads: () => [], queueTaps: false });
+    input.keyDown('Enter');
+    input.keyUp('Enter');
+    input.keyDown('Enter');
+    input.keyUp('Enter');
+    input.update();
+    expect(input.pressed('confirm')).toBe(true);
+    input.update();
+    expect(input.pressed('confirm')).toBe(false);
+  });
+
   it('merges multiple bindings: second key held does not re-press', () => {
     const input = new Input(bindings, { getGamepads: () => [] });
     input.keyDown('Enter');

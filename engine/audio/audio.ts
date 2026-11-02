@@ -2,7 +2,7 @@
  * Runtime audio: an `AudioContext` created and resumed on the first user gesture, four buses
  * (master ← music, sfx, ui), named sounds rendered from specs, one-shots and loops.
  */
-import { volumeToGain } from './dsp';
+import { reverbImpulse, volumeToGain } from './dsp';
 import { type OfflineContextFactory, renderSound, type SoundSpec } from './synth';
 
 export const BUS_NAMES = ['master', 'music', 'sfx', 'ui'] as const;
@@ -214,6 +214,54 @@ class VoiceImpl implements Voice {
   }
 }
 
+/** Master limiter (a `DynamicsCompressorNode` between master and the output). */
+export interface LimiterOptions {
+  /** dB. Default -1. */
+  threshold?: number;
+  /** dB. Default 0 (hard knee). */
+  knee?: number;
+  /** Default 20. */
+  ratio?: number;
+  /** Seconds. Default 0.003. */
+  attack?: number;
+  /** Seconds. Default 0.25. */
+  release?: number;
+}
+
+export const DEFAULT_LIMITER: Readonly<Required<LimiterOptions>> = {
+  threshold: -1,
+  knee: 0,
+  ratio: 20,
+  attack: 0.003,
+  release: 0.25,
+};
+
+/** Shared convolution reverb: per-bus sends into one procedural room, returned to master. */
+export interface ReverbOptions {
+  /** Impulse length in seconds. Default 2. */
+  seconds?: number;
+  /** Tail shape: `(1 - t)^decay`. Higher = shorter, drier. Default 3. */
+  decay?: number;
+  /** Impulse noise seed. Default 1. */
+  seed?: number;
+  /** Wet return level into master (linear). Default 1. */
+  wet?: number;
+  /** Send level per bus (linear, 0 = dry). Default music 0.2, sfx 0.25, ui 0. */
+  sends?: Partial<Record<OutputBus, number>>;
+}
+
+export const DEFAULT_REVERB_SENDS: Readonly<Record<OutputBus, number>> = {
+  music: 0.2,
+  sfx: 0.25,
+  ui: 0,
+};
+
+interface ReverbNodes {
+  convolver: ConvolverNode;
+  wet: GainNode;
+  sends: Record<OutputBus, GainNode>;
+}
+
 export interface AudioEngineOptions {
   /** Create the realtime context. Called lazily, inside a user gesture. */
   createContext?: () => AudioContext;
@@ -221,6 +269,13 @@ export interface AudioEngineOptions {
   createOffline?: OfflineContextFactory;
   /** Initial mixer settings (e.g. from a save). */
   settings?: unknown;
+  /**
+   * Master limiter that catches stacked one-shots before they clip. Default on
+   * (`DEFAULT_LIMITER`); `false` connects master straight to the output.
+   */
+  limiter?: boolean | LimiterOptions;
+  /** Optional shared reverb (off by default). Change later with `setReverb`. */
+  reverb?: ReverbOptions | null;
 }
 
 export interface AttachAudioOptions {
@@ -247,9 +302,18 @@ export class AudioEngine {
   private detachFns: (() => void)[] = [];
   private userSuspended = false;
   private hidden = false;
+  private readonly limiterOpts: Required<LimiterOptions> | null;
+  private limiterNode: DynamicsCompressorNode | null = null;
+  private reverbOpts: ReverbOptions | null;
+  private reverbSends: Record<OutputBus, number>;
+  private reverbNodes: ReverbNodes | null = null;
 
   constructor(opts: AudioEngineOptions = {}) {
     this._settings = sanitizeMixer(opts.settings);
+    const lim = opts.limiter ?? true;
+    this.limiterOpts = lim === false ? null : { ...DEFAULT_LIMITER, ...(lim === true ? {} : lim) };
+    this.reverbOpts = opts.reverb ?? null;
+    this.reverbSends = { ...DEFAULT_REVERB_SENDS, ...opts.reverb?.sends };
     this.createOffline = opts.createOffline;
     this.createContext =
       opts.createContext ??
@@ -411,6 +475,8 @@ export class AudioEngine {
     const ctx = this.ctx;
     this.ctx = null;
     this.buses = {};
+    this.limiterNode = null;
+    this.reverbNodes = null;
     if (ctx) await ctx.close().catch(() => {});
     this.setState('locked');
   }
@@ -420,7 +486,13 @@ export class AudioEngine {
   private buildBuses() {
     const ctx = this.ctx!;
     const master = ctx.createGain();
-    master.connect(ctx.destination);
+    this.limiterNode = this.limiterOpts ? createLimiter(ctx, this.limiterOpts) : null;
+    if (this.limiterNode) {
+      master.connect(this.limiterNode);
+      this.limiterNode.connect(ctx.destination);
+    } else {
+      master.connect(ctx.destination);
+    }
     this.buses.master = master;
     for (const name of BUS_NAMES) {
       if (name === 'master') continue;
@@ -429,6 +501,89 @@ export class AudioEngine {
       this.buses[name] = g;
     }
     for (const name of BUS_NAMES) this.buses[name]!.gain.value = busGain(this._settings[name]);
+    this.buildReverb();
+  }
+
+  /** The master limiter node, once the context exists (null when disabled or unsupported). */
+  get limiter(): DynamicsCompressorNode | null {
+    return this.limiterNode;
+  }
+
+  /** Current reverb settings (`null` = off). */
+  get reverb(): Readonly<ReverbOptions> | null {
+    return this.reverbOpts;
+  }
+
+  /**
+   * Turn the shared reverb on (or rebuild it with a new room), or off with `null`. Safe before
+   * unlock: it is built with the buses. Rebuilding renders a new impulse, so do it rarely
+   * (scene changes), not per frame. Sends given here replace the matching current sends.
+   */
+  setReverb(opts: ReverbOptions | null): void {
+    this.reverbOpts = opts;
+    if (opts?.sends) this.reverbSends = { ...this.reverbSends, ...opts.sends };
+    this.teardownReverb();
+    this.buildReverb();
+  }
+
+  /** Change one bus's reverb send (linear, ramped). Remembered while reverb is off. */
+  setReverbSend(bus: OutputBus, level: number): void {
+    const v = Math.max(0, Number.isFinite(level) ? level : 0);
+    this.reverbSends = { ...this.reverbSends, [bus]: v };
+    const node = this.reverbNodes?.sends[bus];
+    if (node && this.ctx) node.gain.setTargetAtTime(v, this.ctx.currentTime, 0.015);
+  }
+
+  /** Current send levels per bus. */
+  get reverbSendLevels(): Readonly<Record<OutputBus, number>> {
+    return this.reverbSends;
+  }
+
+  private buildReverb() {
+    const ctx = this.ctx;
+    const opts = this.reverbOpts;
+    const master = this.buses.master;
+    if (!ctx || !opts || !master || typeof ctx.createConvolver !== 'function') return;
+    const ir = reverbImpulse(ctx.sampleRate, opts.seconds ?? 2, opts.decay ?? 3, opts.seed ?? 1);
+    const buffer = ctx.createBuffer(ir.length, ir[0]!.length, ctx.sampleRate);
+    ir.forEach((ch, i) => {
+      buffer.copyToChannel(ch, i);
+    });
+    const convolver = ctx.createConvolver();
+    convolver.normalize = true;
+    convolver.buffer = buffer;
+    const wet = ctx.createGain();
+    wet.gain.value = opts.wet ?? 1;
+    convolver.connect(wet);
+    wet.connect(master);
+    const sends = {} as Record<OutputBus, GainNode>;
+    for (const name of BUS_NAMES) {
+      if (name === 'master') continue;
+      const g = ctx.createGain();
+      g.gain.value = this.reverbSends[name];
+      this.buses[name]!.connect(g);
+      g.connect(convolver);
+      sends[name] = g;
+    }
+    this.reverbNodes = { convolver, wet, sends };
+  }
+
+  private teardownReverb() {
+    const r = this.reverbNodes;
+    if (!r) return;
+    this.reverbNodes = null;
+    for (const name of BUS_NAMES) {
+      if (name === 'master') continue;
+      const bus = this.buses[name];
+      try {
+        bus?.disconnect(r.sends[name]);
+      } catch {
+        // Not connected.
+      }
+      r.sends[name].disconnect();
+    }
+    r.convolver.disconnect();
+    r.wet.disconnect();
   }
 
   /** Internal: the GainNode for a bus, once the context exists. */
@@ -621,4 +776,18 @@ export class AudioEngine {
   get voiceCount(): number {
     return this.active.size;
   }
+}
+
+function createLimiter(
+  ctx: AudioContext,
+  o: Required<LimiterOptions>,
+): DynamicsCompressorNode | null {
+  if (typeof ctx.createDynamicsCompressor !== 'function') return null;
+  const c = ctx.createDynamicsCompressor();
+  c.threshold.value = o.threshold;
+  c.knee.value = o.knee;
+  c.ratio.value = o.ratio;
+  c.attack.value = o.attack;
+  c.release.value = o.release;
+  return c;
 }

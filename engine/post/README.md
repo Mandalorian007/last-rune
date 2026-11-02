@@ -19,6 +19,34 @@ post.settings.fog.enabled = false;                                   // or mutat
 Settings are packed into one uniform buffer each frame. Changing them never rebuilds
 pipelines or bind groups.
 
+## Easing between looks
+
+`post.blendTo(patch, seconds, ease?)` moves settings over time instead of switching them
+at once, so a mood change needs no covering wash.
+
+```ts
+import { easeOut } from '@engine/post';
+
+post.blendTo({ grade: { exposure: 0.6, gain: [1.1, 0.9, 0.8] }, fog: { density: 0.9 } }, 3);
+post.set({ godRays: { intensity: 0 } }).blendTo({ godRays: { enabled: true, intensity: 0.5 } }, 2, easeOut);
+post.blending;      // true while anything is still moving
+post.finishBlend(); // jump to the end values
+```
+
+- Numbers and RGB colours interpolate from their values at the time of the call. The default
+  ease is smoothstep (`easeInOut`); `easeLinear`, `easeIn`, `easeOut` or any `(t) => t` also
+  work.
+- `enabled: true` applies at once, so set the pass's strength to 0 first to fade it in.
+  `enabled: false`, `tonemap`, `dither` and `bloom.levels` switch when the blend ends, so a
+  pass can fade out first.
+- A later `set` or `blendTo` that touches the same key takes over from its current value.
+  Other keys keep blending.
+- Blends advance with the frame time passed to `beginFrame`, inside `encode`. Each step counts
+  at most 0.1 s, so a hitch or a hidden tab slows a blend rather than skipping it. Without
+  rendering, call `post.advanceBlend(time)` yourself.
+- `PostBlender` is the same logic as a pure class (no GPU) for custom processors.
+- Nothing allocates per frame.
+
 ## Passes, in order
 
 | Pass | Where | Key settings |

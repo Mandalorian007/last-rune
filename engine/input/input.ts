@@ -16,6 +16,18 @@ export interface InputOptions {
    * keys are `preventDefault`ed. Raw state keeps tracking so nothing sticks on unblock.
    */
   blocked?: () => boolean;
+  /**
+   * Key codes that still register while a button, link or other non-text control has focus
+   * (e.g. HUD shortcuts after clicking a HUD button). They never register in text entry and
+   * are not preventDefaulted on interactive targets. See `setGlobalKeys`.
+   */
+  globalKeys?: Iterable<string>;
+  /**
+   * Queue repeat taps: when a key or mouse button goes down again before the tick that saw
+   * its first press, each extra tap fires `pressed` on a following tick instead of merging
+   * into one. Default true; pass false for the old one-press-per-tick behaviour.
+   */
+  queueTaps?: boolean;
 }
 
 export interface AttachOptions {
@@ -29,6 +41,36 @@ export interface AttachOptions {
 
 const DEFAULT_AXIS_THRESHOLD = 0.5;
 const DEFAULT_BUTTON_THRESHOLD = 0.5;
+/** Most repeat taps queued per key/button. */
+const MAX_QUEUED_TAPS = 8;
+
+const NON_TEXT_INPUTS = new Set([
+  'button',
+  'submit',
+  'reset',
+  'checkbox',
+  'radio',
+  'image',
+  'range',
+  'color',
+  'file',
+]);
+
+/** True for elements where keys type text (text inputs, textareas, selects, contenteditable). */
+export function isTextEntryTarget(target: EventTarget | null): boolean {
+  const el = target as (HTMLElement & { isContentEditable?: boolean; type?: string }) | null;
+  if (!el || typeof el.tagName !== 'string') return false;
+  if (el.isContentEditable) return true;
+  switch (el.tagName) {
+    case 'TEXTAREA':
+    case 'SELECT':
+      return true;
+    case 'INPUT':
+      return !NON_TEXT_INPUTS.has((el.type ?? '').toLowerCase());
+  }
+  const role = el.getAttribute?.('role');
+  return role === 'textbox' || role === 'searchbox' || role === 'combobox';
+}
 
 function defaultGamepads(): readonly (GamepadLike | null)[] {
   try {
@@ -97,6 +139,11 @@ export class Input<A extends string> {
   private readonly keysTapped = new Set<string>();
   private readonly buttonsDown = new Set<number>();
   private readonly buttonsTapped = new Set<number>();
+  /** Extra taps queued per key/button (see `InputOptions.queueTaps`). */
+  private readonly keyRepeats = new Map<string, number>();
+  private readonly buttonRepeats = new Map<number, number>();
+  private readonly queueTaps: boolean;
+  private globalKeys = new Set<string>();
   private wheelAccX = 0;
   private wheelAccY = 0;
   private prevX = 0;
@@ -111,6 +158,8 @@ export class Input<A extends string> {
     this.bindings = bindings;
     this.getGamepads = opts.getGamepads ?? defaultGamepads;
     this.blocked = opts.blocked ?? (() => false);
+    this.queueTaps = opts.queueTaps ?? true;
+    if (opts.globalKeys) this.setGlobalKeys(opts.globalKeys);
     this.setBindings(bindings);
   }
 
@@ -118,6 +167,8 @@ export class Input<A extends string> {
   setBindings(bindings: Bindings<A>): void {
     this.bindings = bindings;
     this.states.clear();
+    this.keyRepeats.clear();
+    this.buttonRepeats.clear();
     this.boundKeys = new Set();
     this.boundMouse = new Set();
     this.boundWheel = false;
@@ -135,6 +186,11 @@ export class Input<A extends string> {
         else if ('wheel' in b) this.boundWheel = true;
       }
     }
+  }
+
+  /** Replace the global keys (see `InputOptions.globalKeys`). */
+  setGlobalKeys(codes: Iterable<string>): void {
+    this.globalKeys = new Set(codes);
   }
 
   getBindings(): Bindings<A> {
@@ -198,7 +254,7 @@ export class Input<A extends string> {
         continue;
       }
       const was = st.heldTicks > 0;
-      st.pressed = active && !was;
+      st.pressed = active && (!was || v.fresh);
       st.released = !active && was && st.held;
       st.held = active;
       st.value = v.value;
@@ -206,6 +262,13 @@ export class Input<A extends string> {
     }
 
     if (padActive) this.lastDevice = 'gamepad';
+    if (blocked) {
+      this.keyRepeats.clear();
+      this.buttonRepeats.clear();
+    } else {
+      consumeRepeats(this.keyRepeats, this.keysTapped);
+      consumeRepeats(this.buttonRepeats, this.buttonsTapped);
+    }
     this.keysTapped.clear();
     this.buttonsTapped.clear();
     this.pointer.wheelX = this.wheelAccX;
@@ -218,18 +281,26 @@ export class Input<A extends string> {
     this.prevY = this.pointer.y;
   }
 
-  private readonly evalOut = { value: 0, pad: false };
+  private readonly evalOut = { value: 0, pad: false, fresh: false };
 
-  private evaluate(list: readonly Binding[]): { value: number; pad: boolean } {
+  private evaluate(list: readonly Binding[]): { value: number; pad: boolean; fresh: boolean } {
     const out = this.evalOut;
     out.value = 0;
     out.pad = false;
+    out.fresh = false;
     for (const b of list) {
       let v = 0;
       if ('key' in b) {
-        v = this.keysDown.has(b.key) || this.keysTapped.has(b.key) ? 1 : 0;
+        const tapped = this.keysTapped.has(b.key);
+        // A queued repeat counts once the tick holding its first tap has passed.
+        const queued = !tapped && (this.keyRepeats.get(b.key) ?? 0) > 0;
+        if (queued) out.fresh = true;
+        v = this.keysDown.has(b.key) || tapped || queued ? 1 : 0;
       } else if ('mouse' in b) {
-        v = this.buttonsDown.has(b.mouse) || this.buttonsTapped.has(b.mouse) ? 1 : 0;
+        const tapped = this.buttonsTapped.has(b.mouse);
+        const queued = !tapped && (this.buttonRepeats.get(b.mouse) ?? 0) > 0;
+        if (queued) out.fresh = true;
+        v = this.buttonsDown.has(b.mouse) || tapped || queued ? 1 : 0;
       } else if ('wheel' in b) {
         v = Math.sign(this.wheelAccY) === b.wheel ? 1 : 0;
       } else if ('padButton' in b) {
@@ -271,7 +342,13 @@ export class Input<A extends string> {
   // Public so tests, replays and automated playtests can drive input without a DOM.
 
   keyDown(code: string): void {
-    if (!this.keysDown.has(code)) this.keysTapped.add(code);
+    if (!this.keysDown.has(code)) {
+      if (this.queueTaps && (this.keysTapped.has(code) || this.keyRepeats.has(code))) {
+        queueRepeat(this.keyRepeats, code);
+      } else {
+        this.keysTapped.add(code);
+      }
+    }
     this.keysDown.add(code);
     this.lastDevice = 'keyboard';
   }
@@ -279,8 +356,14 @@ export class Input<A extends string> {
     this.keysDown.delete(code);
   }
   buttonDown(button: number): void {
+    if (!this.buttonsDown.has(button)) {
+      if (this.queueTaps && (this.buttonsTapped.has(button) || this.buttonRepeats.has(button))) {
+        queueRepeat(this.buttonRepeats, button);
+      } else {
+        this.buttonsTapped.add(button);
+      }
+    }
     this.buttonsDown.add(button);
-    this.buttonsTapped.add(button);
     if (button === 0) this.pointer.down = true;
   }
   buttonUp(button: number): void {
@@ -308,6 +391,8 @@ export class Input<A extends string> {
   releaseAll(): void {
     this.keysDown.clear();
     this.buttonsDown.clear();
+    this.keyRepeats.clear();
+    this.buttonRepeats.clear();
     this.pointer.down = false;
   }
 
@@ -336,7 +421,14 @@ export class Input<A extends string> {
 
     const onKeyDown = (ev: Event) => {
       const e = ev as KeyboardEvent;
-      if (isInteractiveTarget(e.target)) return;
+      if (isInteractiveTarget(e.target)) {
+        // Global keys still count on buttons/links (never in text entry); the control keeps
+        // the default action.
+        if (!e.repeat && this.globalKeys.has(e.code) && !isTextEntryTarget(e.target)) {
+          this.keyDown(e.code);
+        }
+        return;
+      }
       if (!e.repeat) this.keyDown(e.code);
       if (
         this.boundKeys.has(e.code) &&
@@ -428,5 +520,18 @@ export class Input<A extends string> {
     this.detachFn?.();
     this.detachFn = null;
     this.releaseAll();
+  }
+}
+
+function queueRepeat<K>(repeats: Map<K, number>, k: K): void {
+  repeats.set(k, Math.min(MAX_QUEUED_TAPS, (repeats.get(k) ?? 0) + 1));
+}
+
+/** One queued repeat per key is used up each tick, except on the tick of its first tap. */
+function consumeRepeats<K>(repeats: Map<K, number>, tappedNow: Set<K>): void {
+  for (const [k, n] of repeats) {
+    if (tappedNow.has(k)) continue;
+    if (n <= 1) repeats.delete(k);
+    else repeats.set(k, n - 1);
   }
 }

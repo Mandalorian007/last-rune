@@ -100,10 +100,46 @@ orb.setTexture(0, someTexture);                   // bind group rebuilt lazily, 
 A material can also override the vertex stage with `vertexEntry`. Use `engine_vertex(v)`
 inside it to keep the standard transform.
 
+### Per-draw uniforms
+
+Set `perDrawUniforms: true` so one material can draw many objects with different uniforms in
+one frame. Pass each draw's block as `DrawParams.uniforms`, an array of f32 values. The rest
+of the block reads 0, and the shader code stays the same.
+
+```ts
+const glow = renderer.createMaterial({ label: 'glow', wgsl, uniformBytes: 32, perDrawUniforms: true });
+glow.setUniforms(shared);                            // used by draws without `uniforms`
+frame.sprite(glow, { x, y, w, h, uniforms: obj.u });  // own block, bound at a dynamic offset
+```
+
+- Blocks are staged on the CPU and uploaded in one `writeBuffer` per material in `endFrame`.
+  The buffer doubles when it runs out of room, so a steady scene allocates nothing.
+- Draws only batch together when they share a block. Draws without `uniforms` use the shared
+  block (`setUniforms`) and still merge with each other.
+- Passing `uniforms` to a material without the flag throws, and so does a block bigger than
+  `uniformBytes`.
+- Each block costs `minUniformBufferOffsetAlignment` bytes (256 on most devices), which is
+  fine for hundreds of draws.
+
+Bind groups are cached per texture set (the last 4 sets). Flipping a material between two
+textures every frame, as ping-pong does, builds no new bind groups after the first round.
+
 ## Textures
 
 - `renderer.createTexture(desc)` and `renderer.createRenderTarget(desc)`
-- `renderer.textureFromSource(ImageBitmap | ImageData | OffscreenCanvas | HTMLCanvasElement)`
+- `renderer.textureFromSource(ImageBitmap | ImageData | OffscreenCanvas | HTMLCanvasElement, label?, { linear? })`
+  uploads colour as `rgba8unorm-srgb`. Pass `{ linear: true }` for data such as masks, height
+  or normal maps, or noise, so the bytes are sampled exactly as written (`rgba8unorm`).
+- `renderer.textureFromPixels({ width, height, data, format?, label?, usage? })` uploads raw
+  typed pixels. It defaults to linear `rgba8unorm` and also takes `r8unorm`, `rg8unorm`,
+  `r16float`, `rgba16float`, `r32float`, `rgba32float` and others; `bytesPerTexel(format)`
+  lists them. `renderer.writePixels(tex, data)` refreshes it later and checks the size.
+- `renderer.createPingPong({ width, height, format?, label? })` returns two same-size render
+  targets for feedback effects such as fluid sims or trails. The format defaults to
+  `rgba16float`. Each `pp.step(encoder, pass, { slot?, clear? })` reads `pp.read` in texture
+  `slot` (default 0), writes `pp.write`, then swaps. Run it inside a `frame.prePass` and then
+  call `material.setTexture(0, pp.read)` to show the newest state. `pp.resize(w, h)` and
+  `pp.destroy()` handle the rest. It replaces hand-rolled A/B plus `copyTextureToTexture`.
 - `renderer.textureFromShader({ width, height, wgsl, uniforms? })` runs a WGSL
   `fn shade(uv: vec2f) -> vec4f` once into a texture. Use it for procedural stone, noise,
   and glyphs. The default format is `rgba8unorm-srgb`, and `shade` returns linear colour.
@@ -121,6 +157,14 @@ inside it to keep the standard transform.
   inside the scene pass. Build them with `layout: [renderer.globalsLayout, yours]` and
   `targets: renderer.sceneFormats`.
 - `frame.prePass(fn)` runs before the scene pass, for things like render-to-texture.
+- `ParticleSystem.clear()` (in `engine/fx`) drops every live particle and any emits queued
+  this frame. The particle buffer is zeroed on the GPU in the next `prepare`, so nothing
+  allocates. Particles emitted after `clear()` in the same frame survive.
+- Tests: `engine/render/fake-gpu.ts` provides a recording fake `GPUDevice`, created with
+  `createFakeDevice()` and wrapped with `fakeRendererGpu()`. It checks buffer and texture
+  usage flags such as COPY_DST, catches writes past the end of a buffer, and records pass
+  commands such as `setBindGroup` offsets and draws. That means `new Renderer(...)` and the
+  props run in Node. It is test-only and not exported from the index.
 
 ## Diagnostics
 
