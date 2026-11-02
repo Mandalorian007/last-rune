@@ -50,6 +50,12 @@ The Discord link is a plain `<a href target="_blank" rel="noopener noreferrer">`
 - **Reduced motion:** no camera push, no storm motion, a static door, whole-line chat typing, and CSS transitions that change opacity only.
 - **Captions:** FUSE's lines go through `ctx.fuse.say`, so they use the player's caption speed.
 - **Keyboard:** Back to the hall is focused on the end card. Esc skips on replays.
+- **Reduce flashes** (`ctx.settings.reduceFlashes`):
+  - The white-out fades over 2.8 s instead of 1.6 s, to a dimmer warm white.
+  - The door peaks at 0.45 instead of 0.7.
+  - The funnel's sparks are frozen, so nothing twinkles.
+  - The flood's gold rises over 6 s and the rune re-ignites over 2.5 s instead of 0.5 s.
+  - The flood uses a softer bloom (`FLOOD_POST_CALM`) and a lower wash.
 
 ## UI copy that is not story text (PM to confirm or replace)
 
@@ -75,6 +81,8 @@ The Discord link is a plain `<a href target="_blank" rel="noopener noreferrer">`
 - `ending-flood.png`: the gold flood with the title.
 - `ending-credits.png`
 - `ending-card.png`: the end card with the post-credits note.
+- `ending-card-newhall.png`: the title over the re-dressed hall, after main was merged (pass 5).
+- `ending-flood-reduce-flashes.png`: the same beat with Reduce flashes on.
 
 ## Iteration log
 
@@ -87,6 +95,10 @@ The Discord link is a plain `<a href target="_blank" rel="noopener noreferrer">`
    - End card: the full ending preset turned the flood into cream, and the glowing title text was illegible. Added `FLOOD_POST`, made the flood wash a deeper amber, and gave the title and footer dark shadows.
    - The credits overlapped the safety slip; moved them down to 650.
    - Found that `hidden` was overridden by `display: flex`, so the invisible end card was clickable during the ending. Forced `[hidden]` to `display: none`, and the e2e test now asserts the card is hidden until it is reached.
+5. **Pass 5 (after merging main):**
+   - The re-dressed hall (3-tier grid) is much brighter, and the old flood blew the title beat out to flat yellow.
+   - Lowered the flood wash (0.5 → 0.34, emissive 0.35 → 0.14), its glow (0.22 → 0.12) and the `FLOOD_POST` bloom (0.9/1.3 → 0.75/1.4). The alcoves now read through the gold.
+   - Added Reduce flashes support (see Accessibility).
 
 ## Open issues
 

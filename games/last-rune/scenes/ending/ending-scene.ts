@@ -76,12 +76,14 @@ const DUSK_POST = {
 } as const;
 /** The gold flood: warm and full, but held under white so the end card reads. */
 const FLOOD_POST = {
-  bloom: { intensity: 0.9, threshold: 1.3 },
+  bloom: { intensity: 0.75, threshold: 1.4 },
   godRays: { intensity: 0.4 },
   fog: { density: 0.3 },
   vignette: { intensity: 0.55 },
   grade: { exposure: 0.95 },
 } as const;
+/** Reduce flashes: the same flood with a softer bloom (no sudden glare). */
+const FLOOD_POST_CALM = { ...FLOOD_POST, bloom: { intensity: 0.55, threshold: 1.6 } } as const;
 const CHAT_POST = {
   fog: { enabled: false },
   godRays: { enabled: false },
@@ -376,9 +378,10 @@ export class EndingScene implements GameScene {
         f.rollTo(RUNE_CENTRE.x);
         this.fuseDepth.set(1, 3.2, this.time);
         this.fuseFade.set(0, 2.6, this.time + 1.0);
-        this.doorBright.set(0.7, 3, this.time + 0.8);
+        this.doorBright.set(this.calm ? 0.45 : 0.7, 3, this.time + 0.8);
         await this.wait(2.8);
-        this.screen.set(1, 1.6, this.time);
+        // Reduce flashes: a slower fade to a dimmer white.
+        this.screen.set(1, this.calm ? 2.8 : 1.6, this.time);
         await this.wait(2.4);
         break;
       }
@@ -411,11 +414,12 @@ export class EndingScene implements GameScene {
         this.typing.textContent = '';
         this.chat.setAttribute('data-shrink', '');
         this.ctx.post.set(POST_PRESETS.ending);
-        this.ctx.post.set(FLOOD_POST);
+        this.ctx.post.set(this.calm ? FLOOD_POST_CALM : FLOOD_POST);
         this.ctx.sound.sfx.play('endingSwell');
         this.screen.set(0, 2.2, t + 0.5);
-        this.flood.set(1, 4, t + 0.3);
-        this.ign.set(1, 0.5, t);
+        // Reduce flashes: the gold rises slowly instead of blooming at once.
+        this.flood.set(1, this.calm ? 6 : 4, t + 0.3);
+        this.ign.set(1, this.calm ? 2.5 : 0.5, t);
         await this.wait(2.4);
         break;
     }
@@ -479,7 +483,7 @@ export class EndingScene implements GameScene {
     this.ctx.fuse.hush();
     this.typingLine = null;
     this.ctx.post.set(POST_PRESETS.ending);
-    this.ctx.post.set(FLOOD_POST);
+    this.ctx.post.set(this.calm ? FLOOD_POST_CALM : FLOOD_POST);
     // The world as the ending leaves it: rune lit, door shut, FUSE gone, clipboard on the floor.
     this.dusk.snap(1);
     this.ign.snap(1);
@@ -580,6 +584,11 @@ export class EndingScene implements GameScene {
     return this.viewFrame;
   }
 
+  /** Settings → Reduce flashes: softer white-out, door and flood; no spark twinkle. */
+  private get calm(): boolean {
+    return this.ctx.settings.reduceFlashes;
+  }
+
   render(frame: Frame): void {
     const vf = this.viewFrame;
     this.view.render(frame, vf);
@@ -595,7 +604,8 @@ export class EndingScene implements GameScene {
     // The storm funnelling into the rune.
     if (this.storm.v > 0.002) {
       this.quad(this.matAdd, frame, C.x, C.y, 1920, 1080, ENDING_MODE.funnel);
-      this.setParams(this.storm.v, reduced ? 4.0 : t, this.pull.v);
+      // Reduce flashes freezes the funnel's twinkling sparks too.
+      this.setParams(this.storm.v, reduced || this.calm ? 4.0 : t, this.pull.v);
       this.dp.emissive = 1;
       frame.sprite(this.matAdd, this.dp);
     }
@@ -634,7 +644,10 @@ export class EndingScene implements GameScene {
     // Gold floods the hall.
     if (this.flood.v > 0.001) {
       const r = 60 + this.flood.v * 2300;
-      this.wash(frame, 0.62, 0.38, 0.12, 0.5, r, 520, 0.35);
+      // The re-dressed hall is brighter than the one this was tuned on: keep the
+      // gold under the card, and lower still with Reduce flashes.
+      const calm = this.calm;
+      this.wash(frame, 0.62, 0.38, 0.12, calm ? 0.28 : 0.34, r, 520, calm ? 0.1 : 0.14);
       this.desk.glow(
         frame,
         C.x,
@@ -644,7 +657,7 @@ export class EndingScene implements GameScene {
         1.0,
         0.7,
         0.3,
-        0.22,
+        calm ? 0.09 : 0.12,
       );
     }
 
@@ -658,7 +671,8 @@ export class EndingScene implements GameScene {
       const r = WARM_WHITE[0] + (CHAT_DARK[0] - WARM_WHITE[0]) * k;
       const g = WARM_WHITE[1] + (CHAT_DARK[1] - WARM_WHITE[1]) * k;
       const b = WARM_WHITE[2] + (CHAT_DARK[2] - WARM_WHITE[2]) * k;
-      this.wash(frame, r, g, b, s, 4000, 10, (1 - k) * 0.6);
+      const w = this.calm ? 0.72 + 0.28 * k : 1;
+      this.wash(frame, r * w, g * w, b * w, s, 4000, 10, (1 - k) * (this.calm ? 0.25 : 0.6));
     }
   }
 

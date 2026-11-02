@@ -58,3 +58,18 @@ Open issues and gaps:
 - Missing copy: the credits, chat server and channel names, reactor handles, and the "Safety record" and "Skip" labels are invented UI copy. They are listed in `ending.md` for the PM to confirm or replace. No story lines were missing.
 - Engine gap: `ctx.post.set` applies immediately and there is no tween or crossfade between post settings. The ending hides each switch behind a white or dark wash. A `post.blendTo(patch, seconds)` would let the bloom ease down as the door opens.
 - Visual: the door still blooms hot over the disc centre at its peak, and the end card sits over a busy flooded hall (see `ending.md`).
+
+### Follow-up (PM note): main merged, FUSE altar lines, Reduce flashes
+
+- **Merge:** merged `main` (altar-scene and hall-art) into this branch. Three conflicts, resolved by keeping both sides:
+  - `game/actions.ts`: the altar actions plus `journal`.
+  - `main.ts`: `AltarScene` and `SolveScene` plus the journal and ending factories. The stubs are no longer wired.
+  - `shaders/fuse-shaders.ts`: main's new `fuse_lit` signature plus the clipboard-drop offset.
+- **Lines** (`content/lines.ts`, two new `FuseLine` kinds, all `source: 'new'`; also added to `docs/design/script.md` under "At the altar"; tests in `content/altar-lines.test.ts`):
+  - `exact`: `exact.t1`–`t4`, looked up with `exactLine(tier)`, which falls back to lower tiers.
+  - `nudge`: `nudge.teach` is exported as `TEACH_NUDGE`. There is one `nudge.<gem>` for bend, amplify, split, gate and capacitor, looked up with `gemNudge(gem)`. Channel has none.
+  - "I" rules: Tier 1 and Tier 2 lines have none. Only `exact.t3` and `nudge.capacitor` use it.
+- **altar-scene.ts:** the one-line exception. The local `TEACH_NUDGE` constant was removed, and it is now imported from `lines.ts`. The altar verdict still shows its hard-coded "Exactly right. It wakes."; wiring it to `exactLine` is up to altar-clarity.
+- **Ending:**
+  - honours `reduceFlashes`: a slower, dimmer white-out, a dimmer door, frozen sparks, a slow flood and a softer bloom.
+  - the flood is retuned for the brighter new hall (pass 5 in `ending.md`).
