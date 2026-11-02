@@ -11,7 +11,8 @@ export type Action =
   | 'next' // cycle keyboard focus (hall alcoves, codex pages)
   | 'prev'
   | 'codex' // global: open the codex (pitch: "reachable from every puzzle, always")
-  | 'settings';
+  | 'settings'
+  | 'journal'; // the journal desk (from the hall)
 
 export const BINDINGS: Bindings<Action> = {
   select: [{ mouse: 0 }],
@@ -33,4 +34,5 @@ export const BINDINGS: Bindings<Action> = {
   ],
   codex: [{ key: 'KeyC' }, { padButton: 3 }],
   settings: [{ key: 'KeyO' }, { padButton: 9 }],
+  journal: [{ key: 'KeyJ' }],
 };
