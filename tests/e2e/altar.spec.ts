@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
-import { altarDims, isRotational } from '../../games/last-rune/rules';
+import { isRotational } from '../../games/last-rune/rules';
 import { initialState } from '../../games/last-rune/rules/progression';
 import { GEM_KINDS, type MachineId } from '../../games/last-rune/rules/types';
 import { deriveHall, focusOrder } from '../../games/last-rune/scenes/hall/hall-state';
@@ -56,22 +56,26 @@ async function openAltar(page: Page, machine: MachineId) {
   await page.waitForTimeout(500);
 }
 
+/** The altar's keyboard cursor (`data-cursor="x,y"` on `.lr-altar`). */
+async function altarCursor(page: Page): Promise<{ x: number; y: number }> {
+  const v = await page.locator('.lr-altar').getAttribute('data-cursor');
+  const [x, y] = (v ?? '0,0').split(',').map(Number);
+  return { x: x!, y: y! };
+}
+
 /** Build the intended solution with the keyboard cursor: 1-6 picks, R turns, arrows, Enter. */
 async function buildSolution(page: Page, machine: MachineId) {
   const p = puzzleFor(machine);
   const tray = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
-  const rows = altarDims(p.altar).h;
-  // The altar's starting cursor (see AltarScene.enter).
-  const cursor = { x: 0, y: Math.min(Math.max(0, p.storm.at.y), rows - 1) };
   for (const g of p.design.intended) {
     await press(page, `Digit${tray.indexOf(g.gem) + 1}`);
     if (isRotational(g.gem)) await press(page, 'KeyR', g.rot);
+    // The altar moves the cursor on to the route's open end after each Enter; read where.
+    const cursor = await altarCursor(page);
     const dx = g.cell.x - cursor.x;
     const dy = g.cell.y - cursor.y;
     await press(page, dx > 0 ? 'ArrowRight' : 'ArrowLeft', Math.abs(dx));
     await press(page, dy > 0 ? 'ArrowDown' : 'ArrowUp', Math.abs(dy));
-    cursor.x = g.cell.x;
-    cursor.y = g.cell.y;
     await press(page, 'Enter');
   }
 }

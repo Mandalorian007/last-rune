@@ -42,7 +42,7 @@ import { BoardState } from './board';
 import { type ChargeChip, chargeChips, liveSockets, previewPath } from './circuit-model';
 import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
 import { setHintTarget } from './hints';
-import { anchorOf, cellAt, cellCenter, traySlotAt } from './layout';
+import { anchorOf, cellAt, cellCenter, traySlotAt, trayTipX } from './layout';
 import {
   type Arrival,
   buildTimeline,
@@ -131,6 +131,9 @@ export class AltarScene implements GameScene {
   private hand: Hand | null = null;
   private press: Press | null = null;
   private cursor: Cell = { x: 0, y: 0 };
+  /** Socket just filled with Enter; the next gem taken by key moves the cursor on from it. */
+  private keyPlaced: Cell | null = null;
+  private cursorKey = '';
   private keyboard = false;
   private lastPointer = { x: -1, y: -1 };
   private hoverCell: Cell | null = null;
@@ -287,7 +290,7 @@ export class AltarScene implements GameScene {
     this.chipEls.length = 0;
     this.teachTags.length = 0;
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
-    // particles.clear() is broken in engine (buffer lacks COPY_DST); particles die on their own.
+    this.ctx.particles.clear();
     emitPuzzleEvent({
       type: 'close',
       machine: this.machine,
@@ -365,9 +368,11 @@ export class AltarScene implements GameScene {
       h('b', null, 'R'),
       '/scroll turns · ',
       h('b', null, 'Right-click'),
-      ' removes · arrows + ',
+      ' removes · keys: ',
+      h('b', null, '1–6'),
+      ' take, arrows move, ',
       h('b', null, 'Enter'),
-      ' to play by keyboard · hold ',
+      ' picks up or places · hold ',
       h('b', null, 'F'),
       ' to fast-forward',
     );
@@ -744,11 +749,15 @@ export class AltarScene implements GameScene {
     this.changed(cell);
   }
 
-  /** Click / Enter on a placed gem with an empty hand. */
-  private actOnGem(cell: Cell): void {
+  /**
+   * Click / Enter / pad A on a placed gem with an empty hand. A click turns a Bend or Gate (the
+   * mouse has no R key to hand); Enter and A always pick the gem up, keeping its turn, so the
+   * keyboard has one rule: Enter picks up and puts down, R and Q turn.
+   */
+  private actOnGem(cell: Cell, byKey = false): void {
     const p = this.board.at(cell);
     if (p) {
-      if (isRotational(p.gem)) this.rotateAt(cell, 1);
+      if (isRotational(p.gem) && !byKey) this.rotateAt(cell, 1);
       else {
         this.board.remove(cell);
         this.hand = { kind: p.gem, rot: p.rot, from: null };
@@ -1330,6 +1339,12 @@ export class AltarScene implements GameScene {
     this.updateFuse();
     this.updateTray();
     this.updateTip();
+    // The keyboard cursor, for tests and tools (the gold ring is drawn on the GPU).
+    const ck = `${this.cursor.x},${this.cursor.y}`;
+    if (ck !== this.cursorKey) {
+      this.cursorKey = ck;
+      this.dom.dataset.cursor = ck;
+    }
     this.buildMarks();
     this.view.update(dt);
   }
@@ -1412,6 +1427,7 @@ export class AltarScene implements GameScene {
     const dx = (input.pressed('right') ? 1 : 0) - (input.pressed('left') ? 1 : 0);
     const dy = (input.pressed('down') ? 1 : 0) - (input.pressed('up') ? 1 : 0);
     if (dx !== 0 || dy !== 0) {
+      this.keyPlaced = null;
       if (this.keyboard) {
         this.cursor.x = Math.max(0, Math.min(L.cols - 1, this.cursor.x + dx));
         this.cursor.y = Math.max(0, Math.min(L.rows - 1, this.cursor.y + dy));
@@ -1426,19 +1442,23 @@ export class AltarScene implements GameScene {
         if (this.hand?.from) this.dropHand();
         this.takeFromTray(L.tray[i]!.gem);
         if (!this.hoverCell) this.keyboard = true;
+        this.cursorOn();
       }
     }
     if (input.pressed('trayNext')) {
       this.cycleTray();
       if (!this.hoverCell) this.keyboard = true;
+      this.cursorOn();
     }
     if (input.pressed('confirm')) {
       // Enter acts where the player is looking: the hovered socket, else the cursor.
       if (!this.keyboard && !this.hoverCell) this.keyboard = true;
       const at = this.keyboard ? this.cursor : this.hoverCell;
       if (at) {
-        if (this.hand) this.placeHand(at);
-        else this.actOnGem(at);
+        if (this.hand) {
+          this.placeHand(at);
+          this.keyPlaced = this.keyboard && this.board.at(at) ? { x: at.x, y: at.y } : null;
+        } else this.actOnGem(at, true);
       }
     }
     const target = this.keyboard ? this.cursor : this.hoverCell;
@@ -1460,6 +1480,30 @@ export class AltarScene implements GameScene {
       if (this.hand) this.dropHand();
       else this.back();
     }
+  }
+
+  /**
+   * After Enter fills a socket, taking the next gem by key moves the cursor to the nearest open
+   * end of the route (the socket the bolt would reach next), so building a long route is a
+   * gem key and Enter per socket instead of a walk across the board each time.
+   */
+  private cursorOn(): void {
+    const from = this.keyPlaced;
+    this.keyPlaced = null;
+    if (!from || !this.keyboard || !this.hand) return;
+    if (from.x !== this.cursor.x || from.y !== this.cursor.y) return;
+    this.updateCircuit();
+    let best: Cell | null = null;
+    let bestD = Infinity;
+    for (const c of this.openEnds) {
+      if (this.board.at(c) || this.board.fixedAt(c) || this.board.isBlocked(c)) continue;
+      const d = Math.abs(c.x - from.x) + Math.abs(c.y - from.y);
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    if (best) this.cursor = { x: best.x, y: best.y };
   }
 
   private cycleTray(): void {
@@ -1545,9 +1589,13 @@ export class AltarScene implements GameScene {
       return;
     }
     this.tip.replaceChildren(h('b', null, GEM_NAME[s.gem]), ` ${this.rules[s.gem] ?? ''}`);
-    this.tip.style.left = `${s.x}px`;
     this.tip.style.top = `${s.y - s.size * 0.62}px`;
     this.tip.hidden = false;
+    // Over its slot, but never over FUSE (left) or into the caption's corner (right).
+    const x = trayTipX(s.x, this.tip.offsetWidth);
+    this.tip.style.left = `${x}px`;
+    // The pointer under the tip still points at the slot.
+    this.tip.style.setProperty('--lr-tip-dx', `${s.x - x}px`);
   }
 
   private updateFuse(): void {

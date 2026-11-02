@@ -19,8 +19,20 @@ const TOP = 76;
  * bottom-right corner (720 px wide), so nothing on the board may reach below ~y 830.
  */
 const TRAY_BAND = 250;
-/** Tray row centre, left of the caption card. */
-const TRAY_X = 800;
+/**
+ * FUSE's caption card owns the bottom-right corner (720 px wide, 40 px from the edges, and
+ * up to ~220 px tall). Nothing the puzzle needs (tray slots, counts, labels, tooltips) may
+ * enter this lane.
+ */
+export const CAPTION_LANE = { x: 1130, y: 820 } as const;
+/** FUSE's sprite stands bottom-left (x ≤ ~390 from y ~820 down); keep the tray clear of it. */
+export const FUSE_LANE = { x: 410, y: 820 } as const;
+/** Tray slot centres stay between these, so six slots fit between FUSE and the caption. */
+const TRAY_MIN_X = 470;
+const TRAY_MAX_X = 1070;
+/** Tray row centre. */
+const TRAY_X = (TRAY_MIN_X + TRAY_MAX_X) / 2;
+const TRAY_SPACING = 140;
 const MAX_PITCH = 118;
 /** Machines never shrink below this (design px), so the gauge stays readable on big boards. */
 const MACHINE_MIN = 180;
@@ -97,6 +109,10 @@ export function computeLayout(p: PuzzleDef): AltarLayout {
   const hasMachine = [false, false, false, false];
   for (const c of outside) has[sideOf(c, cols, rows)] = true;
   for (const m of p.machines) hasMachine[sideOf(m.at, cols, rows)] = true;
+  const stormSide = sideOf(p.storm.at, cols, rows);
+  // A machine on the storm's side (E/W) steps further out, so the storm's stand never
+  // overlaps its roof (splitter-mill).
+  const shareOffset = (pitch: number) => Math.round(pitch * 2.1 * 0.3);
   const machineFactor = p.machines.length > 2 ? 1.6 : 1.85;
   const machineSizeAt = (pitch: number) =>
     Math.round(Math.min(MACHINE_MAX, Math.max(MACHINE_MIN, pitch * machineFactor)));
@@ -111,6 +127,7 @@ export function computeLayout(p: PuzzleDef): AltarLayout {
       let r = (vertical ? 0.1 : 0.3) * pitch;
       if (has[s]) r = Math.max(r, (vertical ? PROP_OUT_V : PROP_OUT_H) * pitch);
       if (hasMachine[s]) r = Math.max(r, vertical ? 0.6 * m : 0.1 * pitch + 0.95 * m + 8);
+      if (s === stormSide && hasMachine[s] && !vertical) r += shareOffset(pitch);
       out[s] = r;
     }
     return out;
@@ -175,13 +192,14 @@ export function computeLayout(p: PuzzleDef): AltarLayout {
       port = { x, y: y + sy };
     } else {
       const k = size / 2;
+      const out = side === stormSide && (side === 1 || side === 3) ? shareOffset(pitch) : 0;
       if (side === 1) {
         // Terminal (left side of the cabinet) lines up with the row.
-        x = right + gap + 0.9 * k;
+        x = right + gap + 0.9 * k + out;
         y = cellY(c.y) + 0.18 * k;
         port = { x: x - 0.96 * k, y: y - 0.18 * k };
       } else if (side === 3) {
-        x = left - gap - 0.9 * k;
+        x = left - gap - 0.9 * k - out;
         y = cellY(c.y) + 0.18 * k;
         port = { x: x + 0.86 * k, y: cellY(c.y) };
       } else if (side === 0) {
@@ -198,12 +216,16 @@ export function computeLayout(p: PuzzleDef): AltarLayout {
       x: Math.max(0, Math.min(cols - 1, c.x)),
       y: Math.max(0, Math.min(rows - 1, c.y)),
     };
-    // Label: below the cabinet on E/W; beside it on N/S, where below would hit the board or
-    // the tray.
+    // Label: under the cabinet on E/W; beside it on N/S, where below would hit the board or
+    // the tray. A south label sits level with the cabinet's top half, clear of the caption.
     const label =
       side === 0 || side === 2
-        ? { x: Math.round(x + 0.5 * size), y: Math.round(y + 0.04 * size), align: 'right' as const }
-        : { x: Math.round(x), y: Math.round(y + 0.34 * size), align: 'below' as const };
+        ? {
+            x: Math.round(x + 0.46 * size),
+            y: Math.round(y + (side === 0 ? 0.04 : -0.18) * size),
+            align: 'right' as const,
+          }
+        : { x: Math.round(x), y: Math.round(y + 0.33 * size), align: 'below' as const };
     return { x, y, size, side, port, cell: { x: c.x, y: c.y }, inner, label };
   };
 
@@ -214,7 +236,10 @@ export function computeLayout(p: PuzzleDef): AltarLayout {
   // Tray: canonical gem order, only what this puzzle offers.
   const kinds = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
   const trayY = DESIGN_H - 108;
-  const spacing = 140;
+  const spacing =
+    kinds.length > 1
+      ? Math.min(TRAY_SPACING, (TRAY_MAX_X - TRAY_MIN_X) / (kinds.length - 1))
+      : TRAY_SPACING;
   const tray = kinds.map((gem, i) => ({
     gem,
     x: TRAY_X + (i - (kinds.length - 1) / 2) * spacing,
@@ -326,9 +351,17 @@ export function cellAt(L: AltarLayout, x: number, y: number): Cell | null {
 
 /** Tray slot under a logical point, or -1. */
 export function traySlotAt(L: AltarLayout, x: number, y: number): number {
+  const half = L.tray.length > 1 ? Math.min(68, (L.tray[1]!.x - L.tray[0]!.x) / 2) : 68;
   for (let i = 0; i < L.tray.length; i++) {
     const s = L.tray[i]!;
-    if (Math.abs(x - s.x) < 68 && Math.abs(y - s.y) < 72) return i;
+    if (Math.abs(x - s.x) < half && Math.abs(y - s.y) < 72) return i;
   }
   return -1;
+}
+
+/** Centre x for a box `w` wide over the tray: as near `x` as fits between FUSE and the caption. */
+export function trayTipX(x: number, w: number): number {
+  const lo = FUSE_LANE.x + w / 2;
+  const hi = CAPTION_LANE.x - w / 2;
+  return lo > hi ? (FUSE_LANE.x + CAPTION_LANE.x) / 2 : Math.max(lo, Math.min(hi, x));
 }

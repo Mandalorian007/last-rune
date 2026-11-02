@@ -144,7 +144,7 @@ export class SolveScene implements GameScene {
     this.view.dispose();
     this.dom.remove();
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
-    // particles.clear() is broken in engine (buffer lacks COPY_DST); particles die on their own.
+    this.ctx.particles.clear();
   }
 
   private buildDom(): void {

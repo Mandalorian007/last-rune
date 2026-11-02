@@ -12,9 +12,9 @@ attention. Text is short, sits around the board, and never covers it.
 | Top centre | Machine name; subtitle `Storm ×N · K strikes` (hidden while a verdict shows). If a north gauge would sit under it, the title and verdict move to the widest clear gap (`layout.titleX`). |
 | Top right | `Undo Z` · `Clear Del` · `Back Esc` · **`Strike F`** (gold, the largest control) |
 | Below the title | Verdict after a strike (`Not enough: needs 2, got 0`). On exact it is FUSE's `exactLine(tier)`. The numbers match a need label, so multi-machine verdicts carry no ordinal. In a narrow title gap (finale) it drops to 24 px. |
-| Next to each machine | A large `Needs N` (40 px number), then `got M` after a strike, plus `Strike k: r` pips on multi-strike altars. Border and numbers are cyan for exact, amber for under and red for over. North and south machines put the label beside the cabinet; east and west machines put it below. Machines are 180–230 px and sit against the exit socket. |
-| Bottom row, left of centre | Tray: one gem per kind, with `slot ×count`. Hover or hold a gem to see a one-line rule (`Bend Turns the bolt 90°.`) |
-| Bottom right | FUSE caption card. Layout keeps every board 830 px or more above it (`TRAY_BAND`). |
+| Next to each machine | A large `Needs N` (40 px number), then `got M` after a strike, plus `Strike k: r` pips on multi-strike altars. Border and numbers are cyan for exact, amber for under and red for over. North and south machines put the label beside the cabinet (a south label sits level with the cabinet's top half); east and west machines put it below. A notch on the label points at its machine. Machines are 180–230 px and sit against the exit socket. |
+| Bottom row, left of centre | Tray: one gem per kind, with `slot ×count`, between FUSE's sprite and the caption (slot centres x 470–1070; six slots close up to 120 px). Hover or hold a gem to see a one-line rule (`Bend Turns the bolt 90°.`); the tip is clamped between FUSE and the caption and its pointer still marks the slot. |
+| Bottom right | FUSE caption card. It owns the caption lane (`CAPTION_LANE`: x ≥ 1130, y ≥ 820). No tray slot, count, label or tooltip may enter it (tested in `clarity.test.ts`). |
 | Bottom line | One line of controls in small type. |
 
 Layout (`layout.ts`) is computed from the puzzle alone: board size, storm side and machine
@@ -27,16 +27,29 @@ sides. It fits every puzzle from 4×4 up to the 10×8 finale.
 | Take a gem | click it in the tray | `1`–`6`, `T` cycles | LB cycles |
 | Place | click a socket, or drag and drop | arrows/WASD move the gold cursor, `Enter` | d-pad/stick, A |
 | Turn (Bend, Gate) | click the placed gem, or scroll | `R` / `Q` (also turns the gem in hand) | RB |
-| Pick up / move | drag a placed gem; drop it off the altar to return it | `Enter` on a gem | A |
+| Pick up / move | drag a placed gem; drop it off the altar to return it | `Enter` on any placed gem picks it up, keeping its turn | A |
 | Remove | right-click | `X` | X |
 | Undo / clear | buttons | `Z` / `Del` | Back |
 | Strike | Strike button | `F` (hold to fast-forward) | Start |
 | Skip strike | click | `Enter` / `Esc` | A / B |
 | Leave | Back | `Esc` (drops the gem in hand first) | B |
 
-`Enter` acts where the player is looking: the hovered socket, otherwise the cursor.
+`Enter` acts where the player is looking: the hovered socket, otherwise the cursor. On the
+keyboard the rule is one rule: `Enter` picks up and puts down, `R`/`Q` turn. Only a mouse click
+turns a placed Bend or Gate, since the mouse has no `R` to hand.
+
+After `Enter` fills a socket, taking the next gem by key (`1`–`6`, `T`) moves the cursor on to
+the nearest open end of the route, so a long route costs a gem key and `Enter` per socket. The
+cursor is exposed as `data-cursor="x,y"` on `.lr-altar` for tests and tools.
 
 ## Board as a circuit (altar-clarity)
+
+- **Blocked sockets** are sealed with a pale, flush capstone with a deep X cut across it. Open
+  sockets keep a dark bowl and rim; the veil over quiet sockets stops inside the rim, so a quiet
+  open socket never reads as a blocked one.
+- **Light:** a work light over the slab and a lamp over each machine (`altar-view.ts`), so the
+  lower rows of big boards and every machine cabinet read before the first strike.
+- **Fizzle tags** name the cause, then fade after about 3 s; the red ring stays.
 
 - **Quiet sockets.** Only sockets that matter right now stay bright: the storm entry, each
   machine's exit socket, fixed and placed gems with their four neighbours, and the route's open
@@ -65,8 +78,8 @@ sides. It fits every puzzle from 4×4 up to the 10×8 finale.
   it. A new fixed gem pulses and wears a card with its rule's first sentence (`Bend Turns the
   bolt 90° between its two joined sides.`) until the first strike. A new tray gem bobs until
   it is first picked up. FUSE says `gemNudge(gem)` (`nudge.<gem>`) once, queued after the
-  arrival line, for fixed gems on arrival and for tray gems on first pickup. Channel has no
-  nudge line.
+  arrival line, for fixed gems on arrival and for tray gems on first pickup. Channel's line is
+  `nudge.channel`.
 
 ## Strike
 

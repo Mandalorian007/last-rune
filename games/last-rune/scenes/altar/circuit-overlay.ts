@@ -21,10 +21,12 @@ const OVERLAY_WGSL = /* wgsl */ `
   let glow = in.params.z;
   let seed = in.params.w;
   if (mode == 0) {
-    // Veil: soft disc of slab-coloured stone; a little grain so it isn't a flat sticker.
+    // Veil: soft disc of slab-coloured stone; a little grain so it isn't a flat sticker. It
+    // stops inside the bowl's rim (socket radius = 0.87 here), so a quiet socket still reads
+    // as an open hole and never as the capstone of a blocked one.
     let p = in.local * 2.0 - 1.0;
     let r = length(p);
-    let edge = smoothstep(1.0, 0.72, r);
+    let edge = smoothstep(0.8, 0.58, r);
     let grain = 0.85 + 0.3 * engine_fbm(in.world * 0.045 + seed, 3);
     let a = edge * amt;
     o.color = vec4f(in.color.rgb * grain * a, a);

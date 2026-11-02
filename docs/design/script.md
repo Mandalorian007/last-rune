@@ -675,6 +675,9 @@ Heard at the altar itself, not in the hall. Written for the altar in the same vo
 
 **New-gem nudges** (idle, the first puzzle that offers the gem, `gemNudge(gem)`)
 
+> Plain blue. In one side, out the other. Like the paperwork. **[NEW]**  
+> <sub>`nudge.channel` · 11w</sub>
+
 > New gem in the tray. It has opinions about straight lines. **[NEW]**  
 > <sub>`nudge.bend` · 10w</sub>
 

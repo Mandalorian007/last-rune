@@ -4,7 +4,7 @@ import { type Placement, simulate } from '../../rules';
 import { altarDims } from '../../rules/model';
 import type { MachineId } from '../../rules/types';
 import { chargeChips, liveSockets, previewPath } from './circuit-model';
-import { computeLayout } from './layout';
+import { CAPTION_LANE, computeLayout, FUSE_LANE, traySlotAt, trayTipX } from './layout';
 import { firstSentence, newGems, nudgeGems } from './teach';
 
 const P = (gem: Placement['gem'], x: number, y: number, rot: Placement['rot'] = 0): Placement => ({
@@ -100,12 +100,12 @@ describe('new gems', () => {
     expect(newGems(puzzleFor('furnace'), all)).toEqual({ fixed: [], tray: [] });
   });
 
-  it('has a FUSE nudge for every new gem but Channel', () => {
+  it('has a FUSE nudge for every new gem, Channel included', () => {
     const intake = newGems(puzzleFor('intake-desk'), []);
-    expect(nudgeGems(intake)).toEqual(['bend']);
+    expect(nudgeGems(intake)).toEqual(['bend', 'channel']);
     for (const p of Object.values(PUZZLES)) {
       const news = newGems(p, []);
-      const kinds = [...news.fixed.map((f) => f.gem), ...news.tray].filter((g) => g !== 'channel');
+      const kinds = [...news.fixed.map((f) => f.gem), ...news.tray];
       expect(nudgeGems(news).sort()).toEqual([...new Set(kinds)].sort());
     }
   });
@@ -129,6 +129,52 @@ describe('layout labels', () => {
         expect(m.label.x).toBeGreaterThan(0);
         expect(m.label.x).toBeLessThan(1920 - (m.label.align === 'right' ? 240 : 120));
         expect(m.label.y).toBeLessThan(L.trayY - 40);
+      }
+    }
+  });
+
+  it('keeps labels out of the caption lane', () => {
+    for (const p of Object.values(PUZZLES)) {
+      const L = computeLayout(p);
+      for (const m of L.machines) {
+        // Label box after a strike: "Needs N", "got M" (~100 px), plus the strike row.
+        const hgt = 100 + (p.pulses > 1 ? 30 : 0);
+        const right = m.label.align === 'right';
+        const x1 = right ? m.label.x + 14 + 240 : m.label.x + 120;
+        const y1 = right ? m.label.y + hgt / 2 : m.label.y + 12 + hgt;
+        expect(x1 > CAPTION_LANE.x && y1 > CAPTION_LANE.y, p.id).toBe(false);
+      }
+    }
+  });
+});
+
+describe('caption and FUSE lanes', () => {
+  it('fits every tray between FUSE and the caption, slots still distinct', () => {
+    for (const p of Object.values(PUZZLES)) {
+      const L = computeLayout(p);
+      for (const [i, s] of L.tray.entries()) {
+        expect(s.x - s.size / 2, p.id).toBeGreaterThan(FUSE_LANE.x);
+        expect(s.x + s.size / 2, p.id).toBeLessThan(CAPTION_LANE.x);
+        expect(traySlotAt(L, s.x, s.y)).toBe(i);
+      }
+    }
+  });
+
+  it('clamps the tray tooltip between the lanes', () => {
+    expect(trayTipX(470, 360)).toBe(FUSE_LANE.x + 180);
+    expect(trayTipX(1070, 360)).toBe(CAPTION_LANE.x - 180);
+    expect(trayTipX(770, 200)).toBe(770);
+  });
+
+  it('keeps the storm off a machine that shares its side', () => {
+    for (const p of Object.values(PUZZLES)) {
+      const L = computeLayout(p);
+      const st = L.storm;
+      for (const m of L.machines) {
+        if (m.side !== st.side || (m.side !== 1 && m.side !== 3)) continue;
+        // Storm stand (~0.2 size wide) vs cabinet (~0.9 size wide).
+        const gap = Math.abs(st.x - m.x) - 0.12 * st.size - 0.45 * m.size;
+        expect(gap, p.id).toBeGreaterThan(-4);
       }
     }
   });
