@@ -1,0 +1,592 @@
+import { installGpuErrorLogging } from './diagnostics';
+import { type Drawable, type DrawParams, Frame, type FrameSink } from './frame';
+import { FullscreenPass, type FullscreenPassDesc } from './fullscreen';
+import {
+  INSTANCE_FLOATS,
+  INSTANCE_STRIDE,
+  Material,
+  type MaterialDesc,
+  SPRITE_WGSL,
+} from './material';
+import { Mesh, type MeshDesc, quadGeometry } from './mesh';
+import {
+  createSamplers,
+  type SamplerKind,
+  Texture,
+  type TextureDesc,
+  type TextureLike,
+  type TextureSource,
+} from './texture';
+
+/** HDR scene targets: [0] colour, [1] emissive (feeds bloom). */
+export const SCENE_FORMAT: GPUTextureFormat = 'rgba16float';
+
+export interface PostInputs {
+  color: TextureLike;
+  emissive: TextureLike;
+  time: number;
+  dt: number;
+}
+
+/** The final stage: turns the HDR scene into swapchain pixels. See `@engine/post`. */
+export interface PostProcessor {
+  resize(width: number, height: number): void;
+  encode(encoder: GPUCommandEncoder, inputs: PostInputs, output: GPUTextureView): void;
+}
+
+export interface RendererOptions {
+  logicalWidth?: number;
+  logicalHeight?: number;
+  /** Initial instance capacity (grows by doubling). Default 4096. */
+  initialInstances?: number;
+}
+
+export interface RendererGpu {
+  device: GPUDevice;
+  context: GPUCanvasContext;
+  format: GPUTextureFormat;
+}
+
+/** 2D camera over the logical space. Offsets in logical px; zoom about the view centre. */
+export interface Camera {
+  x: number;
+  y: number;
+  zoom: number;
+  rotation: number;
+}
+
+export interface RenderStats {
+  drawCalls: number;
+  instances: number;
+  drawables: number;
+}
+
+interface DrawCmd {
+  material: Material | null;
+  mesh: Mesh | null;
+  drawable: Drawable | null;
+  first: number;
+  count: number;
+}
+
+const GLOBALS_FLOATS = 24;
+
+/**
+ * WebGPU renderer: owns the HDR scene targets, instanced batch, materials and the hand-off to
+ * the post stack. One per canvas.
+ *
+ * ```ts
+ * const r = new Renderer(gpu);
+ * r.resize(w, h);
+ * const f = r.beginFrame(time, dt);
+ * f.sprite(myMaterial, { x: 960, y: 540, w: 200, h: 200 });
+ * r.endFrame();
+ * ```
+ */
+export class Renderer implements FrameSink {
+  readonly device: GPUDevice;
+  readonly context: GPUCanvasContext;
+  /** Swapchain format. */
+  readonly format: GPUTextureFormat;
+  readonly sceneFormats: readonly GPUTextureFormat[] = [SCENE_FORMAT, SCENE_FORMAT];
+  readonly logicalWidth: number;
+  readonly logicalHeight: number;
+  readonly camera: Camera = { x: 0, y: 0, zoom: 1, rotation: 0 };
+  readonly samplers: Record<SamplerKind, GPUSampler>;
+  readonly globalsLayout: GPUBindGroupLayout;
+  readonly globalsBindGroup: GPUBindGroup;
+  readonly quad: Mesh;
+  /** 1×1 white texture (default for unbound texture slots). */
+  readonly white: Texture;
+  /** Built-in sprite material bound to `white` (solid colour quads via tint). */
+  readonly defaultSprite: Material;
+  readonly stats: RenderStats = { drawCalls: 0, instances: 0, drawables: 0 };
+
+  /** Final stage. Defaults to a plain tonemap + sRGB present; set to a `PostStack`. */
+  post: PostProcessor | null = null;
+
+  width = 1;
+  height = 1;
+  sceneColor!: Texture;
+  sceneEmissive!: Texture;
+
+  private readonly globalsBuffer: GPUBuffer;
+  private readonly globalsData = new Float32Array(GLOBALS_FLOATS);
+  private instanceData: Float32Array;
+  private instanceBuffer: GPUBuffer;
+  private instanceCount = 0;
+  private readonly cmds: DrawCmd[] = [];
+  private cmdCount = 0;
+  private readonly prePasses: ((encoder: GPUCommandEncoder) => void)[] = [];
+  private readonly prepared = new Set<Drawable>();
+  private readonly frame: Frame;
+  private readonly present: FullscreenPass;
+  private presentGroup: GPUBindGroup | null = null;
+  private readonly scenePassDesc: GPURenderPassDescriptor;
+  private readonly colorAtt: GPURenderPassColorAttachment;
+  private readonly emissiveAtt: GPURenderPassColorAttachment;
+  private readonly resizeListeners = new Set<(w: number, h: number) => void>();
+  private inFrame = false;
+  private destroyed = false;
+
+  constructor(gpu: RendererGpu, opts: RendererOptions = {}) {
+    this.device = gpu.device;
+    this.context = gpu.context;
+    this.format = gpu.format;
+    this.logicalWidth = opts.logicalWidth ?? 1920;
+    this.logicalHeight = opts.logicalHeight ?? 1080;
+    const device = this.device;
+    installGpuErrorLogging(device);
+
+    this.samplers = createSamplers(device);
+    this.globalsLayout = device.createBindGroupLayout({
+      label: 'engine-globals-layout',
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
+          buffer: {},
+        },
+      ],
+    });
+    this.globalsBuffer = device.createBuffer({
+      label: 'engine-globals',
+      size: GLOBALS_FLOATS * 4,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    this.globalsBindGroup = device.createBindGroup({
+      label: 'engine-globals-group',
+      layout: this.globalsLayout,
+      entries: [{ binding: 0, resource: { buffer: this.globalsBuffer } }],
+    });
+
+    const cap = opts.initialInstances ?? 4096;
+    this.instanceData = new Float32Array(cap * INSTANCE_FLOATS);
+    this.instanceBuffer = this.makeInstanceBuffer(cap);
+
+    this.quad = new Mesh(device, { label: 'quad', ...quadGeometry() });
+    this.white = new Texture(device, { width: 1, height: 1, label: 'white' });
+    device.queue.writeTexture(
+      { texture: this.white.texture },
+      new Uint8Array([255, 255, 255, 255]),
+      { bytesPerRow: 4 },
+      [1, 1],
+    );
+    this.defaultSprite = this.createSpriteMaterial(this.white, 'sprite-default');
+
+    this.present = this.createFullscreenPass({
+      label: 'present-basic',
+      targets: [this.format],
+      textures: 2,
+      wgsl: /* wgsl */ `
+@group(0) @binding(1) var samp: sampler;
+@group(0) @binding(2) var colorTex: texture_2d<f32>;
+@group(0) @binding(3) var emissiveTex: texture_2d<f32>;
+@fragment fn fs_main(in: FullscreenIn) -> @location(0) vec4f {
+  let c = textureSample(colorTex, samp, in.uv).rgb + textureSample(emissiveTex, samp, in.uv).rgb;
+  let t = c / (1.0 + c);
+  return vec4f(pow(t, vec3f(1.0 / 2.2)), 1.0);
+}`,
+    });
+
+    this.colorAtt = {
+      view: this.white.view,
+      loadOp: 'clear',
+      storeOp: 'store',
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    };
+    this.emissiveAtt = {
+      view: this.white.view,
+      loadOp: 'clear',
+      storeOp: 'store',
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    };
+    this.scenePassDesc = { label: 'scene', colorAttachments: [this.colorAtt, this.emissiveAtt] };
+    this.frame = new Frame(this, this.logicalWidth, this.logicalHeight);
+    this.colorAtt.clearValue = this.frame.clearColor;
+    this.resize(1, 1);
+  }
+
+  /** Resize the HDR targets (backbuffer pixels). Cheap no-op when unchanged. */
+  resize(width: number, height: number): void {
+    const w = Math.max(1, Math.floor(width));
+    const h = Math.max(1, Math.floor(height));
+    if (this.sceneColor && w === this.width && h === this.height) return;
+    this.width = w;
+    this.height = h;
+    this.sceneColor?.destroy();
+    this.sceneEmissive?.destroy();
+    const usage = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
+    this.sceneColor = new Texture(this.device, {
+      width: w,
+      height: h,
+      format: SCENE_FORMAT,
+      usage,
+      label: 'scene-color',
+    });
+    this.sceneEmissive = new Texture(this.device, {
+      width: w,
+      height: h,
+      format: SCENE_FORMAT,
+      usage,
+      label: 'scene-emissive',
+    });
+    this.colorAtt.view = this.sceneColor.view;
+    this.emissiveAtt.view = this.sceneEmissive.view;
+    this.presentGroup = this.present.createBindGroup([
+      this.sceneColor.view,
+      this.sceneEmissive.view,
+    ]);
+    this.post?.resize(w, h);
+    for (const fn of this.resizeListeners) fn(w, h);
+  }
+
+  /** Called after every resize with backbuffer size. Returns unsubscribe. */
+  onResize(fn: (width: number, height: number) => void): () => void {
+    this.resizeListeners.add(fn);
+    return () => this.resizeListeners.delete(fn);
+  }
+
+  // ---------------------------------------------------------------- resources
+
+  createMaterial(desc: MaterialDesc): Material {
+    return new Material(
+      this.device,
+      desc,
+      this.globalsLayout,
+      this.sceneFormats,
+      this.samplers[desc.sampler ?? 'linear-clamp'],
+      this.white.view,
+    );
+  }
+
+  /** Built-in textured sprite material for `texture`. */
+  createSpriteMaterial(
+    texture: TextureLike,
+    label = 'sprite',
+    opts: { blend?: MaterialDesc['blend']; sampler?: SamplerKind } = {},
+  ): Material {
+    const m = this.createMaterial({
+      label,
+      wgsl: SPRITE_WGSL,
+      textures: 1,
+      blend: opts.blend,
+      sampler: opts.sampler,
+    });
+    m.setTexture(0, texture);
+    return m;
+  }
+
+  createMesh(desc: MeshDesc): Mesh {
+    return new Mesh(this.device, desc);
+  }
+
+  createTexture(desc: TextureDesc): Texture {
+    return new Texture(this.device, desc);
+  }
+
+  /** Offscreen render target (sampleable). Default format is the HDR scene format. */
+  createRenderTarget(desc: TextureDesc): Texture {
+    return new Texture(this.device, {
+      format: SCENE_FORMAT,
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT |
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_SRC |
+        GPUTextureUsage.COPY_DST,
+      ...desc,
+    });
+  }
+
+  createFullscreenPass(desc: FullscreenPassDesc): FullscreenPass {
+    return new FullscreenPass(
+      this.device,
+      desc,
+      this.samplers[desc.sampler ?? 'linear-clamp'],
+      this.white.view,
+    );
+  }
+
+  /** Upload an image/canvas/ImageData as an sRGB texture (sampled as linear). */
+  textureFromSource(source: TextureSource, label = 'image'): Texture {
+    const width = source.width;
+    const height = source.height;
+    const tex = this.createTexture({ width, height, label, format: 'rgba8unorm-srgb' });
+    if (typeof ImageData !== 'undefined' && source instanceof ImageData) {
+      this.device.queue.writeTexture(
+        { texture: tex.texture },
+        source.data,
+        { bytesPerRow: width * 4 },
+        [width, height],
+      );
+    } else {
+      this.device.queue.copyExternalImageToTexture(
+        { source: source as Exclude<TextureSource, ImageData> },
+        { texture: tex.texture },
+        [width, height],
+      );
+    }
+    return tex;
+  }
+
+  /**
+   * Generate a texture procedurally on the GPU. `wgsl` must define
+   * `fn shade(uv: vec2f) -> vec4f` returning **linear** colour (uv 0..1, top-left origin).
+   * Engine noise helpers (`engine_fbm` …) are available. Optional uniforms at
+   * `@group(0) @binding(0)`.
+   */
+  textureFromShader(opts: {
+    width: number;
+    height: number;
+    wgsl: string;
+    label?: string;
+    format?: GPUTextureFormat;
+    uniforms?: Float32Array<ArrayBuffer>;
+  }): Texture {
+    const format = opts.format ?? 'rgba8unorm-srgb';
+    const label = opts.label ?? 'procedural';
+    const tex = this.createTexture({ width: opts.width, height: opts.height, format, label });
+    const pass = this.createFullscreenPass({
+      label: `gen:${label}`,
+      targets: [format],
+      uniformBytes: opts.uniforms?.byteLength ?? 0,
+      wgsl: `${opts.wgsl}
+@fragment fn fs_main(in: FullscreenIn) -> @location(0) vec4f { return shade(in.uv); }`,
+    });
+    if (opts.uniforms) pass.setUniforms(opts.uniforms);
+    const enc = this.device.createCommandEncoder({ label: `gen:${label}` });
+    pass.encode(enc, tex.view);
+    this.device.queue.submit([enc.finish()]);
+    pass.destroy();
+    return tex;
+  }
+
+  // ---------------------------------------------------------------- frame
+
+  /** Start recording a frame. `time`/`dt` in seconds are exposed to shaders via `globals`. */
+  beginFrame(time: number, dt: number): Frame {
+    if (this.inFrame) throw new Error('beginFrame called twice without endFrame');
+    this.inFrame = true;
+    this.instanceCount = 0;
+    this.cmdCount = 0;
+    this.prePasses.length = 0;
+    this.prepared.clear();
+    const f = this.frame;
+    f.time = time;
+    f.dt = dt;
+    return f;
+  }
+
+  /** Encode and submit: pre-passes, drawable prepare, scene pass, post, present. */
+  endFrame(): void {
+    if (!this.inFrame) throw new Error('endFrame without beginFrame');
+    this.inFrame = false;
+    if (this.destroyed) return;
+    const device = this.device;
+    this.writeGlobals();
+
+    if (this.instanceCount > 0) {
+      const needed = this.instanceCount * INSTANCE_STRIDE;
+      if (needed > this.instanceBuffer.size) {
+        this.instanceBuffer.destroy();
+        this.instanceBuffer = this.makeInstanceBuffer(this.instanceData.length / INSTANCE_FLOATS);
+      }
+      device.queue.writeBuffer(this.instanceBuffer, 0, this.instanceData.buffer, 0, needed);
+    }
+
+    const enc = device.createCommandEncoder({ label: 'frame' });
+    for (const fn of this.prePasses) fn(enc);
+    for (let i = 0; i < this.cmdCount; i++) {
+      const d = this.cmds[i]!.drawable;
+      if (d?.prepare && !this.prepared.has(d)) {
+        this.prepared.add(d);
+        d.prepare(enc, this.frame);
+      }
+    }
+
+    const pass = enc.beginRenderPass(this.scenePassDesc);
+    pass.setBindGroup(0, this.globalsBindGroup);
+    let curPipeline: GPURenderPipeline | null = null;
+    let curMaterial: Material | null = null;
+    let curMesh: Mesh | null = null;
+    let drawCalls = 0;
+    let drawables = 0;
+    for (let i = 0; i < this.cmdCount; i++) {
+      const c = this.cmds[i]!;
+      if (c.drawable) {
+        c.drawable.draw(pass, this.frame);
+        drawables++;
+        curPipeline = null;
+        curMaterial = null;
+        curMesh = null;
+        pass.setBindGroup(0, this.globalsBindGroup);
+        continue;
+      }
+      const m = c.material!;
+      const mesh = c.mesh!;
+      if (m.pipeline !== curPipeline) {
+        pass.setPipeline(m.pipeline);
+        curPipeline = m.pipeline;
+      }
+      if (m !== curMaterial) {
+        if (m.bindings) pass.setBindGroup(1, m.bindings.bindGroup);
+        curMaterial = m;
+      }
+      if (mesh !== curMesh) {
+        pass.setVertexBuffer(0, mesh.vertexBuffer);
+        pass.setVertexBuffer(1, this.instanceBuffer);
+        if (mesh.indexBuffer) pass.setIndexBuffer(mesh.indexBuffer, mesh.indexFormat);
+        curMesh = mesh;
+      }
+      if (mesh.indexBuffer && mesh.indexCount > 0) {
+        pass.drawIndexed(mesh.indexCount, c.count, 0, 0, c.first);
+      } else {
+        pass.draw(mesh.vertexCount, c.count, 0, c.first);
+      }
+      drawCalls++;
+    }
+    pass.end();
+    this.stats.drawCalls = drawCalls;
+    this.stats.instances = this.instanceCount;
+    this.stats.drawables = drawables;
+
+    const out = this.context.getCurrentTexture().createView();
+    if (this.post) {
+      this.post.encode(
+        enc,
+        {
+          color: this.sceneColor,
+          emissive: this.sceneEmissive,
+          time: this.frame.time,
+          dt: this.frame.dt,
+        },
+        out,
+      );
+    } else {
+      this.present.encode(enc, out, {
+        bindGroup: this.presentGroup!,
+        clear: { r: 0, g: 0, b: 0, a: 1 },
+      });
+    }
+    device.queue.submit([enc.finish()]);
+  }
+
+  destroy(): void {
+    this.destroyed = true;
+    this.sceneColor?.destroy();
+    this.sceneEmissive?.destroy();
+    this.instanceBuffer.destroy();
+    this.globalsBuffer.destroy();
+    this.quad.destroy();
+    this.white.destroy();
+  }
+
+  // ---------------------------------------------------------------- FrameSink
+
+  pushInstance(material: Material, mesh: Mesh, p: DrawParams): void {
+    const idx = this.instanceCount++;
+    if (this.instanceCount * INSTANCE_FLOATS > this.instanceData.length) this.growInstances();
+    const d = this.instanceData;
+    let o = idx * INSTANCE_FLOATS;
+    d[o++] = p.x;
+    d[o++] = p.y;
+    d[o++] = p.w ?? 1;
+    d[o++] = p.h ?? 1;
+    d[o++] = p.rotation ?? 0;
+    d[o++] = p.emissive ?? 0;
+    d[o++] = 0;
+    d[o++] = 0;
+    const uv = p.uv;
+    d[o++] = uv ? uv[0]! : 0;
+    d[o++] = uv ? uv[1]! : 0;
+    d[o++] = uv ? uv[2]! : 1;
+    d[o++] = uv ? uv[3]! : 1;
+    const t = p.tint;
+    d[o++] = t ? t[0]! : 1;
+    d[o++] = t ? t[1]! : 1;
+    d[o++] = t ? t[2]! : 1;
+    d[o++] = t ? (t[3] ?? 1) : 1;
+    const q = p.params;
+    d[o++] = q ? q[0]! : 0;
+    d[o++] = q ? (q[1] ?? 0) : 0;
+    d[o++] = q ? (q[2] ?? 0) : 0;
+    d[o++] = q ? (q[3] ?? 0) : 0;
+
+    const last = this.cmdCount > 0 ? this.cmds[this.cmdCount - 1]! : null;
+    if (last && !last.drawable && last.material === material && last.mesh === mesh) {
+      last.count++;
+      return;
+    }
+    const c = this.nextCmd();
+    c.material = material;
+    c.mesh = mesh;
+    c.drawable = null;
+    c.first = idx;
+    c.count = 1;
+  }
+
+  pushDrawable(d: Drawable): void {
+    const c = this.nextCmd();
+    c.material = null;
+    c.mesh = null;
+    c.drawable = d;
+    c.first = 0;
+    c.count = 0;
+  }
+
+  pushPrePass(fn: (encoder: GPUCommandEncoder) => void): void {
+    this.prePasses.push(fn);
+  }
+
+  // ---------------------------------------------------------------- internals
+
+  private nextCmd(): DrawCmd {
+    if (this.cmdCount === this.cmds.length) {
+      this.cmds.push({ material: null, mesh: null, drawable: null, first: 0, count: 0 });
+    }
+    return this.cmds[this.cmdCount++]!;
+  }
+
+  private growInstances(): void {
+    const next = new Float32Array(this.instanceData.length * 2);
+    next.set(this.instanceData);
+    this.instanceData = next;
+  }
+
+  private makeInstanceBuffer(count: number): GPUBuffer {
+    return this.device.createBuffer({
+      label: 'instances',
+      size: count * INSTANCE_STRIDE,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+  }
+
+  private writeGlobals(): void {
+    const g = this.globalsData;
+    const W = this.logicalWidth;
+    const H = this.logicalHeight;
+    const cam = this.camera;
+    const sx = 2 / W;
+    const sy = 2 / H;
+    const c = Math.cos(-cam.rotation) * cam.zoom;
+    const s = Math.sin(-cam.rotation) * cam.zoom;
+    const cx = W / 2 + cam.x;
+    const cy = H / 2 + cam.y;
+    g.fill(0);
+    g[0] = c * sx;
+    g[1] = -s * sy;
+    g[4] = -s * sx;
+    g[5] = -c * sy;
+    g[10] = 1;
+    g[12] = -c * sx * cx + s * sx * cy;
+    g[13] = s * sy * cx + c * sy * cy;
+    g[15] = 1;
+    g[16] = W;
+    g[17] = H;
+    g[18] = this.width;
+    g[19] = this.height;
+    g[20] = this.frame.time;
+    g[21] = this.frame.dt;
+    this.device.queue.writeBuffer(this.globalsBuffer, 0, g);
+  }
+}
