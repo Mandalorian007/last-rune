@@ -61,6 +61,7 @@ export class TitleScene implements GameScene {
     this.view.dispose();
     this.ctx.fuse.hush();
     this.ctx.fuse.avoid(null);
+    this.ctx.fuse.pointAt(null);
     this.ctx.ui.root.style.removeProperty('--lr-title-cap-top');
   }
 
@@ -85,6 +86,9 @@ export class TitleScene implements GameScene {
       if (!menuNav(this.ctx.input, this.dom) && this.ctx.input.pressed('confirm')) this.primary();
     }
     this.view.update(dt, this.frameState());
+    // Phones: FUSE's card points at him as he potters (mobile-7-hall).
+    const phone = this.ctx.device.phone;
+    this.ctx.fuse.pointAt(phone ? (this.view.fuseAt?.() ?? null) : null, 7 * this.ctx.device.cssPx);
   }
 
   render(frame: Frame): void {

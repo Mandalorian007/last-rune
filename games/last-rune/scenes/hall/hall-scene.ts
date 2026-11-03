@@ -40,6 +40,7 @@ import {
   lineForAlcove,
   lockedNote,
   newlyUnlocked,
+  noteNamesGems,
 } from './hall-state';
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
@@ -58,7 +59,8 @@ export class HallScene implements GameScene {
   private baseModel!: HallModel;
   private model!: HallModel;
   private frame: HallFrame = IDENTITY_FRAME;
-  /** The bottom of the visible band (screen design px) and one CSS px in design px. */
+  /** The visible band's top and bottom (screen design px) and one CSS px in design px. */
+  private viewTop = 0;
   private viewBottom = 1080;
   private cssPx = 1;
   private time = 0;
@@ -108,6 +110,7 @@ export class HallScene implements GameScene {
     this.ctx.hud.suggest(null);
     this.ctx.hud.doors(null);
     this.ctx.fuse.avoid(null);
+    this.ctx.fuse.pointAt(null);
     const cam = this.ctx.renderer.camera;
     cam.x = cam.y = 0;
     cam.zoom = 1;
@@ -207,6 +210,16 @@ export class HallScene implements GameScene {
     if (this.idle >= AMBIENT_EVERY && !this.ctx.fuse.speaking) this.ambient();
 
     this.view.update(dt, this.frameState());
+    // Phones: FUSE's card points at him wherever he has rolled (mobile-7-hall).
+    this.ctx.fuse.pointAt(this.ctx.device.phone ? this.fuseSpot() : null, 7 * this.cssPx);
+  }
+
+  /** FUSE in screen design px (his wheels' centre and his height), if the view says. */
+  private fuseSpot(): { x: number; y: number; h: number } | null {
+    const f = this.view.fuseAt?.();
+    if (!f) return null;
+    const p = toScreen(this.frame, f.x, f.y);
+    return { x: p.x, y: p.y, h: f.h * this.frame.zoom };
   }
 
   render(frame: Frame): void {
@@ -252,6 +265,7 @@ export class HallScene implements GameScene {
   private reframe(): boolean {
     const { device, surface } = this.ctx;
     let f = IDENTITY_FRAME;
+    this.viewTop = 0;
     this.viewBottom = 1080;
     this.cssPx = device.cssPx;
     if (device.phone) {
@@ -262,6 +276,7 @@ export class HallScene implements GameScene {
         top: Math.max(0, -r.y) / k,
         height: Math.min(1080, surface.root.clientHeight / k),
       };
+      this.viewTop = view.top;
       this.viewBottom = Math.min(1080, view.top + view.height);
       f = hallFrame(view, reserve);
     }
@@ -295,26 +310,48 @@ export class HallScene implements GameScene {
     return { x: p.x, y: p.y, width: r.width * k, height: r.height * k };
   }
 
+  /** The visible band, screen design px (the whole design off phones). */
+  private bounds() {
+    return { left: 0, top: this.viewTop, right: 1920, bottom: this.viewBottom };
+  }
+
   /** The HUD's suggestion ring and the phone door plates, at this frame. */
   private placeChrome(): void {
-    // Phones mark the suggested door in the HUD (hidden elsewhere); the box hugs the alcove's
-    // arch and sill (y-125 to y+99), so it stays inside the phone framing, or the floor disc.
+    const phone = this.ctx.device.phone;
+    const plates = phone ? this.doorPlates() : null;
+    this.ctx.hud.doors(plates);
+    // Phones mark the suggested door in the HUD (hidden elsewhere). The ring goes round the
+    // door's art and stops just above its plate (mobile-7-hall: never through the name): a wall
+    // door's arch (y-125) down to its plate, the floor seal's disc down to its plate.
     const next = this.model.alcoves.find((a) => a.suggested);
-    const box = next
-      ? next.floor
-        ? this.screenBox(next.x, next.y, ALCOVE_HIT.h * 1.3, ALCOVE_HIT.h * 1.3)
-        : this.screenBox(next.x, next.y - 13, 226, 224)
-      : null;
+    let box: { x: number; y: number; w: number; h: number } | null = null;
+    if (next) {
+      const plateTop = plates?.find((p) => p.id === next.id)?.y;
+      const gap = 3 * this.cssPx;
+      if (next.floor) {
+        const r = ALCOVE_HIT.h * 0.65;
+        const disc = this.screenBox(next.x, next.y, r * 2, r * 2);
+        const top = disc.y - disc.h / 2;
+        const bottom = Math.min(disc.y + disc.h / 2, (plateTop ?? 1e9) - gap);
+        box = { x: disc.x, y: (top + bottom) / 2, w: disc.w, h: bottom - top };
+      } else {
+        const arch = this.screenBox(next.x, next.y - 13, 226, 224);
+        const top = arch.y - arch.h / 2;
+        const bottom = Math.min(arch.y + arch.h / 2, (plateTop ?? 1e9) - gap);
+        box = { x: arch.x, y: (top + bottom) / 2, w: arch.w, h: bottom - top };
+      }
+    }
     this.ctx.hud.suggest(
       next && box
         ? {
             ...box,
             label: this.progress.solved.length === 0 ? 'Start here' : 'Next',
             round: next.floor,
+            bounds: phone ? this.bounds() : undefined,
+            gap: 5 * this.cssPx,
           }
         : null,
     );
-    this.ctx.hud.doors(this.ctx.device.phone ? this.doorPlates() : null);
   }
 
   /**
@@ -337,7 +374,8 @@ export class HallScene implements GameScene {
         id: a.id,
         x: at.x,
         y: Math.min(at.y, floorY),
-        maxWidth: gap * k - 6,
+        // Neighbours keep 8 CSS px between their widest plates (mobile-7-hall).
+        maxWidth: gap * k - 8 * this.cssPx,
         name: a.name,
         status: a.status,
       };
@@ -361,20 +399,25 @@ export class HallScene implements GameScene {
     const top = a.y < 320;
     const half = a.floor ? ALCOVE_HIT.h * 0.6 : ALCOVE_HIT.h / 2;
     if (this.ctx.device.phone) {
-      // Phones (mobile-6-chrome): plain words and the needed gems by name. A top-row door's
-      // card hangs under the door's own plate; any other's stands on the arch, clear of it.
+      // Phones: plain words ("Locked: solve Relay Tower first"); the gems by name only when the
+      // words point at them. The card stands beside the door, clear of every other door's
+      // plate (mobile-7-hall); FUSE's word on it joins the card after a moment (`speak`).
       const at = toScreen(this.frame, a.x, top ? a.y + half : a.y - half - 6);
       this.ctx.hud.plate({
         x: at.x,
         y: at.y,
         name: a.name,
         note: lockedNote(a),
-        gems: a.missing.map((m) => ({
-          label: m.label,
-          colour: CSS_PALETTE[m.colour === 'slate' ? 'parchment' : m.colour],
-        })),
+        gems: noteNamesGems(a)
+          ? a.missing.map((m) => ({
+              label: m.label,
+              colour: CSS_PALETTE[m.colour === 'slate' ? 'parchment' : m.colour],
+            }))
+          : [],
         above: !top,
         door: a.id,
+        doorBox: this.screenRect(archRect(a)),
+        bounds: this.bounds(),
       });
       return;
     }
@@ -392,7 +435,14 @@ export class HallScene implements GameScene {
     this.spoken = id;
     this.idle = 0;
     const line = a ? lineForAlcove(a) : undefined;
-    if (line && !this.ctx.fuse.isSaying(line)) this.say(line, { interrupt: true }, id);
+    if (!line) return;
+    // Phones (mobile-7-hall): his word on a door goes inside that door's card, not a second
+    // bubble over the hall.
+    if (this.ctx.device.phone && this.ctx.hud.plateSay(id, line.text)) {
+      this.ctx.fuse.hush();
+      return;
+    }
+    if (!this.ctx.fuse.isSaying(line)) this.say(line, { interrupt: true }, id);
   }
 
   private activate(a: AlcoveModel): void {
@@ -419,13 +469,32 @@ export class HallScene implements GameScene {
   /** FUSE speaks with his card kept off the suggested door (and its tag) and the one he names. */
   private say(line: FuseLine, opts?: { interrupt?: boolean }, about?: MachineId): void {
     const regions: Rect[] = [];
-    // Phones: the card keeps off every door (their plates are part of the hall's map).
+    // Phones: the card keeps off every door (their plates are part of the hall's map) and off
+    // FUSE himself, and sits on his side of the hall so its tail is short (mobile-7-hall). The
+    // caption card weighs regions by summed area, so a door that can be played counts four
+    // times over: if the card must cover something, it is a locked door.
     const phone = this.ctx.device.phone;
     for (const a of this.model.alcoves) {
-      if (phone || a.suggested || a.id === about) regions.push(this.screenRect(doorRect(a)));
+      if (!phone && !a.suggested && a.id !== about) continue;
+      const r = this.screenRect(doorRect(a));
+      regions.push(r);
+      if (phone && a.status !== 'locked') regions.push(r, r, r);
+      if (phone && a.suggested) {
+        // Its tag may stand beside the ring (hud placeTag): keep the card off either side.
+        const side = 100 * this.cssPx;
+        const t = { x: r.x - side, y: r.y, width: r.width + side * 2, height: r.height };
+        regions.push(t, t, t, t);
+      }
+    }
+    let corner: 'bottom-left' | 'bottom-right' | undefined;
+    const me = phone ? this.fuseSpot() : null;
+    if (me) {
+      const w = me.h * 0.8;
+      regions.push({ x: me.x - w / 2, y: me.y - me.h, width: w, height: me.h });
+      corner = me.x < 960 ? 'bottom-left' : 'bottom-right';
     }
     this.ctx.fuse.avoid(regions);
-    void this.ctx.fuse.say(line, opts);
+    void this.ctx.fuse.say(line, { ...opts, corner });
   }
 }
 
@@ -434,11 +503,23 @@ export function welcomeFits(model: HallModel): boolean {
   return model.alcoves.find((a) => a.suggested)?.id === 'intake-desk';
 }
 
-/** A door's arch-to-sill box plus the phone "Start here ▾" tag above it, design px. */
+/**
+ * A door's arch-to-sill box plus the phone "Start here ▾" tag above it, design px; the floor
+ * seal's also reaches down over its plate, which hangs below the disc.
+ */
 export function doorRect(a: AlcoveModel): Rect {
   if (a.floor) {
     const r = ALCOVE_HIT.h * 0.65;
-    return { x: a.x - r, y: a.y - r - 40, width: r * 2, height: r * 2 + 40 };
+    return { x: a.x - r, y: a.y - r - 40, width: r * 2, height: r * 2 + 40 + 120 };
   }
   return { x: a.x - 113, y: a.y - 125 - 40, width: 226, height: 224 + 40 };
+}
+
+/** A door's drawn art alone (arch to sill, or the floor seal's disc), world px. */
+export function archRect(a: AlcoveModel): Rect {
+  if (a.floor) {
+    const r = ALCOVE_HIT.h * 0.65;
+    return { x: a.x - r, y: a.y - r, width: r * 2, height: r * 2 };
+  }
+  return { x: a.x - 100, y: a.y - 118, width: 200, height: 210 };
 }

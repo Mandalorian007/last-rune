@@ -10,7 +10,7 @@
  * title → hall → title never rebakes or leaks.
  */
 import type { DrawParams, Frame, Renderer } from '@engine/render';
-import type { TitleView, TitleViewFrame, ViewContext } from '../../scenes/views';
+import type { FuseSpot, TitleView, TitleViewFrame, ViewContext } from '../../scenes/views';
 import { HALL_WINDOW_UNIFORM_FLOATS } from '../../shaders/hall-shaders';
 import { type CandleInstance, CandleRenderer } from '../materials/candles';
 import { EmbossLabel, EmbossRenderer } from '../materials/emboss';
@@ -177,6 +177,11 @@ export class StormTitleView implements TitleView {
     kit.candles.drawFlames(frame, this.all);
     hall.fuse.draw(frame, L);
     frame.drawable(this.vc.particles);
+  }
+
+  fuseAt(): FuseSpot {
+    const f = this.hall.fuse;
+    return { x: f.x, y: f.y, h: f.scale * 2.2 };
   }
 
   dispose(): void {

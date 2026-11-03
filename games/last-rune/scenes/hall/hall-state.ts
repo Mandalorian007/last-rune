@@ -218,10 +218,14 @@ export function lockedNote(a: AlcoveModel): string {
   // The machines a door waits on include the ones that grant its gems.
   const n = a.missingMachines;
   if (n > 0) return `Locked: solve ${n}\u00a0more machine${n === 1 ? '' : 's'} first`;
-  // Many sources (the Last Rune): the gem icons beside the words say which.
-  if (doors.length > 2) return 'Locked: earn these gems first';
+  // Many sources (the Last Rune): the gems by name beside the words say which. Up to three
+  // doors are named outright (mobile-7-hall: no gem chip that reads like a door).
+  if (doors.length > 3) return 'Locked: earn these gems first';
   if (doors.length === 0) return 'Locked';
-  const list = doors.map(keep).join(' and ');
+  const list =
+    doors.length < 3
+      ? doors.map(keep).join(' and ')
+      : `${doors.slice(0, -1).map(keep).join(', ')} and ${keep(doors.at(-1)!)}`;
   return `Locked: solve ${list} first`;
 }
 
@@ -233,4 +237,13 @@ export function focusOrder(model: HallModel): MachineId[] {
 /** The door the first Tab lands on: the suggested one, else the front of the hall. */
 export function firstFocus(model: HallModel): MachineId | undefined {
   return model.alcoves.find((a) => a.suggested)?.id ?? focusOrder(model)[0];
+}
+
+/**
+ * True when a locked door's note points at its gems rather than naming the doors to solve
+ * ("earn these gems first"): only then does the phone card list the gems by name (mobile-7-hall).
+ */
+export function noteNamesGems(a: AlcoveModel): boolean {
+  if (a.status !== 'locked' || a.missingMachines > 0) return false;
+  return new Set(a.missing.map((m) => m.from).filter(Boolean)).size > 3;
 }

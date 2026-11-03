@@ -14,6 +14,8 @@
  * outranks any scene stylesheet whatever the load order.
  */
 
+import { hall7Css } from './phone-hall-styles';
+
 /** n CSS px, as a design-px length (phones only; the variable is unset elsewhere). */
 export const cpx = (n: number) => `calc(var(--lr-css-px, 1px) * ${n})`;
 /** n CSS px of text, grown by Settings → Text size. */
@@ -1011,4 +1013,4 @@ ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cp
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }
 ${P} .lr-title-coffee { min-height: ${cpx(24)}; padding: 0 ${cpx(8)}; font-size: ${tpx(11)}; }
 ${P} .lr-release { font-size: ${tpx(11)}; }
-${CHROME_CSS}${CHROME4_CSS}${CHROME5_CSS}${CHROME6_CSS}`;
+${CHROME_CSS}${CHROME4_CSS}${CHROME5_CSS}${CHROME6_CSS}${hall7Css()}`;
