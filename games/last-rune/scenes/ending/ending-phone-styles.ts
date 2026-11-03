@@ -55,7 +55,7 @@ ${P} .lr-hg-main { background: #2b2e37; }
 
 /* Header: ‹ (with the unread count) · # channel · server; Skip sits at its right end. */
 ${P} .lr-hg-top {
-  height: ${HEAD}; gap: ${cpx(4)}; padding: 0 calc(${LANE} + ${cpx(12)}) 0 ${cpx(6)};
+  height: ${HEAD}; gap: ${cpx(4)}; padding: 0 calc(${LANE} + ${cpx(12)}) 0 ${cpx(12)};
   font-size: ${tpx(15)}; white-space: nowrap; background: #30343f;
 }
 ${P} .lr-hg-top .lr-emo { font-size: ${tpx(15)}; margin-right: ${cpx(3)}; }
@@ -65,18 +65,17 @@ ${P} .lr-hg-top-server {
   display: inline; margin-left: ${cpx(2)}; font-family: var(--tc-font-display); font-size: ${tpx(13)}; font-weight: 400; color: #a39a88;
 }
 ${P} .lr-hg-top-server::before { content: '·'; margin-right: ${cpx(6)}; color: #6e6a62; }
-${P} .lr-hg-back {
-  display: inline-flex; align-items: center; gap: ${cpx(2)}; margin-right: ${cpx(4)}; padding: 0 ${cpx(4)};
-  color: #e8c06a; font-weight: 700;
-}
-${P} .lr-hg-back i { font-style: normal; font-size: ${tpx(24)}; line-height: 1; margin-top: ${cpx(-3)}; }
+/* Other channels' news: a quiet "· 3 unread" after the server name. Plain text, no pill or
+   glow, so it reads as information and never as something to tap (D-027). */
 ${P} .lr-hg-badge-count {
-  min-width: ${cpx(17)}; height: ${cpx(17)}; padding: 0 ${cpx(4)}; box-sizing: border-box; border-radius: ${cpx(9)};
-  display: inline-grid; place-items: center; font-size: ${tpx(11)}; line-height: 1; color: #2a1600;
-  background: #ffb03f; box-shadow: 0 0 ${cpx(6)} #ffb03f88;
+  display: inline; margin-left: ${cpx(8)}; font-size: ${tpx(12)}; font-weight: 600; color: #d9a54a;
+  white-space: nowrap; pointer-events: none;
 }
+${P} .lr-hg-badge-count::before { content: '·'; margin-right: ${cpx(8)}; color: #6e6a62; font-weight: 400; }
+${P} .lr-hg-badge-count::after { content: ' unread'; font-weight: 400; color: #a88a52; }
 ${P} .lr-hg-badge-count:empty { display: none; }
-${P} .lr-hg-badge-count[data-ping] { animation: lr-hg-pop 420ms cubic-bezier(.3,1.6,.5,1) both; }
+${P} .lr-hg-badge-count[data-ping] { animation: lr-hg-news 900ms ease-out both; }
+@keyframes lr-hg-news { from { color: #ffe08a; } to { color: #d9a54a; } }
 
 /* Messages: full width, 14 px, bottom-anchored. */
 ${P} .lr-hg-log {

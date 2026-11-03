@@ -29,12 +29,14 @@ type G = any;
 
 async function insets(page: Page, px: number) {
   if (!px) return;
+  // Init scripts run before <html> exists: touching documentElement here throws and the inset
+  // never lands (the first after-captures were full-width for that reason). Apply on DOMContentLoaded.
   await page.addInitScript((px) => {
-    document.documentElement.style.setProperty('--lr-safe-l', `${px}px`);
-    document.documentElement.style.setProperty('--lr-safe-r', `${px}px`);
-    const s = document.createElement('style');
-    s.textContent = `#app { left: ${px}px !important; right: ${px}px !important; }`;
-    document.addEventListener('DOMContentLoaded', () => document.head.append(s));
+    document.addEventListener('DOMContentLoaded', () => {
+      const s = document.createElement('style');
+      s.textContent = `#app { left: ${px}px !important; right: ${px}px !important; }`;
+      document.head.append(s);
+    });
   }, px);
 }
 
@@ -53,6 +55,13 @@ for (const vp of VIEWPORTS) {
       const shots: string[] = [];
       const shot = async (name: string) => {
         await waitFrames(page, 4);
+        const app = await page.evaluate(() => {
+          const r = document.querySelector('#app')!.getBoundingClientRect();
+          return { l: r.left, r: r.right };
+        });
+        if (vp.inset && (app.l < vp.inset - 0.5 || app.r > vp.width - vp.inset + 0.5)) {
+          throw new Error(`${vp.name}: the ${vp.inset}px notch insets did not apply`);
+        }
         await page.screenshot({ path: join(dir, `${name}.png`), scale: 'css' });
         shots.push(name);
       };

@@ -33,6 +33,40 @@ async function insets(page: Page, px: number) {
   }, px);
 }
 
+/**
+ * Everything that matters sits inside the safe area (#app is inset by env(safe-area-inset-*),
+ * emulated here): every visible match of `sels` must lie within the app's box. Backgrounds may
+ * bleed; text, avatars, chips, fields and controls may not.
+ */
+async function insideSafeArea(page: Page, sels: string[], where: string) {
+  const out = await page.evaluate((sels) => {
+    const a = document.querySelector('#app')!.getBoundingClientRect();
+    const bad: string[] = [];
+    let n = 0;
+    for (const sel of sels) {
+      for (const el of document.querySelectorAll<HTMLElement>(sel)) {
+        if (el.closest('[hidden]')) continue;
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height || getComputedStyle(el).visibility === 'hidden') continue;
+        n++;
+        if (
+          r.left < a.left - 0.5 ||
+          r.right > a.right + 0.5 ||
+          r.top < a.top - 0.5 ||
+          r.bottom > a.bottom + 0.5
+        ) {
+          bad.push(
+            `${sel} ${r.left.toFixed(0)}..${r.right.toFixed(0)} (safe ${a.left}..${a.right})`,
+          );
+        }
+      }
+    }
+    return { bad, n };
+  }, sels);
+  expect(out.n, `${where}: nothing measured`).toBeGreaterThan(0);
+  expect(out.bad, `${where}: outside the safe area`).toEqual([]);
+}
+
 const meets = (a: Box, b: Box) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
 
 /** Box of a selector's first visible match, client px, or null. */
@@ -109,6 +143,9 @@ for (const vp of PHONES) {
         MACHINE_IDS as unknown as string[],
       );
       const app = await appBox(page);
+      // The notch insets really applied (the app's box is inset), so the checks below mean it.
+      expect(app.l).toBeCloseTo(vp.inset, 0);
+      expect(app.r).toBeCloseTo(vp.width - vp.inset, 0);
 
       // ── FUSE's caption and Skip ─────────────────────────────────────────
       const skip = page.locator('.lr-end-skip');
@@ -121,6 +158,11 @@ for (const vp of PHONES) {
       expect(sk.box.l).toBeGreaterThanOrEqual(app.l - 0.5);
       expect(sk.box.r).toBeLessThanOrEqual(app.r + 0.5);
       expect(sk.box.t).toBeGreaterThanOrEqual(app.t - 0.5);
+      await insideSafeArea(
+        page,
+        ['.lr-end-skip', '.tc-caption', '.tc-caption-text'],
+        'ending caption and Skip',
+      );
       const cap = (await boxOf(page, '.tc-caption'))!;
       expect(meets(cap, sk.box), 'the caption covers Skip').toBe(false);
       expect(cap.r, 'the caption ends before the Skip lane').toBeLessThanOrEqual(sk.box.l);
@@ -210,6 +252,24 @@ for (const vp of PHONES) {
       // The typing line sits above the message bar; Skip sits in the header, over no message.
       expect(chat.typingBottom).toBeLessThanOrEqual(chat.composeTop + 0.5);
       expect(chat.skip.b).toBeLessThanOrEqual(chat.top.b + 0.5);
+      await insideSafeArea(
+        page,
+        [
+          '.lr-hg-top > *',
+          '.lr-hg-log:not([hidden]) .lr-hg-av',
+          '.lr-hg-log:not([hidden]) .lr-hg-meta',
+          '.lr-hg-log:not([hidden]) .lr-hg-text',
+          '.lr-hg-log:not([hidden]) .lr-hg-form',
+          '.lr-hg-log:not([hidden]) .lr-hg-reacts',
+          '.lr-hg-log:not([hidden]) .lr-hg-sys',
+          '.lr-hg-typing',
+          '.lr-hg-compose',
+          '.lr-end-skip',
+        ],
+        'hangout',
+      );
+      // The header has no dead controls (D-027): no chevron, and the unread count is plain text.
+      expect(await hg.locator('.lr-hg-back').count()).toBe(0);
       expect(meets(chat.skip, chat.log)).toBe(false);
 
       // ── Skip still works by finger: on to the end card ──────────────────
@@ -249,6 +309,18 @@ for (const vp of PHONES) {
         const grown = { l: b.l - 12, t: b.t - 4, r: b.r + 12, b: b.b + 4 };
         expect(meets(grown, clip), 'a control crowds the clipboard').toBe(false);
       }
+      await insideSafeArea(
+        page,
+        [
+          '.lr-end-title > *',
+          '.lr-end-safety',
+          '.lr-end-card > *',
+          '.lr-end-card a',
+          '.lr-end-card button',
+          '.lr-clip-note',
+        ],
+        'end card',
+      );
       // Nothing scrolls.
       const scroll = await page.evaluate(() => ({
         x: document.scrollingElement!.scrollWidth - window.innerWidth,

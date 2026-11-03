@@ -73,7 +73,6 @@ export class Hangout {
   private readonly composeText: HTMLElement;
   private readonly typingEl: HTMLElement;
   /** Phones (D-040): the conversation header's ‹, with a count of channels holding unread posts. */
-  private readonly backEl: HTMLElement;
   private readonly badgeEl: HTMLElement;
   private channel: ChannelId = HANGOUT_START;
   private talking = false;
@@ -116,7 +115,6 @@ export class Hangout {
     );
     this.topEl = h('div', { class: 'lr-hg-top' });
     this.badgeEl = h('span', { class: 'lr-hg-badge-count' });
-    this.backEl = h('span', { class: 'lr-hg-back' }, h('i', null, '‹'), this.badgeEl);
     this.logsEl = h('div', { class: 'lr-hg-logs' });
     this.composeText = h('span', { class: 'lr-hg-draft' });
     this.compose = h(
@@ -246,13 +244,14 @@ export class Hangout {
     row.setAttribute('data-on', '');
     row.removeAttribute('data-unread');
     const ch = HANGOUT_CHANNELS.find((c) => c.id === id)!;
-    // On phones the header is the whole navigation (D-040): ‹, the channel, then the server.
+    // On phones the header is all the chrome there is (D-040): the channel, the server, and a
+    // plain count of other channels with news (information only: nothing here is a control).
     this.topEl.replaceChildren(
-      this.backEl,
       h('span', { class: 'lr-hg-hash' }, '#'),
       h('span', { class: 'lr-emo' }, ch.emoji),
       h('span', { class: 'lr-hg-top-name' }, ch.name),
       h('span', { class: 'lr-hg-top-server' }, HANGOUT_SERVER),
+      this.badgeEl,
     );
     (this.compose.firstChild as HTMLElement).textContent =
       `${HANGOUT_COPY.messagePrefix}${ch.name}`;

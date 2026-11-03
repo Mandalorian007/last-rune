@@ -91,3 +91,11 @@ These are PM decisions. Phone only: the desktop and iPad output must be unchange
 **Proposals for the PM.**
 - (a) A phone one-line credit under Back would need either dropping the footer line or a second column; I left it out.
 - (b) The ‹ chevron is decorative, as in the real app's header. Tapping it does nothing, and Skip remains the only exit. If the review reads it as a button, make it a no-op channel-list peek or remove it.
+
+### 2026-11-03: PM review fixes (notch safety, no dead chevron)
+- **Notch safety.** The game was right; the capture was wrong. `#app` is inset by `env(safe-area-inset-*)` and clips, and the hangout, caption, Skip and end card all sit inside it. Probe on iphone with insets: `#app` 47..797, `.lr-hg` 47..797.
+  - The capture's `insets()` called `document.documentElement.style.setProperty(...)` in an init script, before `<html>` exists. That threw, so the `#app` inset style was never added, and the first iphone/promax "after" sheets ran edge to edge.
+  - Fixed in `scripts/playtest/mobile-3-ending.spec.ts`: the inset style is now applied on DOMContentLoaded, and the script fails if `#app` isn't inset.
+  - **Heads-up:** `scripts/playtest/mobile-2.spec.ts` and `pm-review.spec.ts` have the same pattern, so their iphone/promax shots may not have been notch-inset either. I did not touch them.
+  - `tests/e2e/mobile-ending.spec.ts` now asserts that the insets applied (`#app` at 47/59 px). It also asserts that every visible piece sits inside the safe area: caption, Skip, header items, avatars, names, text, form, reactions, system lines, typing line, composer, title, safety card, card links and buttons, and the clipboard note.
+- **Dead control removed (D-027).** The ‹ chevron is gone. The unread count is now plain text after the server name ("· 3 unread", amber, no pill or glow, `pointer-events: none`), and it brightens briefly when a new channel gets news. The e2e checks that no `.lr-hg-back` exists.
