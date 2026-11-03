@@ -31,6 +31,9 @@ const BUSES: { bus: BusName; label: string }[] = [
 
 import { TEXT_SCALES, type TextScale, toTextScale } from './text-scale';
 
+/** The rows a phone's Settings fold may end on (mobile-5-chrome). */
+const ROWS = 'h3, .tc-field, .lr-choice, .lr-save-box, .lr-row, .lr-settings-danger, .lr-note';
+
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 function select<T extends string>(
@@ -95,7 +98,8 @@ export function openSettings(deps: SettingsPanelDeps): void {
     'Reduce flashes',
     settings.stored.reduceFlashes ?? 'auto',
     [
-      ['auto', 'With reduced motion'],
+      // Phones (mobile-5-chrome): "Auto / On / Off"; Auto follows Reduced motion.
+      ['auto', phone ? 'Auto' : 'With reduced motion'],
       ['on', 'On'],
       ['off', 'Off'],
     ],
@@ -131,8 +135,14 @@ export function openSettings(deps: SettingsPanelDeps): void {
   const area = h('textarea', {
     'aria-label': 'Save code',
     spellcheck: 'false',
-    placeholder: 'Export to get a save code, or paste one here and Import.',
+    placeholder: phone
+      ? 'Tap Export for a code to keep, or paste a code here and tap Import.'
+      : 'Export to get a save code, or paste one here and Import.',
   });
+  // Phones (mobile-5-chrome): the code sits in a labelled box, not a bare developer field.
+  const saveBox = phone
+    ? h('label', { class: 'lr-save-box' }, h('span', null, 'Save code'), area)
+    : area;
   const note = h('p', { class: 'lr-note', role: 'status' });
   const exportBtn = button('Export save', () => {
     save.flush();
@@ -226,11 +236,19 @@ export function openSettings(deps: SettingsPanelDeps): void {
           null,
           h('h3', null, 'Save'),
           persistent,
-          area,
+          saveBox,
           h('div', { class: 'lr-row' }, exportBtn, importBtn, phone ? null : resetBtn),
           note,
-          // Phones: Reset gets a row of its own, away from Import (D-040).
-          phone ? h('div', { class: 'lr-row lr-settings-danger' }, resetBtn) : null,
+          // Phones: Reset gets a group of its own, away from Import (D-040, mobile-5-chrome).
+          phone
+            ? h(
+                'div',
+                { class: 'lr-settings-danger', role: 'group', 'aria-label': 'Start over' },
+                h('h4', null, 'Start over'),
+                h('p', null, 'Erases machines and journal pages. Settings stay.'),
+                resetBtn,
+              )
+            : null,
         ),
       ),
     ),
@@ -254,6 +272,36 @@ export function openSettings(deps: SettingsPanelDeps): void {
     cols.addEventListener('scroll', sync, { passive: true });
     requestAnimationFrame(sync);
     new ResizeObserver(sync).observe(cols);
+    // mobile-5-chrome: the fold falls on a whole row, so no header or control is cut in half
+    // under the footer; the thumb and "Graphics & Save ▾" say there is more.
+    const fold = () => {
+      if (!cols.isConnected) {
+        refold.disconnect();
+        return;
+      }
+      cols.style.maxHeight = '';
+      const avail = cols.clientHeight;
+      if (cols.scrollHeight - avail <= 4) return;
+      // The lowest row end that fits and that no row in either column straddles.
+      const rows = [...cols.querySelectorAll<HTMLElement>(ROWS)].map((e) => ({
+        top: e.offsetTop,
+        bottom: e.offsetTop + e.offsetHeight,
+      }));
+      let end = 0;
+      for (const { bottom } of rows) {
+        if (bottom > avail || bottom <= end) continue;
+        if (rows.some((r) => r.top < bottom - 1 && r.bottom > bottom + 1)) continue;
+        end = bottom;
+      }
+      // Exactly at the row end: any more shows a sliver of the next row's frame.
+      if (end > 0) cols.style.maxHeight = `${Math.ceil(end)}px`;
+      sync();
+    };
+    const refold = new ResizeObserver(fold);
+    requestAnimationFrame(() => {
+      fold();
+      refold.observe(ui.root);
+    });
   }
   const content = h(
     'div',

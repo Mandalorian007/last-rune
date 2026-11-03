@@ -295,6 +295,109 @@ ${P} .lr-j-slip .lr-j-new {
 `;
 /* end mobile-4-chrome */
 
+/* mobile-5-chrome */
+const CHROME5_CSS = /* css */ `
+/* ── mobile-5-chrome: the hall explains itself; menus fold cleanly (D-040 addendum 3) ───── */
+/* Every door wears a plate (hall-scene doorPlates): an open door's name in gold, a restored
+   one's with a ✓, a locked one's padlock and the gem colours it still needs. Phones only. */
+.tc-overlay:not([data-phone]) :is(.lr-doors, .lr-hud-menu-label, .lr-hud-menu-new) { display: none !important; }
+${P} .lr-doors { position: absolute; inset: 0; pointer-events: none; }
+${P} .lr-doors[hidden] { display: none; }
+${P} .lr-door {
+  position: absolute; transform: translateX(-50%); box-sizing: border-box; width: max-content;
+  max-width: var(--lr-door-max); display: flex; align-items: center; justify-content: center;
+  gap: ${cpx(3)}; padding: ${cpx(1)} ${cpx(4)}; border-radius: ${cpx(6)};
+  font: 600 ${tpx(12)}/1.1 var(--tc-font-display, serif); letter-spacing: 0.2px; text-align: center;
+  text-wrap: balance; color: #f4e6c4; background: rgb(16 11 7 / 0.86);
+  border: 1px solid rgb(232 192 106 / 0.4); box-shadow: 0 ${cpx(1)} ${cpx(4)} rgb(0 0 0 / 0.7);
+}
+${P} .lr-door[data-status="unlocked"] { color: #ffd77a; border-color: rgb(255 215 122 / 0.8); }
+${P} .lr-door[data-status="solved"] { color: #e9f4e4; border-color: rgb(110 220 160 / 0.6); }
+${P} .lr-door-tick { color: #6ee0a0; font-weight: 700; }
+${P} .lr-door[data-status="locked"] { color: #c9bea8; gap: ${cpx(4)}; padding: ${cpx(2)} ${cpx(6)}; background: rgb(10 8 6 / 0.88); border-color: rgb(200 190 170 / 0.3); }
+${P} .lr-door-lock { width: ${cpx(10)}; height: ${cpx(12)}; flex: none; }
+${P} .lr-door-gem {
+  width: ${cpx(10)}; height: ${cpx(10)}; flex: none; border-radius: 50%; background: var(--gem);
+  box-shadow: 0 0 ${cpx(3)} var(--gem); border: 1px solid rgb(0 0 0 / 0.6);
+}
+${P} .lr-door b { font: 700 ${tpx(12)}/1 var(--tc-font-display, serif); }
+/* The suggested door's tag sits on its top edge, never closer than 5 px to the band's top. */
+${P} .lr-hall-next-tag { top: max(calc(var(--lr-next-top, 0px) - ${cpx(10)}), calc(${CT} + ${cpx(5)})); }
+/* A tapped door's card: name, then what it is waiting for, in words. */
+${P} .lr-nameplate {
+  z-index: 2; white-space: normal; width: max-content; max-width: ${cpx(230)}; text-align: center;
+  padding: ${cpx(4)} ${cpx(10)}; font-size: ${tpx(13)}; line-height: 1.2; border-radius: ${cpx(8)}; border-width: 1px;
+}
+${P} .lr-nameplate small { font-size: ${tpx(12)}; line-height: 1.25; margin-top: ${cpx(1)}; color: #d9c9a4; }
+/* The ☰ says "Menu" under it; when the journal has new pages, a tag under it says so. */
+${P} .lr-hud .lr-hud-menu { position: relative; flex-direction: column; gap: 0; height: ${cpx(44)}; }
+${P} .lr-hud .lr-hud-menu > span { font-size: ${cpx(18)}; line-height: 1; }
+${P} .lr-hud-menu-label { display: block; font: 600 ${tpx(12)}/1 var(--tc-font-display, serif); letter-spacing: 0.3px; margin-top: ${cpx(1)}; }
+${P} .lr-hud-menu-new {
+  position: absolute; top: calc(100% + ${cpx(3)}); right: 0; width: ${cpx(44)}; box-sizing: border-box;
+  padding: ${cpx(2)} 0; border-radius: ${cpx(6)}; text-align: center;
+  font: italic 700 ${tpx(12)}/1.05 var(--tc-font-body, serif); color: #2a1206; background: #ffb27a;
+  box-shadow: 0 ${cpx(1)} ${cpx(4)} rgb(0 0 0 / 0.7);
+}
+${P} .lr-hud-menu-new[hidden], ${P} .lr-hud[data-open] .lr-hud-menu-new { display: none; }
+/* FUSE's card carries his name (his portrait is hidden on phones), except at an altar, where
+   he sits right beside it. */
+${P}:not(:has(.lr-altar[data-phone])) .tc-caption-text::before {
+  content: 'FUSE '; font: 700 ${tpx(12)}/1 var(--tc-font-display, serif); letter-spacing: 0.6px; color: #e8c06a;
+}
+/* Settings: the fold ends on a whole row (settings-panel fold()), so no fade is needed; the
+   save code sits in a labelled box; Start over is a group of its own, ruled off in red. */
+${P} .lr-settings-scroll > .lr-settings-cols { box-sizing: border-box; mask-image: none; }
+${P} .lr-save-box {
+  display: flex; flex-direction: column; gap: ${cpx(2)}; margin: ${cpx(4)} 0 0; padding: ${cpx(4)} ${cpx(8)} ${cpx(6)};
+  border: 1px solid rgb(232 192 106 / 0.45); border-radius: ${cpx(8)}; background: rgb(232 192 106 / 0.06);
+}
+${P} .lr-save-box > span { font: 600 ${tpx(12)}/1.2 var(--tc-font-display, serif); color: #e8c06a; letter-spacing: 0.3px; }
+${P} .lr-settings .lr-save-box textarea {
+  height: ${cpx(38)}; margin: 0; padding: ${cpx(4)} ${cpx(6)}; resize: none; box-sizing: border-box;
+  font: ${tpx(12)}/1.3 var(--tc-font-body, serif); color: #f4e6c4; background: rgb(10 7 4 / 0.55);
+  border: 1px solid rgb(232 192 106 / 0.25); border-radius: ${cpx(5)};
+}
+${P} .lr-settings .lr-save-box textarea::placeholder { color: rgb(244 230 196 / 0.6); font-style: italic; }
+${P} .lr-settings-danger {
+  margin: ${cpx(10)} 0 ${cpx(4)}; padding: ${cpx(4)} ${cpx(8)} ${cpx(2)}; border: 1px solid rgb(224 102 76 / 0.45);
+  border-radius: ${cpx(8)}; background: rgb(110 29 18 / 0.18);
+}
+${P} .lr-settings-danger h4 { margin: 0; font: 600 ${tpx(12)}/1.3 var(--tc-font-display, serif); letter-spacing: 1px; text-transform: uppercase; color: #ff9c86; }
+${P} .lr-settings-danger p { margin: ${cpx(1)} 0 0; font-size: ${tpx(12)}; line-height: 1.3; color: #e7d3c8; }
+${P} .lr-settings-danger .tc-button { min-height: ${cpx(36)}; margin: ${cpx(4)} 0; }
+${P} .lr-settings h3 { font-size: ${tpx(12.5)}; }
+/* Codex on the shortest phones: the rule and its formula sit beside the gem, FUSE's note
+   under them, so the whole rule shows without scrolling. */
+@media (max-height: 330px) {
+  ${P} .lr-plate, ${P} .lr-niche { grid-row: 3 / span 2; align-self: start; }
+  ${P} .lr-codex-rule { grid-column: 2; grid-row: 3; margin-top: 0; }
+  ${P} .lr-codex-maths { grid-column: 2; grid-row: 4; align-self: start; }
+  ${P} .lr-margin { grid-column: 1 / -1; grid-row: 5; align-self: start; margin-top: ${cpx(6)}; }
+}
+${P} .lr-codex-status { font-size: ${tpx(12)}; }
+/* Chrome text floor 12 px: the Yours / Not met yet / NEW tags and FUSE's margin label. */
+${P} .lr-codex-page .lr-status, ${P} .lr-codex-page .lr-new, ${P} .lr-margin b {
+  font-size: ${tpx(12)}; letter-spacing: 0.6px;
+}
+/* Journal: the page number at 13 px ink, and the page arrows beside the book, not over its
+   edges: ‹ left of the book, › in the right lane under the ✕. */
+${P} .lr-j-folio { display: flex; justify-content: center; white-space: nowrap; font-size: ${tpx(13)}; font-weight: 700; color: #3d2818; }
+${P} .lr-j-folio[hidden] { display: none; }
+${P} .lr-journal .lr-j-turn[aria-label="Previous page"] { transform: translate(calc(-26px - ${cpx(54)}), ${cpx(-4)}); }
+${P} .lr-journal .lr-j-turn[aria-label="Next page"] { left: auto !important; right: calc(-1 * var(--lr-bar, 0px)); transform: translateY(${cpx(-4)}); }
+${P} .lr-j-head p { font-size: ${tpx(12)}; }
+/* Hangout: no "unread" count; nothing there is for the player to open (D-027). */
+${P} .lr-hg-badge-count { display: none !important; }
+/* End card on the narrowest phones (SE): the column moves further left, so the dropped
+   clipboard on the right stays clear of "Copy Ko-fi link". Order unchanged (D-034). */
+@media (max-width: 700px) {
+  ${P} :is(.lr-end-title, .lr-end-credits, .lr-end-card):not(#lr-none) { right: 600px; }
+  ${P} .lr-end-safety:not(#lr-none) { left: calc(50% - 300px); }
+}
+`;
+/* end mobile-5-chrome */
+
 export const PHONE_CSS = /* css */ `
 /* The edge columns live in the letterbox bars, outside the 16:9 box (#app still clips). */
 ${P} { overflow: visible; }
@@ -690,4 +793,4 @@ ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cp
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }
 ${P} .lr-title-coffee { min-height: ${cpx(24)}; padding: 0 ${cpx(8)}; font-size: ${tpx(11)}; }
 ${P} .lr-release { font-size: ${tpx(11)}; }
-${CHROME_CSS}${CHROME4_CSS}`;
+${CHROME_CSS}${CHROME4_CSS}${CHROME5_CSS}`;

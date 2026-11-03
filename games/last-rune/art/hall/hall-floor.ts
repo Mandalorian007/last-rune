@@ -105,11 +105,14 @@ export class HallFloor {
   private readonly back: DrawParams[];
   private readonly front: DrawParams[];
   private readonly lamps: DrawParams[];
+  /** The props as designed, matching `back` then `front` (for `layout`). */
+  private readonly props: Prop[];
 
   constructor(r: Renderer) {
     this.mat = floorMaterial(r);
     this.back = BACK.map((p) => dp(p));
     this.front = FRONT.map((p) => dp(p));
+    this.props = [...BACK, ...FRONT];
     // Lamps: hook at the ceiling, shade 34 px above the quad's bottom.
     this.lamps = HALL_LAMPS.map((l) => {
       const h = l.y + 34;
@@ -138,6 +141,26 @@ export class HallFloor {
   set edgeGauge(on: boolean) {
     const d = this.back[RIGHT_RISER];
     if (d?.params) (d.params as number[])[3] = on ? 4 : 0;
+  }
+
+  /**
+   * A phone's widened hall (mobile-5-chrome, `hall-frame.ts`): every prop moves out from the
+   * centre line by `spread`, the ceiling cables stretch with their spans, and the runs that cross
+   * the whole wall reach `halfWidth` either side of the centre. `spread` 1 is the design.
+   */
+  layout(spread: number, halfWidth: number): void {
+    const cx = 960;
+    const all = [...this.back, ...this.front];
+    this.props.forEach((p, i) => {
+      const d = all[i]!;
+      const [x, , w, , kind] = p;
+      d.x = cx + (x - cx) * spread;
+      if (w >= 1920) d.w = Math.max(w, halfWidth * 2 + 40);
+      else if (kind === K.cable && p[1] < 60) d.w = w * spread;
+    });
+    HALL_LAMPS.forEach((l, i) => {
+      this.lamps[i]!.x = cx + (l.x - cx) * spread;
+    });
   }
 
   /** Wall layer: pipes, cables, lamps, junction boxes, rails, cart (one draw call). */

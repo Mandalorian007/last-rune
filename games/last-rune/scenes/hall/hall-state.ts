@@ -193,10 +193,11 @@ export function lineForAlcove(a: AlcoveModel): FuseLine | undefined {
  * The name plate's status line. A locked door names what it is waiting for in words, so
  * the coloured sockets aren't the only cue.
  */
-export function alcoveNote(a: AlcoveModel): string {
+export function alcoveNote(a: AlcoveModel, touch = false): string {
   if (a.status === 'solved') return 'Restored';
   if (a.status === 'unlocked') {
-    return a.suggested ? 'Open · try this one next' : 'Open · click or Enter to restore';
+    if (a.suggested) return 'Open · try this one next';
+    return touch ? 'Open · tap to restore' : 'Open · click or Enter to restore';
   }
   const needs = a.missing.map((m) => (m.from ? `${m.label} (from ${m.from})` : m.label));
   if (a.missingMachines > 0) {

@@ -62,3 +62,59 @@ Gate review 2 (2026-11-03) scored 6 / 6 / 6.5 / 6.5, a fail. The PM checked thes
 - The log in this file is updated.
 
 ## Log
+
+**2026-11-03 (mobile-5-chrome agent).** Branch `ws/mobile-5-chrome`, main merged (72cdadf).
+
+What changed (phones only; desktop and iPad keep `IDENTITY_FRAME` and unchanged CSS):
+- **Door plates** (`ui/hud.ts` `doors()`, built in `hall-scene.ts` `doorPlates()`):
+  - every door has a plate under it;
+  - an open door shows its name; a solved door shows ✓ and its name, with a green edge;
+  - a locked door shows a lock, a ≥10 px gem pip for each missing gem, and "+N" for any machines still needed;
+  - each plate's width is capped at the gap to the next door in its row, so plates never overlap;
+  - the Intake Desk plate is clamped above the screen's bottom edge.
+
+  Tapping a door still gives the named card (e.g. "Crane · Locked · needs Gate (from Relay Tower)"). Tapping an open door a second time opens it, as before.
+- **The hall fills the width.** This is new code in `scenes/hall/hall-frame.ts`, which is pure and has unit tests.
+  - On a short view the camera zooms out about the doorway band, never below 2/3, and centres it in the visible view.
+  - The wall and floor are baked wider (`HALL_WIDE`).
+  - The door columns spread outward (up to 1.6×) to use the width, clear of the ☰ column.
+  - Props, candles, lamps and slots follow the spread.
+
+  Side bars are now ≤3% on all four phones (previously ~11.5% on Android), and the Intake Desk is whole on SE.
+- **FUSE's card** reads "FUSE" before the line and stays off the doors. On the title screen, FUSE's caption avoids FUSE himself (`FUSE_ZONE`). The title's top margin is now ≥8 px (`FILL_BANDS.title.focusY` 505).
+- **Settings:**
+  - the fold falls exactly on a whole row that no row in either column straddles, so no header is cut under the footer;
+  - the save code sits in a labelled "Save code" box;
+  - Reset sits in a red "Start over" group with a one-line warning;
+  - Reduce flashes reads Auto / On / Off.
+- **SE Codex** (`max-height: 330px`): the rule and the formula sit beside the gem art; FUSE's note runs full-width below and fades at the bottom. The Yours, NEW and Not met yet tags, and the FUSE label, are now 12 px.
+- **Menu:** the button is labelled "Menu", with a peach "New page"/"New pages" pill under it when there is something new.
+- **Journal:** the page number is a 13 px bold folio. The arrows sit off the pages: the left one left of the book, the right one in the right lane under the ✕ on SE.
+- **Leftovers:**
+  - no hangout unread count;
+  - on SE the end-card column moves left, so the clipboard prop clears "Copy Ko-fi link"; the button order is unchanged (D-034).
+- **Bug found in captures and fixed:** on touch, a door card stayed on screen over Settings and the Codex after a tap. The hall now drops the hover while any UI panel is open, and doesn't hit-test doors under one.
+
+Tests:
+- `tests/e2e/mobile-chrome.spec.ts`:
+  - door checks now use the scene's own model and frame;
+  - `HALL_BAR` is 0.03, and the ring, tag and plates must sit 4 px inside the screen;
+  - a new "plates and floors" test per phone checks:
+    - plate content, no overlaps and pips ≥10 px;
+    - the Menu label and the New page pill;
+    - a locked-door tap card that goes when Settings opens;
+    - no row cut at the Settings fold, plus the save box, the Start over group and Auto;
+    - rule and formula wholly on screen on every Codex tab;
+    - a 12 px drawn-text floor on the hall chrome, Settings, Codex and Journal.
+- `tests/e2e/mobile-ending.spec.ts`: the hangout unread count is hidden.
+- `scenes/hall/hall-frame.test.ts`: the hall framing.
+- `scripts/playtest/mobile-4-chrome.spec.ts` gains:
+  - `M4_OUT`;
+  - phone shots of a locked-door tap card, the open menu and a third Codex page.
+
+Sheets: `docs/design/screens/local/mobile-5-chrome/` (`m5chrome-<vp>.png`, `m5chrome-<vp>-ending.png`, and `mobile-2/m5chrome-<vp>.png`).
+
+Softness:
+- On SE, two-word door names ("Press Unit 4", "Storm Cell II") wrap onto two lines to stay inside the gap between doors.
+- On SE, the brief tap card can cover a neighbouring plate while it shows.
+- The "+11" after a long row of gems is tight against its pips on SE.

@@ -24,6 +24,13 @@ import {
   socketColour,
 } from '../../rules/progression';
 import type { MachineId } from '../../rules/types';
+import {
+  HALL_WIDE,
+  type HallFrame,
+  halfWorldWidth,
+  IDENTITY_FRAME,
+  spreadX,
+} from '../../scenes/hall/hall-frame';
 import type { AlcoveModel, AlcoveStatus, HallModel } from '../../scenes/hall/hall-state';
 import type { HallView, HallViewFrame, ViewContext } from '../../scenes/views';
 import {
@@ -91,6 +98,9 @@ const STATE: Record<AlcoveStatus, 0 | 1 | 2> = { locked: 0, unlocked: 1, solved:
 
 interface Slot {
   readonly def: MachineDef;
+  /** Door centre, world px: the model's (moved out on a phone's widened hall). */
+  x: number;
+  y: number;
   readonly alcove: Alcove;
   /** The machine silhouette inside (one instance of the shared machine material). */
   readonly machine: DrawParams;
@@ -129,8 +139,18 @@ export interface HallKit {
   readonly fxMat: Material;
   readonly machineMat: Material;
   readonly fuse: Fuse;
+  /** Phones: the wall and floor baked wide enough for the zoomed-out hall (made on first use). */
+  wide?: { readonly wall: StoneSurface; readonly floor: StoneSurface };
 }
 const kits = new WeakMap<Renderer, HallKit>();
+
+function wideStone(r: Renderer, k: HallKit): NonNullable<HallKit['wide']> {
+  k.wide ??= {
+    wall: createStoneWall(r, { width: HALL_WIDE, seed: 7 }),
+    floor: createStoneFloor(r, { width: HALL_WIDE, height: H - HALL_FLOOR_Y, seed: 3 }),
+  };
+  return k.wide;
+}
 
 export function hallKit(r: Renderer): HallKit {
   let k = kits.get(r);
@@ -208,6 +228,13 @@ export class CathedralHallView implements HallView {
     candle(642, 1064, 58, 8, 0.8),
   ];
 
+  /** The candles' x as designed (a widened hall moves them out with the doors). */
+  private readonly candleX = this.allCandles.map((c) => c.x);
+  private layout: HallFrame = IDENTITY_FRAME;
+  /** The side wall-washers' x (they follow the outer door columns). */
+  private washX = [290, 1630];
+  private lampX = HALL_LAMPS.map((l) => l.x);
+
   // Preallocated draw state.
   private readonly winCol: number[][] = WINDOWS.map(() => [0, 0, 0]);
   private readonly windowU = new Float32Array(HALL_WINDOW_UNIFORM_FLOATS);
@@ -240,6 +267,8 @@ export class CathedralHallView implements HallView {
       const accent = def.grants ? SOCKET_RGB[socketColour(def.grants)] : GOLD;
       const slot: Slot = {
         def,
+        x: def.alcove.x,
+        y: def.alcove.y,
         alcove: new Alcove(r, { x: def.alcove.x, y: def.alcove.y, size: ALCOVE_SIZE }),
         machine: {
           x: def.alcove.x,
@@ -295,6 +324,8 @@ export class CathedralHallView implements HallView {
 
   update(dt: number, s: HallViewFrame): void {
     this.time += dt;
+    const layout = s.layout ?? IDENTITY_FRAME;
+    if (layout !== this.layout) this.relayout(layout);
     if (s.model !== this.model) this.sync(s.model);
     const t = this.time;
 
@@ -352,12 +383,20 @@ export class CathedralHallView implements HallView {
     kit.candles.light(L);
 
     frame.clear(0, 0, 0, 1);
-    kit.wall.draw(frame, W / 2, H / 2, W, H, undefined, 1, 0.06);
-    kit.floor.draw(
+    // A zoomed-out phone hall shows past the design's sides: the wide bake covers it.
+    const wide = this.layout.zoom < 1 ? wideStone(this.vc.renderer, kit) : null;
+    const wall = wide?.wall ?? kit.wall;
+    const floor = wide?.floor ?? kit.floor;
+    if (wide) {
+      wall.light(L);
+      floor.light(L);
+    }
+    wall.draw(frame, W / 2, H / 2, wall.width, H, undefined, 1, 0.06);
+    floor.draw(
       frame,
       W / 2,
       HALL_FLOOR_Y + (H - HALL_FLOOR_Y) / 2,
-      W,
+      floor.width,
       H - HALL_FLOOR_Y,
       undefined,
       1,
@@ -401,6 +440,30 @@ export class CathedralHallView implements HallView {
 
   // ── model ─────────────────────────────────────────────────────────────────
 
+  /** A phone's widened hall: props, candles and side lights move out with the door columns. */
+  private relayout(f: HallFrame): void {
+    this.layout = f;
+    this.floorProps.layout(f.spread, halfWorldWidth(f));
+    this.allCandles.forEach((c, i) => {
+      c.x = spreadX(f, this.candleX[i]!);
+    });
+    this.washX = [spreadX(f, 290), spreadX(f, 1630)];
+    this.lampX = HALL_LAMPS.map((l) => spreadX(f, l.x));
+  }
+
+  /** Move a slot's door, machine and glow to the model's position. */
+  private place(slot: Slot, x: number, y: number): void {
+    if (slot.x === x && slot.y === y) return;
+    slot.x = x;
+    slot.y = y;
+    slot.alcove.x = x;
+    slot.alcove.y = y;
+    slot.machine.x = x;
+    slot.machine.y = y - HALL_MACHINE_LIFT;
+    slot.pool.x = x;
+    slot.pool.y = y;
+  }
+
   private sync(model: HallModel): void {
     this.model = model;
     this.byId.clear();
@@ -412,6 +475,7 @@ export class CathedralHallView implements HallView {
       if (a.status === 'solved') solved++;
       const slot = this.slots.get(a.id);
       if (!slot) continue;
+      this.place(slot, a.x, a.y);
       this.applyStatus(slot, a);
     }
     const total = model.alcoves.length;
@@ -544,20 +608,21 @@ export class CathedralHallView implements HallView {
       L.add(win.x, win.y + 40 * m, 800 + 400 * m, c, 0.34 - 0.1 * this.level + f * 2.4, 280);
     }
     // Low wall-washers on each wing so the side niches never fall to black.
-    L.add(290, 400, 560, COOL, 0.26, 240);
-    L.add(1630, 400, 560, COOL, 0.26, 240);
+    L.add(this.washX[0]!, 400, 560, COOL, 0.26, 240);
+    L.add(this.washX[1]!, 400, 560, COOL, 0.26, 240);
     this.kit.candles.addLights(L, this.litCandles);
     // The two wing lamps (the centre pair sits in the seal's and windows' light already).
-    for (const l of HALL_LAMPS) {
-      if (l.x === 325 || l.x === 1595) L.add(l.x, l.y + 30, 420, WARM, 0.75 * this.lamp, 120);
-    }
+    HALL_LAMPS.forEach((l, i) => {
+      if (l.x === 325 || l.x === 1595)
+        L.add(this.lampX[i]!, l.y + 30, 420, WARM, 0.75 * this.lamp, 120);
+    });
     // The seal: amethyst ember while sealed, gold once open.
     const so = this.sealOpen;
     L.add(this.sealX, this.sealY, 520, so > 0.5 ? GOLD : AMETHYST, 0.25 + 0.75 * so, 140);
     // Hover: gold light on the alcove under the pointer.
     const hov = s.focus ?? s.hover;
     const hs = hov ? this.slots.get(hov) : undefined;
-    if (hs) L.add(hs.def.alcove.x, hs.def.alcove.y + 30, 360, GOLD, 0.9, 150);
+    if (hs) L.add(hs.x, hs.y + 30, 360, GOLD, 0.9, 150);
     // Restored machines: warm light from inside, most recent first.
     for (const slot of this.warmOrder) {
       const al = slot.alcove.light;
@@ -657,8 +722,8 @@ export class CathedralHallView implements HallView {
     slot: Slot,
     phase: number,
   ): void {
-    ring.dp.x = slot.def.alcove.x;
-    ring.dp.y = slot.def.alcove.y - 2;
+    ring.dp.x = slot.x;
+    ring.dp.y = slot.y - 2;
     ring.dp.w = ALCOVE_SIZE * 0.78 + 36;
     ring.dp.h = ALCOVE_SIZE * 0.98 + 36;
     ring.params[2] = phase;
@@ -667,7 +732,7 @@ export class CathedralHallView implements HallView {
 
   private steerFuse(target: MachineId | null, s: HallViewFrame, dt: number): void {
     const fuse = this.kit.fuse;
-    let x = 330;
+    let x = spreadX(this.layout, 330);
     let lx: number | null = null;
     let ly = 0;
     if (target) {
@@ -675,9 +740,10 @@ export class CathedralHallView implements HallView {
       if (a) {
         const side = a.x < W / 2 ? 1 : -1;
         x = a.x + side * 130;
-        // Keep clear of the intake desk and the seal's candles.
+        // Keep clear of the intake desk and the seal's candles, and on screen.
         if (Math.abs(x - W / 2) < 265) x = W / 2 + (a.x <= W / 2 ? -265 : 265);
-        x = Math.min(W - 90, Math.max(90, x));
+        const edge = halfWorldWidth(this.layout) - 90;
+        x = Math.min(W / 2 + edge, Math.max(W / 2 - edge, x));
         lx = a.x;
         ly = a.y;
       }

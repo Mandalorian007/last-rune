@@ -10,10 +10,10 @@ import { DEV_URL, waitFrames } from '../../tests/e2e/helpers';
 //   M4_TAG=after pnpm exec playwright test -c scripts/playtest/playwright.config.ts mobile-4-chrome
 // Writes docs/design/screens/local/mobile-4-chrome/<tag>/<viewport>/*.png and
 // docs/design/screens/local/mobile-4-chrome/<tag>-<viewport>[-ending].png. M4_ONLY=iphone,se.
-// M4_PART=chrome|ending runs one half. Run desktop/iPad with --workers=1 (see mobile-3-ending).
+// M4_PART=chrome|ending runs one half. M4_OUT=<dir> writes somewhere else (mobile-5-chrome). Run desktop/iPad with --workers=1 (see mobile-3-ending).
 
 const TAG = process.env.M4_TAG ?? 'after';
-const OUT = resolve('docs/design/screens/local/mobile-4-chrome');
+const OUT = resolve(process.env.M4_OUT ?? 'docs/design/screens/local/mobile-4-chrome');
 const VIEWPORTS = [
   { name: 'iphone', width: 844, height: 340, inset: 47, phone: true },
   { name: 'se', width: 667, height: 320, inset: 0, phone: true },
@@ -164,6 +164,32 @@ for (const vp of VIEWPORTS) {
         await page.waitForTimeout(600);
         await shot('02-hall-fuse');
         await page.evaluate(() => (window as G).__game.fuse.hush());
+        // mobile-5-chrome: tapping a locked door names it and says what it needs; the menu open.
+        if (vp.phone) {
+          const at = await page.evaluate(() => {
+            const st = (window as G).__game.stack.top.state;
+            const a = st.model.alcoves.find((x: G) => x.status === 'locked');
+            if (!a) return null;
+            const f = st.frame;
+            const ov = document.querySelector('.tc-overlay')!.getBoundingClientRect();
+            const k = ov.width / 1920;
+            return {
+              x: ov.left + (960 + (a.x - 960 - f.camX) * f.zoom) * k,
+              y: ov.top + (540 + (a.y - 540 - f.camY) * f.zoom) * k,
+            };
+          });
+          if (at) {
+            await page.touchscreen.tap(at.x, at.y);
+            await page.waitForTimeout(700);
+            await shot('02-hall-tap-locked');
+            await page.evaluate(() => (window as G).__game.fuse.hush());
+          }
+          await page.locator('.lr-hud-menu').click();
+          await page.waitForTimeout(300);
+          await shot('02-hall-menu');
+          await page.keyboard.press('Escape');
+          await page.waitForTimeout(300);
+        }
         await page.evaluate(() => (window as G).__game.openSettings());
         await page.waitForTimeout(500);
         await shot('03-settings');
@@ -177,6 +203,12 @@ for (const vp of VIEWPORTS) {
         await page.evaluate(() => (window as G).__game.codex.open());
         await page.waitForTimeout(600);
         await shot('04-codex');
+        const tabs = page.locator('.lr-codex-nav button');
+        if (vp.phone && (await tabs.count()) > 2) {
+          await tabs.nth(2).click();
+          await page.waitForTimeout(300);
+          await shot('04-codex-3');
+        }
         await page.evaluate(() => (window as G).__game.ui.stack.clear());
         await page.evaluate(() => (window as G).__game.flow.openJournal());
         await page.waitForTimeout(1500);
