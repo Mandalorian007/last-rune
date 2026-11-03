@@ -3,6 +3,7 @@
  * shared `ui/styles.ts` stays untouched; injected once per document.
  */
 import { scaleFontSizes } from '../../ui/text-scale';
+import { STRIKE_CSS } from './strike-styles';
 
 const CSS = /* css */ `
 .tc-overlay .lr-altar { position: absolute; inset: 0; pointer-events: none; }
@@ -330,6 +331,6 @@ export function ensureAltarStyles(doc: Document = document): void {
   injected.add(doc);
   const el = doc.createElement('style');
   el.dataset.lr = 'altar';
-  el.textContent = scaleFontSizes(CSS);
+  el.textContent = scaleFontSizes(CSS + STRIKE_CSS);
   doc.head.append(el);
 }

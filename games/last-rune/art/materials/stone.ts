@@ -134,6 +134,8 @@ export function createStoneFloor(renderer: Renderer, opts: StoneOptions = {}): S
  * and a blocked socket as a plain recessed plate (no carved X). `collar` is a fixed gem's
  * bolted iron ring (mobile-4-board). `legal` is the steady ring round every socket the held gem
  * may go in (mobile-6-board): the same on every such socket, so the ringed set is the legal set.
+ * `fault` is the red mark a failed strike's Try line points at (mobile-7-strike): a thick red
+ * ring with dark keylines and a slow breathing halo, readable on pale stone and navy alike.
  */
 export type SocketState =
   | 'empty'
@@ -143,7 +145,8 @@ export type SocketState =
   | 'rim'
   | 'plate'
   | 'collar'
-  | 'legal';
+  | 'legal'
+  | 'fault';
 
 const SOCKET_STATE_ID: Record<SocketState, number> = {
   empty: 0,
@@ -154,6 +157,7 @@ const SOCKET_STATE_ID: Record<SocketState, number> = {
   plate: 5,
   collar: 6,
   legal: 7,
+  fault: 8,
 };
 
 /**
@@ -287,9 +291,11 @@ export class AltarSlab {
     p[2] = intensity;
     dp.x = o.x;
     dp.y = o.y;
-    // The collar reaches further than the other marks (1.42 radii, mobile-5-board).
-    const reach = state === 'collar' ? 1.42 : 1.3;
-    p[3] = state === 'collar' ? reach : 0;
+    // The collar and the fault ring reach further than the other marks (1.42 radii,
+    // mobile-5-board; mobile-7-strike).
+    const wide = state === 'collar' || state === 'fault';
+    const reach = wide ? 1.42 : 1.3;
+    p[3] = wide ? reach : 0;
     dp.w = this.socketRadius * 2 * reach;
     dp.h = this.socketRadius * 2 * reach;
     dp.tint = color;

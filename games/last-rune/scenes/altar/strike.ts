@@ -309,3 +309,57 @@ export function strikeStory(pulses: number, result: SimResult, beats: readonly C
   }
   return parts.join(' ');
 }
+
+// ── mobile-7-strike: the verdict and Strike read at a glance (D-040 addendum 5) ──────────────
+
+/**
+ * Phones: the verdict's headline for a fizzle, in plain words: what the charge did. The Try
+ * line under it (`nextStep`) gives the fix, so cause and fix read together. The short
+ * `causeText` stays for the tags over the board on big screens.
+ */
+const CAUSE_HEAD: Record<FizzleCause, string> = {
+  empty: 'The charge hit an empty socket',
+  blocked: 'The charge hit carved stone',
+  ground: 'The charge ran off the altar',
+  facing: 'The charge hit a gem turned the wrong way',
+  'odd-split': "A Split can't halve an odd charge",
+  'gate-alone': 'The Gate got charge on one side only',
+  spent: 'The charge met a gem already used this strike',
+};
+
+export function causeHeadline(c: FizzleCause): string {
+  return CAUSE_HEAD[c];
+}
+
+/**
+ * Phones, multi-strike altars: the verdict's headline in plain words, with the numbers left to
+ * the strike line under it (`strikesLine`): "Breaker tripped", "Not enough charge".
+ */
+export function failHead(m: MachineResult, outcome: 'over' | 'under'): string {
+  if (outcome === 'over') return 'Breaker tripped';
+  return m.readings.some((r) => r > 0) ? 'Not enough charge' : 'No charge reached this machine';
+}
+
+/**
+ * Phones, multi-strike altars: what each strike gave the machine the verdict is about, and
+ * what it needs, in plain words: "Strike 1: 0 · Strike 2: 8. Needs 20 in one strike." Empty on
+ * a one-strike altar (the gauge's "got" says it all).
+ */
+export function strikesLine(m: MachineResult, pulses: number): string {
+  if (pulses < 2 || m.readings.length === 0) return '';
+  const each = m.readings.map((r, i) => `Strike ${i + 1}: ${r}`).join(' · ');
+  return `${each}. Needs ${m.need} in one strike.`;
+}
+
+/**
+ * What Strike says it will do (phones): "Strike", or on a multi-strike altar "Strike (2 left)";
+ * while the strikes run, how many are left, then "Strike again" for the last; after a fail,
+ * "Try again". Always one short line.
+ */
+export function strikeLabel(pulses: number, state: 'edit' | 'strike' | 'fail', now = -1): string {
+  if (state === 'fail') return 'Try again';
+  if (pulses < 2) return 'Strike';
+  if (state === 'edit' || now < 0) return `Strike (${pulses} left)`;
+  if (now >= pulses - 1) return 'Strike again';
+  return `Strike (${pulses - now - 1} left)`;
+}

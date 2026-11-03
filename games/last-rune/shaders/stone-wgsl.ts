@@ -537,7 +537,8 @@ export const LIT_SURFACE_WGSL = /* wgsl */ `${LIGHTS_WGSL}
 /**
  * Socket state overlay, drawn over a baked socket (quad = 2.6 × socket radius).
  * params.x = state (1 blocked, 2 highlighted, 3 wanted: dotted ring in the needed colour, 4 rim,
- * 5 plate, 6 collar: the iron ring and rivets of a fixed gem, 7 legal: the held gem may go here),
+ * 5 plate, 6 collar: the iron ring and rivets of a fixed gem, 7 legal: the held gem may go here,
+ * 8 fault: the thick red ring a failed strike's Try line points at),
  * params.y = seed, params.z = intensity/pulse (0..1+). tint = highlight colour (linear).
  */
 export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
@@ -702,6 +703,24 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
     let c = mix(vec3f(0.015, 0.012, 0.01), tint, band / max(max(band, key * 0.7), 0.001));
     o.color = vec4f(c, a);
     o.emissive = vec4f(tint * band * in.emissive * 0.1 * k, a);
+    return o;
+  }
+  if (state == 8) {
+    // Fault (mobile-7-strike): the red mark. A solid band from 0.9 to 1.24 radii (at least
+    // 3 CSS px on the smallest phone socket), a dark keyline either side so it holds on pale
+    // stone and on the navy wall, a hot core line, and a halo that breathes slowly (~3 s).
+    let band = smoothstep(0.86, 0.9, r) * (1.0 - smoothstep(1.24, 1.28, r));
+    let key = smoothstep(0.76, 0.84, r) * (1.0 - smoothstep(1.3, 1.38, r));
+    let core = exp(-pow((r - 1.07) * 14.0, 2.0));
+    let breathe = 0.5 + 0.5 * sin(globals.time * 2.1);
+    let halo = exp(-max(r - 1.28, 0.0) * 18.0) * step(1.28, r) * (0.25 + 0.45 * breathe);
+    let red = mix(vec3f(0.93, 0.13, 0.08), vec3f(1.0, 0.62, 0.5), core * (0.55 + 0.35 * breathe));
+    let a = clamp(max(max(band, key * 0.85), halo) * min(k, 1.0), 0.0, 1.0);
+    let w = band / max(max(band, key * 0.85), 0.001);
+    var c = mix(vec3f(0.02, 0.01, 0.01), red, w);
+    c = mix(c, vec3f(1.0, 0.2, 0.12), halo * (1.0 - band) * (1.0 - key));
+    o.color = vec4f(c, a);
+    o.emissive = vec4f(tint * (band * 0.12 + halo * 0.25) * in.emissive * k, a);
     return o;
   }
   if (state == 2) {

@@ -354,7 +354,9 @@ export class SolveScene implements GameScene {
     if (cap && !cap.hidden && card) {
       const a = card.getBoundingClientRect();
       const b = cap.getBoundingClientRect();
-      crowd = b.height > 0 && b.top < a.bottom + 4 && b.left < a.right && b.right > a.left;
+      // mobile-7-strike: FUSE's line keeps a clear 12 CSS px under the card (and Continue,
+      // its foot), or steps out.
+      crowd = b.height > 0 && b.top < a.bottom + 12 && b.left < a.right && b.right > a.left;
     }
     if (crowd !== this.crowd) {
       this.crowd = crowd;

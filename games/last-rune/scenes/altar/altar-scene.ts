@@ -87,19 +87,24 @@ import {
   pickHint,
   type VoiceAsk,
 } from './moments';
+import { allReached, gaugeReach } from './reach';
 import { legalSockets, socketLooks } from './socket-looks';
 import {
   type Arrival,
   buildTimeline,
+  causeHeadline,
   causeText,
   type Fizzle,
+  failHead,
   failText,
   fizzles,
   nextStep,
   rootCell,
   rootFizzle,
   type StrikeTimeline,
+  strikeLabel,
   strikeStory,
+  strikesLine,
 } from './strike';
 import { arrivalNudges, firstSentence, type NewGems, newGems } from './teach';
 import {
@@ -459,6 +464,13 @@ export class AltarScene implements GameScene {
   private capKey2 = '';
   /** Phones: Strike's "twice" / "1 of 2" for multi-strike altars (the pips are for big screens). */
   private strikeCount: HTMLElement | null = null;
+  /**
+   * Strike's word (mobile-7-strike). Phones say what a tap does on one line: "Strike",
+   * "Strike (2 left)", "Strike again" while the last strike runs, "Try again" after a fail.
+   */
+  private strikeWord: HTMLElement | null = null;
+  /** Phones: one reach lamp per gauge, before Strike (see reach.ts). */
+  private lampEls: (HTMLElement | null)[] = [];
   /** Phones: one marker per tray slot (a used-up slash; the first visit's pulse). */
   private slotEls: HTMLElement[] = [];
   /** A gem has been taken from the tray at this visit (ends the first visit's tray pulse). */
@@ -599,6 +611,8 @@ export class AltarScene implements GameScene {
     this.strikePips.length = 0;
     this.strikeRow = null;
     this.strikeCount = null;
+    this.strikeWord = null;
+    this.lampEls.length = 0;
     this.lane = null;
     this.laneShift = 0;
     this.capKey2 = '';
@@ -835,6 +849,11 @@ export class AltarScene implements GameScene {
     this.undoBtn = btn('Undo', 'Z', () => this.undo(), false, 'undo', '\u21b6');
     this.clearBtn = btn('Clear', 'Del', () => this.clear(), false, 'clear', '\u2715');
     this.strikeBtn = btn('Strike', 'F', () => this.strike(), true, 'strike');
+    // The word in its own span, so phones can say what a tap will do (`setStrikeWord`).
+    const inner = this.strikeBtn.firstElementChild;
+    const word = [...(inner?.childNodes ?? [])].find((n) => n.nodeType === Node.TEXT_NODE);
+    this.strikeWord = h('span', { class: 'lr-strike-word' }, 'Strike');
+    if (word) word.replaceWith(this.strikeWord);
     const back = btn('Back', 'Esc', () => this.back(), false, 'back', '\u2190');
     this.subtitle = h('small');
     this.holdingEl = h('span', { class: 'lr-altar-holding', 'aria-hidden': 'true', hidden: true });
@@ -1267,6 +1286,7 @@ export class AltarScene implements GameScene {
    * once strike `now` fires, with that many pips lit.
    */
   private setStrikeRow(now: number): void {
+    this.setStrikeWord(now < 0 ? 'edit' : 'strike', now);
     if (!this.strikeRow) return;
     const n = this.puzzle.pulses;
     // Phones (mobile-5-board): the storm's card says the number is per strike ("Gives 8" /
@@ -1281,6 +1301,7 @@ export class AltarScene implements GameScene {
         : `Strike ${now + 1} of ${n}`;
     if (this.strikeCount)
       this.strikeCount.textContent = now < 0 ? timesWord(n) : `${now + 1} of ${n}`;
+
     this.strikePips.forEach((el, i) => {
       el.toggleAttribute('data-lit', i % n <= now);
     });
@@ -1288,6 +1309,16 @@ export class AltarScene implements GameScene {
     if (band) {
       if (this.dom?.isConnected) this.placePhoneLabels(band);
     } else if (this.stormLabel) this.clearOfBoard(this.stormLabel);
+  }
+
+  /**
+   * Phones (mobile-7-strike): Strike says what a tap will do, on one line (`strikeLabel`).
+   * Big screens keep "Strike" and the pips.
+   */
+  private setStrikeWord(state: 'edit' | 'strike' | 'fail', now = -1): void {
+    if (!this.strikeWord || !this.view.layout.phone) return;
+    const text = strikeLabel(this.puzzle.pulses, state, now);
+    if (this.strikeWord.textContent !== text) this.strikeWord.textContent = text;
   }
 
   /**
@@ -1411,10 +1442,19 @@ export class AltarScene implements GameScene {
     });
   }
 
-  private showVerdict(text: string, outcome: BoltOutcome, story = '', hint = '', cause = ''): void {
+  private showVerdict(
+    text: string,
+    outcome: BoltOutcome,
+    story = '',
+    hint = '',
+    cause = '',
+    strikes = '',
+  ): void {
     // The verdict sits where the subtitle is; the subtitle steps aside until the next edit.
     this.subtitle.style.display = 'none';
     this.verdict.textContent = text;
+    // Phones, multi-strike: each strike's reading, in words, right under the headline.
+    if (strikes) this.verdict.append(h('small', { class: 'lr-verdict-strikes' }, strikes));
     // Phones: where it went wrong rides in the verdict, not in a tag over the board.
     if (cause) this.verdict.append(h('small', { class: 'lr-verdict-cause' }, cause));
     if (story) this.verdict.append(h('small', { class: 'lr-verdict-story' }, story));
@@ -1635,8 +1675,21 @@ export class AltarScene implements GameScene {
   /** "Needs N" and, once charge has landed, "got M" plus one entry per strike on multi-strike. */
   private setNeed(i: number, need: number, got: number | null): void {
     const el = this.needs[i]!;
+    const phone = !!this.view.layout.phone;
+    // Phones, before Strike (mobile-7-strike): a lamp, lit when the charge path reaches this
+    // gauge (reach.ts). On or off only: it never shows an amount.
+    const lamp =
+      phone && got === null
+        ? h('i', {
+            class: 'lr-need-lamp',
+            'aria-hidden': 'true',
+            ...(this.view.machineLinked[i] ? { 'data-on': '' } : {}),
+          })
+        : null;
+    this.lampEls[i] = lamp;
+    el.toggleAttribute('data-lamp', !!lamp);
     const kids: (HTMLElement | string)[] = [
-      h('span', { class: 'lr-need-row' }, 'Needs ', h('b', null, String(need))),
+      h('span', { class: 'lr-need-row' }, lamp, 'Needs ', h('b', null, String(need))),
     ];
     // Multi-strike: each strike is read on its own; the strikes never add up at the machine.
     if (got === null && this.puzzle.pulses > 1)
@@ -1647,17 +1700,15 @@ export class AltarScene implements GameScene {
       // Mid-strike, `got` is the strike still landing: show it as a live entry so "got 4"
       // never sits beside only "Strike 1: 2" and reads as strike 1's total.
       const live = this.pulse >= 0 && rs.length <= this.pulse;
-      if (this.puzzle.pulses > 1 && (rs.length > 0 || live)) {
-        // Phones (mobile-5-board): "Strike" once, then "1: 0  2: 0", so two cards side by
-        // side at 13 px stay clear of each other.
-        const phone = !!this.view.layout.phone;
+      // Phones (mobile-7-strike): the card stays compact, "Needs 20 · got 0" (the strike now
+      // landing, or the last); each strike's reading is told in words in the verdict.
+      if (!phone && this.puzzle.pulses > 1 && (rs.length > 0 || live)) {
         const chip = (r: number, k: number, state: string) =>
-          h('span', { 'data-state': state }, phone ? `${k + 1}: ${r}` : `Strike ${k + 1}: ${r}`);
+          h('span', { 'data-state': state }, `Strike ${k + 1}: ${r}`);
         kids.push(
           h(
             'span',
             { class: 'lr-need-strikes' },
-            ...(phone ? [h('i', { class: 'lr-need-strike-lead' }, 'Strike')] : []),
             ...rs.map((r, k) => chip(r, k, r === need ? 'exact' : r > need ? 'over' : 'under')),
             ...(live ? [chip(got, this.pulse, 'live')] : []),
           ),
@@ -1706,10 +1757,9 @@ export class AltarScene implements GameScene {
       this.openEnds = pv.openEnds;
       // Linked (and Strike-ready) by what is on the board, never by the gem in hand. A route
       // that reaches a machine only on a later strike (a Capacitor's release) still reaches it.
-      const at = (c: Cell, m: Cell) => c.x === m.x && c.y === m.y;
-      this.puzzle.machines.forEach((m, i) => {
-        v.machineLinked[i] =
-          pv.hops.some((q) => at(q.to, m.at)) || sim.trace.some((q) => at(q.to, m.at));
+      // The same rule lights each gauge's reach lamp (reach.ts, unit-tested).
+      gaugeReach(this.puzzle, placements, sim, pv.hops).forEach((on, i) => {
+        v.machineLinked[i] = on;
       });
       this.realPreview = { hops: pv.hops, sim };
       this.ghostKey = '#';
@@ -1744,7 +1794,11 @@ export class AltarScene implements GameScene {
   private updateFirstTime(): void {
     const v = this.view;
     const edit = this.mode === 'edit';
-    const linked = v.machineLinked.every(Boolean);
+    const linked = allReached(v.machineLinked);
+    // Phones: each gauge's lamp follows the same reach (lit only while editing).
+    this.lampEls.forEach((el, i) => {
+      el?.toggleAttribute('data-on', edit && !!v.machineLinked[i]);
+    });
     v.beckonTarget = edit && this.teachCell && !linked ? 1 : 0;
     v.guide = this.teachFixed.length > 0 ? this.guide : [];
     v.guideTarget = edit && this.teachFixed.length > 0 ? 1 : 0;
@@ -2677,7 +2731,12 @@ export class AltarScene implements GameScene {
     } else {
       const over = ms.findIndex((m) => m.outcome === 'over');
       const under = ms.findIndex((m) => m.outcome !== 'exact' && m.outcome !== 'over');
-      const story = strikeStory(this.puzzle.pulses, res, this.capBeats);
+      // Phones, multi-strike: the strike line and the Capacitor read-out in the lane already
+      // tell each strike, so the verdict skips the story and keeps the next step.
+      const story =
+        L.phone && this.puzzle.pulses > 1
+          ? ''
+          : strikeStory(this.puzzle.pulses, res, this.capBeats);
       const hint = nextStep(
         o,
         this.fizzleList.map((f) => f.cause),
@@ -2687,19 +2746,29 @@ export class AltarScene implements GameScene {
       // unless the strike's story already fills it); the red mark on the socket says where.
       const phone = !!L.phone;
       const why = phone ? rootFizzle('dead', this.fizzleList) : undefined;
-      const cause = why ? causeText(why.cause) : '';
+      // Phones (mobile-7-strike): the cause in plain words ("The charge hit an empty socket"),
+      // and the Try line under it, so cause and fix read together.
+      const cause = why ? causeHeadline(why.cause) : '';
+      // Phones, multi-strike: a plain headline, then each strike's reading in words ("Strike 1:
+      // 0 · Strike 2: 8. Needs 20 in one strike."); the gauge's own card stays compact.
+      const multi = phone && this.puzzle.pulses > 1;
+      const head = (m: SimResult['machines'][number], oc: 'over' | 'under') =>
+        multi ? failHead(m, oc) : failText(m, oc, this.puzzle.pulses);
+      const each = (m: SimResult['machines'][number]) =>
+        multi ? strikesLine(m, this.puzzle.pulses) : '';
       if (o === 'over') {
         const m = ms[over]!;
-        const text = say(over, failText(m, 'over', this.puzzle.pulses));
-        this.showVerdict(text, 'over', story, hint, story ? '' : cause);
+        const text = say(over, head(m, 'over'));
+        this.showVerdict(text, 'over', story, hint, story ? '' : cause, each(m));
       } else if (o === 'under') {
         const m = ms[under] ?? ms[0]!;
-        const text = say(under, failText(m, 'under', this.puzzle.pulses));
-        this.showVerdict(text, 'under', story, hint, story ? '' : cause);
+        const text = say(under, head(m, 'under'));
+        this.showVerdict(text, 'under', story, hint, story ? '' : cause, each(m));
       } else {
-        // On a phone the cause is the headline ("Empty socket: charge lost"): the lane is narrow.
+        // On a phone the cause is the headline ("The charge hit an empty socket").
         this.showVerdict(cause || 'No charge reached the machine', 'dead', '', hint);
       }
+      this.setStrikeWord('fail');
       // Idle hints ("Bend already here") give way to the verdict and its fizzle tags.
       this.clearTags();
       this.tagTimer = 0;
@@ -3778,9 +3847,12 @@ export class AltarScene implements GameScene {
       if (was) el.dataset.arb = was;
       asks.push(shrinks && line < full ? { id, voice, full, line } : { id, voice, full });
     };
-    if (!this.verdict.hidden) ask('verdict', this.verdict, 'verdict', false);
+    const verdictUp = !this.verdict.hidden;
+    if (verdictUp) ask('verdict', this.verdict, 'verdict', false);
+    // mobile-7-strike: under a verdict the Capacitor read-out waits for room (the verdict's
+    // strike line already gives each strike's reading).
     this.capEls.forEach((el, i) => {
-      if (el.parentElement === lane) ask(`cap${i}`, el, 'verdict', false);
+      if (el.parentElement === lane) ask(`cap${i}`, el, verdictUp ? 'hint' : 'verdict', false);
     });
     const teach = this.tip.dataset.source === 'intro';
     if (teach && !this.tip.hidden) {
@@ -3808,6 +3880,15 @@ export class AltarScene implements GameScene {
       else if (el.dataset.arb !== g) el.dataset.arb = g;
     }
     this.holdFuse(talking && grants.get('fuse') === 'wait');
+    // mobile-7-strike: a verdict too tall for the column (an SE after a two-strike fail) owns
+    // the corner; Strike steps out until the verdict clears (any tap), never under it.
+    let yieldStrike = false;
+    if (verdictUp) {
+      const v = this.verdict.getBoundingClientRect();
+      const b = this.strikeBtn.getBoundingClientRect();
+      yieldStrike = v.bottom > b.top && v.right > b.left && v.left < b.right && v.height > 0;
+    }
+    this.strikeBtn.toggleAttribute('data-yield', yieldStrike);
   }
 
   /** The overlay's top edge in CSS px (design y 0). */
@@ -4107,10 +4188,14 @@ export class AltarScene implements GameScene {
     }
     if (this.mode === 'result' && this.result?.outcome !== 'exact') {
       const L = v.layout;
+      // Phones (mobile-7-strike): the socket the Try line names wears the thick red ring.
+      const root = L.phone ? this.verdictAvoid : null;
       for (const f of this.fizzleList) {
         if (f.cell.x < 0 || f.cell.y < 0 || f.cell.x >= L.cols || f.cell.y >= L.rows) continue;
+        if (root && f.cell.x === root.x && f.cell.y === root.y) continue;
         v.mark(f.cell.x, f.cell.y, 'highlighted', DANGER, 1.1, 5);
       }
+      if (root) v.mark(root.x, root.y, 'fault', DANGER, 1, 0);
     }
     if (this.mode === 'edit' && this.hand && !this.hand.from) {
       // Every socket the held gem may go in wears the same steady ring (mobile-6-board): the
