@@ -72,24 +72,24 @@ These come from the scripted keyboard run. "Place" is the time the script took t
 
 | # | Machine | Board | Gems | Keys | Place (s) | Strike (s) | Wake (s) | Card (s) | Design (min) |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | intake-desk | 6x4 | 5 | 18 | 1.5 | 1.5 | 1.8 | 1.3 | 1 |
-| 2 | furnace | 6x4 | 8 | 31 | 2.8 | 2.0 | 1.3 | 1.8 | 2 |
-| 3 | conveyor-a | 6x4 | 6 | 26 | 2.3 | 2.0 | 1.3 | 1.8 | 2 |
-| 4 | splitter-mill | 6x4 | 8 | 31 | 2.8 | 2.0 | 1.3 | 1.8 | 2 |
-| 5 | storm-cell-2 | 6x4 | 11 | 49 | 4.6 | 2.0 | 1.3 | 1.8 | 3 |
-| 6 | press-unit-4 | 6x4 | 11 | 56 | 5.1 | 2.5 | 1.3 | 1.3 | 3 |
-| 7 | boiler-room | 6x4 | 13 | 54 | 5.1 | 2.0 | 1.3 | 1.8 | 4 |
-| 8 | relay-tower | 6x4 | 9 | 46 | 4.2 | 2.0 | 1.3 | 1.8 | 2 |
-| 9 | foundry | 6x4 | 10 | 63 | 4.9 | 2.0 | 1.3 | 1.8 | 4 |
-| 10 | crane | 6x4 | 11 | 60 | 5.3 | 2.0 | 1.3 | 1.8 | 4 |
-| 11 | capacitor-bay | 8x6 | 13 | 78 | 6.2 | 4.5 | 1.3 | 1.8 | 5 |
-| 12 | archive | 8x6 | 20 | 114 | 10.8 | 2.5 | 1.3 | 1.8 | 5 |
-| 13 | roof-array | 8x6 | 18 | 90 | 8.7 | 4.5 | 1.3 | 1.8 | 6 |
-| 14 | lift-shaft | 8x6 | 10 | 68 | 6.5 | 5.5 | 1.3 | 1.3 | 6 |
-| 15 | control-booth | 8x6 | 16 | 97 | 8.2 | 2.5 | 1.3 | 1.8 | 7 |
-| 16 | the-last-rune | 10x8 | 15 | 82 | 7.1 | 5.5 | 1.3 | 1.8 | 8 |
+| 1 | intake-desk | 6x4 | 5 | 13 | 1.5 | 1.5 | 1.8 | 1.3 | 1 |
+| 2 | furnace | 6x4 | 8 | 23 | 2.8 | 2.0 | 1.3 | 1.8 | 2 |
+| 3 | conveyor-a | 6x4 | 6 | 20 | 2.3 | 2.0 | 1.3 | 1.8 | 2 |
+| 4 | splitter-mill | 6x4 | 8 | 22 | 2.8 | 2.0 | 1.3 | 1.8 | 2 |
+| 5 | storm-cell-2 | 6x4 | 11 | 30 | 4.6 | 2.0 | 1.3 | 1.8 | 3 |
+| 6 | press-unit-4 | 6x4 | 11 | 30 | 5.1 | 2.5 | 1.3 | 1.3 | 3 |
+| 7 | boiler-room | 6x4 | 13 | 35 | 5.1 | 2.0 | 1.3 | 1.8 | 4 |
+| 8 | relay-tower | 6x4 | 9 | 26 | 4.2 | 2.0 | 1.3 | 1.8 | 2 |
+| 9 | foundry | 6x4 | 10 | 39 | 4.9 | 2.0 | 1.3 | 1.8 | 4 |
+| 10 | crane | 6x4 | 11 | 35 | 5.3 | 2.0 | 1.3 | 1.8 | 4 |
+| 11 | capacitor-bay | 8x6 | 13 | 56 | 6.2 | 4.5 | 1.3 | 1.8 | 5 |
+| 12 | archive | 8x6 | 20 | 55 | 10.8 | 2.5 | 1.3 | 1.8 | 5 |
+| 13 | roof-array | 8x6 | 18 | 50 | 8.7 | 4.5 | 1.3 | 1.8 | 6 |
+| 14 | lift-shaft | 8x6 | 10 | 31 | 6.5 | 5.5 | 1.3 | 1.3 | 6 |
+| 15 | control-booth | 8x6 | 16 | 55 | 8.2 | 2.5 | 1.3 | 1.8 | 7 |
+| 16 | the-last-rune | 10x8 | 15 | 59 | 7.1 | 5.5 | 1.3 | 1.8 | 8 |
 
-Keyboard cost runs 4 to 7 presses per gem: pick, turn, move, then Enter. The cursor stays where it was after each placement, and the script places gems in solution order rather than the shortest path, so a careful player can do somewhat better. Archive still takes 114 presses for 20 gems, which is noticeable on a keyboard. A "place another of the same gem" shortcut would help (S3, owner: altar-scene).
+Keyboard cost now runs about 2.5 to 4 presses per gem: pick, turn, move, then Enter. (Keys refreshed by bug-bash on 2026-11-02 from a new keyboard-only full run. The other columns are from the earlier run.) The script places gems in solution order rather than by the shortest path, so a careful player can do a little better. Archive dropped from 114 presses to 55 for 20 gems. The biggest totals are now the-last-rune (59), capacitor-bay (56), archive (55) and control-booth (55). None of those are a burden on a keyboard. The run logged zero console warnings or errors.
 
 ## Ending
 

@@ -294,6 +294,10 @@ const CSS = /* css */ `
 .tc-overlay .lr-codex-folio { grid-column: 1 / -1; grid-row: 7; align-self: end; text-align: center; font-size: 22px; color: #5e4329; }
 /* Bigger text: the plate keeps its size and FUSE's note takes the rest of the row, so the
    note stays short and the page still fits the spread (it scrolls if it ever doesn't). */
+/* The book also grows to the full panel height (90% of the screen) so the late pages
+   (Gate, Capacitor) fit at 150% without scrolling or running under the tab row. */
+.tc-overlay[data-text-scale] .lr-codex { height: 972px; padding-bottom: 40px; }
+.tc-overlay[data-text-scale] .lr-codex-rule { line-height: 1.3; }
 .tc-overlay[data-text-scale] .lr-codex-page { padding: 32px 48px 22px; column-gap: 26px; grid-template-columns: 240px 1fr; }
 .tc-overlay[data-text-scale] .lr-plate { width: 240px; height: 240px; }
 .tc-overlay[data-text-scale] .lr-niche { width: 180px; height: 180px; }
@@ -327,7 +331,21 @@ const CSS = /* css */ `
 .tc-overlay .lr-new { display: inline-block; margin-left: 12px; padding: 2px 10px; border-radius: 10px; font-size: 18px; vertical-align: 8px; color: #fff; background: #a3341f; letter-spacing: 1px; }
 
 /* ── Settings ──────────────────────────────────────────────────────────── */
-.tc-overlay .lr-settings { width: 860px; display: flex; flex-direction: column; gap: 12px; }
+.tc-overlay .lr-settings { width: 1440px; display: flex; flex-direction: column; gap: 12px; }
+.tc-overlay .lr-settings-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 64px; align-items: start; }
+.tc-overlay .lr-settings-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+/* Volume sliders read like the other fields (same face and size) and line up in a column. */
+.tc-overlay .lr-settings .tc-field { font-family: inherit; font-size: 26px; gap: 20px; }
+.tc-overlay .lr-settings .tc-field > span { flex: 0 0 8.5em; }
+/* Done stays in reach: pinned to the bottom of the panel while the rest scrolls (large text). */
+.tc-overlay .lr-settings .lr-settings-done {
+  position: sticky; bottom: -1px; justify-content: flex-end; padding: 14px 0 4px; margin-top: 4px;
+  background: linear-gradient(to bottom, transparent, var(--tc-color-surface) 14px); border-top: 1px solid var(--tc-color-border);
+}
+/* The book is sized to fit; only its brass corners poke 6px out, which must not scroll. */
+.tc-overlay .tc-panel.lr-codex-host { overflow: visible; }
+/* Any panel that still has to scroll shows a scrollbar in the theme, never a hidden one. */
+.tc-overlay .tc-panel { scrollbar-width: auto; scrollbar-color: var(--tc-color-accent) rgba(0,0,0,0.3); }
 .tc-overlay .lr-settings section { display: flex; flex-direction: column; gap: 6px; }
 .tc-overlay .lr-settings h3 { margin: 6px 0 0; font-size: 26px; letter-spacing: 2px; text-transform: uppercase; color: var(--tc-color-accent); }
 .tc-overlay .lr-settings label.lr-field { display: flex; justify-content: space-between; align-items: center; gap: 20px; font-size: 26px; }

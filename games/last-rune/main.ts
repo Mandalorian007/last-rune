@@ -67,6 +67,15 @@ async function main(): Promise<void> {
       tone: 'warn',
       duration: 8000,
     });
+  } else if (ctx.save.status.loadResult === 'recovered') {
+    // The old bytes are kept under `<key>:backup`; say so rather than silently starting over.
+    ctx.ui.toasts.show(
+      'Your saved game couldn’t be read, so a new one begins. A backup was kept.',
+      {
+        tone: 'warn',
+        duration: 9000,
+      },
+    );
   }
   ctx.flow.start();
   ctx.loop.start();

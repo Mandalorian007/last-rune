@@ -677,10 +677,13 @@ export class AltarScene implements GameScene {
     if (this.mode === 'edit') {
       const p = this.puzzle.pulses;
       const s = this.puzzle.storm.strength;
-      this.subtitle.textContent =
-        `Storm ×${s} gives ${stormCharge(s)}` +
-        (p > 1 ? ` · ${p} strikes` : '') +
-        (this.attempts > 0 ? ` · try ${this.attempts + 1}` : '');
+      // Each part keeps its words together, so a wrap never strands "strikes" on its own.
+      const parts = [`Storm ×${s} gives ${stormCharge(s)}`];
+      if (p > 1) parts.push(`· ${p} strikes`);
+      if (this.attempts > 0) parts.push(`· try ${this.attempts + 1}`);
+      this.subtitle.replaceChildren(
+        ...parts.flatMap((t, i) => [...(i ? [' '] : []), h('span', { class: 'lr-nowrap' }, t)]),
+      );
     }
     this.fitTop();
   }
@@ -720,7 +723,10 @@ export class AltarScene implements GameScene {
     this.verdict.toggleAttribute('data-narrow', verdictW < 600);
     if (!this.verdict.hidden) place(this.verdict, verdictW);
     for (const el of this.needs) this.clearOfActions(el);
-    if (this.stormLabel) this.clearOfActions(this.stormLabel);
+    if (this.stormLabel) {
+      this.clearOfBoard(this.stormLabel);
+      this.clearOfActions(this.stormLabel);
+    }
     // The verdict sits under the title, however many lines the title took.
     const titleBottom = this.titleEl.offsetTop + this.titleEl.offsetHeight;
     this.verdict.style.top = `${Math.max(96, titleBottom + 6)}px`;
@@ -738,6 +744,36 @@ export class AltarScene implements GameScene {
     this.strikePips.forEach((el, i) => {
       el.toggleAttribute('data-lit', i % n <= now);
     });
+    if (this.stormLabel) this.clearOfBoard(this.stormLabel);
+  }
+
+  /**
+   * A storm on the west or east edge has its "Gives N" card centred under it, which at bigger
+   * text reaches over the board's first column. Slide the card outward until it clears the
+   * sockets; the notch stays under the storm.
+   */
+  private clearOfBoard(el: HTMLElement): void {
+    const L = this.view.layout;
+    const side = L.storm.side;
+    el.style.marginLeft = '';
+    el.style.removeProperty('--lr-notch');
+    // Runs while the DOM is still being built (setStrikeRow), before `dom` is attached.
+    if ((side !== 1 && side !== 3) || !this.dom?.isConnected) return;
+    const w = el.offsetWidth;
+    const x = L.storm.label.x;
+    const gap = 6;
+    let shift = 0;
+    if (side === 3) {
+      const edge = L.left + L.margin - gap;
+      shift = Math.min(0, edge - (x + w / 2));
+      shift = Math.max(shift, 8 - (x - w / 2)); // never off the left of the screen
+    } else {
+      const edge = L.right - L.margin + gap;
+      shift = Math.max(0, edge - (x - w / 2));
+    }
+    if (shift === 0) return;
+    el.style.marginLeft = `${Math.round(shift)}px`;
+    el.style.setProperty('--lr-notch', `${Math.round(w / 2 - shift)}px`);
   }
 
   /**
@@ -887,11 +923,29 @@ export class AltarScene implements GameScene {
     return parts.join(' ');
   }
 
-  private addTag(x: number, y: number, text: string, tone: 'bad' | 'info' = 'bad'): void {
+  private addTag(x: number, y: number, text: string, tone: 'bad' | 'info' = 'bad'): HTMLElement {
     const el = h('div', { class: 'lr-altar-tag', style: { left: `${x}px`, top: `${y}px` } }, text);
     if (tone === 'info') el.dataset.tone = 'info';
     this.dom.append(el);
     this.tags.push(el);
+    return el;
+  }
+
+  /** Whether a tag (drawn above its anchor, arrow down) would cover any of the verdict. */
+  private overlapsVerdict(tag: HTMLElement): boolean {
+    const v = this.verdict;
+    if (v.hidden || !this.dom.isConnected) return false;
+    const vx = Number.parseFloat(v.style.left) || 0;
+    const vy = Number.parseFloat(v.style.top) || 0;
+    const tx = Number.parseFloat(tag.style.left) || 0;
+    const ty = Number.parseFloat(tag.style.top) || 0;
+    const pad = 8;
+    const tw = tag.offsetWidth / 2;
+    const vw = v.offsetWidth / 2;
+    const xHit = tx - tw < vx + vw + pad && tx + tw > vx - vw - pad;
+    // The tag spans [ty - height - arrow, ty]; the verdict [vy, vy + height].
+    const yHit = ty - tag.offsetHeight - 7 < vy + v.offsetHeight + pad && ty > vy - pad;
+    return xHit && yHit;
   }
 
   private clearTags(): void {
@@ -1910,7 +1964,12 @@ export class AltarScene implements GameScene {
         for (const q of placedTags)
           if (Math.abs(q.x - pt.x) < 230 && Math.abs(q.y - ty) < 40) ty = q.y - 40;
         placedTags.push({ x: pt.x, y: ty });
-        this.addTag(pt.x, ty, causeText(f.cause));
+        const tag = this.addTag(pt.x, ty, causeText(f.cause));
+        // A tag on the top row can rise into the verdict (big text); hang it below the cell.
+        if (this.overlapsVerdict(tag)) {
+          tag.dataset.below = '';
+          tag.style.top = `${Math.round(pt.y + L.pitch * 0.38)}px`;
+        }
         count++;
       }
       const line = reactionLine(
