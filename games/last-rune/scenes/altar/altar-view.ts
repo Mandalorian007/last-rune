@@ -92,6 +92,8 @@ export interface HeldGem {
   y: number;
   /** Over a legal socket: snap preview. */
   snapped: boolean;
+  /** Drawn size, design px, when not the board's gem size (phones: resting in its tray slot). */
+  size?: number;
 }
 
 export class AltarView {
@@ -173,7 +175,7 @@ export class AltarView {
     const L = computeLayout(puzzle, phoneFrameFor(dev.phone, dev.cssPx, dev.bar));
     this.layout = L;
     this.slab = L.phone
-      ? this.assets.slab(L.cols, L.rows, L.pitch, L.margin, L.phone.front)
+      ? this.assets.slab(L.cols, L.rows, L.pitch, L.margin, L.phone.front, puzzle.blocked)
       : this.assets.slab(L.cols, L.rows, L.pitch);
     this.slab.place(L.cx, L.cy);
     this.storm = new StormCell(r, {
@@ -667,7 +669,7 @@ export class AltarView {
       g.y = h.y;
       g.lift = h.snapped ? 0.6 : 1;
       g.state = 'hover';
-      g.size = L.gemSize * (h.snapped ? 1 : 1.05);
+      g.size = h.size ?? L.gemSize * (h.snapped ? 1 : 1.05);
       g.glow = 1.1;
       a.gems.drawUnder(frame, this.heldList);
       a.gems.drawGems(frame, this.heldList);

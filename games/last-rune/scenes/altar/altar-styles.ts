@@ -187,27 +187,6 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-altar-nogo::after { transform: translate(-50%, -50%) rotate(-45deg); }
 
-/* Fixed gems: iron corner brackets and a bolt head. Part of the machine, not the player's. */
-.tc-overlay .lr-altar-pin {
-  position: absolute; transform: translate(-50%, -50%); pointer-events: none; box-sizing: border-box;
-  --lr-pin: rgba(196,208,226,0.9);
-  background:
-    linear-gradient(var(--lr-pin), var(--lr-pin)) top left / 22% 4px no-repeat,
-    linear-gradient(var(--lr-pin), var(--lr-pin)) top left / 4px 22% no-repeat,
-    linear-gradient(var(--lr-pin), var(--lr-pin)) top right / 22% 4px no-repeat,
-    linear-gradient(var(--lr-pin), var(--lr-pin)) top right / 4px 22% no-repeat,
-    linear-gradient(var(--lr-pin), var(--lr-pin)) bottom left / 22% 4px no-repeat,
-    linear-gradient(var(--lr-pin), var(--lr-pin)) bottom left / 4px 22% no-repeat,
-    linear-gradient(var(--lr-pin), var(--lr-pin)) bottom right / 22% 4px no-repeat,
-    linear-gradient(var(--lr-pin), var(--lr-pin)) bottom right / 4px 22% no-repeat;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.9));
-}
-.tc-overlay .lr-pin-bolt {
-  position: absolute; right: -4px; top: -4px; width: 18px; height: 18px;
-  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%);
-  background: radial-gradient(circle at 50% 50%, #2a3039 0 22%, #c9d2e0 26%, #8a96a8 70%, #4a5260);
-}
-
 /* A held Bend, Gate or Split turns: an arrow by the gem, with its keys, until the first turn. */
 .tc-overlay .lr-altar-turn {
   position: absolute; transform: translate(-30%, -70%); display: flex; align-items: center; gap: 6px;

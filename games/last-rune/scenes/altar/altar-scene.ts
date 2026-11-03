@@ -76,6 +76,7 @@ import {
   traySlotAt,
   trayTipX,
 } from './layout';
+import { socketLooks } from './socket-looks';
 import {
   type Arrival,
   buildTimeline,
@@ -212,7 +213,6 @@ const RING_RULE = "A socket the bolt's route must reach. Set a gem there.";
 const SLOT_ACTIONS = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6'] as const;
 const CYAN: RGBA = [0.25, 1.3, 1.8, 1];
 /** Fixed gems wear cold iron, not gold: gold marks where the player acts. */
-const FIXED_RING: RGBA = [1.05, 1.15, 1.35, 1];
 const WHITE_HOT: RGBA = [2, 2, 2, 1];
 const OPEN_END: RGBA = [1.5, 1.05, 0.5, 1];
 /** Conduit colours by outcome (match the need label's CSS colours). */
@@ -303,8 +303,6 @@ export class AltarScene implements GameScene {
   private tipSlotX: number | null = null;
   private tipRight = 0;
   /** Iron brackets on fixed (and hint-locked) gems, rebuilt when the board changes. */
-  private pins: HTMLElement[] = [];
-  private pinsRev = -1;
   /** Turn arrow on a held Bend, Gate or Split, until the player has turned one here. */
   private turnBadge!: HTMLElement;
   private turned = false;
@@ -533,7 +531,6 @@ export class AltarScene implements GameScene {
     this.strikeCount = null;
     this.lane = null;
     this.slotEls.length = 0;
-    this.pins.length = 0;
   }
 
   /** The altar's look; phones drop the fog and vignette so the whole grid reads evenly. */
@@ -571,7 +568,6 @@ export class AltarScene implements GameScene {
     this.idleRev = -1;
     this.validRev = -1;
     this.tipKey = '';
-    this.pinsRev = -1;
     this.focusKey = '';
     this.previewChipKey = '';
     this.ghostKey = '';
@@ -692,6 +688,9 @@ export class AltarScene implements GameScene {
     if (key === this.hintMode) return;
     this.hintMode = key;
     this.hint.replaceChildren(...hintLine(mode, turns));
+    // Phones: one line inside the column, never cut. Too long? The ↻ clause goes first.
+    if (turns && this.view.layout.phone && this.hint.scrollWidth > this.hint.clientWidth + 1)
+      this.hint.replaceChildren(...hintLine(mode, false));
     this.hint.dataset.mode = mode;
     this.avoidTray();
   }
@@ -899,8 +898,7 @@ export class AltarScene implements GameScene {
     this.phoneCaption(true);
     this.ctx.ui.layers.hud.append(this.dom);
     // Dev/e2e handle: the layout in use (tests tap cells and slots by it on phones).
-    if (import.meta.env.DEV)
-      (window as unknown as { __altarLayout: AltarLayout }).__altarLayout = L;
+    if (import.meta.env.DEV) Object.assign(window, { __altarLayout: L, __altarView: this.view });
   }
 
   /**
@@ -1133,7 +1131,9 @@ export class AltarScene implements GameScene {
   private setStrikeRow(now: number): void {
     if (!this.strikeRow) return;
     const n = this.puzzle.pulses;
-    this.strikeRow.textContent = now < 0 ? `${n} strikes` : `Strike ${now + 1} of ${n}`;
+    // Phones: "×2 strikes" under "Gives N" (the pips are hidden there).
+    const ph = this.view.layout.phone ? '\u00d7' : '';
+    this.strikeRow.textContent = now < 0 ? `${ph}${n} strikes` : `Strike ${now + 1} of ${n}`;
     if (this.strikeCount) this.strikeCount.textContent = now < 0 ? `\u00d7${n}` : `${now + 1}/${n}`;
     this.strikePips.forEach((el, i) => {
       el.toggleAttribute('data-lit', i % n <= now);
@@ -2686,7 +2686,6 @@ export class AltarScene implements GameScene {
     if (this.introLeft > 0 && this.mode === 'edit')
       this.introLeft = Math.max(0, this.introLeft - dt);
     this.updateInfo();
-    this.updatePins();
     this.updateTurnBadge();
     this.updateTurnButton();
     this.updateCrowd();
@@ -3224,44 +3223,6 @@ export class AltarScene implements GameScene {
   }
 
   /**
-   * Iron brackets and a bolt head on every fixed gem (and a hint-locked one): part of the
-   * machine, not the player's to move or turn. Drawn in the overlay over the socket corners.
-   */
-  private updatePins(): void {
-    const rev = this.board.revision;
-    if (rev === this.pinsRev) return;
-    this.pinsRev = rev;
-    for (const el of this.pins) el.remove();
-    this.pins.length = 0;
-    const L = this.view.layout;
-    const pt = { x: 0, y: 0 };
-    const cells = [
-      ...this.puzzle.fixed.map((f) => f.cell),
-      ...this.board.lockedPlacements.map((f) => f.cell),
-    ];
-    for (const c of cells) {
-      cellCenter(L, c, pt);
-      const el = h(
-        'div',
-        {
-          class: 'lr-altar-pin',
-          'aria-hidden': 'true',
-          style: {
-            left: `${pt.x}px`,
-            top: `${pt.y}px`,
-            width: `${L.pitch * 0.9}px`,
-            height: `${L.pitch * 0.9}px`,
-          },
-        },
-        h('i', { class: 'lr-pin-bolt' }),
-      );
-      el.dataset.cell = `${c.x},${c.y}`;
-      this.dom.insertBefore(el, this.lane ?? this.tip);
-      this.pins.push(el);
-    }
-  }
-
-  /**
    * A held Bend, Gate or Split shows it turns: a turn arrow by the gem, with the keys, until the
    * player has turned one here. Only where the altar teaches turning (its first tray Bend or
    * Gate); the preview swings with each turn (see `ghost`).
@@ -3333,6 +3294,8 @@ export class AltarScene implements GameScene {
     let target: Cell | 'hand' | null = null;
     const pt = { x: 0, y: 0 };
     const held = this.view.held;
+    let size = L.gemSize;
+    let lift = 0;
     if (this.mode !== 'strike' && this.touch && !this.keyboard && !this.press) {
       const pl = this.lastPlaced ? this.board.at(this.lastPlaced) : undefined;
       if (this.lastPlaced && pl && isRotational(pl.gem)) {
@@ -3342,6 +3305,8 @@ export class AltarScene implements GameScene {
         target = 'hand';
         pt.x = held.x;
         pt.y = held.y;
+        size = held.size ?? L.gemSize;
+        lift = held.snapped ? 0.6 : 1;
       }
     }
     this.turnTarget = target;
@@ -3353,6 +3318,17 @@ export class AltarScene implements GameScene {
       this.avoidTray();
     }
     if (!show) return;
+    const band = L.phone;
+    if (band) {
+      // Phones (mobile-4-board): a small badge centred on the gem's top-right corner, as
+      // drawn (lifted 16 px, gems.ts GEM_LIFT_PX), kept on screen.
+      const half = band.badge / 2;
+      const x = pt.x + size * 0.42;
+      const y = pt.y - 16 * lift - size * 0.42;
+      this.turnMark.style.left = `${Math.round(Math.min(band.colR - half, x))}px`;
+      this.turnMark.style.top = `${Math.round(Math.max(band.edge + half, y))}px`;
+      return;
+    }
     const r = L.gemSize * 0.5;
     this.turnMark.style.left = `${Math.round(pt.x + r)}px`;
     this.turnMark.style.top = `${Math.round(pt.y - r)}px`;
@@ -3501,6 +3477,7 @@ export class AltarScene implements GameScene {
     }
     const pt = { x: 0, y: 0 };
     let snapped = false;
+    let size: number | undefined;
     const p = this.ctx.input.pointer;
     const cell = this.keyboard ? this.cursor : this.hoverCell;
     let refused: string | null = null;
@@ -3528,7 +3505,9 @@ export class AltarScene implements GameScene {
         const i = L.tray.findIndex((s) => s.gem === hand.kind);
         const s = L.tray[Math.max(0, i)]!;
         pt.x = s.x;
-        pt.y = s.y - 70;
+        // Phones: it rests lifted in its own slot, under the title (mobile-4-board).
+        pt.y = L.phone ? s.y : s.y - 70;
+        if (L.phone) size = s.size;
       }
     }
     this.showRefusal(refused ? cell : null, refused);
@@ -3539,7 +3518,8 @@ export class AltarScene implements GameScene {
       h0.x = pt.x;
       h0.y = pt.y;
       h0.snapped = snapped;
-    } else this.view.held = { kind: hand.kind, rot: hand.rot, x: pt.x, y: pt.y, snapped };
+      h0.size = size;
+    } else this.view.held = { kind: hand.kind, rot: hand.rot, x: pt.x, y: pt.y, snapped, size };
   }
 
   /** With a gem in hand (not dragging), is the pointer or cursor on one of the player's gems? */
@@ -3575,17 +3555,15 @@ export class AltarScene implements GameScene {
   private buildMarks(): void {
     const v = this.view;
     v.clearMarks();
-    if (v.layout.phone) {
-      // Phones: every open socket gets a faint pale lip; blocked ones a plain sunk plate.
-      const L = v.layout;
-      for (let y = 0; y < L.rows; y++)
-        for (let x = 0; x < L.cols; x++)
-          if (!this.board.isBlocked({ x, y })) v.mark(x, y, 'rim', GOLD, 1);
-      for (const b of this.puzzle.blocked) v.mark(b.x, b.y, 'plate', GOLD, 1);
-    } else for (const b of this.puzzle.blocked) v.mark(b.x, b.y, 'blocked', GOLD, 1);
-    for (const f of this.puzzle.fixed) v.mark(f.cell.x, f.cell.y, 'wanted', FIXED_RING, 0.8);
-    for (const f of this.board.lockedPlacements) {
-      v.mark(f.cell.x, f.cell.y, 'wanted', FIXED_RING, 0.8);
+    // Open, blocked and fixed sockets (see socket-looks): phones bake blocked cells solid, so
+    // only open sockets get the pale lip; fixed and hint-locked gems wear a bolted collar.
+    const L = v.layout;
+    const fixed = [
+      ...this.puzzle.fixed.map((f) => f.cell),
+      ...this.board.lockedPlacements.map((f) => f.cell),
+    ];
+    for (const m of socketLooks(!!L.phone, L.cols, L.rows, this.puzzle.blocked, fixed)) {
+      v.mark(m.x, m.y, m.state, GOLD, 1);
     }
     if (this.hintCell && this.mode !== 'strike') {
       v.mark(this.hintCell.x, this.hintCell.y, 'highlighted', GOLD, 1.3, 3);

@@ -74,3 +74,30 @@ Keep `ui/phone-styles.ts` edits in a `/* mobile-4-board */` block.
 - Log in this file.
 
 ## Log
+
+### 2026-11-03: done (branch ws/mobile-4-board)
+Captures: `docs/design/screens/local/mobile-4-board/{before,after}-{iphone,se,promax,android,desktop,ipad}.png` (+ `m2/`, `pmr-before/`, `pmr-after/`).
+
+What changed
+1. **Blocked cells on phones are plain stone.** `altar_surf` gets a per-cell solid mask (`StoneGen.solid`, 24 cells per float, `solidMask()` in `art/materials/stone.ts`). A solid cell has no bore and no lip, and gets no overlay mark. Open sockets keep the pale rim. The pure rule lives in `scenes/altar/socket-looks.ts`. 8×6 and 10×8 still read as grids (lift-shaft, the-last-rune).
+2. **Fixed gems, all platforms:** the dashed corner brackets and pin (`.lr-altar-pin`, `updatePins`) are gone. New overlay state `collar` (6): a dark iron ring with four lit rivets on the diagonals. It is the only change on desktop and iPad (see the furnace and the-last-rune tiles).
+3. **Held gem:** on phones it rests lifted in its own slot. Tray row 0 is pushed down so the lifted gem and its badge clear the title. The badge is clamped inside the column and the screen. The tooltip lane starts below the counts.
+4. **Hint:** phone font 11 px, capped at the column width. If it overflows, it re-renders without the ↻ clause. No ellipsis anywhere.
+5. **Edges:** the phone slab border is adaptive (0.22/0.16 pitch where it fits, else 0.14/0.10), and the gutter is 66. On multi-strike verdicts, north/south cards drop the "got" row (the per-strike chips replace it), so they stay two lines tall and inside the play area.
+6. **Labels:** "Gives N" / "×K strikes" and "Needs N" / "in one strike" sit on two lines, the second only on multi-strike altars, and never wrap into one line.
+7. **Tray:** zero-start types are not shown (layout filter). Depleted types are at opacity 0.4 with no strike-through or slash. Slots are clamp(column, 38–46) px; counts are 13 px.
+
+Pitch (CSS px, before → after; e2e floors iPhone 44/38/30, SE 90%)
+- iPhone: 6×4 51.6→51.3 · archive/control-booth 39.3→39.0 · capacitor/lift 39.6 · roof 45→45.6 · last-rune 30.2→30.2
+- SE: 6×4 45.6→45.3 · 8×6 35.0→34.4 · capacitor/lift 36.4 · last-rune 27.9→27.6
+- promax: 6×4 52.1 · archive 47.9→47.5 · capacitor 45.4→46.1 · last-rune 34.8
+- android: 6×4 52.0 · archive 43.7→43.3 · capacitor 42.7 · last-rune 32.7
+
+Tests
+- `scenes/altar/socket-looks.test.ts`: phones put no mark on blocked cells (every puzzle); desktop keeps the capstone; collar, never 'wanted'; solid-mask packing.
+- `tests/e2e/mobile-budget.spec.ts`: now runs on iphone, se, promax and android. Per altar it checks that gauges and labels are ≥4 px inside the play area (verdict states included), the held gem and badge are off the title and on screen, the tooltip doesn't cover the tray, the hint isn't cut and isn't under Strike, and there are no marks on blocked cells. A placed-turner case checks the badge.
+
+Proposals for the PM
+- D-040 note: fixed gems = the bolted iron collar (state 6), on all platforms. The dashed brackets are retired.
+- The 'plate' socket state (5) is now unused: delete it from the shader and `SocketState`.
+- The collar rivets are subtle at desktop scale. If the blind review misses "bolted in", raise the rivet radius from 0.11 to 0.14.

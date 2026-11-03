@@ -129,6 +129,8 @@ export interface PhoneBand {
   /** Half the hit box of a tray slot. */
   trayHitX: number;
   trayHitY: number;
+  /** The ↻ badge on a held gem, design px across (mobile-4-board). */
+  badge: number;
   /** Slab margin and front face (thinner than the desktop slab's). */
   front: number;
 }
@@ -345,36 +347,50 @@ export function computeLayout(p: PuzzleDef, phone: PhoneFrame | null = null): Al
  * gauges' gutters and the right-hand column are paid for.
  */
 const PH = {
-  /** Canvas edge inset. */
-  edge: 3,
+  /** Canvas edge inset: every gauge and card stands ≥4 px inside the play area (mobile-4-board). */
+  edge: 5,
   /** A label's clearance from the board. */
   clear: 8,
   /** A west/east side with a gauge: the gauge and its card (card ≤ gutter − clear − edge). */
-  gutter: 62,
+  gutter: 66,
   /** The right-hand column: narrowest, widest; and its gap from the board block. */
   colMin: 140,
   colMax: 216,
   colGap: 4,
   /** Biggest socket pitch (6×4 boards stop here; the column takes what is left). */
   maxPitch: 52,
-  /** Tray: gem size, slot spacing across and down, and the title line above it. */
-  slot: 38,
-  slotDX: 46,
-  slotDY: 56,
+  /**
+   * Tray (mobile-4-board): gems as big as three to a row allow, between these; the gap between
+   * gems and the count line under each; the title line above. A held gem (lifted, ↻ badge at
+   * its corner) stays under the title, so the first row sits low enough for both.
+   */
+  slotMin: 38,
+  slotMax: 46,
+  slotGap: 8,
+  countH: 18,
   titleH: 22,
+  badge: 26,
   /** FUSE's bubble / the hint sit this far above the canvas bottom (clear of Strike, 64 px). */
   bubbleUp: 68,
   /** Height of a card beside a north/south gauge: one line, or two on multi-strike altars. */
-  label1: 18,
-  label2: 28,
+  label1: 20,
+  label2: 30,
 } as const;
+
+/** A lifted gem rises this far (design px; gems.ts GEM_LIFT_PX) and grows 7%. */
+const LIFT = 16;
 
 /** The widest a west/east gauge's card may be on a phone, CSS px (it wraps to fit). */
 export const PHONE_GUTTER_CARD = PH.gutter - PH.clear - PH.edge;
 
-/** Slab border and front face on a phone, in pitches (the desktop slab: 0.8 and 0.42). */
-const PHONE_MARGIN = 0.22;
-const PHONE_FRONT = 0.16;
+/**
+ * Slab border and front face on a phone, in pitches (the desktop slab: 0.8 and 0.42): the
+ * fuller slab where the board fits at that pitch, else the thin one (mobile-4-board).
+ */
+const PHONE_SLAB = [
+  [0.22, 0.16],
+  [0.14, 0.1],
+] as const;
 
 function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
   const c = f.cssPx;
@@ -390,7 +406,7 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
   // How far each side's gauge and card reach past the slab (front face included at S).
   const reach = (pitch: number): [number, number, number, number] => {
     const m = machineSizeAt(pitch);
-    const r = 0.24 * stormSizeAt(pitch);
+    const r = 0.29 * stormSizeAt(pitch); // the orb as drawn, glass and halo
     const v = Math.max(0.62 * m, 1.4 * r, clear + labelH) + edge;
     return [
       has[0] ? v : edge,
@@ -402,9 +418,9 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
   const x0 = f.padL;
   const x1 = DESIGN_W - f.padR - edge;
   const boardRoom = x1 - x0 - (PH.colMin + PH.colGap) * c;
-  const dims = (pitch: number) => {
-    const m = Math.round(pitch * PHONE_MARGIN);
-    const front = Math.round(pitch * PHONE_FRONT);
+  const dims = (pitch: number, slab = 0) => {
+    const m = Math.round(pitch * PHONE_SLAB[slab]![0]);
+    const front = Math.round(pitch * PHONE_SLAB[slab]![1]);
     const r = reach(pitch);
     return {
       m,
@@ -415,12 +431,16 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
     };
   };
   let pitch = Math.round(PH.maxPitch * c);
-  while (pitch > 24) {
-    const d = dims(pitch);
-    if (d.w <= boardRoom && d.h <= DESIGN_H) break;
-    pitch--;
+  let slab = 0;
+  const fits = (d: ReturnType<typeof dims>) => d.w <= boardRoom && d.h <= DESIGN_H;
+  for (; pitch > 24; pitch--) {
+    if (fits(dims(pitch, 0))) break;
+    if (fits(dims(pitch, 1))) {
+      slab = 1;
+      break;
+    }
   }
-  const d = dims(pitch);
+  const d = dims(pitch, slab);
   const margin = d.m;
   const front = d.front;
   const ext = d.r;
@@ -508,29 +528,40 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
   const machineSize = machineSizeAt(pitch);
   const machines = p.machines.map((m) => spot(m.at, machineSize, 'machine'));
 
-  // Tray: rows of up to three under the title, centred in the column.
+  // Tray: rows of up to three under the title, centred in the column, the gems as big as
+  // the column allows (types the puzzle starts without are left out).
   const kinds = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
   const nRows = Math.max(1, Math.ceil(kinds.length / 3));
   const per = Math.ceil(kinds.length / nRows);
   const colX = (colL + colR) / 2;
-  const trayTop = PH.titleH * c;
+  const slot = Math.max(
+    PH.slotMin,
+    Math.min(PH.slotMax, Math.floor((colR - colL) / c / Math.max(per, 3) - PH.slotGap)),
+  );
+  const slotDX = slot + PH.slotGap;
+  const slotDY = Math.max(44, slot + PH.countH + 4);
+  const lift = LIFT / c;
+  // First row: a held gem, lifted, and its ↻ badge clear of the title line.
+  const row0 =
+    PH.titleH + 2 + Math.ceil(Math.max(lift + 0.535 * slot, lift + 0.42 * slot + PH.badge / 2));
   const tray: TraySlot[] = kinds.map((gem, i) => {
     const row = Math.floor(i / per);
     const inRow = Math.min(per, kinds.length - row * per);
     const j = i - row * per;
     return {
       gem,
-      x: Math.round(colX + (j - (inRow - 1) / 2) * PH.slotDX * c),
-      y: Math.round(trayTop + (PH.slot / 2 + 2 + row * PH.slotDY) * c),
-      size: Math.round(PH.slot * c),
+      x: Math.round(colX + (j - (inRow - 1) / 2) * slotDX * c),
+      y: Math.round((row0 + row * slotDY) * c),
+      size: Math.round(slot * c),
     };
   });
+  const lastRow = row0 + (nRows - 1) * slotDY;
   return {
     phone: {
       padL: f.padL,
       colL,
       colR,
-      laneTop: Math.round(trayTop + (nRows * PH.slotDY + 2) * c),
+      laneTop: Math.round((lastRow + slot / 2 + 1 + PH.countH + 6) * c),
       bubbleL: colL,
       bubbleB: Math.round(DESIGN_H - PH.bubbleUp * c),
       fuseX: Math.round(colL + 22 * c),
@@ -539,8 +570,9 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
       cssPx: c,
       edge,
       clear,
-      trayHitX: Math.round((PH.slotDX / 2) * c),
-      trayHitY: Math.round((PH.slotDY / 2) * c),
+      trayHitX: Math.round((slotDX / 2) * c),
+      trayHitY: Math.round((slotDY / 2) * c),
+      badge: Math.round(PH.badge * c),
       front,
     },
     cols,
@@ -558,7 +590,7 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
     storm,
     machines,
     tray,
-    trayY: tray[0]?.y ?? trayTop,
+    trayY: tray[0]?.y ?? row0 * c,
     titleX: Math.round(colX),
     titleMax: Math.round(colR - colL),
   };
