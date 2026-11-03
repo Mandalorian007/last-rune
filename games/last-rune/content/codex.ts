@@ -24,7 +24,11 @@ export interface CodexEntry {
    * charge included; a long-press shows `rule` in full.
    */
   readonly chip: string;
-  /** The charge maths, one line, in sparks. */
+  /**
+   * A worked example: one line with real numbers, in the Capacitor read-out's style ("Strike 1:
+   * keeps 4. Strike 2: 4 + 4 → 8."). The codex card, the phone's gem chip and the arrival card
+   * all show it (mobile-7-teach).
+   */
   readonly maths: string;
 }
 
@@ -41,42 +45,42 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
     name: 'Channel',
     rule: 'Carries the charge straight through, whichever way it enters. The charge is unchanged.',
     chip: 'Carries the charge straight through, unchanged.',
-    maths: 'out = in',
+    maths: 'In 4 → out 4, straight on.',
   },
   bend: {
     gem: 'bend',
     name: 'Bend',
     rule: 'Turns the charge round the corner along its bent line, either way. Charge entering any other side is lost.',
     chip: 'Turns the charge along its bent line. Other sides lose it.',
-    maths: 'out = in, round the corner',
+    maths: 'In 4 → out 4, round the corner.',
   },
   split: {
     gem: 'split',
     name: 'Split',
     rule: 'Charge enters at the plain end and leaves by both arrows, half each. Odd charge, or charge from any other side, is lost.',
     chip: 'In at the plain end, half out each arrow. Odd or wrong side: lost.',
-    maths: '4 → 2 + 2 · odd → lost',
+    maths: 'In 4 → out 2 and 2. Odd charge is lost.',
   },
   amplify: {
     gem: 'amplify',
     name: 'Amplify',
     rule: 'Doubles the charge, once per path. Charge that has already passed an Amplify, even split since, goes through unchanged.',
     chip: 'Doubles the charge, once per path. Already doubled: unchanged.',
-    maths: '4 → 8 · 8 → 8 (already doubled)',
+    maths: 'In 4 → out 8. Doubled already: 8 stays 8.',
   },
   gate: {
     gem: 'gate',
     name: 'Gate',
     rule: 'Takes charge in on both side lines. If both arrive in the same strike, their sum leaves by the arrow. Otherwise it is lost.',
     chip: 'Both side lines in one strike: their sum leaves by the arrow.',
-    maths: 'out = a + b, only if both arrive',
+    maths: 'In 4 and 4 → out 8. Only one in: lost.',
   },
   capacitor: {
     gem: 'capacitor',
     name: 'Capacitor',
     rule: 'Keeps the first charge it gets; nothing comes out. Next strike, the new charge pushes both out together, straight on.',
-    chip: 'Keeps its first charge. Next strike, lets out both together.',
-    maths: 'strike 1: 0 · strike 2: stored + in',
+    chip: 'Holds its first charge; next strike, lets out both.',
+    maths: 'Strike 1: keeps 4. Strike 2: 4 + 4 → 8.',
   },
 };
 

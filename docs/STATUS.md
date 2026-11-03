@@ -70,7 +70,9 @@ _Last updated: 2026-11-02 by PM_
 | mobile-7-strike | ws/mobile-7-strike | ✅ merged | Phones: compact gauges, plain verdict, 'Strike (2 left)', reach lamps, fault ring. Open: on the SE the verdict covers FUSE and Strike yields | D-040 addendum 5 |
 | mobile-7-zoom | ws/mobile-7-zoom | ✅ merged → being removed | Minimap, gutter chips, arrows, settled camera, badge. PM integration fix: minimap above a wide Strike. Superseded by zoom-removal (D-041 addendum 1) | D-041 |
 | mobile-7-hall | ws/mobile-7-hall | ✅ merged | Label collisions, Next ring, menu backing, plain locked card, Menu badge, FUSE tails, SE density. Open: on the SE, FUSE's reason sometimes lands in his bubble | D-040 addendum 5 |
-| zoom-removal | ws/zoom-removal | 🟡 running | Remove the phone altar zoom entirely (user call); dense boards on phones wait for the Phase 2 layout | D-041 addendum 1 |
+| zoom-removal | ws/zoom-removal | ✅ merged | Phone altar zoom removed (−2,940 lines); loupe and snap now work at the whole board. Whole-board socket pitch on the-last-rune: 26 px (SE) to 33 px (Pro Max); the dense-board fix is a 1.1 item | D-041 addendum 1 |
+| test-split | ws/test-split | ✅ merged | `docs/engine/test-split.md`: every test classed as engine, game, mixed or redundant, with mover, engine matrix (15 rows) and game sizes kept; game e2e estimated 6–8 → ~3 min | D-041 addendum 2 |
+| workspace | ws/workspace | 🟡 adding engine e2e harness | Engine at packages/engine as @thunderclap/engine; byte-identical dist; boundary check; CI split. Merges after Gate 0 | D-041 |
 | mobile-perf | ws/mobile-perf | ✅ merged | D-039: support matrix in docs/design/mobile.md (iOS 26+ Safari, Android 12+ Chrome on Qualcomm/Mali); handhelds start Auto→Low (hall GPU 13.9→5.5 ms p50 emulated ×4); steady-30 fallback when Low can't hold 60; iOS interruptions recover, audio re-arms on tap, pause on pagehide/freeze; lifecycle flush via watchLifecycle; memory ~120 MB steady, nothing cut; desktop unchanged. PM: keep default iOS audio session (silent switch mutes), steady-30 also on weak desktops OK, Reload on device loss stays |
 
 ## Blocked / needs user
