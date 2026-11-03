@@ -146,3 +146,31 @@ Format: `D-NNN · date · decision · why · who`.
       - on phones, a placed gem leaves the hand (desktop keeps it);
       - the pitch floors are reset to the reached values, trading a little pitch on 8×6 and 10×8 boards for the 13/15 px label floors (The Last Rune: 26.4 px on SE, 28.9 px on iPhone);
       - the height-share floor is met on Android only; west/east 6×4 boards are limited by width.
+  - **Addendum 4 (gate review 3, 2026-11-03).** Blind scores were 6 / 6 / 6 / 6.5 (average 6.1), so the gate failed a third time. Three rounds of trimming have not moved the score, so the PM calls a structural fix for dense boards. Every issue below was checked against `docs/design/screens/local/mobile-2/gate3/`.
+    - **False issue.** FUSE repeating the Intake Desk line on The Last Rune is a capture artefact: that machine has no `arrive` line, and the capture falls back to the Intake Desk one.
+    - **Zoom calls (mobile-6-zoom).** Dense boards are too small to tap: 4 of 4 reviewers, one blocker. 10×8 sockets are 24–29 px, and 8×6 boards about 30–36 px. Eight rows cannot reach 44 px in 320–380 px of height, so on phones a board whose fitted pitch is under 40 px gets a zoomed view:
+      - placement happens at an effective pitch ≥44 px;
+      - the whole board is always one gesture away, with a visible way back to the fit view;
+      - Strike, the verdict and the solve are shown at the fit view;
+      - desktop and iPad are unchanged.
+    - **Board calls (mobile-6-board):**
+      - the held gem is unmistakable: the tray tile lifts and is outlined, and a "Holding: Bend" style cue appears near the board;
+      - valid-socket rings mark exactly the legal sockets, so every empty socket when any gem may go there (gate 3 showed a scattered subset: a D-027 rules mismatch);
+      - empty sockets read clearly against the slab (a lighter rim and contrast);
+      - wall cut-outs and blocked areas read as solid wall, never as black glitch rectangles or dead sockets;
+      - gauges: the dial is ≥24 px, the Needs plate sits on a consistent side, and nothing touches the screen edge;
+      - used-up (×0) tray gems read as "all placed", not as broken or locked.
+    - **Moments calls (mobile-6-moments):**
+      - the right column has one owner at a time, and tips, FUSE's speech, teach cards and verdict tags never overlap each other or board labels;
+      - teach cards show a visible Next/Got it affordance;
+      - the verdict tag never covers sockets;
+      - rule copy uses words the game teaches. "Charge" is the one noun; "bolt", "fizzle", "stem", "arms" and "joined sides" go or are taught on screen. This applies to tray tips, teach cards, verdicts and the Codex text.
+    - **Chrome calls (mobile-6-chrome):**
+      - FUSE's title bubble never overlaps the logo (a regression on Android);
+      - locked doors say what unlocks them in plain words, and the gem-pip strips and "+N" either explain themselves or go on phones;
+      - the hall's top row isn't cropped;
+      - the door tap card closes when the Menu opens;
+      - Settings has no headers at the fold without content, and no duplicate "Graphics & Save" jump;
+      - SE Codex and Journal text, arrows and ✕ are fully on screen;
+      - the end card is centred and balanced, the clipboard is clear of the buttons, the subtitles have contrast, and "Back to the hall" is a clear button.
+    - **Gate unchanged:** ≥8/10 average with no blocker or major issue.
