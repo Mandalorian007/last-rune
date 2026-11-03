@@ -3,7 +3,15 @@ import { PUZZLES, puzzleFor } from '../../content/puzzles';
 import { type PuzzleDef, simulate } from '../../rules';
 import { altarDims } from '../../rules/model';
 import { anchorOf, cellAt, computeLayout, DESIGN_H, DESIGN_W } from './layout';
-import { buildTimeline, failText, fizzles, nextStep, rootCell, rootFizzle } from './strike';
+import {
+  buildTimeline,
+  causeText,
+  failText,
+  fizzles,
+  nextStep,
+  rootCell,
+  rootFizzle,
+} from './strike';
 
 function bench(over: Partial<PuzzleDef> = {}): PuzzleDef {
   return {
@@ -166,5 +174,26 @@ describe('failed-verdict guidance', () => {
       'spent',
     ] as const;
     for (const c of all) expect(nextStep('dead', [c])).toMatch(/^Try: /);
+    // A finger is told the on-screen control, not R or scroll.
+    expect(nextStep('dead', ['facing'], true)).toMatch(/Turn\)/);
+    expect(nextStep('dead', ['facing'], true)).not.toMatch(/scroll/);
+  });
+
+  it('says "charge", never the untaught bolt or fizzle (mobile-6-moments)', () => {
+    const words = /\b(bolts?|fizzl\w*|stem|arms?|sparks?)\b/i;
+    const all = [
+      'empty',
+      'blocked',
+      'ground',
+      'facing',
+      'odd-split',
+      'gate-alone',
+      'spent',
+    ] as const;
+    for (const c of all) {
+      expect(causeText(c)).not.toMatch(words);
+      expect(nextStep('dead', [c])).not.toMatch(words);
+    }
+    for (const o of ['over', 'under', 'dead'] as const) expect(nextStep(o, [])).not.toMatch(words);
   });
 });

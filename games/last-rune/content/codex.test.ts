@@ -30,8 +30,18 @@ describe('codex content', () => {
     }
   });
 
-  it('counts charge the way the rules do (1 bolt = 4 sparks)', () => {
-    expect(CODEX_SPARKS).toContain('4 sparks');
+  it('says "charge", never the untaught bolt, fizzle, stem or arms (mobile-6-moments)', () => {
+    const words = /\b(bolts?|fizzl\w*|stem|arms?|joined|sparks?|amber)\b/i;
+    expect(CODEX_SPARKS).not.toMatch(words);
+    for (const gem of GEM_KINDS) {
+      const e = CODEX[gem];
+      for (const text of [e.rule, e.chip, e.maths]) expect(text, gem).not.toMatch(words);
+    }
+  });
+
+  it('counts charge the way the rules do (a 1× storm gives 4)', () => {
+    expect(CODEX_SPARKS).toMatch(/charge/);
+    expect(CODEX_SPARKS).toContain('4');
     expect(CODEX_SPARKS).toContain('8');
     expect(CODEX_SPARKS).toContain('16');
     expect(CODEX.split.maths).toContain('4 → 2 + 2');

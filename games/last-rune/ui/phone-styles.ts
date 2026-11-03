@@ -833,6 +833,45 @@ ${A} .lr-altar-hint, ${A} .lr-altar-lane > .lr-altar-hint { font-size: ${tpx(13)
 ${A} .lr-altar-lane .lr-altar-cap, ${A} .lr-cap-head { font-size: ${tpx(13)}; }
 /* mobile-5-board end */
 
+/* mobile-6-moments ─ One owner of the column; teach cards paged by tap (D-040 addendum 4) ──
+   altar-scene arrangeColumn asks moments.ts arbitrate who gets the room under the tray:
+   verdict > teach card > gem tip > how-to line > FUSE. A tip that does not fit shrinks to its
+   name line (data-arb="line"); anything else waits (data-arb="wait", FUSE's caption frozen).
+   The lane steps right of any Gives/Needs card (--lr-lane-l/-w), so nothing touches a label. */
+${A} .lr-altar-lane { left: var(--lr-lane-l, var(--lr-col-l)); width: var(--lr-lane-w, var(--lr-col-w)); }
+${A} .lr-altar-lane > [data-arb="wait"] { visibility: hidden !important; position: absolute !important; }
+${A} .lr-altar-lane > .lr-altar-tip[data-arb="line"] > :not(:first-child) { display: none; }
+${A} .lr-altar-lane > .lr-altar-tip[data-arb="line"] > :first-child {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* The verdict outranks a gem's tip: both may show, the verdict first (the old rule hid it). */
+${A}:has(.lr-altar-tip:not([hidden])) .lr-altar-lane .lr-altar-verdict:not([hidden]) { display: block; }
+/* The verdict's cause, then its next step, each on a line of its own. */
+${A} .lr-altar-verdict .lr-verdict-cause {
+  display: block; margin-top: ${cpx(2)}; font-family: var(--tc-font-ui); font-size: ${tpx(12.5)}; line-height: 1.3;
+  letter-spacing: 0; color: #ffb3a0;
+}
+/* The teach card's footer: its place in the run, and a button to turn the page. */
+${A} .lr-altar-tip .lr-info-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: ${cpx(8)}; margin-top: ${cpx(4)};
+}
+${A} .lr-altar-tip .lr-info-page { margin: 0; font-size: ${tpx(12)}; }
+${A} .lr-altar-tip .lr-info-next {
+  position: relative; flex: none; pointer-events: auto; min-height: ${cpx(36)}; min-width: ${cpx(72)};
+  padding: 0 ${cpx(12)}; font-size: ${tpx(13)}; line-height: 1; border-radius: ${cpx(8)}; border-width: 1px;
+}
+/* A 44 px finger target around the 36 px button. */
+${A} .lr-altar-tip .lr-info-next::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, ${cpx(44)}); height: ${cpx(44)};
+  transform: translate(-50%, -50%);
+}
+${A} .lr-altar-tip:has(.lr-info-next) { pointer-events: auto; }
+/* Text floors: tray counts 13 px (keycap and count), solve-card lore 12 px. */
+${A} .lr-altar-count .lr-n { font-size: ${tpx(13)}; }
+${A} .lr-altar-count kbd.lr-k { font-size: ${tpx(13)}; line-height: 1.2; min-width: 0; }
+${P} .lr-solve[data-phone] .lr-page-note, ${P} .lr-solve[data-phone] .lr-page-note b { font-size: ${tpx(12)}; }
+/* mobile-6-moments end */
+
 /* ── Title ──────────────────────────────────────────────────────────────── */
 ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cpx(2)} ${cpx(8)}; }
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }
