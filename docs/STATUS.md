@@ -42,7 +42,7 @@ _Last updated: 2026-11-02 by PM_
 | engine-cleanup | ws/engine-cleanup | ✅ merged | particles clear, bolt timing from trace, Fuse.destroy, per-draw uniforms, texture uploads, PingPong, global keys, queued taps, master limiter + reverb, post.blendTo. 60fps, no new churn |
 | candle-light | ws/candle-light | ✅ merged | candles 25–32% darker with a slow warm breath (0.70–1, no pops; steady under Reduced motion/Reduce flashes); held gem, live sockets, Strike and the hall doorway beat them; puddles read as water, capacitor-bay cans no longer wash out, vignette lifted. 60fps, draws unchanged |
 | difficulty-2 | ws/difficulty-2 | ✅ merged | D-037: turn load in the score; press-unit-4 9→2, capacitor-bay 11→1 (re-laid, single south lane), conveyor-a kept at 4 on purpose; all 16 in band, finale highest; intake-desk first visit 4 FUSE cards → 1; est. 54.5 min |
-| bug-bash | ws/bug-bash | 🟡 running | first-time-player sweep of every screen/res/input; robustness (resize, device lost, bad saves); panel scroll; lint |
+| bug-bash | ws/bug-bash | ✅ merged | Settings two-column + sticky Done (no scroll at 100/125/150%); Codex fits at 150%; live strike chip (got N = newest chip); corrupt-save toast + backup; altar tag/storm-label/subtitle fixes; ending clears toasts; lint clean; 21 new e2e (robustness, layout-fit); full run 0 console errors. Deferred S3/S4 in its log |
 | perf-low | ws/perf-low | 🟡 running | GPU timestamps, Low composite at scene res, ending flood at DPR 2, weak-GPU estimate, first-frame timing |
 
 ## Blocked / needs user

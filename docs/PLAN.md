@@ -44,7 +44,7 @@ A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 t
 | 2 Playable vertical | game-shell, art-materials, audio-design, difficulty-fun (phase 1), art-props | ✅ merged |
 | 3 Content complete | altar-scene, hall-art, story-scenes | ✅ merged |
 | 4 Alpha + verify | hall-floor ✅, altar-clarity ✅, full-run ✅ (keyboard e2e through all 16 + playtest report), engine-cleanup ✅, engine-adoption ✅, then the playtest fixes before alpha: caption-layout ✅, altar-polish ✅; release label on title ✅; then the M3α pre-release | ✅ merged |
-| 5 Polish | perf-tiers ✅, a11y ✅, polish-1 ✅, first-altar ✅, onboarding-2 ✅, title-fuse ✅, split-rotate ✅, turn-2 ✅, turn-clarity ✅, capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅, link-copy ✅, candle-light ✅, difficulty-2 ✅ (D-037), screens pruned ✅; remaining: bug-bash, perf-low, then user playtest check | 🟡 running: bug-bash, perf-low |
+| 5 Polish | perf-tiers ✅, a11y ✅, polish-1 ✅, first-altar ✅, onboarding-2 ✅, title-fuse ✅, split-rotate ✅, turn-2 ✅, turn-clarity ✅, capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅, link-copy ✅, candle-light ✅, difficulty-2 ✅ (D-037), bug-bash ✅, screens pruned ✅; remaining: perf-low, bug-bash S3 leftovers, then user playtest check | 🟡 running: perf-low |
 | 6 Ship | v1.0.0 release, tags, itch kit | ⏳ |
 
 ## User feedback backlog
@@ -88,7 +88,8 @@ Each item stays here until it is verified in a merged build. The owning workstre
 - ✅ Text size setting 100/125/150% (polish-1, D-025).
 - ✅ Caption no longer covers the altar key-hint line (polish-1).
 - ✅ Archive key presses 109 → 55; all 16: 808 → 564 (polish-1, D-026). Refresh the Keys column in `docs/design/playtest-report.md` from this run.
-- Settings and Codex panels scroll at every text size (pre-existing); revisit if players miss options.
+- ✅ Settings and Codex fit at every text size (bug-bash).
+- Bug-bash deferred: toasts + ending closing line use the sans font (S3); tilted brown card prop near "Back to the hall" on the end card reads as clutter (S3); tag flip pop-in jump (S4); loop ticks under the device-lost dialog (S4).
 - ✅ Pruned `docs/design/screens` (41 MB → 2 MB playtest set; history keeps the rest; new shots go to ignored `screens/local/`).
 - Perf follow-ups: timestamp-query GPU timing (engine/platform), composite at scene resolution on Low (softer, cuts the ~4 ms floor), DPR 2 ending flood on High is over budget.
 - Optional altar board readout key for screen readers (a11y S3).
