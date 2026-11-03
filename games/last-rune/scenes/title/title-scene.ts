@@ -21,6 +21,8 @@ import type { TitleView, TitleViewFrame } from '../views';
 import { ChatterClock, ShuffleBag } from './chatter';
 
 const KNOCK_DELAY = 1.6;
+/** Where FUSE potters on the title (art/hall/title-view.ts STROLL_SPOTS), head to wheels. */
+const FUSE_ZONE: Rect = { x: 280, y: 730, width: 540, height: 250 };
 /** Design px kept clear around the menu and the release label when FUSE's card moves. */
 const AVOID_PAD = 24;
 
@@ -134,6 +136,8 @@ export class TitleScene implements GameScene {
         height: r.height / ui.scale + AVOID_PAD * 2,
       });
     }
+    // Phones (mobile-5-chrome): FUSE himself, wherever he potters, so his card never covers him.
+    if (this.ctx.device.phone) out.push(FUSE_ZONE);
     return out;
   }
 

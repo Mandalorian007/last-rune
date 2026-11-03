@@ -270,6 +270,8 @@ for (const vp of PHONES) {
       );
       // The header has no dead controls (D-027): no chevron, and the unread count is plain text.
       expect(await hg.locator('.lr-hg-back').count()).toBe(0);
+      // mobile-5-chrome: no unread count at all (nothing in a read-only channel is "unread").
+      await expect(hg.locator('.lr-hg-badge-count')).toBeHidden();
       // mobile-4-chrome: nothing in the hangout takes focus or looks typeable; the bar reads
       // "Read-only channel"; one "#introductions" header (the top bar), no repeated start block.
       const inert = await page.evaluate(() => {

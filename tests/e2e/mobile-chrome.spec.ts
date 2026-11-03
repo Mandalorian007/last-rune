@@ -1,6 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
 import { hallLines } from '../../games/last-rune/content/lines';
-import { MACHINES } from '../../games/last-rune/content/machines';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-3-chrome: the title, hall and menus at the four realistic phone viewports (D-040):
@@ -25,10 +24,10 @@ const PHONES = [
 ] as const;
 
 /**
- * The hall keeps every doorway whole, arch to sill (FILL_BANDS minVisible 985), so wide phones
- * keep soft-edged side bars: at most this share of the width each side (Android 20:9 ≈ 11.5%).
+ * The hall fills the width on every phone (mobile-5-chrome: the hall camera zooms out about the
+ * doorway band and the wall widens, scenes/hall/hall-frame.ts): side bars at most 3% a side.
  */
-const HALL_BAR = 0.12;
+const HALL_BAR = 0.03;
 
 /** A wall alcove's drawn arch and sill around its centre, design px (the floor seal is round). */
 const ARCH = { l: -100, r: 100, t: -118, b: 92 } as const;
@@ -122,43 +121,50 @@ function bars(page: Page) {
   });
 }
 
-/** Doorways (arch to sill) and the suggestion tag that are not wholly on screen. */
+/** Screen (client px) of a hall world point under the scene's own camera (phones zoom it). */
+const HALL_TO_SCREEN = `
+  const st = window.__game.stack.top.state;
+  const f = st.frame;
+  const ov = document.querySelector('.tc-overlay').getBoundingClientRect();
+  const k = ov.width / 1920;
+  const sx = (x) => ov.left + (960 + (x - 960 - f.camX) * f.zoom) * k;
+  const sy = (y) => ov.top + (540 + (y - 540 - f.camY) * f.zoom) * k;
+`;
+
+/**
+ * Doorways (arch to sill) and the suggestion ring and tag that are not wholly on screen; the
+ * tag and every door plate also keep 4 px inside the edges (mobile-5-chrome).
+ */
 function doorsOff(page: Page): Promise<string[]> {
-  const doors = MACHINES.map((m) => ({
-    id: m.id,
-    x: m.alcove.x,
-    y: m.alcove.y,
-    floor: m.id === 'the-last-rune',
-  }));
   return page.evaluate(
-    ({ doors, A }) => {
+    ({ A, src }) => {
+      const { st, sx, sy } = new Function(`${src} return { st, sx, sy };`)();
       const app = document.getElementById('app')!.getBoundingClientRect();
-      const ov = document.querySelector<HTMLElement>('.tc-overlay')!.getBoundingClientRect();
-      const k = ov.width / 1920;
       const bad: string[] = [];
-      const check = (name: string, l: number, t: number, r: number, b: number) => {
-        if (l < app.left - 1 || r > app.right + 1 || t < app.top - 1 || b > app.bottom + 1)
+      const check = (name: string, l: number, t: number, r: number, b: number, pad = 0) => {
+        if (
+          l < app.left + pad - 1 ||
+          r > app.right - pad + 1 ||
+          t < app.top + pad - 1 ||
+          b > app.bottom - pad + 1
+        )
           bad.push(`${name} at ${l.toFixed(0)},${t.toFixed(0)}–${r.toFixed(0)},${b.toFixed(0)}`);
       };
-      for (const d of doors) {
+      for (const d of st.model.alcoves) {
         const e = d.floor ? { l: -110, r: 110, t: -110, b: 110 } : A;
-        check(
-          `door ${d.id}`,
-          ov.left + (d.x + e.l) * k,
-          ov.top + (d.y + e.t) * k,
-          ov.left + (d.x + e.r) * k,
-          ov.top + (d.y + e.b) * k,
-        );
+        check(`door ${d.id}`, sx(d.x + e.l), sy(d.y + e.t), sx(d.x + e.r), sy(d.y + e.b));
       }
-      for (const sel of ['.lr-hall-next', '.lr-hall-next-tag']) {
-        const el = document.querySelector(sel);
-        if (!el) continue;
-        const r = el.getBoundingClientRect();
-        check(sel, r.left, r.top, r.right, r.bottom);
+      for (const sel of ['.lr-hall-next', '.lr-hall-next-tag', '.lr-door']) {
+        for (const el of document.querySelectorAll<HTMLElement>(sel)) {
+          const r = el.getBoundingClientRect();
+          if (!r.width) continue;
+          const name = `${sel} ${el.dataset.door ?? ''}`.trim();
+          check(name, r.left, r.top, r.right, r.bottom, sel === '.lr-hall-next' ? 0 : 4);
+        }
       }
       return bad;
     },
-    { doors, A: ARCH },
+    { A: ARCH, src: HALL_TO_SCREEN },
   );
 }
 
@@ -240,11 +246,11 @@ for (const vp of PHONES) {
       await expect(page.locator('.lr-hall-next-tag')).toHaveText(/Start here/);
       problems.push(...(await doorsOff(page)).map((s) => `hall first entry: ${s}`));
       const start = (await page.locator('.lr-hall-next').boundingBox())!;
-      const desk = MACHINES.find((m) => m.id === 'intake-desk')!.alcove;
-      const ovb = (await page.locator('.tc-overlay').boundingBox())!;
-      const kk = ovb.width / 1920;
-      const cx = ovb.x + desk.x * kk;
-      const cy = ovb.y + desk.y * kk;
+      const { cx, cy } = await page.evaluate((src) => {
+        const { st, sx, sy } = new Function(`${src} return { st, sx, sy };`)();
+        const desk = st.model.alcoves.find((a: G) => a.id === 'intake-desk');
+        return { cx: sx(desk.x), cy: sy(desk.y) };
+      }, HALL_TO_SCREEN);
       if (
         Math.abs(start.x + start.width / 2 - cx) > 2 ||
         start.y > cy ||
@@ -566,6 +572,217 @@ for (const vp of PHONES) {
           await page.waitForTimeout(300);
         }
       }
+
+      expect(problems).toEqual([]);
+    });
+  });
+}
+
+/** Shown elements under `root` whose own text draws under `min` px on screen (client px). */
+function tinyText(page: Page, root: string, min = 12): Promise<string[]> {
+  return page.evaluate(
+    ({ root, min }) => {
+      const out: string[] = [];
+      for (const host of document.querySelectorAll<HTMLElement>(root)) {
+        for (const el of [host, ...host.querySelectorAll<HTMLElement>('*')]) {
+          const own = [...el.childNodes]
+            .filter((n) => n.nodeType === Node.TEXT_NODE)
+            .map((n) => n.textContent ?? '')
+            .join('')
+            .trim();
+          if (!own || el.closest('[hidden], [aria-hidden="true"], svg, option')) continue;
+          const r = el.getBoundingClientRect();
+          const cs = getComputedStyle(el);
+          if (!r.width || !r.height || cs.visibility === 'hidden' || Number(cs.opacity) === 0)
+            continue;
+          // The overlay is scaled to the screen: measure the drawn size, not the design size.
+          const k = el.offsetWidth ? r.width / el.offsetWidth : 1;
+          const px = Number.parseFloat(cs.fontSize) * k;
+          // A zero font is a deliberate textless mark (the journal's red "new" dot); the scale
+          // rounds a 12 px design size to a hair under, hence the 0.2 px grace.
+          if (px > 0 && px < min - 0.2) out.push(`"${own.slice(0, 24)}" ${px.toFixed(1)} px`);
+        }
+      }
+      return out;
+    },
+    { root, min },
+  );
+}
+
+// mobile-5-chrome (gate review 2): door plates, a full-width hall, the Settings fold, the SE
+// Codex formula, a 12 px text floor on the chrome. (No hangout unread badge: mobile-ending.)
+for (const vp of PHONES) {
+  test.describe(`phone chrome plates and floors ${vp.name}`, () => {
+    test.use({
+      viewport: { width: vp.width, height: vp.height },
+      isMobile: true,
+      hasTouch: true,
+      deviceScaleFactor: 2,
+    });
+
+    test(`door plates, Menu, Settings fold, Codex formula and text floors at ${vp.width}×${vp.height}`, async ({
+      page,
+    }) => {
+      await insets(page, vp.inset);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(DEV_URL);
+      await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+        timeout: 30_000,
+      });
+      await page.evaluate(() =>
+        document.dispatchEvent(
+          new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }),
+        ),
+      );
+      const problems: string[] = [];
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.save.update((d: G) => {
+          d.flags.hallIntro = true;
+          d.settings.captionSpeed = 'instant';
+          d.progress.solved = ['intake-desk', 'furnace', 'splitter-mill'];
+          d.puzzles = {};
+          d.journal.found = [1, 2, 3, 4];
+          d.journal.read = [1, 2, 3];
+        });
+        g.flow.continueGame();
+        g.fuse.hush();
+      });
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'hall');
+      await page.waitForTimeout(600);
+      await waitFrames(page, 6);
+
+      // Every door has a plate: solved ones ✓ and named, open ones named, locked ones a lock and
+      // what they need. On screen 4 px in (doorsOff), none overlapping, need pips ≥10 px.
+      const plates = await page.evaluate(() => {
+        const st = (window as G).__game.stack.top.state;
+        const out: string[] = [];
+        const boxes: [string, DOMRect][] = [];
+        for (const a of st.model.alcoves) {
+          const el = document.querySelector<HTMLElement>(`.lr-door[data-door="${a.id}"]`);
+          if (!el?.getBoundingClientRect().width) {
+            out.push(`${a.id}: no plate`);
+            continue;
+          }
+          boxes.push([a.id, el.getBoundingClientRect()]);
+          const text = el.textContent ?? '';
+          if (a.status === 'locked') {
+            if (!el.querySelector('svg')) out.push(`${a.id}: locked with no lock`);
+            if (!el.querySelector('.lr-door-gem') && !a.missingMachines)
+              out.push(`${a.id}: locked with no requirement`);
+          } else {
+            if (!text.includes(a.name)) out.push(`${a.id}: plate "${text}" lacks "${a.name}"`);
+            if (a.status === 'solved' && !el.querySelector('.lr-door-tick'))
+              out.push(`${a.id}: solved with no ✓`);
+          }
+        }
+        for (let i = 0; i < boxes.length; i++)
+          for (let j = i + 1; j < boxes.length; j++) {
+            const [n, a] = boxes[i]!;
+            const [m, b] = boxes[j]!;
+            if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom)
+              out.push(`plates ${n} and ${m} overlap`);
+          }
+        for (const g of document.querySelectorAll('.lr-door-gem')) {
+          const r = g.getBoundingClientRect();
+          if (r.width < 9.5 || r.height < 9.5)
+            out.push(`a need pip is ${r.width.toFixed(1)}×${r.height.toFixed(1)}`);
+        }
+        return out;
+      });
+      problems.push(...plates.map((s) => `hall: ${s}`));
+      problems.push(...(await doorsOff(page)).map((s) => `hall: ${s}`));
+      const hb = await bars(page);
+      if (Math.max(hb.l, hb.r) > HALL_BAR * vp.width)
+        problems.push(`hall art bars ${hb.l.toFixed(0)}/${hb.r.toFixed(0)} px`);
+      await expect(page.locator('.lr-hud-menu-label')).toHaveText('Menu');
+      await expect(page.locator('.lr-hud-menu-new')).toHaveText(/New page/);
+      problems.push(
+        ...(await tinyText(page, '.lr-doors, .lr-hud-menu, .lr-hall-next-tag')).map(
+          (s) => `hall text: ${s}`,
+        ),
+      );
+
+      // A tap on a locked door gives its card (name, what it needs); the card goes when a panel
+      // opens over the hall.
+      const locked = await page.evaluate(() => {
+        const st = (window as G).__game.stack.top.state;
+        const a = st.model.alcoves.find((x: G) => x.status === 'locked');
+        const f = st.frame;
+        const ov = document.querySelector('.tc-overlay')!.getBoundingClientRect();
+        const k = ov.width / 1920;
+        return {
+          name: a.name as string,
+          x: ov.left + (960 + (a.x - 960 - f.camX) * f.zoom) * k,
+          y: ov.top + (540 + (a.y - 540 - f.camY) * f.zoom) * k,
+        };
+      });
+      await page.touchscreen.tap(locked.x, locked.y);
+      await expect(page.locator('.lr-nameplate')).toBeVisible();
+      await expect(page.locator('.lr-nameplate')).toContainText(locked.name);
+      await expect(page.locator('.lr-nameplate')).toContainText(/Locked/);
+
+      // Settings: no header or control is cut by the fold; the save box and Start over group.
+      await page.evaluate(() => (window as G).__game.openSettings());
+      await expect(page.locator('.lr-settings')).toBeVisible();
+      await expect(page.locator('.lr-nameplate')).toBeHidden();
+      await page.waitForTimeout(300);
+      await waitFrames(page, 4);
+      const cut = await page.evaluate(() => {
+        const cols = document.querySelector<HTMLElement>('.lr-settings-cols')!;
+        const v = cols.getBoundingClientRect();
+        const out: string[] = [];
+        for (const e of cols.querySelectorAll<HTMLElement>('h3, .tc-field, .lr-choice')) {
+          const r = e.getBoundingClientRect();
+          if (r.top < v.bottom - 1 && r.bottom > v.bottom + 1)
+            out.push(`"${(e.textContent ?? '').trim().slice(0, 20)}" is cut by the fold`);
+        }
+        return out;
+      });
+      problems.push(...cut.map((s) => `settings: ${s}`));
+      await expect(page.locator('.lr-save-box')).toContainText('Save code');
+      await expect(page.locator('.lr-settings-danger')).toContainText('Start over');
+      await expect(page.locator('.lr-settings .lr-seg button', { hasText: 'Auto' })).toHaveCount(2);
+      problems.push(...(await tinyText(page, '.lr-settings-host')).map((s) => `settings: ${s}`));
+      await page.evaluate(() => (window as G).__game.ui.stack.clear());
+
+      // Codex: on every unlocked page the rule and its formula are wholly on screen, unscrolled.
+      await page.evaluate(() => (window as G).__game.codex.open());
+      await expect(page.locator('.lr-codex-nav')).toBeVisible();
+      const tabs = await page.locator('.lr-codex-nav button').count();
+      for (let i = 0; i < tabs; i++) {
+        await page.locator('.lr-codex-nav button').nth(i).click();
+        await waitFrames(page, 3);
+        const miss = await page.evaluate(() => {
+          const app = document.getElementById('app')!.getBoundingClientRect();
+          const out: string[] = [];
+          for (const p of document.querySelectorAll<HTMLElement>('.lr-codex-page')) {
+            const pr = p.getBoundingClientRect();
+            if (!pr.width) continue;
+            const top = Math.max(pr.top, app.top);
+            const bottom = Math.min(pr.bottom, app.bottom);
+            for (const e of p.querySelectorAll<HTMLElement>('.lr-codex-rule, .lr-codex-maths')) {
+              const r = e.getBoundingClientRect();
+              if (r.top < top - 1 || r.bottom > bottom + 1 || r.right > app.right + 1)
+                out.push(`${e.className} "${(e.textContent ?? '').trim().slice(0, 20)}" is cut`);
+            }
+          }
+          return out;
+        });
+        problems.push(...miss.map((s) => `codex tab ${i}: ${s}`));
+        problems.push(
+          ...(await tinyText(page, '.lr-codex-nav, .lr-codex-page')).map(
+            (s) => `codex tab ${i}: ${s}`,
+          ),
+        );
+      }
+      await page.evaluate(() => (window as G).__game.ui.stack.clear());
+
+      // Journal: the chrome (rows, counter, folio) is ≥12 px.
+      await page.evaluate(() => (window as G).__game.flow.openJournal());
+      await expect(page.locator('.lr-journal')).toBeVisible();
+      await page.waitForTimeout(400);
+      problems.push(...(await tinyText(page, '.lr-journal')).map((s) => `journal: ${s}`));
 
       expect(problems).toEqual([]);
     });

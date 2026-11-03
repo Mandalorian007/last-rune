@@ -167,3 +167,8 @@ Gate review 2 (4 blind reviewers, 2026-11-03) scored 6 / 6 / 6.5 / 6.5, a fail. 
 - `before-*.png` / `after-*.png` sheets;
 - `after/altars/{iphone,se}`;
 - desktop and iPad collars in `before/desk`, `after/desk`.
+
+**Merge of main (mobile-5-moments, mobile-5-chrome):**
+- `FILL_BANDS` keeps chrome's title and hall bands and adds puzzle and solve.
+- In `phone-styles.ts` my block now sits after the moments block. The lane hint is 13 px and may wrap.
+- The solve card is moved in by the crop, 12 px from the top, and reaches to 12 px inside the right edge (fill-width leaves no free right bar). `mobile-moments.spec` passes.
