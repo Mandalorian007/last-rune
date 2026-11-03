@@ -410,18 +410,36 @@ const DEFS: Def[] = [
     "The crane. Lifts the big stones. Hands are overrated. This unit has clamps. Clamps can't hold a gem. Noted. Resented.",
     "Bigger altar. More sockets. More ways to be wrong. Ask me how I know. Don't. Regulation 8.",
   ),
-  ...machineLines(
-    'boiler-room',
-    2,
-    "Boiler room. The Builder slept here, toward the end. There's a cot. It's a very specific cot. Nobody told this unit that.",
-    "Warm. First time it's been warm in here since… the cot's facing the wrong wall. It always was. Why would that be known.",
-  ),
-  ...machineLines(
-    'archive',
-    2,
-    "The archive. Drawers. Nothing but drawers. Can't open a single one. Had a long time to resent drawers. Regulation 14 is about drawers.",
-    "You've read the pages. This unit hasn't. 'They say nothing on this floor runs hot enough.' That's page four. How is that… Regulation 8. Regulation 8.",
-  ),
+  // lore-1: the boiler solve and archive arrive echo pages 12 and 10 nearly verbatim, and the
+  // slip shows ("My… the Builder's"). New Tier 2 lines still leave the "I" to the pitch.
+  {
+    kind: 'arrive',
+    machine: 'boiler-room',
+    tier: 2,
+    source: P,
+    text: "Boiler room. The Builder slept here, toward the end. There's a cot. It's a very specific cot. Nobody told this unit that.",
+  },
+  {
+    kind: 'solve',
+    machine: 'boiler-room',
+    tier: 2,
+    source: N,
+    text: "Warm again. The cot faces the big one. My… the Builder's idea. In case it wakes up at night.",
+  },
+  {
+    kind: 'arrive',
+    machine: 'archive',
+    tier: 2,
+    source: N,
+    text: "The archive. Drawers. Can't open one. Regulation 14: drawers open only for their owner. So, not this unit. Presumably.",
+  },
+  {
+    kind: 'solve',
+    machine: 'archive',
+    tier: 2,
+    source: P,
+    text: "You've read the pages. This unit hasn't. 'They say nothing on this floor runs hot enough.' That's page four. How is that… Regulation 8. Regulation 8.",
+  },
   ...machineLines(
     'foundry',
     2,
@@ -456,30 +474,58 @@ const DEFS: Def[] = [
   },
 
   // ── Tier 3 ───────────────────────────────────────────────────────────────
-  ...machineLines(
-    'capacitor-bay',
-    3,
-    'Capacitor bay. Stores a bolt for later. The committee said that was cheating. It is. Do it anyway.',
-    "Ice gem. The last one I… the last one that was cut. Didn't get to use it. Someone didn't. Monitoring self.",
-  ),
-  ...machineLines(
-    'lift-shaft',
-    3,
-    "Lift to the roof. Hasn't run since the day the counting started. Day one. The count started for a reason. Can't find the form.",
-    "Going up. I don't like heights. This unit doesn't have a setting for heights. So where did that come from.",
-  ),
+  // lore-1: Tier 3 slips say it outright ("I… the Builder") and quote pages 13 and 14 before
+  // the player has them.
+  {
+    kind: 'arrive',
+    machine: 'capacitor-bay',
+    tier: 3,
+    source: P,
+    text: 'Capacitor bay. Stores a bolt for later. The committee said that was cheating. It is. Do it anyway.',
+  },
+  {
+    kind: 'solve',
+    machine: 'capacitor-bay',
+    tier: 3,
+    source: N,
+    text: 'Ice gem. Cut it last. I… the Builder cut it last. Ran the sums on later. Later was short.',
+  },
+  {
+    kind: 'arrive',
+    machine: 'lift-shaft',
+    tier: 3,
+    source: P,
+    text: "Lift to the roof. Hasn't run since the day the counting started. Day one. The count started for a reason. Can't find the form.",
+  },
+  {
+    kind: 'solve',
+    machine: 'lift-shaft',
+    tier: 3,
+    source: N,
+    text: 'Going up. Hate heights. Went anyway. I… the Builder wrote that. This unit has no setting for heights.',
+  },
   ...machineLines(
     'roof-array',
     3,
     "The roof. The storm's right there. Forty years it's come every night and found nobody home. Tonight it's looking at you.",
     "Array's live. The whole sky's wired to the floor now. Management said keep the lights on until someone comes back. I assumed they meant them.",
   ),
-  ...machineLines(
-    'control-booth',
-    3,
-    "The booth. The Builder's chair. Nobody sits in it. It's… it's adjusted. For a unit this height. That's a coincidence. Regulation 8 covers coincidences.",
-    "Page sixteen. Last page. Dated the day the count started. I haven't read it. I know what it says. I know what it says.",
-  ),
+  // lore-1: the reveal, said plainly once, on one card so it is read before Continue appears.
+  // It answers the arrive line's "Regulation 8 covers coincidences".
+  {
+    kind: 'arrive',
+    machine: 'control-booth',
+    tier: 3,
+    source: P,
+    text: "The booth. The Builder's chair. Nobody sits in it. It's… it's adjusted. For a unit this height. That's a coincidence. Regulation 8 covers coincidences.",
+  },
+  {
+    kind: 'solve',
+    machine: 'control-booth',
+    tier: 3,
+    source: N,
+    text: "Page sixteen. Day 1. My handwriting. My drawers. My chair. Oh. I'm the Builder. Regulation 8 does not cover this.",
+  },
 
   // ── The Last Rune (no arrive line: the corner card is empty) ──────────────
   {

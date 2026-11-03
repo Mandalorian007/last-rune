@@ -263,7 +263,7 @@ export const HANGOUT_SCRIPT: readonly HangoutStep[] = [
     line: 'beat.beyond-arrived',
     form: [
       ['Name', 'FUSE'],
-      ['Last post', 'Foreman, 40 years'],
+      ['Last post', 'Builder, then foreman'],
       ['Hobbies', 'Pending'],
     ],
   },

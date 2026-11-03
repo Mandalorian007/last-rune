@@ -57,6 +57,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-j-sketch circle { fill: none; stroke: #5a3a1c; stroke-width: 5; opacity: 0.16; }
 .tc-overlay .lr-j-sign { position: absolute; overflow: visible; }
 .tc-overlay .lr-j-sign path { fill: none; stroke: #24170f; stroke-width: 2.4; stroke-linecap: round; opacity: 0.85; }
+.tc-overlay .lr-j-sign text { font-family: var(--lr-hand); fill: #24170f; opacity: 0.9; }
 .tc-overlay .lr-j-empty { position: absolute; font-family: var(--lr-hand); font-size: 34px; color: #4a3520; text-align: center; }
 
 .tc-overlay .lr-journal .lr-j-turn { position: absolute; width: 64px; height: 64px; font-size: 44px; line-height: 60px; text-align: center; color: #3a2614; font-family: var(--lr-hand); border-radius: 50%; }

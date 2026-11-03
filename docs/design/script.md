@@ -25,10 +25,11 @@ Last Rune he says nothing until the final gem. Tested "I" counts: Tier 1 = 0 < T
 | Rung | Clue | Where it is laid |
 |---|---|---|
 | 1 | He knows every solution but can't place gems | Tier 1: conveyor arrive, page 5 ("Knew where each one went. Hands didn't."). Tier 2: press arrive ("amber before magenta"), crane arrive ("Clamps can't hold a gem"), page 9 |
-| 2 | Journal handwriting matches his report font | Page 1 is drawn in his report face. Page 4's plate: "Similar handwriting. Common handwriting." Page 9 is written *as* an incident report, and its plate notices. Page 16's signature direction |
+| 2 | Journal handwriting matches his report font | Page 1 is drawn in his report face. Page 4's plate: "Similar handwriting. Common handwriting." Page 9 is written *as* an incident report, and its plate notices. Page 16's signature runs on into his sign-off, "Monitoring.", and the booth solve says "My handwriting." |
 | 3 | He quotes a page he says he never read | Page 4 (relay, Tier 1) holds "They say nothing on this floor runs hot enough." The archive solve (Tier 2) quotes it. The relay is a prerequisite of the archive, so page 4 is always found first (tested). Page 6's plate: "This unit has not read that page." |
 | 4 | The Builder's last entry is dated the day his count started | Page 16 is dated **Day 1**. FUSE's count is on screen from the intake desk ("Day 14,610"). The other pages count up from Day 9,131, so Day 1 jumps out |
-| 5 | He says "I" instead of "the Builder" and stops mid-sentence | Tier 2: foundry solve. Tier 3: every machine, the Tier 3 hall echo, the Tier 3 reactions, and the plates on pages 13 to 15 |
+| 5 | He says "I" instead of "the Builder" and stops mid-sentence | Tier 2: foundry solve, and boiler solve ("My… the Builder's idea"). Tier 3 says the swap out loud: capacitor solve ("I… the Builder cut it last"), lift solve ("I… the Builder wrote that"), the Tier 3 hall echo, the Tier 3 reactions, and the plates on pages 13 to 15 |
+| **Said** | FUSE works it out | Control booth solve, after page 16: "Oh. I'm the Builder." Once, plainly. The Last Rune's silence and "it was mine" follow from it |
 
 **Rhymes** (each page answers something FUSE says in the same tier):
 
@@ -43,13 +44,13 @@ Last Rune he says nothing until the final gem. Tested "I" counts: Tier 1 = 0 < T
 | 7 six hundred and twelve | foundry solve |
 | 8 shutdown order | storm cell arrive: "The committee said it couldn't be built." |
 | 9 incident report: dropped a Bend | crane arrive: "Clamps can't hold a gem. Noted. Resented." |
-| 10 Regulation 14 | archive arrive: "Regulation 14 is about drawers." |
+| 10 Regulation 14 | archive arrive: "Regulation 14: drawers open only for their owner." |
 | 11 memory going | archive solve: "You've read the pages. This unit hasn't." |
-| 12 the cot | boiler arrive and solve |
-| 13 ice cut last | capacitor bay solve: "The last one I… the last one that was cut." |
-| 14 hates heights | lift solve: "I don't like heights." |
+| 12 the cot | boiler arrive and solve (the solve says the page: "In case it wakes up at night.") |
+| 13 ice cut last | capacitor bay solve: "I… the Builder cut it last. Ran the sums on later." |
+| 14 hates heights | lift solve: "Hate heights. Went anyway. I… the Builder wrote that." (before the page is found) |
 | 15 Management's last memo | roof solve: "keep the lights on until someone comes back." |
-| 16 the count can stop | booth solve: "Dated the day the count started." |
+| 16 the drawers were mine | booth solve: "My drawers. My chair. Oh. I'm the Builder." |
 
 **Regulations** (FUSE's running gag. Each one is also a fact):
 
@@ -62,7 +63,7 @@ Last Rune he says nothing until the final gem. Tested "I" counts: Tier 1 = 0 < T
 | 5 | Greed trips breakers | amplify codex |
 | 6 | Candles are lighting, not decoration | title chatter (the title has no lamps, only candles) |
 | 7 | Floors are not filing | page 1 plate |
-| 8 | Don't ask where Management went | relay solve, crane solve, archive solve, booth arrive, page 8 plate |
+| 8 | Don't ask where Management went | relay solve, crane solve, archive solve, booth arrive ("covers coincidences"), booth solve ("does not cover this"), page 8 plate |
 | 9 | Two signatures | relay arrive, gate codex, page 4 (the Builder wrote it) |
 | 12 | Press Unit 4: a magenta and an amber | press locked, Tier 3 hall echo ("I wrote Regulation 12") |
 | 14 | Drawers open only for their owner | archive arrive, page 10 (the Builder wrote it). Pays off in "Turns out I had a key the whole time." |
@@ -392,8 +393,8 @@ FUSE's plate **[NEW]**:
 
 *Solve*
 
-> Warm. First time it's been warm in here since… the cot's facing the wrong wall. It always was. Why would that be known.  
-> <sub>`boiler-room.solve` · 23w</sub>
+> Warm again. The cot faces the big one. My… the Builder's idea. In case it wakes up at night. **[NEW]**  
+> <sub>`boiler-room.solve` · 19w</sub>
 
 **Journal page 12** · Day 13,190
 
@@ -407,8 +408,8 @@ FUSE's plate **[NEW]**:
 
 *Arrive*
 
-> The archive. Drawers. Nothing but drawers. Can't open a single one. Had a long time to resent drawers. Regulation 14 is about drawers.  
-> <sub>`archive.arrive` · 23w</sub>
+> The archive. Drawers. Can't open one. Regulation 14: drawers open only for their owner. So, not this unit. Presumably. **[NEW]**  
+> <sub>`archive.arrive` · 19w</sub>
 
 *Solve*
 
@@ -476,8 +477,8 @@ FUSE's plate **[NEW]**:
 
 *Solve*
 
-> Ice gem. The last one I… the last one that was cut. Didn't get to use it. Someone didn't. Monitoring self.  
-> <sub>`capacitor-bay.solve` · 21w</sub>
+> Ice gem. Cut it last. I… the Builder cut it last. Ran the sums on later. Later was short. **[NEW]**  
+> <sub>`capacitor-bay.solve` · 19w</sub>
 
 **Journal page 13** · Day 13,512 **[NEW]**
 
@@ -496,8 +497,8 @@ FUSE's plate **[NEW]**:
 
 *Solve*
 
-> Going up. I don't like heights. This unit doesn't have a setting for heights. So where did that come from.  
-> <sub>`lift-shaft.solve` · 20w</sub>
+> Going up. Hate heights. Went anyway. I… the Builder wrote that. This unit has no setting for heights. **[NEW]**  
+> <sub>`lift-shaft.solve` · 18w</sub>
 
 **Journal page 14** · Day 13,877 **[NEW]**
 
@@ -505,7 +506,7 @@ FUSE's plate **[NEW]**:
 
 FUSE's plate **[NEW]**:
 
-> Hates heights. Went anyway. I would have… the Builder did. The Builder went anyway.
+> Said it before reading it. Hates heights. Went anyway. I would have… the Builder did.
 
 ### Roof Array `roof-array`
 
@@ -534,18 +535,20 @@ FUSE's plate **[NEW]**:
 > The booth. The Builder's chair. Nobody sits in it. It's… it's adjusted. For a unit this height. That's a coincidence. Regulation 8 covers coincidences.  
 > <sub>`control-booth.arrive` · 24w</sub>
 
-*Solve*
+*Solve. The reveal: said plainly, once, on one card, so it is read before Continue appears.*
 
-> Page sixteen. Last page. Dated the day the count started. I haven't read it. I know what it says. I know what it says.  
-> <sub>`control-booth.solve` · 24w</sub>
+> Page sixteen. Day 1. My handwriting. My drawers. My chair. Oh. I'm the Builder. Regulation 8 does not cover this. **[NEW]**  
+> <sub>`control-booth.solve` · 19w</sub>
 
 **Journal page 16** · Day 1
 
 > *It can't be finished in a lifetime. Fine. I'll stop having one. The foreman unit has room. If this works, it'll keep the lights on and it won't remember why, which is a mercy. If someone comes: tell it the drawers were mine. Tell it the count can stop.*
 
-*— signed, and then the signature trails into the same hand as every incident report.*
+*— signed, and then the signature trails into the same hand as every incident report.* The loops
+tighten, flatten and run on into legible words in the page's hand: **Monitoring.** (FUSE's sign-off;
+`signOff` in `journal.ts`).
 
-FUSE's plate: *(blank)*
+FUSE's plate: *(blank)*. He has already said it at the booth; the page ends in his own word.
 
 ## The Last Rune
 
@@ -597,7 +600,7 @@ member but ThunderSoap is invented. **[NEW]** throughout, except FUSE's three cl
 **#welcome.** A join notice: FUSE came through the door. Say hi! (👋 9)
 
 **#introductions.** FUSE posts, with a paper form clipped on (*New arrival.* Name: FUSE. Last
-post: Foreman, 40 years. Hobbies: Pending.):
+post: Builder, then foreman. Hobbies: Pending.):
 
 > Hello. This unit has arrived somewhere with a great many people in it. **[NEW]**  
 > <sub>`beat.beyond-arrived` · 13w</sub>
