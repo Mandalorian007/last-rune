@@ -6,9 +6,10 @@
  * seconds between them (the gauges read out, capacitors glow). The verdict lands
  * `verdictDelay` after the last bolt arrives.
  */
-import type { Placement, PuzzleDef, SimResult, TraceSegment } from '../../rules';
+import type { MachineResult, Placement, PuzzleDef, SimResult, TraceSegment } from '../../rules';
 import { altarDims } from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
+import type { CapBeat } from './circuit-model';
 
 export interface TimelineOptions {
   /** Seconds per sim tick. */
@@ -200,4 +201,47 @@ export function gemsUsed(result: SimResult): GemKind[] {
   const set = new Set<GemKind>();
   for (const s of result.trace) if (s.tick > 0) set.add(s.colour);
   return [...set];
+}
+
+/**
+ * The verdict's headline for a failed attempt, naming the strike on a multi-strike altar:
+ * "Breaker tripped on strike 2: needs 8, got 16", "Not enough: needs 12, got 8 each strike".
+ */
+export function failText(m: MachineResult, outcome: 'over' | 'under', pulses: number): string {
+  const rs = m.readings;
+  let k = -1;
+  if (outcome === 'over') k = rs.findIndex((r) => r > m.need);
+  else for (let i = rs.length - 1; i >= 0 && k < 0; i--) if ((rs[i] ?? 0) > 0) k = i;
+  const got = k >= 0 ? rs[k]! : 0;
+  const lit = rs.filter((r) => r > 0);
+  const when =
+    pulses < 2 || k < 0
+      ? ''
+      : outcome === 'under' && lit.length > 1 && lit.every((r) => r === got)
+        ? ' each strike'
+        : ` on strike ${k + 1}`;
+  return outcome === 'over'
+    ? `Breaker tripped${when}: needs ${m.need}, got ${got}`
+    : `Not enough: needs ${m.need}, got ${got}${when}`;
+}
+
+/**
+ * On a multi-strike altar that failed, what happened on each strike in plain words, under the
+ * verdict: what each Capacitor kept and let out ("Strike 1: the Capacitor kept 8. Strike 2: the
+ * Capacitor let out 8 + 8 = 16."), or, with none in play, that strikes never add up.
+ */
+export function strikeStory(pulses: number, result: SimResult, beats: readonly CapBeat[]): string {
+  if (pulses < 2 || result.outcome === 'exact' || result.outcome === 'dead') return '';
+  if (beats.length === 0)
+    return result.pulsesRun > 1 ? 'Each strike is read on its own: strikes never add up.' : '';
+  const parts: string[] = [];
+  for (let i = 0; i < result.pulsesRun; i++) {
+    const said = beats
+      .filter((b) => b.pulse === i)
+      .map((b) =>
+        b.kind === 'keep' ? `kept ${b.stored}` : `let out ${b.stored} + ${b.incoming} = ${b.out}`,
+      );
+    if (said.length > 0) parts.push(`Strike ${i + 1}: the Capacitor ${said.join(' and ')}.`);
+  }
+  return parts.join(' ');
 }
