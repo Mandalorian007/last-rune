@@ -76,3 +76,55 @@ The root cause of most rows: the game is a fixed 1920×1080 design letterboxed i
 | A17 | Wide phones | 844–932 px wide phones show 75–91 px black bars left and right (the game is 16:9). Not a bug: it keeps the notch clear. Noted only. | Info |
 | A18 | Page | No page scroll, no element off screen (apart from sr-only text) at any size. Pinch/double-tap zoom and text selection are already blocked in index.html. | OK |
 | A19 | Hall | Alcoves are ~65 CSS px: tappable. A tap opens at once, so the hover name plate is never seen; FUSE still speaks for a locked door. Acceptable. | OK |
+
+### 2026-11-03 · Fixes
+
+Two flags on the overlay root, recomputed live (`ui/device-mode.ts`):
+- `data-phone`: set when the overlay scale is under 0.45, which means a phone in landscape. Tablets and desktop never get it. It sets `--lr-text-min` (14 CSS px), `--lr-tap` (44 CSS px) and `--lr-css-px`.
+- `data-touch`: set when the last input was a finger. It comes from the engine's `watchPointerKind`; a mouse press or a key turns it off.
+
+All phone CSS is in `ui/phone-styles.ts`, scoped to those flags. Desktop is unchanged.
+
+| # | Fix |
+|---|---|
+| A1 | Every scaled font size floors at `--lr-text-min` (text-scale.ts), so overlay text is never under 14 CSS px on a phone. |
+| A2, A3, A8–A14 | Phone sizes for HUD, altar actions, Settings, Codex, journal, title links, solve card and end card. Every button and link gets an invisible hit area of at least 44 CSS px (a `::before`). The journal slips are the exception: they keep their exact 16 px rows so neighbours don't steal taps, and the big page arrows turn pages instead. In the hall, the HUD moves to the bare floor bottom-left; on the solve card it hides. |
+| A4 | Board zoom was not built (open item). Instead, a finger drag aims 56 CSS px above the fingertip, so you can see the socket you're aiming at, and the gem places on release (lift your finger anywhere else and it stays in hand). Tray slots and 6×4 boards are tappable; 8×6 boards are tight; the Last Rune is fiddly. |
+| A5 | **Turning by touch:** a docked **↻ Turn** button sits right of the tray, with a small ↻ mark on the gem it will turn. Its target is the turning gem you last placed, or one you long-pressed; otherwise the turning gem in your hand. The mark doesn't take taps, and tapping a gem only ever picks it up (D-029). **Removing:** drag a placed gem off the altar, or use Undo or Clear. **Info card:** a long press (0.45 s) on a placed gem shows its card and selects it for ↻. The held gem's card shows for 2.5 s after you pick it up, then steps aside. |
+| A6 | With touch on, key caps hide and the wording changes. Hint: "Tap a gem, then a socket · ↻ turns it". Card tags: "tap ↻ to turn" / "drag off the altar to remove". FUSE and verdict lines say "the ↻ button" instead of "R or Q". The old R/Scroll badge hides. |
+| A7 | A finger that has lifted no longer counts as hovering: no ghost or route preview stays behind. |
+| A15 | Portrait: a full-screen card in FUSE's voice: "Turn your phone sideways … The building was. Regulation 1." It shows only on a handheld (mobile-perf's `deviceTraits().handheld`) or a touch phone held upright, and goes the moment the phone turns. **No scene supports portrait; every scene shows the card.** |
+| A16 | `viewport-fit=cover` with safe-area padding on `#app`, `-webkit-text-size-adjust: 100%`, and tap highlight off. On phones the title has a **Full screen** button. It is hidden where the browser can't go full screen (iPhone Safari; an itch iframe without `allowfullscreen`). Where it can, it also tries to lock landscape. The layout follows resize and orientation changes through the surface's existing resize path. |
+| — | In the altar title, the subtitle hides on phones; the storm's Gives card already says it. |
+
+Engine additions (no game nouns): `engine/platform/device.ts` provides `isTouchOnly`, `watchPointerKind`, `isPortrait`, `fullscreenAvailable`, `isFullscreen`, `toggleFullscreen({lockLandscape})` and `watchFullscreen`.
+
+Tests: `tests/e2e/mobile.spec.ts` runs at 844×390 with `isMobile`, `hasTouch` and DPR 2:
+- Intake desk by touch only, including Undo.
+- Furnace with four Bends turned by ↻.
+- A gem in hand turned before placing, plus drag-off removal.
+- A fit check at 844×390 and 667×375: no page scroll, text 14 px and up, targets 44 px and up, across hall, Settings, Codex and every altar.
+- The rotate card appears when the phone is upright and goes when it turns back.
+
+Screens (local, not committed): `docs/design/screens/local/mobile-ui/{844x390,667x375,390x844}/`. Touch states: `12-altar-relay-tower-touch-held.png` and `12-altar-relay-tower-touch-placed.png`.
+
+### Real-device checklist (for the user)
+
+**iPhone Safari** (landscape, and once from the itch page):
+1. Title text reads easily at arm's length. There is no Full screen button (expected on iPhone).
+2. Hold the phone upright: the "Turn your phone sideways" card appears. Turn it: the card goes and the title fits with no scroll.
+3. The home bar and notch don't cover the tray hint or the buttons.
+4. Intake desk: tap a gem, tap a socket, tap Strike, tap Continue.
+5. Furnace: place a Bend, tap ↻ Turn, and watch it turn. Long-press a placed gem to see its card. Drag a gem off the altar to remove it.
+6. Double-tap and pinch don't zoom. Pull-down doesn't reload. A long press doesn't select text or open a callout.
+7. Codex: tabs and Close work. Journal: the arrows turn pages. Settings: the sliders drag.
+8. Archive (8×6): you can land a gem on the socket you mean. Note how the Last Rune feels.
+
+**Android Chrome**: all of the above, plus:
+9. The Full screen button shows on the title. Tapping it fills the screen and stays landscape. Back exits it.
+10. Rotate while in an altar: the layout re-fits with nothing lost.
+
+### Open items
+- **Board zoom** for 8×6 boards (25–27 CSS px pitch) and the Last Rune (18 CSS px). Aim-with-lift helps, but a pinch or tap-to-zoom board would be the real fix. This touches altar layout and needs a PM call.
+- Text exactly 14 px passes the fit check. Some FUSE captions in the altar are long, so a shorter phone line set could help.
+- Nothing is needed from mobile-perf. Their `handheld` trait is reused for the rotate card.

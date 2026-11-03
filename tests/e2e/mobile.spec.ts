@@ -293,3 +293,16 @@ for (const vp of [
     expect(found).toEqual({});
   });
 }
+
+test('upright, the phone shows the turn-sideways card; turning it back hides it', async ({
+  page,
+}) => {
+  await boot(page, []);
+  const card = page.locator('.lr-rotate');
+  await expect(card).toBeHidden();
+  await page.setViewportSize({ width: PHONE.height, height: PHONE.width });
+  await expect(card).toBeVisible();
+  await expect(card).toContainText('Turn your phone sideways');
+  await page.setViewportSize(PHONE);
+  await expect(card).toBeHidden();
+});
