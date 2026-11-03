@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅ (D-032–D-035). Now (PM judgement, user playtests later): candle-light, difficulty-2, bug-bash, perf-low running; Firefox not a target. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
+**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 PM-judgement polish round ✅ (candle-light, difficulty-2/D-037, bug-bash, perf-low, finish-1); waiting on user playtest, then wave 6 ship. Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅ (D-032–D-035). Now (PM judgement, user playtests later): candle-light, difficulty-2, bug-bash, perf-low running; Firefox not a target. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
@@ -44,7 +44,7 @@ _Last updated: 2026-11-02 by PM_
 | difficulty-2 | ws/difficulty-2 | ✅ merged | D-037: turn load in the score; press-unit-4 9→2, capacitor-bay 11→1 (re-laid, single south lane), conveyor-a kept at 4 on purpose; all 16 in band, finale highest; intake-desk first visit 4 FUSE cards → 1; est. 54.5 min |
 | bug-bash | ws/bug-bash | ✅ merged | Settings two-column + sticky Done (no scroll at 100/125/150%); Codex fits at 150%; live strike chip (got N = newest chip); corrupt-save toast + backup; altar tag/storm-label/subtitle fixes; ending clears toasts; lint clean; 21 new e2e (robustness, layout-fit); full run 0 console errors. Deferred S3/S4 in its log |
 | perf-low | ws/perf-low | ✅ merged | GPU timestamp timing per pass (DynamicResolution sees real cost; the old 'gpu' column was queue latency); Low composites at scene res + upscale; ending caps at DPR 1 (High DPR 2: 21.6→12.2 ms p50, in budget); audio pre-render yields (title keeps animating); first frame 0.1–0.16 s; perf harness `ts` column, baseline + load specs |
-| finish-1 | ws/finish-1 | 🟡 running | bug-bash leftovers: serif toasts/ending line, unclear end-card prop, tag flip jump, ending fresh-eyes pass |
+| finish-1 | ws/finish-1 | ✅ merged | serif on toasts, closing line, Ko-fi/Copy links, FUSE's journal plate; end-card prop is now clearly FUSE's clipboard with his form, bottom right, clear of everything at 150%; below-cell tags pop from their own cell |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
