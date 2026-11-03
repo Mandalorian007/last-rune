@@ -108,7 +108,9 @@ test('the title offers a quiet Ko-fi link that opens only on a click (D-034)', a
   expect(box!.height).toBeLessThan(play!.height);
   expect(box!.y).toBeGreaterThan(menu!.y + menu!.height);
 
-  // Arrow keys reach it (the pad drives the same up/down actions).
+  // Arrow keys reach it (the pad drives the same up/down actions); its Copy link comes last.
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('[data-action="title-coffee-copy"]')).toBeFocused();
   await page.keyboard.press('ArrowUp');
   await expect(coffee).toBeFocused();
 

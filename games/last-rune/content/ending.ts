@@ -29,6 +29,16 @@ export const ENDING_COPY = {
   footer: 'This was the whole game. Thank you for finishing it.',
 } as const;
 
+/** Copy link (ui/link-copy.ts) beside each outbound link, for when a browser blocks the new tab. */
+export const LINK_COPY_TEXT = {
+  copy: 'Copy link',
+  copied: 'Copied!',
+  copiedAnnounce: 'Link copied.',
+  close: 'Close',
+  copyBlocked: 'Your browser blocked copying. Copy the link from here:',
+  popupBlocked: 'Your browser blocked the new tab. Copy the link from here:',
+} as const;
+
 export interface EndingButton {
   readonly id: 'join' | 'coffee';
   readonly label: string;

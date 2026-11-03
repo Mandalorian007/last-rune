@@ -56,8 +56,13 @@ const CSS = /* css */ `
   font: 500 14px/1 var(--tc-font-ui, system-ui, sans-serif); letter-spacing: 0.08em;
   color: rgb(255 255 255 / 0.45); text-transform: uppercase; pointer-events: none;
 }
+/* Ko-fi and its Copy link, bottom right; a blocked copy or tab opens a field just above them. */
+.tc-overlay .lr-outbound.lr-title-links {
+  position: absolute; right: 28px; bottom: 26px; display: flex; flex-direction: column; align-items: flex-end;
+  gap: 10px; pointer-events: auto;
+}
 .tc-overlay .lr-title-coffee {
-  position: absolute; right: 28px; bottom: 26px; display: inline-flex; align-items: center; gap: 10px;
+  display: inline-flex; align-items: center; gap: 10px;
   padding: 8px 18px; border-radius: 999px; text-decoration: none; pointer-events: auto;
   font: 500 20px/1.2 var(--tc-font-ui, system-ui, sans-serif); color: #e8d6b0;
   background: rgb(20 12 30 / 0.55); border: 1px solid rgb(232 192 106 / 0.35);
@@ -65,6 +70,41 @@ const CSS = /* css */ `
 .tc-overlay .lr-title-coffee:hover { color: #fff3d6; border-color: rgb(232 192 106 / 0.8); }
 .tc-overlay .lr-title-coffee:focus-visible { outline: var(--tc-focus-ring) solid var(--tc-color-focus); outline-offset: 4px; }
 .tc-overlay .lr-title-coffee .lr-coffee-icon { width: 1.3em; height: 1.3em; flex: none; color: #e8c06a; }
+/* Copy link (link-copy.ts): a quiet button beside each outbound link, and its fallback field. */
+.tc-overlay .lr-outbound-row { display: flex; align-items: center; gap: 10px; }
+.tc-overlay .lr-copy-link {
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  white-space: nowrap; font: 500 18px/1.2 var(--tc-font-ui, system-ui, sans-serif); color: #e8d6b0;
+  background: rgb(20 12 30 / 0.55); border: 1px solid rgb(232 192 106 / 0.3);
+}
+.tc-overlay .lr-copy-link:hover { color: #fff3d6; border-color: rgb(232 192 106 / 0.8); }
+.tc-overlay .lr-copy-link:focus-visible { outline: var(--tc-focus-ring) solid var(--tc-color-focus); outline-offset: 4px; }
+.tc-overlay .lr-copy-link[data-copied] { color: #c8f5cc; border-color: rgb(150 225 160 / 0.8); }
+.tc-overlay .lr-copy-icon { width: 1.1em; height: 1.1em; flex: none; }
+.tc-overlay .lr-outbound { position: relative; }
+.tc-overlay .lr-link-fallback {
+  position: absolute; z-index: 5; display: flex; flex-direction: column; gap: 8px; width: 560px;
+  padding: 12px 16px 14px; box-sizing: border-box; border-radius: 12px; text-align: left; pointer-events: auto;
+  background: rgb(16 10 24 / 0.96); border: 1px solid rgb(232 192 106 / 0.6); box-shadow: 0 10px 30px rgb(0 0 0 / 0.55);
+}
+.tc-overlay .lr-link-fallback[hidden] { display: none; }
+.tc-overlay .lr-link-fallback-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.tc-overlay .lr-link-fallback label { font: 500 18px/1.3 var(--tc-font-ui, system-ui, sans-serif); color: #f3e6c8; }
+.tc-overlay .lr-link-close {
+  flex: none; padding: 3px 12px; border-radius: 999px; cursor: pointer;
+  font: 500 16px/1.2 var(--tc-font-ui, system-ui, sans-serif); color: #e8d6b0;
+  background: transparent; border: 1px solid rgb(232 192 106 / 0.45);
+}
+.tc-overlay .lr-link-close:hover { color: #fff3d6; border-color: rgb(232 192 106 / 0.9); }
+.tc-overlay .lr-link-close:focus-visible { outline: var(--tc-focus-ring) solid var(--tc-color-focus); outline-offset: 2px; }
+/* Title: the field opens above the Ko-fi row, right-aligned with it. */
+.tc-overlay .lr-title-links .lr-link-fallback { right: 0; bottom: calc(100% + 10px); }
+.tc-overlay .lr-link-field {
+  width: 100%; box-sizing: border-box; padding: 6px 10px; border-radius: 6px;
+  font: 500 20px/1.3 var(--tc-font-mono, ui-monospace, monospace); color: #fff; background: #0c0814;
+  border: 1px solid rgb(232 192 106 / 0.6);
+}
+.tc-overlay .lr-link-field:focus-visible { outline: var(--tc-focus-ring) solid var(--tc-color-focus); outline-offset: 2px; }
 .tc-overlay .lr-title-menu {
   position: absolute; left: 50%; top: 610px; transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 22px; pointer-events: auto;

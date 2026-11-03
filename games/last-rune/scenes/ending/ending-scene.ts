@@ -24,6 +24,7 @@ import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
 import { progressOf } from '../../game/save';
 import { coffeeAnchor } from '../../ui/coffee';
+import { withCopyLink } from '../../ui/link-copy';
 import { menuNav } from '../../ui/menu-nav';
 import { deriveHall } from '../hall/hall-state';
 import { DeskArt } from '../journal/desk-art';
@@ -474,28 +475,42 @@ export class EndingScene implements GameScene {
 
   /**
    * The end card's links, created only now: Join ThunderClap Gaming, then the smaller
-   * Ko-fi link (D-034). Plain anchors that open only on the player's click, in a new tab.
+   * Ko-fi link (D-034). Plain anchors that open only on the player's click, in a new tab,
+   * each with a Copy link button for when the browser blocks the tab.
    */
   private addEndLinks(): void {
     const links: HTMLElement[] = [];
     const join = this.card.join;
     if (join) {
+      const a = h(
+        'a',
+        {
+          class: 'lr-end-join',
+          href: join.href,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          dataset: { action: 'ending-join' },
+        },
+        join.label,
+      );
       links.push(
-        h(
-          'a',
-          {
-            class: 'lr-end-join',
-            href: join.href,
-            target: '_blank',
-            rel: 'noopener noreferrer',
-            dataset: { action: 'ending-join' },
-          },
-          join.label,
-        ),
+        withCopyLink(a, {
+          name: 'the ThunderClap Gaming invite',
+          action: 'ending-join',
+          cls: 'lr-end-links lr-end-join-links',
+        }),
       );
     }
     const coffee = this.card.coffee;
-    if (coffee) links.push(coffeeAnchor(coffee, 'lr-end-coffee', 'ending-coffee'));
+    if (coffee) {
+      links.push(
+        withCopyLink(coffeeAnchor(coffee, 'lr-end-coffee', 'ending-coffee'), {
+          name: "ThunderSoap's Ko-fi",
+          action: 'ending-coffee',
+          cls: 'lr-end-links',
+        }),
+      );
+    }
     this.cardEl.prepend(...links);
   }
 
