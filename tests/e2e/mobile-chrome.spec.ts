@@ -33,12 +33,13 @@ test.setTimeout(120_000);
 
 async function insets(page: Page, px: number) {
   if (!px) return;
+  // Init scripts run before <html> exists, so apply on DOMContentLoaded (mobile-3-ending finding).
   await page.addInitScript((px) => {
-    document.documentElement.style.setProperty('--lr-safe-l', `${px}px`);
-    document.documentElement.style.setProperty('--lr-safe-r', `${px}px`);
-    const s = document.createElement('style');
-    s.textContent = `#app { left: ${px}px !important; right: ${px}px !important; }`;
-    document.addEventListener('DOMContentLoaded', () => document.head.append(s));
+    document.addEventListener('DOMContentLoaded', () => {
+      const s = document.createElement('style');
+      s.textContent = `#app { left: ${px}px !important; right: ${px}px !important; }`;
+      document.head.append(s);
+    });
   }, px);
 }
 
