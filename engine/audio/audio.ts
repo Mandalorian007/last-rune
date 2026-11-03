@@ -318,6 +318,9 @@ export class AudioEngine {
   private readonly createContext: () => AudioContext;
   private readonly createOffline: OfflineContextFactory | undefined;
   private detachFns: (() => void)[] = [];
+  /** Gesture listeners: armed while audio should run but the browser won't let it. */
+  private gestureTarget: EventTarget | null = null;
+  private gesturesArmed = false;
   private userSuspended = false;
   private hidden = false;
   private _halted = false;
@@ -378,27 +381,54 @@ export class AudioEngine {
 
   // ------------------------------------------------------------ lifecycle
 
-  /** Listen for the first user gesture to unlock audio, and pause while hidden. Returns detach. */
+  /**
+   * Listen for the first user gesture to unlock audio, and pause while hidden. Returns detach.
+   *
+   * Phones take audio away again after unlock: iOS interrupts the context for a call, Siri or
+   * an alarm (state `interrupted`) and may leave it suspended after an app switch; Android
+   * suspends it in the background. Whenever the context is not running but should be, the
+   * gesture listeners are re-armed so the next tap brings sound back, and `pageshow` / `focus`
+   * try a resume without one.
+   */
   attach(opts: AttachAudioOptions = {}): () => void {
     const target = opts.target ?? (typeof window !== 'undefined' ? window : undefined);
     if (target) {
-      const onGesture = () => {
-        void this.unlock().then((ok) => {
-          if (ok) for (const g of GESTURES) target.removeEventListener(g, onGesture, true);
-        });
-      };
-      for (const g of GESTURES) target.addEventListener(g, onGesture, true);
+      this.gestureTarget = target;
+      this.armGestures();
       this.detachFns.push(() => {
-        for (const g of GESTURES) target.removeEventListener(g, onGesture, true);
+        this.disarmGestures();
+        this.gestureTarget = null;
       });
     }
     if (opts.pauseWhenHidden !== false && typeof document !== 'undefined') {
+      const visible = () => document.visibilityState !== 'hidden';
       const onVis = () => {
-        this.hidden = document.visibilityState === 'hidden';
+        this.hidden = !visible();
+        void this.syncSuspension();
+      };
+      // pagehide (iOS app switch, bfcache) and freeze can arrive while still "visible".
+      const onAway = () => {
+        this.hidden = true;
+        void this.syncSuspension();
+      };
+      const onBack = () => {
+        this.hidden = !visible();
         void this.syncSuspension();
       };
       document.addEventListener('visibilitychange', onVis);
-      this.detachFns.push(() => document.removeEventListener('visibilitychange', onVis));
+      window.addEventListener('pagehide', onAway);
+      window.addEventListener('pageshow', onBack);
+      window.addEventListener('focus', onBack);
+      document.addEventListener('freeze', onAway);
+      document.addEventListener('resume', onBack);
+      this.detachFns.push(() => {
+        document.removeEventListener('visibilitychange', onVis);
+        window.removeEventListener('pagehide', onAway);
+        window.removeEventListener('pageshow', onBack);
+        window.removeEventListener('focus', onBack);
+        document.removeEventListener('freeze', onAway);
+        document.removeEventListener('resume', onBack);
+      });
     }
     return () => this.detach();
   }
@@ -406,6 +436,26 @@ export class AudioEngine {
   detach(): void {
     for (const fn of this.detachFns) fn();
     this.detachFns = [];
+  }
+
+  private readonly onGesture = () => {
+    void this.unlock().then((ok) => {
+      if (ok) this.disarmGestures();
+    });
+  };
+
+  private armGestures() {
+    const target = this.gestureTarget;
+    if (!target || this.gesturesArmed || this._halted) return;
+    this.gesturesArmed = true;
+    for (const g of GESTURES) target.addEventListener(g, this.onGesture, true);
+  }
+
+  private disarmGestures() {
+    const target = this.gestureTarget;
+    if (!target || !this.gesturesArmed) return;
+    this.gesturesArmed = false;
+    for (const g of GESTURES) target.removeEventListener(g, this.onGesture, true);
   }
 
   /**
@@ -452,14 +502,19 @@ export class AudioEngine {
   private onContextState() {
     const ctx = this.ctx;
     if (!ctx) return;
-    if (ctx.state === 'running') {
+    // `interrupted` (iOS: call, Siri, alarm, another app's audio) is a pause the browser chose;
+    // only `closed` is final.
+    const state = ctx.state as AudioContextState | 'interrupted';
+    if (state === 'running') {
       this.setState('running');
       this.startDeferred();
-    } else if (ctx.state === 'suspended') {
+    } else if (state === 'closed') {
+      this.setState('unavailable');
+    } else {
       // Suspended before ever running means the browser still wants a gesture.
       this.setState(this._state === 'locked' && !this.isPaused() ? 'locked' : 'suspended');
-    } else {
-      this.setState('unavailable');
+      // Should be playing but isn't: the next tap or key brings it back.
+      if (!this.isPaused()) this.armGestures();
     }
   }
 

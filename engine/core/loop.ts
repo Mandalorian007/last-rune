@@ -81,6 +81,9 @@ export interface GameLoopOptions extends FixedStepperOptions {
   caf?: (id: number) => void;
 }
 
+/** Early-frame tolerance for `GameLoop.maxFps`, ms. */
+const FRAME_CAP_SLACK_MS = 3;
+
 export class GameLoop {
   readonly time: Time;
   private readonly stepper: FixedStepper;
@@ -93,6 +96,7 @@ export class GameLoop {
   private running = false;
   private _paused = false;
   private _halted = false;
+  private minFrameMs = 0;
 
   constructor(cb: LoopCallbacks, opts: GameLoopOptions = {}) {
     this.cb = cb;
@@ -115,6 +119,19 @@ export class GameLoop {
   set paused(v: boolean) {
     this._paused = v;
     if (v) this.stepper.reset();
+  }
+
+  /**
+   * Cap the render rate (null = every display frame). With 30 on a 60 Hz display the loop runs
+   * on every other vsync: a steady 30 fps instead of a GPU-bound jitter between 30 and 60.
+   * Frames are skipped whole (no update, no render), so the fixed step still keeps time.
+   */
+  get maxFps(): number | null {
+    return this.minFrameMs > 0 ? 1000 / this.minFrameMs : null;
+  }
+
+  set maxFps(fps: number | null) {
+    this.minFrameMs = fps && fps > 0 ? 1000 / fps : 0;
   }
 
   /** True after `halt()`: the loop is stopped for good. */
@@ -154,6 +171,11 @@ export class GameLoop {
   private readonly frame = (): void => {
     if (!this.running) return;
     const t = this.now();
+    // A few ms of slack: vsync timestamps jitter, and a 33.3 ms target must not miss 33.2.
+    if (this.minFrameMs > 0 && t - this.last < this.minFrameMs - FRAME_CAP_SLACK_MS) {
+      this.rafId = this.raf(this.frame);
+      return;
+    }
     const dt = (t - this.last) / 1000;
     this.last = t;
     this.runFrame(dt);

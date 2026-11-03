@@ -126,3 +126,68 @@ describe('GameLoop', () => {
     expect(loop.isRunning).toBe(false);
   });
 });
+
+describe('GameLoop.maxFps', () => {
+  /** Drive the loop from a fake vsync of `hz` for `frames` display frames. */
+  function drive(clock: { t: number; cb: (() => void) | null }, hz: number, n: number) {
+    for (let i = 0; i < n; i++) {
+      clock.t += 1000 / hz;
+      const cb = clock.cb;
+      clock.cb = null;
+      cb?.();
+    }
+  }
+
+  function make() {
+    const clock = { t: 0, cb: null as (() => void) | null };
+    let renders = 0;
+    let updates = 0;
+    const loop = new GameLoop(
+      { update: () => updates++, render: () => renders++ },
+      {
+        now: () => clock.t,
+        raf: (f) => {
+          clock.cb = () => f(clock.t);
+          return 1;
+        },
+        caf: () => {
+          clock.cb = null;
+        },
+      },
+    );
+    return { loop, clock, renders: () => renders, updates: () => updates };
+  }
+
+  it('renders every display frame by default', () => {
+    const h = make();
+    h.loop.start();
+    drive(h.clock, 60, 60);
+    expect(h.renders()).toBe(60);
+  });
+
+  it('at 30 renders every other frame on 60 Hz and every 4th on 120 Hz, keeping sim time', () => {
+    const h = make();
+    h.loop.maxFps = 30;
+    h.loop.start();
+    drive(h.clock, 60, 60);
+    expect(h.renders()).toBe(30);
+    expect(h.updates()).toBe(60);
+    const k = make();
+    k.loop.maxFps = 30;
+    k.loop.start();
+    drive(k.clock, 120, 120);
+    expect(k.renders()).toBe(30);
+    expect(k.updates()).toBe(60);
+  });
+
+  it('null lifts the cap', () => {
+    const h = make();
+    h.loop.maxFps = 30;
+    expect(h.loop.maxFps).toBeCloseTo(30);
+    h.loop.maxFps = null;
+    expect(h.loop.maxFps).toBeNull();
+    h.loop.start();
+    drive(h.clock, 60, 10);
+    expect(h.renders()).toBe(10);
+  });
+});

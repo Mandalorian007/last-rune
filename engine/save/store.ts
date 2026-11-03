@@ -248,6 +248,8 @@ export function createSaveStore<T>(opts: SaveStoreOptions<T>): SaveStore<T> {
   if (autoFlush && typeof window !== 'undefined') {
     window.addEventListener('pagehide', onPageHide);
     document.addEventListener('visibilitychange', onHide);
+    // Chrome on Android freezes background tabs and may later discard them with no other event.
+    document.addEventListener('freeze', onPageHide);
   }
 
   const store: SaveStore<T> = {
@@ -315,6 +317,7 @@ export function createSaveStore<T>(opts: SaveStoreOptions<T>): SaveStore<T> {
       if (autoFlush && typeof window !== 'undefined') {
         window.removeEventListener('pagehide', onPageHide);
         document.removeEventListener('visibilitychange', onHide);
+        document.removeEventListener('freeze', onPageHide);
       }
     },
   };
