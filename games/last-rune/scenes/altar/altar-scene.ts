@@ -964,19 +964,19 @@ export class AltarScene implements GameScene {
       kids.push(h('span', { class: 'lr-need-note' }, 'in one strike'));
     if (got !== null) {
       kids.push(h('span', { class: 'lr-need-got' }, 'got ', h('b', null, String(got))));
-      const rs = this.strikeReadings[i];
-      if (this.puzzle.pulses > 1 && rs && rs.length > 0) {
+      const rs = this.strikeReadings[i] ?? [];
+      // Mid-strike, `got` is the strike still landing: show it as a live entry so "got 4"
+      // never sits beside only "Strike 1: 2" and reads as strike 1's total.
+      const live = this.pulse >= 0 && rs.length <= this.pulse;
+      if (this.puzzle.pulses > 1 && (rs.length > 0 || live)) {
+        const chip = (r: number, k: number, state: string) =>
+          h('span', { 'data-state': state }, `Strike ${k + 1}: ${r}`);
         kids.push(
           h(
             'span',
             { class: 'lr-need-strikes' },
-            ...rs.map((r, k) =>
-              h(
-                'span',
-                { 'data-state': r === need ? 'exact' : r > need ? 'over' : 'under' },
-                `Strike ${k + 1}: ${r}`,
-              ),
-            ),
+            ...rs.map((r, k) => chip(r, k, r === need ? 'exact' : r > need ? 'over' : 'under')),
+            ...(live ? [chip(got, this.pulse, 'live')] : []),
           ),
         );
       }

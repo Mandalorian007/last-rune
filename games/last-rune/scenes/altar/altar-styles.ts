@@ -107,6 +107,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-need-strikes [data-state="exact"] { border-color: #3fe0ff; color: #bff6ff; }
 .tc-overlay .lr-need-strikes [data-state="under"] { border-color: #ffb03f; color: #ffd9a0; }
 .tc-overlay .lr-need-strikes [data-state="over"] { border-color: #ff5a3c; color: #ffc0b0; }
+.tc-overlay .lr-need-strikes [data-state="live"] { border-style: dashed; color: #f4e6c4; }
 
 /* Charge chips: the bolt's charge where it changes, and what lands at each machine. */
 .tc-overlay .lr-altar-chip {

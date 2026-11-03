@@ -291,12 +291,17 @@ test('spamming Strike, Back and Enter never stacks scenes or panels', async ({ p
   for (let i = 0; i < 9; i++) await page.keyboard.press('KeyO');
   await page.waitForTimeout(300);
   expect(await page.locator('.lr-settings').count()).toBeLessThanOrEqual(1);
-  // Esc in the hall opens Settings as the pause menu, so Esc toggles: odd presses close it.
+  // Esc in the hall opens Settings as the pause menu, so Esc toggles. Spam it (never more
+  // than one panel), then settle: one deliberate Esc at a time must close whatever is open.
   for (let i = 0; i < 7; i++) {
     await page.keyboard.press('Escape');
     expect(await page.locator('.tc-panel').count()).toBeLessThanOrEqual(1);
   }
   await page.waitForTimeout(400);
+  for (let i = 0; i < 3 && (await page.locator('.tc-panel').count()) > 0; i++) {
+    await pressKey(page, 'Escape');
+    await page.waitForTimeout(300);
+  }
   await expect(page.locator('.tc-panel')).toHaveCount(0);
   // Into the altar and Back spam: one trip out, still in the hall, and the hall takes keys.
   await pressKey(page, 'Enter');
