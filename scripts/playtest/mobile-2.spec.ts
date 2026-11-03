@@ -99,7 +99,7 @@ for (const vp of PHONES) {
       await shot('02-hall');
       await page.evaluate((t) => {
         void (window as G).__game.fuse.say(t, { hold: 0 });
-      }, hallLines('first-entry', 1)[0]!.text);
+      }, hallLines('ambient', 1)[0]!.text); // progressed save: an ambient line, not the welcome (mobile-4-chrome)
       await page.waitForTimeout(600);
       await shot('02-hall-fuse');
       await page.evaluate(() => (window as G).__game.fuse.hush());
