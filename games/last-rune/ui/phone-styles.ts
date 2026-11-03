@@ -616,6 +616,75 @@ ${A} .lr-altar-need .lr-need-strikes { line-height: 1.05; margin-top: ${cpx(1)};
 ${A} .lr-altar-need .lr-need-strikes span { padding: 0 ${cpx(3)}; border-radius: ${cpx(4)}; }
 /* mobile-4-board end */
 
+/* mobile-5-moments ─ Hint, FUSE, verdict and solve, one at a time (D-040 addendum 3) ──────
+   The how-to line heads the lane under the tray (altar-scene), its own slot: FUSE's bubble
+   never covers or replaces it. The bubble sits over FUSE's head with a tail pointing at him. A
+   fail shows the socket's tag and one verdict card ("Try: …" on its own line); FUSE's quip
+   waits until the player acts. The solve moment is one card in the column, Continue full width. */
+${A} .lr-altar-lane > .lr-altar-hint {
+  position: relative !important; left: auto !important; top: auto !important; bottom: auto !important;
+  white-space: nowrap; width: max-content; max-width: var(--lr-col-w) !important; overflow: hidden;
+  padding: ${cpx(1)} ${cpx(5)}; font-size: ${tpx(12)}; line-height: 1.3; border-radius: ${cpx(6)};
+  visibility: visible !important;
+}
+${A}:has(.lr-altar-verdict:not([hidden])) .lr-altar-lane > .lr-altar-hint { display: none; }
+${P}:has(.lr-altar[data-phone]) .tc-caption { overflow: visible; }
+${P}:has(.lr-altar[data-phone]) .tc-caption::after {
+  content: ''; position: absolute; left: calc(var(--lr-cap-tail, ${cpx(22)}) - ${cpx(5)}); bottom: ${cpx(-5)};
+  width: ${cpx(8)}; height: ${cpx(8)}; background: inherit; border: 1px solid var(--tc-color-border);
+  border-width: 0 1px 1px 0; transform: rotate(45deg); pointer-events: none;
+}
+/* The arrival card, paged: one new piece at a time, with its place in the run. */
+${A} .lr-altar-tip .lr-info-page {
+  margin-top: ${cpx(1)}; font-family: var(--tc-font-ui); font-size: ${tpx(10.5)}; letter-spacing: 0.5px; color: #b9a98a;
+}
+/* The verdict: its line, then the next step on a line of its own (no run-on "·"). */
+${A} .lr-altar-verdict .lr-verdict-story, ${A} .lr-altar-verdict .lr-verdict-hint {
+  display: block; margin-top: ${cpx(2)}; font-family: var(--tc-font-body, serif); font-size: ${tpx(12)}; line-height: 1.3;
+}
+${A} .lr-altar-verdict .lr-verdict-story::before, ${A} .lr-altar-verdict .lr-verdict-hint::before { content: none; }
+
+/* Solve: one card, ≥12 CSS px inside the play area; Continue 44 px tall across the card. */
+${P} .lr-solve[data-phone] {
+  top: ${cpx(8)}; width: calc(var(--lr-col-w) + var(--lr-bar, 0px) - ${cpx(12)}); gap: 0;
+}
+${P} .lr-solve[data-phone] .lr-solve-card {
+  display: flex; flex-direction: column; gap: ${cpx(4)}; padding: ${cpx(7)} ${cpx(10)} ${cpx(9)};
+  border-width: 1px; border-radius: ${cpx(10)}; box-shadow: 0 ${cpx(3)} ${cpx(12)} rgba(0,0,0,0.6);
+}
+${P} .lr-solve[data-phone] .lr-solve-card h2 { font-size: ${tpx(16)}; letter-spacing: 0.5px; }
+${P} .lr-solve[data-phone] .lr-solve-card .lr-solve-sub { margin: 0; font-size: ${tpx(12.5)}; line-height: 1.3; opacity: 0.85; }
+${P} .lr-solve[data-phone] .lr-solve-grant { margin: ${cpx(2)} 0 0; gap: ${cpx(7)}; font-size: ${tpx(14)}; line-height: 1.2; }
+${P} .lr-solve[data-phone] .lr-solve-grant .lr-gem-dot { width: ${cpx(16)}; height: ${cpx(16)}; box-shadow: 0 0 ${cpx(5)} currentColor; }
+${P} .lr-solve[data-phone] .lr-solve-gem {
+  flex: none; width: ${cpx(30)}; height: ${cpx(30)}; border-radius: 50%;
+  border: 1px solid #5a3d12; box-shadow: inset 0 0 ${cpx(3)} rgba(0,0,0,0.8);
+}
+${P} .lr-solve[data-phone] .lr-solve-codex { margin: 0; font-size: ${tpx(12)}; line-height: 1.3; }
+${P} .lr-solve[data-phone] .lr-solve-opens { margin: 0; font-size: ${tpx(12)}; line-height: 1.3; }
+${P} .lr-solve[data-phone] .lr-page-note {
+  margin: ${cpx(2)} 0 0; padding: ${cpx(4)} ${cpx(8)}; transform: none; border-radius: ${cpx(4)};
+  font-size: ${tpx(12)}; line-height: 1.25; box-shadow: inset 0 0 0 1px rgba(90,61,18,0.45);
+}
+${P} .lr-solve[data-phone] .lr-page-note b { font-size: ${tpx(11.5)}; letter-spacing: 1px; margin-bottom: 0; white-space: nowrap; }
+${P} .lr-solve[data-phone] .lr-solve-continue {
+  align-self: stretch; width: 100%; min-width: 0; min-height: ${cpx(44)}; height: ${cpx(44)}; margin-top: ${cpx(3)};
+  padding: 0; font-size: ${tpx(15)}; border-radius: ${cpx(8)}; border-width: 1px;
+}
+/* FUSE's line: beside him, fully on screen, its tail at his face; it steps out rather than
+   touch the card (solve-scene updateCrowd). */
+${P}:has(.lr-solve[data-phone]) .tc-caption {
+  bottom: ${cpx(8)} !important; overflow: visible;
+  max-width: min(calc(var(--lr-scap-w) + var(--lr-bar, 0px) - ${cpx(12)}), var(--lr-third)) !important;
+}
+${P}:has(.lr-solve[data-phone]) .tc-caption::after {
+  content: ''; position: absolute; left: ${cpx(-5)}; bottom: calc(var(--lr-scap-face, ${cpx(40)}) - ${cpx(8)} - ${cpx(4)});
+  width: ${cpx(8)}; height: ${cpx(8)}; background: inherit; border: 1px solid var(--tc-color-border);
+  border-width: 0 0 1px 1px; transform: rotate(45deg); pointer-events: none;
+}
+${P}:has(.lr-solve[data-phone][data-crowd]) .tc-caption { visibility: hidden; }
+/* mobile-5-moments end */
+
 /* ── Title ──────────────────────────────────────────────────────────────── */
 ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cpx(2)} ${cpx(8)}; }
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }

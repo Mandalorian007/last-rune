@@ -138,7 +138,17 @@ for (const vp of PHONES) {
         await page.evaluate(() => (window as G).__game.fuse.hush());
         await waitFrames(page, 4);
         await shot(`10-${id}`);
-        if (id === 'intake-desk' || id === 'the-last-rune') {
+        if (id === 'intake-desk') {
+          // What a new player meets: a fresh save, nothing restored. FUSE's arrival line, the
+          // arrival card and the how-to line, as they come (mobile-5-moments).
+          await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+          await seed([]);
+          await page.evaluate(() => (window as G).__game.flow.openPuzzle('intake-desk'));
+          await expect(page.locator('.lr-altar')).toBeVisible();
+          await page.waitForTimeout(1500);
+          await shot('11-intake-desk-fuse');
+        }
+        if (id === 'the-last-rune') {
           await page.evaluate(
             (t) => {
               void (window as G).__game.fuse.say(t, { hold: 0 });
@@ -177,6 +187,34 @@ for (const vp of PHONES) {
           await page.waitForTimeout(1500);
           await shot(`13-${id}-verdict`);
         }
+        await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+        await page.waitForTimeout(300);
+      }
+
+      // Fresh progress: a new piece's first appearance, as a first-time player meets it
+      // (mobile-5-moments). Relay Tower right after the Intake Desk (Split and Gate, pre-set);
+      // the Capacitor Bay with everything before it restored.
+      const teach = [
+        ['14-relay-tower-teach', 'relay-tower', ['intake-desk']],
+        [
+          '15-capacitor-teach',
+          'capacitor-bay',
+          all.filter(
+            (m) => !['capacitor-bay', 'lift-shaft', 'roof-array', 'control-booth'].includes(m),
+          ),
+        ],
+      ] as const;
+      for (const [name, id, solved] of teach) {
+        await seed([...solved]);
+        await page.evaluate((id) => {
+          const g = (window as G).__game;
+          if (g.flow.state !== 'hall') g.flow.continueGame();
+          g.flow.openPuzzle(id);
+          g.fuse.hush();
+        }, id);
+        await expect(page.locator('.lr-altar')).toBeVisible();
+        await page.waitForTimeout(1500);
+        await shot(name);
         await page.evaluate(() => (window as G).__game.flow.closePuzzle());
         await page.waitForTimeout(300);
       }
