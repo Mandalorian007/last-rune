@@ -1,5 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
+import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { MACHINE_IDS } from '../../games/last-rune/rules/types';
+import { trayRemaining } from '../../games/last-rune/rules/validate';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, waitFrames } from './helpers';
 
@@ -43,34 +45,55 @@ async function boot(page: Page, inset: number) {
   );
 }
 
+/** Open `id` at first meeting (its arrival card up) with half its intended gems placed. */
 async function openFresh(page: Page, id: string) {
   const at = MACHINE_IDS.indexOf(id as (typeof MACHINE_IDS)[number]);
+  const placed = puzzleFor(id as (typeof MACHINE_IDS)[number]).design.intended;
+  const half = placed.slice(0, Math.floor(placed.length / 2));
   await page.evaluate(
-    ({ solved }) => {
+    ({ solved, id, half }) => {
       const g = (window as G).__game;
       g.save.update((d: G) => {
         d.flags.hallIntro = true;
         d.settings.captionSpeed = 'instant';
         d.progress.solved = solved;
-        d.puzzles = {};
+        d.puzzles = { [id]: { placements: half, attempts: 0 } };
       });
       if (g.flow.state !== 'hall') g.flow.continueGame();
     },
-    { solved: MACHINE_IDS.slice(0, at) as unknown as string[] },
+    { solved: MACHINE_IDS.slice(0, at) as unknown as string[], id, half },
   );
   await page.evaluate((id) => (window as G).__game.flow.openPuzzle(id), id);
   await expect(page.locator('.lr-altar')).toBeVisible();
   await waitFrames(page, 6);
 }
 
-/** The gem names on the shown gem card (empty when it is hidden). */
+/**
+ * The gem names on the cards shown in the column: the gem card and any Capacitor read-out
+ * (se/16 was a plan read-out headed "Capacitor" beside "Holding Channel").
+ */
 async function cardGems(page: Page): Promise<string[]> {
   return page.evaluate(() => {
+    const shown = (el: HTMLElement) => {
+      if (el.hidden || el.closest('[hidden]')) return false;
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return (
+        cs.display !== 'none' &&
+        cs.visibility !== 'hidden' &&
+        Number(cs.opacity) >= 0.05 &&
+        r.width > 0 &&
+        r.height > 0
+      );
+    };
+    const out: string[] = [];
     const tip = document.querySelector<HTMLElement>('.lr-altar-tip');
-    if (!tip || tip.hidden || Number(getComputedStyle(tip).opacity) < 0.05) return [];
-    return [...tip.querySelectorAll('.lr-info-row:not([data-how="ring"]) > b')].map(
-      (b) => b.textContent ?? '',
-    );
+    if (tip && shown(tip))
+      for (const b of tip.querySelectorAll('.lr-info-row:not([data-how="ring"]) > b'))
+        out.push(b.textContent ?? '');
+    for (const c of document.querySelectorAll<HTMLElement>('.lr-altar-lane .lr-altar-cap'))
+      if (shown(c)) out.push(c.querySelector('.lr-cap-head')?.textContent ?? 'Capacitor');
+    return out;
   });
 }
 
@@ -93,7 +116,10 @@ for (const vp of PHONES) {
         );
         const ob = (await page.locator('.tc-overlay').boundingBox())!;
         const k = ob.width / 1920;
+        const pz = puzzleFor(id);
+        const half = pz.design.intended.slice(0, Math.floor(pz.design.intended.length / 2));
         for (const slot of L.tray) {
+          if (trayRemaining(pz, half, slot.gem) <= 0) continue;
           const tap = () => page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);
           await tap();
           await waitFrames(page, 6);

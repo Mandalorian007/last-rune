@@ -3496,6 +3496,8 @@ export class AltarScene implements GameScene {
   private updateInfo(): void {
     const L = this.view.layout;
     const strike = this.mode === 'strike';
+    // A gem in hand: cards that name a board gem (a Capacitor's plan read-out) step aside (CSS).
+    this.dom.toggleAttribute('data-hand', !!this.hand && !strike);
     let rows: { gem: GemKind; how: InfoHow }[] = [];
     let slotX: number | null = null;
     let key = '';
