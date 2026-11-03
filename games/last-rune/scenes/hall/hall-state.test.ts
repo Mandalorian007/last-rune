@@ -11,6 +11,7 @@ import {
   focusOrder,
   type HallModel,
   lineForAlcove,
+  lockedNote,
   newlyUnlocked,
 } from './hall-state';
 
@@ -63,6 +64,16 @@ describe('hall state', () => {
     );
     const booth = m.alcoves.find((a) => a.missingMachines > 0);
     if (booth) expect(alcoveNote(booth)).toMatch(/\d+ more machines?$/);
+  });
+
+  it('a phone card says in plain words what opens a locked door, names unbroken', () => {
+    const m = deriveHall(initialState());
+    const nb = (s: string) => s.replace(/ /g, ' ');
+    expect(lockedNote(byId(m, 'furnace'))).toBe(`Locked: solve ${nb('Intake Desk')} first`);
+    expect(lockedNote(byId(m, 'control-booth'))).toBe('Locked: solve 14 more machines first');
+    expect(lockedNote(byId(m, 'the-last-rune'))).toBe('Locked: earn these gems first');
+    expect(lockedNote(byId(m, 'intake-desk'))).toBe('Open · try this one next');
+    for (const a of m.alcoves) expect(lockedNote(a)).not.toMatch(/·.*·|\(|\+/);
   });
 
   it('suggests exactly one open door: the next in story order', () => {

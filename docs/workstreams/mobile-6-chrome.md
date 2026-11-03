@@ -59,3 +59,54 @@ Gate review 3 failed (6 / 6 / 6 / 6.5; D-040 addendum 4). The chrome issues the 
 - `pnpm check`, `pnpm build` and `pnpm test:e2e` pass.
 
 ## Log
+
+### mobile-6-chrome agent, 2026-11-03
+
+What changed, by goal (phones unless noted):
+
+1. **Title.** FUSE's card measures the logo (`.lr-title`) as a region to avoid, and its top
+   corners drop to just under the subtitle (`--lr-title-cap-top`), so it never covers the logo
+   or the menu. The release label and Ko-fi pill sit on a clean dark band.
+2. **Hall doors.** One plate family: padlock + name (dimmed) for locked, name in gold for open,
+   ✓ inside the plate for restored. No pips, no "+N". "Start here" stays the brightest thing.
+3. **Tap card.** `lockedNote` says it in plain words ("Locked: solve 14 more machines first",
+   "Locked: solve The Furnace and The Crane first", "Locked: earn these gems first"), with
+   non-breaking spaces inside names; the needed gems are shown as named icons on the card. The
+   card is placed clear of its own plate and closes when the Menu or a panel opens.
+4. **Hall framing.** The phone hall band moved up 24 px (`HALL_BAND` top −24) so the top arches
+   are whole; the Next tag sits clear. hall-frame tests now use 720-tall views.
+5. **Settings.** Two tabs, "Sound & Comfort" and "Graphics & Save" (role=tablist/tab/tabpanel),
+   each a whole view; the "Graphics & Save ›" jump and its fake-dropdown look are gone. Reset
+   keeps its own "Start over" group on Graphics & Save. Whole on SE at 100% text.
+6. **Codex (SE).** Tighter type at ≤330 px tall so every page fits; where one still runs long it
+   fades and shows a ⌄ cue (hidden on desktop). Layout only, no copy.
+7. **Journal (SE).** ‹ and › sit in the side lanes, off the art and off the quill; the subtitle
+   is clear of the tabs.
+8. **End card.** Centred plate, two-column grid: Join | Copy invite link, Buy a coffee | Copy
+   Ko-fi link (Join first, D-034); the closing line is plain cream text on the plate; "Back to
+   the hall" is an outlined secondary button across both columns. The title's lines sit on a
+   dark band. The clipboard rests at a phone spot (`PHONE_CLIP`, x 1760, y 790) right of the
+   plate, clear of every button on all four phones.
+9. **Ending scenes.** The ending now fills the width like its hangout (`FILL_BANDS.ending`), so
+   30-ending and the end card have no side bands; Skip, caption, hangout and the end column move
+   in by the crop. The hangout's messages start under its header (no empty top band). A "Plays
+   by itself" chip sits beside Skip (alone in Skip's place on a first ending).
+
+e2e added: FUSE's card vs logo and menu (mobile-chrome), tap card never on its plate and closes
+on Menu, both Settings tabs fold on whole rows and Reset reachable on Graphics & Save, locked
+plates show no pips/"+N", end card centred with the grid order checked, title dark band, closing
+line ≥4.5:1 on the plate (mobile-ending).
+
+Shared / desktop changes (called out):
+- `game/ctx.ts` FILL_BANDS gains `ending` (phones only; desktop is never cropped).
+- `ui/settings-panel.ts`: the desktop path was refactored (sections built once) but renders the
+  same two columns, so nothing on desktop looks different.
+- `ui/codex.ts`: adds a ⌄ cue element per page, hidden on desktop by CSS.
+- `scenes/ending/ending-scene.ts`: `clipPage()` takes the rest pose; desktop keeps
+  `ENDING_LAYOUT.clip`. Removed the mobile-4 SE-only "move the column left" rule.
+
+Remaining weaknesses (honest):
+- On SE, locked plates with long names wrap onto two lines.
+- At 150% text a Settings tab can still run past its view; it scrolls with the drawn thumb.
+- On SE the end card is tight: Back to the hall ends ~10 px above the bottom edge.
+- The "Plays by itself" chip shows through the credits too, not just the cinematic.

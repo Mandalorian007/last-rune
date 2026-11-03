@@ -154,16 +154,25 @@ export class Codex {
       nav,
       close,
     );
-    // A page that runs past its foot says so (phones fade its foot until it is scrolled down).
-    for (const page of book.querySelectorAll<HTMLElement>('.lr-codex-page')) {
-      const sync = () =>
-        page.toggleAttribute(
-          'data-more',
-          page.scrollHeight - page.clientHeight - page.scrollTop > 2,
-        );
+    // A page that runs past its foot says so (phones fade its foot until it is scrolled down,
+    // over a chevron at the page's foot; mobile-6-chrome).
+    const spread = book.querySelector<HTMLElement>('.lr-codex-spread');
+    book.querySelectorAll<HTMLElement>('.lr-codex-page').forEach((page, i) => {
+      const cue = h(
+        'span',
+        { class: 'lr-codex-more', 'aria-hidden': 'true', hidden: true },
+        '\u2304',
+      );
+      cue.style.left = i === 0 ? '25%' : '75%';
+      spread?.append(cue);
+      const sync = () => {
+        const more = page.scrollHeight - page.clientHeight - page.scrollTop > 2;
+        page.toggleAttribute('data-more', more);
+        cue.hidden = !more;
+      };
       page.addEventListener('scroll', sync, { passive: true });
       requestAnimationFrame(sync);
-    }
+    });
     close.focus();
   }
 

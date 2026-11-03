@@ -61,9 +61,22 @@ export const ENDING_LAYOUT = {
   clipInHand: 63,
 } as const;
 
+/**
+ * Phones (mobile-6-chrome): the ending fills the width and crops top and bottom, and the end
+ * card is a centred plate, so the clipboard rests further right and higher: right of the
+ * plate's buttons and wholly inside the visible band (ctx FILL_BANDS.ending).
+ */
+export const PHONE_CLIP = { ...ENDING_LAYOUT.clip, x: 1760, y: 790 } as const;
+
+type ClipRest = typeof ENDING_LAYOUT.clip | typeof PHONE_CLIP;
+
 /** The page on the clipboard, in board space: centred 8% below the board's centre, 80% × 74%. */
-export function clipPage(): { x: number; y: number; w: number; h: number } {
-  const C = ENDING_LAYOUT.clip;
+export function clipPage(C: ClipRest = ENDING_LAYOUT.clip): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+} {
   const dy = C.h * 0.08;
   return {
     x: C.x - dy * Math.sin(C.rot),
@@ -244,6 +257,8 @@ export class EndingScene implements GameScene {
   private cardEl!: HTMLElement;
   private noteEl!: HTMLElement;
   private skipBtn: HTMLButtonElement | null = null;
+  /** Phones: "Plays by itself" beside Skip, so a newcomer waits rather than taps around. */
+  private cueEl!: HTMLElement;
   /** The crowd in the light, under the hangout. */
   private crowd: Voice | null = null;
   /** The community hangout beyond the door (D-038), and FUSE's face for it. */
@@ -269,6 +284,11 @@ export class EndingScene implements GameScene {
 
   get skippable(): boolean {
     return endingSkippable(this.moment);
+  }
+
+  /** Where the clipboard comes to rest (phones: PHONE_CLIP). */
+  private get clip(): ClipRest {
+    return this.ctx.device.phone ? PHONE_CLIP : ENDING_LAYOUT.clip;
   }
 
   enter(ctx: GameCtx): void {
@@ -613,6 +633,7 @@ export class EndingScene implements GameScene {
     this.cardEl.setAttribute('data-in', '');
     this.showForm();
     if (this.skipBtn) this.skipBtn.hidden = true;
+    this.cueEl.hidden = true;
     const back = this.cardEl.querySelector<HTMLButtonElement>('.lr-end-back');
     back?.focus({ preventScroll: true });
     this.idleFrom = this.time;
@@ -642,8 +663,8 @@ export class EndingScene implements GameScene {
     this.flood.snap(1);
     this.fuse.clipboard = false;
     this.clipT = 99;
-    this.clipFromX = ENDING_LAYOUT.clip.x;
-    this.clipFromY = ENDING_LAYOUT.clip.y - 120;
+    this.clipFromX = this.clip.x;
+    this.clipFromY = this.clip.y - 120;
     this.showEndCard();
   }
 
@@ -830,7 +851,7 @@ export class EndingScene implements GameScene {
   }
 
   private drawClipboard(frame: Frame): void {
-    const C = ENDING_LAYOUT.clip;
+    const C = this.clip;
     // Drops from his clamp, growing as it falls toward us, to lie in the foreground.
     const k = Math.min(1, this.clipT / CLIP_FALL_SECONDS);
     const pose = clipDropPose(
@@ -968,7 +989,7 @@ export class EndingScene implements GameScene {
 
     // The clipboard's form, shown with the end card; post-credits, it flips to a new page.
     // The new page's words go in only when it flips, so a screen reader hears them then.
-    const page = clipPage();
+    const page = clipPage(this.clip);
     this.noteEl = h(
       'div',
       {
@@ -979,7 +1000,7 @@ export class EndingScene implements GameScene {
           top: `${Math.round(page.y - page.h / 2)}px`,
           width: `${page.w}px`,
           height: `${page.h}px`,
-          transform: `rotate(${ENDING_LAYOUT.clip.rot}rad)`,
+          transform: `rotate(${this.clip.rot}rad)`,
         },
       },
       h('p', { class: 'lr-clip-day' }),
@@ -1010,6 +1031,12 @@ export class EndingScene implements GameScene {
       this.skipBtn.dataset.action = 'ending-skip';
       parts.push(this.skipBtn);
     }
+    this.cueEl = h(
+      'p',
+      { class: 'lr-end-cue', dataset: this.skippable ? {} : { alone: '' } },
+      'Plays by itself',
+    );
+    parts.push(this.cueEl);
     this.root = h('section', { class: 'lr-ending', 'aria-label': 'Ending' }, ...parts);
     this.ctx.ui.layers.hud.append(this.root);
   }

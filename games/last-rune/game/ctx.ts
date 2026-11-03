@@ -69,6 +69,9 @@ const FILL_BANDS: Record<string, { minVisible: number; focusY: number }> = {
   // (layout.ts phoneLayout), so wide phones trade dead side bars for a bigger board.
   puzzle: { minVisible: 860, focusY: 540 },
   solve: { minVisible: 860, focusY: 540 },
+  // The ending (mobile-6-chrome): full width like its hangout, so no scene of it has side
+  // bars; the rune, FUSE and the clipboard's phone rest spot stay inside the band.
+  ending: { minVisible: 860, focusY: 540 },
 };
 
 export type GameScene = Scene<GameCtx, Frame>;

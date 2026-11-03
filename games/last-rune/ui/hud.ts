@@ -20,10 +20,26 @@ export interface DoorPlate {
   readonly maxWidth: number;
   readonly name: string;
   readonly status: 'solved' | 'unlocked' | 'locked';
-  /** Locked: the missing sockets' colours (CSS colours), in order. */
-  readonly needs: readonly string[];
-  /** Locked: machines still to restore (shown as "+N"). */
-  readonly more: number;
+}
+
+/** A gem a locked door still needs, for the tap card (phones): its name and CSS colour. */
+export interface PlateGem {
+  readonly label: string;
+  readonly colour: string;
+}
+
+/** The tapped door's card: centred on x; its top at y (or, `above`, its foot at y). */
+export interface PlateAt {
+  readonly x: number;
+  readonly y: number;
+  readonly name: string;
+  readonly note: string;
+  /** Phones: the gems a locked door needs, as named icons. */
+  readonly gems?: readonly PlateGem[];
+  /** Phones: the card hangs above y (its foot at y) instead of below it. */
+  readonly above?: boolean;
+  /** Phones: the door whose own plate the card must stay clear of (it sits below that plate). */
+  readonly door?: string;
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -62,6 +78,7 @@ export class Hud {
   readonly nameplate: HTMLElement;
   private readonly plateName: HTMLElement;
   private readonly plateNote: HTMLElement;
+  private readonly plateGems: HTMLElement;
   private readonly journalBtn: HTMLElement | null;
   private readonly menuBtn: HTMLElement;
   private readonly menuNew: HTMLElement;
@@ -123,11 +140,13 @@ export class Hud {
     );
     this.plateName = h('span');
     this.plateNote = h('small');
+    this.plateGems = h('div', { class: 'lr-card-gems', hidden: true });
     this.nameplate = h(
       'div',
       { class: 'lr-nameplate', hidden: true, 'aria-live': 'polite' },
       this.plateName,
       this.plateNote,
+      this.plateGems,
     );
     // Phones: the suggested door gets a pulsing gold outline and a "Start here" / "Next" tag
     // (mobile-3-chrome, D-040); the canvas's own soft ring is too faint at phone size.
@@ -161,8 +180,9 @@ export class Hud {
   }
 
   /**
-   * Phones: a plate on every door, saying what it is without a tap: an open door's name in
-   * gold, a restored one's with a ✓, a locked one's padlock and the colours it still needs.
+   * Phones: a plate on every door, saying what it is without a tap. One plate family
+   * (mobile-6-chrome): an open door's name in gold, a restored one's with a ✓ inside the plate, a
+   * locked one's name, dimmed, after a padlock. What a locked door needs is on its tap card.
    * Null hides them. Rebuilt only when the doors change.
    */
   doors(list: readonly DoorPlate[] | null): void {
@@ -178,18 +198,9 @@ export class Hud {
         el.style.left = `${Math.round(d.x)}px`;
         el.style.top = `${Math.round(d.y)}px`;
         el.style.setProperty('--lr-door-max', `${Math.round(d.maxWidth)}px`);
-        if (d.status === 'locked') {
-          el.append(lockIcon(doc));
-          for (const c of d.needs) {
-            const dot = h('i', { class: 'lr-door-gem' });
-            dot.style.setProperty('--gem', c);
-            el.append(dot);
-          }
-          if (d.more > 0) el.append(h('b', {}, `+${d.more}`));
-        } else {
-          if (d.status === 'solved') el.append(h('span', { class: 'lr-door-tick' }, '\u2713'));
-          el.append(h('span', { class: 'lr-door-name' }, d.name));
-        }
+        if (d.status === 'locked') el.append(lockIcon(doc));
+        if (d.status === 'solved') el.append(h('span', { class: 'lr-door-tick' }, '\u2713'));
+        el.append(h('span', { class: 'lr-door-name' }, d.name));
         return el;
       }),
     );
@@ -203,6 +214,8 @@ export class Hud {
   /** Phones: open or close the ☰ list. */
   menu(open: boolean): void {
     this.root.toggleAttribute('data-open', open);
+    // The list and a door's card never show together (mobile-6-chrome).
+    if (open) this.plate(null);
     this.menuBtn.setAttribute('aria-expanded', String(open));
     this.offOutside?.();
     this.offOutside = null;
@@ -234,15 +247,38 @@ export class Hud {
       unread === 1 ? 'New journal page' : unread > 1 ? `${unread} new journal pages` : '';
   }
 
-  /** Show the plate centred above (x, y) in design px; null hides it. */
-  plate(at: { x: number; y: number; name: string; note: string } | null): void {
+  /** Phones: the ☰ list is open. */
+  get menuOpen(): boolean {
+    return this.root.hasAttribute('data-open');
+  }
+
+  /** Show the plate centred on x, its top at y in design px (see `PlateAt`); null hides it. */
+  plate(at: PlateAt | null): void {
     if (!at) {
       this.nameplate.hidden = true;
       return;
     }
     this.plateName.textContent = at.name;
     this.plateNote.textContent = at.note;
-    this.nameplate.style.top = `${at.y}px`;
+    const gems = at.gems ?? [];
+    this.plateGems.hidden = gems.length === 0;
+    this.plateGems.replaceChildren(
+      ...gems.map((g) => {
+        const dot = h('i', { class: 'lr-door-gem' });
+        dot.style.setProperty('--gem', g.colour);
+        return h('span', { class: 'lr-card-gem' }, dot, g.label.replace(/ /g, '\u00a0'));
+      }),
+    );
+    let y = at.y;
+    // Below a door: under its own plate, never over it.
+    const own = at.door
+      ? this.doorLayer.querySelector<HTMLElement>(`[data-door="${at.door}"]`)
+      : null;
+    if (own && !this.doorLayer.hidden && !at.above) {
+      y = Math.max(y, own.offsetTop + own.offsetHeight + 8);
+    }
+    this.nameplate.toggleAttribute('data-above', at.above === true);
+    this.nameplate.style.top = `${y}px`;
     this.nameplate.hidden = false;
     // Keep the whole plate on screen: doors at the wall's ends would push it off the edge.
     const half = this.nameplate.offsetWidth / 2;
