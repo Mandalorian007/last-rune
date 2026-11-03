@@ -25,6 +25,9 @@ export class Hud {
   private readonly plateNote: HTMLElement;
   private readonly journalBtn: HTMLElement | null;
   private readonly menuBtn: HTMLElement;
+  private readonly journalNote: HTMLElement;
+  private readonly nextRing: HTMLElement;
+  private readonly nextTag: HTMLElement;
   private offOutside: (() => void) | null = null;
 
   constructor(layer: HTMLElement, actions: HudActions) {
@@ -46,9 +49,12 @@ export class Hud {
         h('kbd', { 'aria-hidden': 'true' }, key),
       );
     this.journalBtn = actions.journal ? btn('Journal', 'J', actions.journal) : null;
+    // Phones: the ☰'s dot is explained on the Journal row itself (mobile-3-chrome).
+    this.journalNote = h('small', { class: 'lr-hud-note', 'aria-hidden': 'true', hidden: true });
     if (this.journalBtn) {
       this.journalBtn.dataset.action = 'journal';
       this.journalBtn.hidden = true;
+      this.journalBtn.append(this.journalNote);
     }
     this.menuBtn = h(
       'button',
@@ -77,7 +83,33 @@ export class Hud {
       this.plateName,
       this.plateNote,
     );
-    layer.append(this.nameplate, this.root);
+    // Phones: the suggested door gets a pulsing gold outline and a "Start here" / "Next" tag
+    // (mobile-3-chrome, D-040); the canvas's own soft ring is too faint at phone size.
+    this.nextRing = h('div', { class: 'lr-hall-next', 'aria-hidden': 'true', hidden: true });
+    this.nextTag = h('div', { class: 'lr-hall-next-tag', 'aria-hidden': 'true', hidden: true });
+    layer.append(this.nextRing, this.nextTag, this.nameplate, this.root);
+  }
+
+  /**
+   * Mark the door to try next: a box (design px, centre x/y, size w×h) and its tag's words;
+   * null hides it. Off phones it stays hidden (CSS).
+   */
+  suggest(
+    at: { x: number; y: number; w: number; h: number; label: string; round?: boolean } | null,
+  ): void {
+    this.nextRing.hidden = this.nextTag.hidden = !at;
+    if (!at) return;
+    const top = at.y - at.h / 2;
+    this.nextRing.toggleAttribute('data-round', at.round === true);
+    Object.assign(this.nextRing.style, {
+      left: `${at.x - at.w / 2}px`,
+      top: `${top}px`,
+      width: `${at.w}px`,
+      height: `${at.h}px`,
+    });
+    this.nextTag.style.left = `${at.x}px`;
+    this.nextTag.style.setProperty('--lr-next-top', `${top}px`);
+    this.nextTag.textContent = at.label;
   }
 
   set visible(v: boolean) {
@@ -108,6 +140,9 @@ export class Hud {
     b.toggleAttribute('data-unread', unread > 0);
     this.menuBtn.toggleAttribute('data-unread', shown && unread > 0);
     b.setAttribute('aria-label', unread > 0 ? `Journal, ${unread} new` : 'Journal');
+    this.journalNote.hidden = unread <= 0;
+    this.journalNote.textContent =
+      unread === 1 ? 'New journal page' : unread > 1 ? `${unread} new journal pages` : '';
   }
 
   /** Show the plate centred above (x, y) in design px; null hides it. */

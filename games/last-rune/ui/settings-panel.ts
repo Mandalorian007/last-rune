@@ -38,18 +38,42 @@ function select<T extends string>(
   value: T,
   options: readonly [T, string][],
   onChange: (v: T) => void,
-): HTMLLabelElement {
+): HTMLElement {
   const sel = h(
     'select',
-    { on: { change: (e) => onChange((e.target as HTMLSelectElement).value as T) } },
+    { on: { change: (e) => pick((e.target as HTMLSelectElement).value as T) } },
     ...options.map(([v, text]) => h('option', { value: v, selected: v === value }, text)),
   );
-  return h('label', { class: 'lr-field' }, h('span', null, label), sel);
+  const field = h('label', { class: 'lr-field' }, h('span', null, label), sel);
+  if (options.length > 4) return field;
+  // Phones show a segmented toggle instead of the select (mobile-3-chrome, D-040: every option
+  // in sight and a thumb-sized target each). Both stay in step; CSS shows one of them.
+  const segs = options.map(([v, text]) =>
+    h(
+      'button',
+      {
+        type: 'button',
+        role: 'radio',
+        'aria-checked': String(v === value),
+        dataset: { value: v },
+        on: { click: () => pick(v) },
+      },
+      text,
+    ),
+  );
+  const group = h('div', { class: 'lr-seg', role: 'radiogroup', 'aria-label': label }, ...segs);
+  function pick(v: T): void {
+    sel.value = v;
+    for (const b of segs) b.setAttribute('aria-checked', String(b.dataset.value === v));
+    onChange(v);
+  }
+  return h('div', { class: 'lr-choice' }, field, group);
 }
 
 export function openSettings(deps: SettingsPanelDeps): void {
   const { ui, audio, save, settings } = deps;
   if (ui.root.querySelector('.lr-settings')) return;
+  const phone = ui.root.hasAttribute('data-phone');
 
   const volumes = BUSES.map(
     ({ bus, label }) =>
@@ -166,41 +190,74 @@ export function openSettings(deps: SettingsPanelDeps): void {
         'Saving is off in this browser (private mode or storage blocked). Export a code to keep progress.',
       );
 
-  const content = h(
+  const close = button('✕', () => ui.stack.pop('programmatic'), {
+    className: 'lr-panel-x',
+    ariaLabel: 'Close settings',
+  });
+  // Phones: the body scrolls; "More ▾" says so while anything is still below, and scrolls on.
+  const more = phone
+    ? button('More ▾', () => cols.scrollBy({ top: cols.clientHeight * 0.8, behavior: 'smooth' }), {
+        className: 'lr-settings-more',
+      })
+    : null;
+  const cols = h(
     'div',
-    { class: 'lr-settings' },
-    // Two columns so the whole panel, Done included, fits a 720p screen at 100% text.
+    { class: 'lr-settings-cols' },
     h(
       'div',
-      { class: 'lr-settings-cols' },
+      { class: 'lr-settings-col' },
+      h('section', null, h('h3', null, 'Sound'), ...volumes),
+      h('section', null, h('h3', null, 'Graphics'), graphics),
+    ),
+    h(
+      'div',
+      { class: 'lr-settings-col' },
+      h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed),
       h(
-        'div',
-        { class: 'lr-settings-col' },
-        h('section', null, h('h3', null, 'Sound'), ...volumes),
-        h('section', null, h('h3', null, 'Graphics'), graphics),
-      ),
-      h(
-        'div',
-        { class: 'lr-settings-col' },
-        h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed),
-        h(
-          'section',
-          null,
-          h('h3', null, 'Save'),
-          persistent,
-          area,
-          h('div', { class: 'lr-row' }, exportBtn, importBtn, resetBtn),
-          note,
-        ),
+        'section',
+        null,
+        h('h3', null, 'Save'),
+        persistent,
+        area,
+        h('div', { class: 'lr-row' }, exportBtn, importBtn, phone ? null : resetBtn),
+        note,
+        // Phones: Reset gets a row of its own, away from Import (D-040).
+        phone ? h('div', { class: 'lr-row lr-settings-danger' }, resetBtn) : null,
       ),
     ),
+  );
+  if (more) {
+    const sync = () => {
+      const below = cols.scrollHeight - cols.clientHeight - cols.scrollTop > 4;
+      more.hidden = !below;
+      cols.toggleAttribute('data-more', below);
+    };
+    cols.addEventListener('scroll', sync, { passive: true });
+    requestAnimationFrame(sync);
+    new ResizeObserver(sync).observe(cols);
+  }
+  const content = h(
+    'div',
+    // Phones: the panel itself takes focus, so no focus ring sits on the first slider.
+    { class: 'lr-settings', tabindex: phone ? '-1' : null },
+    phone ? close : null,
+    // Two columns so the whole panel, Done included, fits a 720p screen at 100% text.
+    cols,
     h(
       'div',
       { class: 'lr-row lr-settings-done' },
+      more,
       button('Done', () => ui.stack.pop('programmatic'), { variant: 'primary' }),
     ),
   );
-  ui.stack.push({ content, title: 'Settings', modal: true, dismissible: true });
+  ui.stack.push({
+    content,
+    title: 'Settings',
+    modal: true,
+    dismissible: true,
+    className: 'lr-settings-host',
+    ...(phone ? { initialFocus: content } : {}),
+  });
 }
 
 function confirm(ui: Overlay, message: string, verb: string, onYes: () => void): void {

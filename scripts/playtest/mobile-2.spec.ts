@@ -13,10 +13,10 @@ import { DEV_URL, waitFrames } from '../../tests/e2e/helpers';
 //   M2_TAG=after pnpm exec playwright test -c scripts/playtest/playwright.config.ts mobile-2
 // Writes docs/design/screens/local/mobile-2/<tag>/<viewport>/*.png and
 // docs/design/screens/local/mobile-2/<tag>-<viewport>.png (the sheet).
-// M2_ONLY=iphone,se (viewport names, optional).
+// M2_ONLY=iphone,se (viewport names, optional). M2_OUT=<dir> writes somewhere else.
 
 const TAG = process.env.M2_TAG ?? 'after';
-const OUT = resolve('docs/design/screens/local/mobile-2');
+const OUT = resolve(process.env.M2_OUT ?? 'docs/design/screens/local/mobile-2');
 export const PHONES = [
   { name: 'iphone', width: 844, height: 340, inset: 47 },
   { name: 'se', width: 667, height: 320, inset: 0 },
@@ -33,12 +33,13 @@ type G = any;
 /** The notch insets: env(safe-area-inset-*) can't be emulated, so the app's box is set the same way. */
 async function insets(page: Page, px: number) {
   if (!px) return;
+  // Init scripts run before <html> exists, so apply on DOMContentLoaded (mobile-3-ending finding).
   await page.addInitScript((px) => {
-    document.documentElement.style.setProperty('--lr-safe-l', `${px}px`);
-    document.documentElement.style.setProperty('--lr-safe-r', `${px}px`);
-    const s = document.createElement('style');
-    s.textContent = `#app { left: ${px}px !important; right: ${px}px !important; }`;
-    document.addEventListener('DOMContentLoaded', () => document.head.append(s));
+    document.addEventListener('DOMContentLoaded', () => {
+      const s = document.createElement('style');
+      s.textContent = `#app { left: ${px}px !important; right: ${px}px !important; }`;
+      document.head.append(s);
+    });
   }, px);
 }
 

@@ -25,6 +25,8 @@ export interface ViewContext {
    * Wired to the game sound bank in game/ctx.ts; views must work without it.
    */
   readonly cue?: (name: ViewCue) => void;
+  /** True on a phone-sized screen (mobile-3-chrome): views may drop detail that reads as noise there. */
+  readonly phone?: () => boolean;
 }
 
 /** Sounds a view can ask for, timed to its own pixels. */

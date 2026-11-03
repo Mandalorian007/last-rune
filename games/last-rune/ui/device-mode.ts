@@ -35,9 +35,20 @@ export interface DeviceMode {
 }
 
 export interface DeviceModeController extends DeviceMode {
-  /** `barCss`: the letterbox bar each side of the canvas, CSS px. */
-  setScale(scale: number, barCss?: number): void;
+  /**
+   * `barCss`: the letterbox bar each side of the canvas, CSS px. `crop` (title and hall on
+   * phones, where the art fills the width): the contain fit's scale, which decides phone-ness so
+   * filling never flips the mode, and the CSS px cut off the top and bottom of the canvas.
+   */
+  setScale(scale: number, barCss?: number, crop?: CropInfo): void;
   destroy(): void;
+}
+
+/** See `DeviceModeController.setScale`. */
+export interface CropInfo {
+  readonly fitScale: number;
+  readonly top: number;
+  readonly bottom: number;
 }
 
 export function createDeviceMode(root: HTMLElement): DeviceModeController {
@@ -76,9 +87,15 @@ export function createDeviceMode(root: HTMLElement): DeviceModeController {
       subs.add(fn);
       return () => subs.delete(fn);
     },
-    setScale(scale, barCss = 0) {
+    setScale(scale, barCss = 0, crop) {
       const s = scale > 0 ? scale : 1;
-      const p = s < PHONE_SCALE;
+      const p = (crop && crop.fitScale > 0 ? crop.fitScale : s) < PHONE_SCALE;
+      const ct = p && crop ? Math.max(0, Math.round(crop.top / s)) : 0;
+      const cb = p && crop ? Math.max(0, Math.round(crop.bottom / s)) : 0;
+      // Design px hidden above and below the screen: top- and bottom-anchored chrome moves in by it.
+      root.style.setProperty('--lr-crop-t', `${ct}px`);
+      root.style.setProperty('--lr-crop-b', `${cb}px`);
+      root.toggleAttribute('data-fill', ct + cb > 0);
       const b = Math.max(0, Math.round(barCss / s));
       const resized = Math.abs(cssPx - 1 / s) > 1e-3 || b !== bar;
       cssPx = 1 / s;

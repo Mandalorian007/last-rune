@@ -39,7 +39,7 @@ import { storyTier } from '../rules/progression';
 import type { MachineId } from '../rules/types';
 import type { ViewContext, ViewCue, ViewFactories } from '../scenes/views';
 import { Codex } from '../ui/codex';
-import { createDeviceMode, type DeviceMode } from '../ui/device-mode';
+import { createDeviceMode, type DeviceMode, PHONE_SCALE } from '../ui/device-mode';
 import { Fuse } from '../ui/fuse';
 import { Hud } from '../ui/hud';
 import { createPhoneChrome } from '../ui/phone-chrome';
@@ -54,6 +54,17 @@ import { SettingsController } from './settings';
 
 export const DESIGN_W = 1920;
 export const DESIGN_H = 1080;
+
+/**
+ * Phones: scenes whose art fills the width (D-040), with the design band that must stay on
+ * screen. Hall: every doorway whole, arch to sill, from the top row's arches (y≈45) to the
+ * Intake Desk's sill on the floor (y≈1030); the sky and the floor's foreground crop instead,
+ * and the widest phones keep slim soft-edged side bars. Title: the name down to the candles.
+ */
+const FILL_BANDS: Record<string, { minVisible: number; focusY: number }> = {
+  title: { minVisible: 760, focusY: 520 },
+  hall: { minVisible: 985, focusY: 544 },
+};
 
 export type GameScene = Scene<GameCtx, Frame>;
 
@@ -182,12 +193,34 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   // d-pad moves focus, A activates, B closes (as Tab, Enter and Esc do).
   const padNav = new PadNav(ui.stack);
   const device = createDeviceMode(ui.root);
+  // Title and hall on a phone (D-040): the art fills the width up to the safe areas and the
+  // top and bottom crop instead. `fillScene` is set from the flow below.
+  let fillScene: string = 'boot';
+  const applyFill = () => {
+    const band = FILL_BANDS[fillScene];
+    surface.setFill(band && surface.fitRect.scale < PHONE_SCALE ? band : null);
+  };
+  const applyScale = () => {
+    const r = surface.rect;
+    const ch = surface.root.clientHeight;
+    device.setScale(ui.scale, r.x, {
+      fitScale: surface.fitRect.scale,
+      top: Math.max(0, -r.y),
+      bottom: Math.max(0, r.y + r.height - ch),
+    });
+    // A filled scene that still leaves slim bars (very wide phones) fades its side edges into
+    // them, so the art ends softly instead of at a hard letterbox line.
+    const soft = r.height > ch + 1 && r.x > 0;
+    surface.canvas.style.maskImage = soft
+      ? 'linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent)'
+      : '';
+  };
   surface.onResize(({ rect, backbuffer }) => {
     renderer.resize(backbuffer.width, backbuffer.height);
     ui.setRect(rect);
-    device.setScale(ui.scale, rect.x);
+    applyScale();
+    applyFill();
   });
-  device.setScale(ui.scale, ui.rect.x);
 
   // ── Audio ──────────────────────────────────────────────────────────────
   const audio = new AudioEngine();
@@ -276,7 +309,23 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   // The stack hands scenes this object on enter; it is filled in below, before the first scene.
   const ctx = {} as GameCtx;
   const stack = new SceneStack<GameCtx, Frame>(ctx);
-  const flow = new GameFlow<GameScene>(stack, save, scenes);
+  // A scene is built and entered before the flow announces its state, so the fill (above) is
+  // set for it first: the altar lays out against the plain letterbox, never the hall's fill.
+  const entering =
+    <A extends unknown[]>(state: string, make: (...a: A) => GameScene) =>
+    (...a: A) => {
+      fillScene = state;
+      applyFill();
+      return make(...a);
+    };
+  const flow = new GameFlow<GameScene>(stack, save, {
+    title: entering('title', scenes.title),
+    hall: entering('hall', scenes.hall),
+    puzzle: entering('puzzle', scenes.puzzle),
+    solve: entering('solve', scenes.solve),
+    journal: scenes.journal && entering('journal', scenes.journal),
+    ending: scenes.ending && entering('ending', scenes.ending),
+  });
 
   const doOpenSettings = () =>
     openSettings({
@@ -319,7 +368,11 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   // Phones: the upright "turn sideways" card, and Full screen on the title (D-039).
   const phoneChrome = createPhoneChrome(ui.layers.hud, device);
   phoneChrome.showFullscreen(flow.state === 'title' || flow.state === 'boot');
+  fillScene = flow.state;
+  applyFill();
   flow.onChange((state) => {
+    fillScene = state;
+    applyFill();
     phoneChrome.showFullscreen(state === 'title');
     // Scenes own their caption avoid regions; leaving the altar must never strand one.
     if (state !== 'puzzle') fuse.avoid(null);
@@ -340,6 +393,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     width: DESIGN_W,
     height: DESIGN_H,
     cue: viewCue,
+    phone: () => device.phone,
   };
 
   // ── Loop ───────────────────────────────────────────────────────────────

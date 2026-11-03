@@ -365,6 +365,7 @@ export class CathedralHallView implements HallView {
     );
 
     // Conduits carved into the wall, under everything else.
+    this.floorProps.edgeGauge = !this.vc.phone?.();
     this.floorProps.update(L, this.time, this.motion, this.warmth, this.lamp);
     this.floorProps.drawBack(frame);
     for (const seg of this.segments) {
