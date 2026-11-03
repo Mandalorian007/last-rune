@@ -10,17 +10,17 @@ import {
 } from '../rules/progression';
 import { GEM_KINDS, MACHINE_IDS, type Tier } from '../rules/types';
 import {
+  coffeeLink,
   DISCORD_INVITE_URL,
   ENDING_SEQUENCE,
   endingButtons,
-  endingTitleCard,
+  KOFI_URL,
   safetyRecordLine,
 } from './ending';
 import { JOURNAL, pagesFound } from './journal';
 import {
   beatLine,
   cardsOf,
-  chatLines,
   codexNote,
   countI,
   LINES,
@@ -79,7 +79,7 @@ describe('lines', () => {
       if (p.direction) expect(pitch.includes(p.direction)).toBe(true);
     }
     for (const s of ENDING_SEQUENCE) {
-      if (s.type === 'direction' || s.type === 'silence') {
+      if ((s.type === 'direction' && s.source !== 'new') || s.type === 'silence') {
         const t = s.type === 'direction' ? s.text : s.note;
         expect(pitch.includes(t), t).toBe(true);
       }
@@ -164,11 +164,13 @@ describe('lines', () => {
     for (const g of GEM_KINDS) expect(codexNote(g)).toBeDefined();
   });
 
-  it('chat lines are in order', () => {
-    expect(chatLines().map((l) => l.text)).toEqual([
-      'hello. this unit has arrived somewhere with a great many people in it.',
-      'you appear to be arguing about a game.',
-      'day 1.',
+  it('the lines from beyond the door are in sentence case', () => {
+    expect(
+      (['beyond-arrived', 'beyond-arguing', 'beyond-day-1'] as const).map((b) => beatLine(b).text),
+    ).toEqual([
+      'Hello. This unit has arrived somewhere with a great many people in it.',
+      'You appear to be arguing about a game.',
+      'Day 1.',
     ]);
   });
 
@@ -275,9 +277,15 @@ describe('ending', () => {
     expect(endingButtons().map((b) => b.id)).toContain('join');
     expect(endingButtons('', '')).toEqual([]);
     expect(endingButtons('   ', 'javascript:alert(1)')).toEqual([]);
-    expect(endingButtons('', 'https://example.itch.io').map((b) => b.id)).toEqual(['tip']);
-    expect(endingTitleCard('')).toHaveLength(1);
-    expect(endingTitleCard()).toHaveLength(2);
+    expect(endingButtons('', 'https://example.itch.io').map((b) => b.id)).toEqual(['coffee']);
+  });
+
+  it('links Ko-fi on https only (D-034)', () => {
+    expect(KOFI_URL).toBe('https://ko-fi.com/thundersoap');
+    expect(endingButtons().map((b) => b.id)).toEqual(['join', 'coffee']);
+    expect(coffeeLink()?.href).toBe(KOFI_URL);
+    expect(coffeeLink('http://ko-fi.com/x')).toBeNull();
+    expect(coffeeLink('')).toBeNull();
   });
 
   it('references real lines in order', () => {

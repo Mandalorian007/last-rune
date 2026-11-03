@@ -11,9 +11,12 @@
 import type { Frame } from '@engine/render';
 import type { Rect } from '@engine/ui';
 import { h } from '@engine/ui';
+import { coffeeLink } from '../../content/ending';
 import { beatLine, type FuseLine, titleLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { hasProgress } from '../../game/save';
+import { coffeeAnchor } from '../../ui/coffee';
+import { menuNav } from '../../ui/menu-nav';
 import type { TitleView, TitleViewFrame } from '../views';
 import { ChatterClock, ShuffleBag } from './chatter';
 
@@ -74,7 +77,10 @@ export class TitleScene implements GameScene {
     const speaking = this.ctx.fuse.speaking;
     const paused = this.knockPending || this.ctx.ui.stack.hasModal;
     if (this.chatter.tick(dt, { paused, speaking })) this.chat();
-    if (this.ctx.input.pressed('confirm')) this.primary();
+    if (!this.ctx.ui.stack.hasModal && this.dom) {
+      // Arrows and the pad walk the menu (and the Ko-fi link); otherwise A/Enter/Space play.
+      if (!menuNav(this.ctx.input, this.dom) && this.ctx.input.pressed('confirm')) this.primary();
+    }
     this.view.update(dt, this.frameState());
   }
 
@@ -110,13 +116,15 @@ export class TitleScene implements GameScene {
     void this.ctx.fuse.say(line);
   }
 
-  /** The menu and release label, measured (text size moves them), in design px. */
+  /** The menu, release label and Ko-fi link, measured (text size moves them), in design px. */
   private menuRegions(): Rect[] {
     const ui = this.ctx.ui;
     if (!this.dom?.isConnected) return [];
     const o = ui.root.getBoundingClientRect();
     const out: Rect[] = [];
-    for (const el of this.dom.querySelectorAll<HTMLElement>('.lr-title-menu, .lr-release')) {
+    for (const el of this.dom.querySelectorAll<HTMLElement>(
+      '.lr-title-menu, .lr-release, .lr-title-coffee',
+    )) {
       const r = el.getBoundingClientRect();
       if (r.width === 0) continue;
       out.push({
@@ -139,6 +147,7 @@ export class TitleScene implements GameScene {
 
   private buildDom(): HTMLElement {
     const ctx = this.ctx;
+    const coffee = coffeeLink();
     const gold = (label: string, fn: () => void, id: string) =>
       h(
         'button',
@@ -189,6 +198,8 @@ export class TitleScene implements GameScene {
       ),
       menu,
       ...(releaseLabel() ? [h('p', { class: 'lr-release' }, releaseLabel())] : []),
+      // Ko-fi (D-034): small, in the corner, never competing with Play. Click-only.
+      ...(coffee ? [coffeeAnchor(coffee, 'lr-title-coffee', 'title-coffee')] : []),
     );
   }
 

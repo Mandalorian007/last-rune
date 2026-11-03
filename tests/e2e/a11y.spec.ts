@@ -199,6 +199,8 @@ test('solve, journal and end card: axe, and Esc works from a focused button', as
   const join = page.locator('.lr-end-card a.lr-end-join');
   await join.focus();
   await page.keyboard.press('Tab');
+  await expect(page.locator('.lr-end-card a.lr-end-coffee')).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(back).toBeFocused();
   expect(problems).toEqual([]);
 });

@@ -1,69 +1,73 @@
 /**
  * The ending (pitch §4 "Script · The door"). Data only; the ending scene plays it.
  *
- * D-005: the Discord is lore. There is no bot and no live widget; beat 2 is
- * always the mock chat window. The only network touch is the player clicking
- * the invite link.
+ * D-032 (amends D-005): FUSE went to ThunderClap Gaming and found friends. He is a
+ * game character, not a bot or a member of a real server, so the ending shows no
+ * chat, server or member details. The only network touches are the player clicking
+ * the invite (D-013) or the Ko-fi link (D-034): plain links, new tab, no widgets.
  */
 import { wordCount } from './lines';
 
-/** The ThunderClap Discord invite. If empty, the ending hides the Join button. */
+/** The ThunderClap Gaming invite. If empty, the ending hides the Join button. */
 export const DISCORD_INVITE_URL: string = 'https://discord.gg/thunderclap';
 
-/** Optional tip-jar link. Empty means use itch's own tip prompt (button hidden). */
-export const TIP_JAR_URL: string = '';
+/** ThunderSoap's Ko-fi page (D-034). Shown on the title and the end card; blank hides it. */
+export const KOFI_URL: string = 'https://ko-fi.com/thundersoap';
 
-/** Channel name shown in the mock chat (beat 2). */
-export const CHAT_CHANNEL = '#this-will-break';
-
-/** On-screen copy for beat 3 (UI text, not FUSE lines). Verbatim from the pitch. */
+/**
+ * On-screen copy for the title and end card (UI text, not FUSE lines). Confirmed by
+ * the user, D-032. The title card is lore, so it reads the same with or without an invite.
+ */
 export const ENDING_COPY = {
   titleCard: [
-    'FUSE lives in the ThunderClap Discord now.',
-    'He has questions about your safety record.',
+    'FUSE went to ThunderClap Gaming.',
+    'He made friends. Loud ones.',
+    'He still has questions about your safety record.',
   ],
-  joinLabel: 'Join ThunderClap',
-  tipLabel: 'Leave a tip',
+  joinLabel: 'Join ThunderClap Gaming',
+  coffeeLabel: 'Buy ThunderSoap a coffee',
   footer: 'This was the whole game. Thank you for finishing it.',
 } as const;
 
 export interface EndingButton {
-  readonly id: 'join' | 'tip';
+  readonly id: 'join' | 'coffee';
   readonly label: string;
   readonly href: string;
 }
 
-/**
- * Buttons for the ending screen. Any button whose URL is blank or not https is
- * left out, so an unset constant never produces a dead link.
- */
-export function endingButtons(
-  inviteUrl: string = DISCORD_INVITE_URL,
-  tipUrl: string = TIP_JAR_URL,
-): EndingButton[] {
-  const ok = (u: string) => /^https:\/\/\S+$/.test(u.trim());
-  const out: EndingButton[] = [];
-  if (ok(inviteUrl)) out.push({ id: 'join', label: ENDING_COPY.joinLabel, href: inviteUrl.trim() });
-  if (ok(tipUrl)) out.push({ id: 'tip', label: ENDING_COPY.tipLabel, href: tipUrl.trim() });
-  return out;
+const httpsOnly = (u: string): string | null => {
+  const t = u.trim();
+  return /^https:\/\/\S+$/.test(t) ? t : null;
+};
+
+/** The Ko-fi link (title and end card), or null when the URL is blank or not https. */
+export function coffeeLink(url: string = KOFI_URL): EndingButton | null {
+  const href = httpsOnly(url);
+  return href ? { id: 'coffee', label: ENDING_COPY.coffeeLabel, href } : null;
 }
 
 /**
- * The title card. With no invite link, the Discord claim stays (it is lore) but
- * reads as an aside rather than a call to action.
+ * Buttons for the ending screen: Join first, the Ko-fi link second. Any button whose
+ * URL is blank or not https is left out, so an unset constant never produces a dead link.
  */
-export function endingTitleCard(inviteUrl: string = DISCORD_INVITE_URL): readonly string[] {
-  return endingButtons(inviteUrl, '').some((b) => b.id === 'join')
-    ? ENDING_COPY.titleCard
-    : [ENDING_COPY.titleCard[1]];
+export function endingButtons(
+  inviteUrl: string = DISCORD_INVITE_URL,
+  coffeeUrl: string = KOFI_URL,
+): EndingButton[] {
+  const out: EndingButton[] = [];
+  const join = httpsOnly(inviteUrl);
+  if (join) out.push({ id: 'join', label: ENDING_COPY.joinLabel, href: join });
+  const coffee = coffeeLink(coffeeUrl);
+  if (coffee) out.push(coffee);
+  return out;
 }
 
 /** One step of the ending, in order. `line` ids refer to content/lines.ts. */
 export type EndingStep =
   | { readonly type: 'silence'; readonly note: string }
   | { readonly type: 'line'; readonly line: string }
-  | { readonly type: 'direction'; readonly text: string }
-  | { readonly type: 'chat'; readonly line: string }
+  /** Directions are verbatim from the pitch unless marked `new` (D-032 rewrote the ending's). */
+  | { readonly type: 'direction'; readonly text: string; readonly source?: 'new' }
   | { readonly type: 'title-card' }
   | { readonly type: 'idle'; readonly seconds: number; readonly line: string };
 
@@ -93,18 +97,16 @@ export const ENDING_SEQUENCE: readonly EndingStep[] = [
   },
   {
     type: 'direction',
-    text: 'White fades to a very different kind of screen: a chat window. Dark theme, familiar layout, a channel list down the side. A cursor blinks in a channel called #this-will-break. Then, slowly, typed:',
+    text: 'The white warms to gold. Somewhere in the light, a great many people are talking at once, and laughing. FUSE, from the other side:',
+    source: 'new',
   },
-  { type: 'chat', line: 'chat.1' },
-  { type: 'chat', line: 'chat.2' },
-  { type: 'chat', line: 'chat.3' },
+  { type: 'line', line: 'beat.beyond-arrived' },
+  { type: 'line', line: 'beat.beyond-arguing' },
+  { type: 'line', line: 'beat.beyond-day-1' },
   {
     type: 'direction',
-    text: 'Beat. A second line of avatars lights up as "real" members react.',
-  },
-  {
-    type: 'direction',
-    text: 'The chat window shrinks into the ending screen. Gold floods the hall. Title card:',
+    text: 'The light settles back over the hall. Gold floods it. Title card:',
+    source: 'new',
   },
   { type: 'title-card' },
   { type: 'idle', seconds: 30, line: 'beat.post-credits' },
@@ -118,7 +120,7 @@ export interface PlayStats {
 /**
  * FUSE's closing remark on the player's safety record, for the ending screen
  * under the title card ("He has questions about your safety record").
- * Lore-safe stand-in for the pitch's bot greeting that referenced play time.
+ * Stands in for the pitch's greeting that referenced play time.
  */
 export function safetyRecordLine(stats: PlayStats): string {
   const mins = Math.max(1, Math.round(stats.playSeconds / 60));

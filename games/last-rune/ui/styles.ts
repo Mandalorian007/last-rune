@@ -56,6 +56,15 @@ const CSS = /* css */ `
   font: 500 14px/1 var(--tc-font-ui, system-ui, sans-serif); letter-spacing: 0.08em;
   color: rgb(255 255 255 / 0.45); text-transform: uppercase; pointer-events: none;
 }
+.tc-overlay .lr-title-coffee {
+  position: absolute; right: 28px; bottom: 26px; display: inline-flex; align-items: center; gap: 10px;
+  padding: 8px 18px; border-radius: 999px; text-decoration: none; pointer-events: auto;
+  font: 500 20px/1.2 var(--tc-font-ui, system-ui, sans-serif); color: #e8d6b0;
+  background: rgb(20 12 30 / 0.55); border: 1px solid rgb(232 192 106 / 0.35);
+}
+.tc-overlay .lr-title-coffee:hover { color: #fff3d6; border-color: rgb(232 192 106 / 0.8); }
+.tc-overlay .lr-title-coffee:focus-visible { outline: var(--tc-focus-ring) solid var(--tc-color-focus); outline-offset: 4px; }
+.tc-overlay .lr-title-coffee .lr-coffee-icon { width: 1.3em; height: 1.3em; flex: none; color: #e8c06a; }
 .tc-overlay .lr-title-menu {
   position: absolute; left: 50%; top: 610px; transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 22px; pointer-events: auto;

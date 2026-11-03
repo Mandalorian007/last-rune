@@ -177,6 +177,8 @@ export interface GameAudio {
     ): Voice;
     bolt(intensity?: number): BoltHandle;
     stormCell(strength: 1 | 2 | 4, gain?: number): StormCellHandle;
+    /** Ending: a lively crowd far off in the light (a quiet loop; stop it with a fade). */
+    crowd(gain?: number, fadeIn?: number): Voice;
   };
   music: MusicDirector;
   fuse: {
@@ -312,6 +314,9 @@ export function createGameAudio(engine: AudioEngine, opts: GameAudioOptions = {}
             voice.stop(fade);
           },
         };
+      },
+      crowd(gain = 1, fadeIn = 2.5) {
+        return engine.loop('amb.crowd', { bus: 'sfx', gain, fadeIn });
       },
     },
     music,
