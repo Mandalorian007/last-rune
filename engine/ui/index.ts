@@ -10,6 +10,13 @@ export {
   type SayOptions,
 } from './caption';
 export { append, type Child, focusableWithin, h } from './dom';
+export {
+  activateLink,
+  type ExternalLink,
+  type ExternalLinkLabels,
+  type ExternalLinkOptions,
+  externalLink,
+} from './link';
 export { createOverlay, type Overlay, type OverlayOptions, type Rect } from './overlay';
 export { type PadLike, PadNav, type PadNavOptions } from './padnav';
 export {

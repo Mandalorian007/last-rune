@@ -198,8 +198,15 @@ test('solve, journal and end card: axe, and Esc works from a focused button', as
   await expectNoAxeViolations(page, 'end card');
   const join = page.locator('.lr-end-card a.lr-end-join');
   await join.focus();
-  await page.keyboard.press('Tab');
-  await expect(page.locator('.lr-end-card a.lr-end-coffee')).toBeFocused();
+  // Tab order: Join, its Copy link, Ko-fi, its Copy link, Back.
+  for (const sel of [
+    '[data-action="ending-join-copy"]',
+    '.lr-end-card a.lr-end-coffee',
+    '[data-action="ending-coffee-copy"]',
+  ]) {
+    await page.keyboard.press('Tab');
+    await expect(page.locator(sel)).toBeFocused();
+  }
   await page.keyboard.press('Tab');
   await expect(back).toBeFocused();
   expect(problems).toEqual([]);

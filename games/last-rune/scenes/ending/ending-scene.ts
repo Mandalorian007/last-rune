@@ -15,7 +15,7 @@
 import type { Voice } from '@engine/audio';
 import type { PostSettingsPatch } from '@engine/post';
 import type { DrawParams, Frame, Material, RGBA } from '@engine/render';
-import { h } from '@engine/ui';
+import { externalLink, h } from '@engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import { Fuse as FuseProp } from '../../art/props/fuse';
 import { PropLightRig } from '../../art/props/lighting';
@@ -23,8 +23,7 @@ import type { FuseLine } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
 import { progressOf } from '../../game/save';
-import { coffeeAnchor } from '../../ui/coffee';
-import { withCopyLink } from '../../ui/link-copy';
+import { coffeeLinkWidget, linkLabels } from '../../ui/coffee';
 import { menuNav } from '../../ui/menu-nav';
 import { deriveHall } from '../hall/hall-state';
 import { DeskArt } from '../journal/desk-art';
@@ -481,36 +480,28 @@ export class EndingScene implements GameScene {
   private addEndLinks(): void {
     const links: HTMLElement[] = [];
     const join = this.card.join;
-    if (join) {
-      const a = h(
-        'a',
-        {
-          class: 'lr-end-join',
-          href: join.href,
-          target: '_blank',
-          rel: 'noopener noreferrer',
-          dataset: { action: 'ending-join' },
-        },
-        join.label,
-      );
-      links.push(
-        withCopyLink(a, {
-          name: 'the ThunderClap Gaming invite',
+    const joinLink = join
+      ? externalLink({
+          url: join.href,
+          content: join.label,
+          labels: linkLabels('the ThunderClap Gaming invite'),
+          linkClass: 'lr-end-join',
+          className: 'lr-end-links',
           action: 'ending-join',
-          cls: 'lr-end-links lr-end-join-links',
-        }),
-      );
-    }
+        })
+      : null;
+    if (joinLink) links.push(joinLink.element);
     const coffee = this.card.coffee;
-    if (coffee) {
-      links.push(
-        withCopyLink(coffeeAnchor(coffee, 'lr-end-coffee', 'ending-coffee'), {
-          name: "ThunderSoap's Ko-fi",
+    const coffeeLink = coffee
+      ? coffeeLinkWidget(coffee, {
+          cls: 'lr-end-coffee',
+          wrap: 'lr-end-links',
           action: 'ending-coffee',
-          cls: 'lr-end-links',
-        }),
-      );
-    }
+          place: 'below',
+          align: 'center',
+        })
+      : null;
+    if (coffeeLink) links.push(coffeeLink.element);
     this.cardEl.prepend(...links);
   }
 

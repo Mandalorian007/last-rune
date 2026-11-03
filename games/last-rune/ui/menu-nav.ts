@@ -8,12 +8,11 @@
  * taken here when it came from a gamepad.
  *
  * A pad press is not a user gesture, so a new-tab link is opened with `window.open` and checked:
- * if the browser blocks it, the link's copy field appears instead (see link-copy.ts).
+ * if the browser blocks it, the link's copy field appears instead (engine `activateLink`).
  */
 import type { Input } from '@engine/input';
-import { focusableWithin } from '@engine/ui';
+import { activateLink, focusableWithin } from '@engine/ui';
 import type { Action } from '../game/actions';
-import { isNewTabLink, openInNewTab } from './link-copy';
 
 /** What a tick of menu input did: moved focus, clicked the focused control, or nothing. */
 export type MenuNavResult = 'moved' | 'clicked' | null;
@@ -32,8 +31,7 @@ export function menuNav(input: Input<Action>, root: HTMLElement): MenuNavResult 
     return 'moved';
   }
   if (inside && input.lastDevice === 'gamepad' && input.pressed('confirm')) {
-    if (isNewTabLink(active)) openInNewTab(active);
-    else active.click();
+    activateLink(active, 'gamepad');
     return 'clicked';
   }
   return null;

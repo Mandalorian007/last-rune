@@ -429,8 +429,10 @@ test("itch embed: Copy link still copies the Ko-fi URL inside itch's iframe", as
       async () => (await fallback.isVisible()) || (await copy.textContent())?.includes('Copied'),
     )
     .toBe(true);
-  expect(await frame.evaluate(() => (window as { __writeText?: string }).__writeText)).toBe(
-    'refused',
+  // Chromium exposes the frame's policy, so writeText is not even tried (no policy error);
+  // where it is tried, it is refused. Either way the copy went another route.
+  expect(await frame.evaluate(() => (window as { __writeText?: string }).__writeText)).not.toBe(
+    'ok',
   );
   if (await fallback.isVisible()) {
     await expect(fallback.locator('input')).toHaveValue(KOFI_URL);

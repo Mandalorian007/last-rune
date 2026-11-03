@@ -1,10 +1,11 @@
 /**
- * The Ko-fi link (D-034), used on the title and the end card. A plain link: it opens
- * only on the player's click, in a new tab, with no referrer and no opener. No widget,
- * script, iframe or remote image; the cup icon is drawn here as inline SVG.
+ * The Ko-fi link (D-034), used on the title and the end card, built with the engine's
+ * external-link widget (D-036): a plain new-tab link plus Copy link. It opens only on the
+ * player's action. No third-party widget, script, iframe or remote image; the cup icon is
+ * drawn here as inline SVG.
  */
-import { h } from '@engine/ui';
-import type { EndingButton } from '../content/ending';
+import { type ExternalLink, type ExternalLinkLabels, externalLink, h } from '@engine/ui';
+import { type EndingButton, LINK_COPY_TEXT } from '../content/ending';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -36,19 +37,33 @@ function cupIcon(): SVGSVGElement {
   return svg;
 }
 
-/** The Ko-fi anchor with its cup icon. `action` names it for tests (`data-action`). */
-export function coffeeAnchor(link: EndingButton, cls: string, action: string): HTMLAnchorElement {
-  const a = h(
-    'a',
-    {
-      class: cls,
-      href: link.href,
-      target: '_blank',
-      rel: 'noopener noreferrer',
-      dataset: { action },
-    },
-    h('span', null, link.label),
-  );
-  a.prepend(cupIcon());
-  return a;
+/** The engine link labels with Last Rune's wording; `name` finishes "Copy link to <name>". */
+export function linkLabels(name: string): ExternalLinkLabels {
+  return { ...LINK_COPY_TEXT, copyAriaLabel: `${LINK_COPY_TEXT.copy} to ${name}` };
+}
+
+/**
+ * The Ko-fi link (cup icon + label) with Copy link, as the engine widget. `action` names its parts
+ * for tests (`data-action`); `cls` goes on the anchor, `wrap` on the wrapper.
+ */
+export function coffeeLinkWidget(
+  link: EndingButton,
+  opts: {
+    cls: string;
+    wrap: string;
+    action: string;
+    place: 'above' | 'below';
+    align: 'center' | 'end';
+  },
+): ExternalLink | null {
+  return externalLink({
+    url: link.href,
+    content: [cupIcon(), h('span', null, link.label)],
+    labels: linkLabels("ThunderSoap's Ko-fi"),
+    linkClass: opts.cls,
+    className: opts.wrap,
+    action: opts.action,
+    place: opts.place,
+    align: opts.align,
+  });
 }

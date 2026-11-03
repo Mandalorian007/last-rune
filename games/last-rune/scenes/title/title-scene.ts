@@ -15,8 +15,7 @@ import { coffeeLink } from '../../content/ending';
 import { beatLine, type FuseLine, titleLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { hasProgress } from '../../game/save';
-import { coffeeAnchor } from '../../ui/coffee';
-import { withCopyLink } from '../../ui/link-copy';
+import { coffeeLinkWidget } from '../../ui/coffee';
 import { menuNav } from '../../ui/menu-nav';
 import type { TitleView, TitleViewFrame } from '../views';
 import { ChatterClock, ShuffleBag } from './chatter';
@@ -149,6 +148,15 @@ export class TitleScene implements GameScene {
   private buildDom(): HTMLElement {
     const ctx = this.ctx;
     const coffee = coffeeLink();
+    const coffeeEl = coffee
+      ? coffeeLinkWidget(coffee, {
+          cls: 'lr-title-coffee',
+          wrap: 'lr-title-links',
+          action: 'title-coffee',
+          place: 'above',
+          align: 'end',
+        })?.element
+      : null;
     const gold = (label: string, fn: () => void, id: string) =>
       h(
         'button',
@@ -201,15 +209,7 @@ export class TitleScene implements GameScene {
       ...(releaseLabel() ? [h('p', { class: 'lr-release' }, releaseLabel())] : []),
       // Ko-fi (D-034): small, in the corner, never competing with Play. Click-only, with a
       // Copy link beside it in case the browser blocks the new tab.
-      ...(coffee
-        ? [
-            withCopyLink(coffeeAnchor(coffee, 'lr-title-coffee', 'title-coffee'), {
-              name: "ThunderSoap's Ko-fi",
-              action: 'title-coffee',
-              cls: 'lr-title-links',
-            }),
-          ]
-        : []),
+      ...(coffeeEl ? [coffeeEl] : []),
     );
   }
 
