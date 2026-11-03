@@ -44,11 +44,25 @@ describe('codex content', () => {
     expect(CODEX_SPARKS).toContain('4');
     expect(CODEX_SPARKS).toContain('8');
     expect(CODEX_SPARKS).toContain('16');
-    expect(CODEX.split.maths).toContain('4 → 2 + 2');
     expect(CODEX.split.rule).toMatch(/odd/i);
-    expect(CODEX.amplify.maths).toContain('4 → 8');
     expect(CODEX.amplify.rule).toMatch(/once per path/i);
     expect(CODEX.gate.rule).toMatch(/same strike/i);
-    expect(CODEX.capacitor.maths).toMatch(/stored \+ in/);
+  });
+
+  it('gives every gem a worked example with real numbers (mobile-7-teach)', () => {
+    for (const gem of GEM_KINDS) {
+      const m = CODEX[gem].maths;
+      expect(m, gem).toMatch(/\d → out \d|\d \+ \d → \d/);
+      expect(m, gem).toMatch(/\.$/);
+    }
+    // The numbers are the rules' numbers (rules/sim.ts): a 1× storm's 4 through each gem.
+    expect(CODEX.channel.maths).toContain('In 4 → out 4');
+    expect(CODEX.bend.maths).toContain('In 4 → out 4');
+    expect(CODEX.split.maths).toContain('In 4 → out 2 and 2. Odd charge is lost.');
+    expect(CODEX.amplify.maths).toContain('In 4 → out 8');
+    expect(CODEX.amplify.maths).toMatch(/8 stays 8/);
+    expect(CODEX.gate.maths).toContain('In 4 and 4 → out 8');
+    expect(CODEX.gate.maths).toMatch(/only one/i);
+    expect(CODEX.capacitor.maths).toBe('Strike 1: keeps 4. Strike 2: 4 + 4 → 8.');
   });
 });

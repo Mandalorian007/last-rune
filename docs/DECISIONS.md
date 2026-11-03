@@ -229,7 +229,7 @@ Format: `D-NNN · date · decision · why · who`.
   - v1.0 is released per shipping-itch.md: GitHub Release, tags `v1.0.0` and `engine-v0.1` on the same commit, and Pages.
   - **The itch upload stays manual, with the user (D-012).** It does not block Phase 1. ws/workspace may start on its branch early, but nothing from Phase 1 merges until the tags and baselines are on main.
   - **Committed baselines:** the regression baselines in `docs/design/screens/v1.0/` are an exception to "don't commit images". They cover every scene at 1280×720, 1920×1080 and iPad, with e2e timings and perf numbers. They are kept small, and nothing else in screens/ is committed.
-- **Defaults for the plan's open questions** (the user can override any of them):
+- **The plan's open questions:** the PM's defaults, which the user confirmed on 2026-11-03:
   - package scope `@thunderclap/engine`;
   - the registry is decided at Phase 5;
   - Electron ships unsigned until the user has certificates;
@@ -237,3 +237,27 @@ Format: `D-NNN · date · decision · why · who`.
     - the chrome must work in portrait;
     - the altar in portrait is best effort and does not gate 1.1;
     - landscape stays the must (D-039).
+- **Addendum 1 (2026-11-03, user + PM):** the phone altar zoom is removed entirely: button, badge, minimap, arrows, gutter chips, hints and code (`docs/workstreams/zoom-removal.md`).
+  - Phones get their dense-board answer from the Phase 2 layout and camera model.
+  - promote-ui no longer promotes `zoom.ts` to `camera2d.ts`; Phase 3's Camera builds `fitRect` itself.
+  - Browser-zoom blocking and the loupe stay.
+- **Addendum 2 (2026-11-03, user):** "The engine verifies platform testing. All product testing should remain in the game and we shouldn't need to re-verify platform capability testing." Split the tests by ownership:
+  - **Engine (`packages/engine`):** unit tests plus an engine e2e harness on a noun-free test page. It proves platform capability once:
+    - WebGPU init and loss;
+    - surface and resize;
+    - input, gestures, and the tap-vs-pan boundary;
+    - layout regions, safe areas, form factors and orientation;
+    - text scale and density tokens;
+    - host link, copy, fullscreen and storage (quota, blocked, itch iframe);
+    - lifecycle, pause and audio unlock;
+    - browser-zoom blocking;
+    - camera math.
+
+    The viewports, devices and wrappers the engine supports form a matrix, and the engine's CI runs it.
+  - **Game (`games/last-rune`):** product tests only. These cover rules, puzzles and solvability, teach and moments, copy, the flow (full-run), the D-026 press counts, a11y of game content, and the game's own visual baselines.
+    - Game e2e runs at a small set of representative sizes and trusts the engine for platform behaviour.
+    - It does not re-assert "fits every phone viewport", tap-target sizing math, iframe clipboard or resize handling.
+  - **Migration:** `docs/engine/test-split.md` classifies every current spec and test. Each Phase 1–2 workstream moves the platform assertions it touches into the engine suite in the same branch, so no coverage is lost in between, then trims the game spec.
+    - Gate 1 requires the engine harness.
+    - Gate 2 requires the mobile-* platform checks to be engine-owned.
+    - The D-040 blind screenshot review stays a product check.

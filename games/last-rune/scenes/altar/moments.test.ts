@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { GEM_KINDS, type GemKind } from '../../rules/types';
 import {
   arbitrate,
   HINT_RETIRE,
   hintRetired,
+  type InfoAsk,
   introButton,
   phoneHint,
   pickHint,
+  pickInfo,
   type VoiceAsk,
 } from './moments';
 
@@ -26,9 +29,8 @@ describe('phone how-to line', () => {
 
   it("lets other workstreams' lines stand in the slot, held gem first", () => {
     expect(pickHint({ howto: 'Tap a gem, then a socket' })).toBe('howto');
-    expect(pickHint({ howto: 'x', zoom: 'Tap the board to zoom' })).toBe('zoom');
-    expect(pickHint({ howto: 'x', zoom: 'y', holding: 'Holding: Bend' })).toBe('holding');
-    expect(pickHint({ holding: null, zoom: '', howto: '' })).toBeNull();
+    expect(pickHint({ howto: 'x', holding: 'Holding: Bend' })).toBe('holding');
+    expect(pickHint({ holding: null, howto: '' })).toBeNull();
   });
 });
 
@@ -47,11 +49,22 @@ describe('column arbiter: one owner at a time', () => {
 
   it('gives everyone room when it fits', () => {
     const g = arbitrate(
-      [v('hint', 'hint', 20), v('teach', 'teach', 60), v('fuse', 'fuse', 40)],
+      [v('hint', 'hint', 20), v('tip', 'tip', 60), v('fuse', 'fuse', 40)],
       200,
       8,
     );
     expect([...g.values()]).toEqual(['full', 'full', 'full']);
+  });
+
+  it('a teach card is the one panel: the how-to line and FUSE wait, room or not', () => {
+    const g = arbitrate(
+      [v('hint', 'hint', 20), v('teach', 'teach', 60), v('fuse', 'fuse', 40)],
+      1000,
+      8,
+    );
+    expect(g.get('teach')).toBe('full');
+    expect(g.get('hint')).toBe('wait');
+    expect(g.get('fuse')).toBe('wait');
   });
 
   it('ranks verdict > teach > tip > hint > FUSE, whatever the input order', () => {
@@ -59,17 +72,18 @@ describe('column arbiter: one owner at a time', () => {
       v('fuse', 'fuse', 50),
       v('hint', 'hint', 20),
       v('tip', 'tip', 60, 20),
-      v('teach', 'teach', 70),
       v('verdict', 'verdict', 60),
     ];
-    // 60 + 8 + 70 = 138; the tip shrinks to a line (138 + 8 + 20 = 166); the hint fits
-    // (166 + 8 + 20 = 194); FUSE does not (194 + 8 + 50 > 200).
+    // 60 + 8 + 60 = 128; the hint fits (128 + 8 + 20 = 156); FUSE does not (156 + 8 + 50 > 200).
     const g = arbitrate(asks, 200, 8);
     expect(g.get('verdict')).toBe('full');
-    expect(g.get('teach')).toBe('full');
-    expect(g.get('tip')).toBe('line');
+    expect(g.get('tip')).toBe('full');
     expect(g.get('hint')).toBe('full');
     expect(g.get('fuse')).toBe('wait');
+    // With a teach card: verdict, card, then the tip shrinks to a line (138 + 8 + 20 = 166).
+    const t = arbitrate([...asks, v('teach', 'teach', 70)], 200, 8);
+    expect(t.get('teach')).toBe('full');
+    expect(t.get('tip')).toBe('line');
   });
 
   it('makes a lower voice wait when even one line will not fit', () => {
@@ -84,9 +98,9 @@ describe('column arbiter: one owner at a time', () => {
   });
 
   it('a waiting voice leaves its room to the next one down', () => {
-    // The tip (no line form) cannot fit under the teach card, but the shorter bubble can.
+    // The tip (no line form) cannot fit under the verdict, but the shorter bubble can.
     const g = arbitrate(
-      [v('teach', 'teach', 90), v('tip', 'tip', 120), v('fuse', 'fuse', 40)],
+      [v('verdict', 'verdict', 90), v('tip', 'tip', 120), v('fuse', 'fuse', 40)],
       140,
       8,
     );
@@ -115,5 +129,88 @@ describe('column arbiter: one owner at a time', () => {
     const g = arbitrate([v('a', 'tip', 50), v('b', 'tip', 50)], 60, 8);
     expect(g.get('a')).toBe('full');
     expect(g.get('b')).toBe('wait');
+  });
+});
+
+describe('the gem card matches the gem in hand (D-040 addendum 5 blocker)', () => {
+  /** The gems a card from `src` names, given the ask. */
+  const named = (src: string, a: InfoAsk): GemKind[] =>
+    src === 'teach'
+      ? [...a.teachGems]
+      : src === 'tray'
+        ? [a.slot!]
+        : src === 'board'
+          ? [a.board!]
+          : [];
+  const opts = [null, ...GEM_KINDS] as const;
+
+  it('never names another gem beside "Holding X", for every gem kind and every moment', () => {
+    let checked = 0;
+    for (const phone of [true, false])
+      for (const held of GEM_KINDS)
+        for (const teachUp of [true, false])
+          for (const teach of opts)
+            for (const slot of opts)
+              for (const board of opts) {
+                const a: InfoAsk = {
+                  pin: false,
+                  phone,
+                  teachUp,
+                  teachGems: teach ? [teach] : [],
+                  held,
+                  slot,
+                  board,
+                };
+                const src = pickInfo(a);
+                // A desktop's card for the placed gem under the hand (R turns it) is allowed.
+                if (src === 'board' && !phone) continue;
+                for (const g of named(src, a))
+                  expect(g, `${JSON.stringify(a)} -> ${src}`).toBe(held);
+                checked++;
+              }
+    expect(checked).toBeGreaterThan(1000);
+  });
+
+  it('se/16: holding Channel while the arrival card teaches Capacitor shows Channel or nothing', () => {
+    const a: InfoAsk = {
+      pin: false,
+      phone: true,
+      teachUp: true,
+      teachGems: ['capacitor'],
+      held: 'channel',
+      slot: 'channel',
+      board: null,
+    };
+    expect(pickInfo(a)).toBe('tray');
+    expect(pickInfo({ ...a, slot: null })).toBe('none');
+  });
+
+  it('the arrival card returns once the hand is empty, and stays for its own gem', () => {
+    const a: InfoAsk = {
+      pin: false,
+      phone: true,
+      teachUp: true,
+      teachGems: ['bend'],
+      held: null,
+      slot: null,
+      board: null,
+    };
+    expect(pickInfo(a)).toBe('teach');
+    expect(pickInfo({ ...a, held: 'bend', slot: 'bend' })).toBe('teach');
+    // The gold-ring page names no gem: it is about where the held gem goes.
+    expect(pickInfo({ ...a, teachGems: [], held: 'channel' })).toBe('teach');
+  });
+
+  it('a long-press pin wins: the player asked for that gem', () => {
+    const a: InfoAsk = {
+      pin: true,
+      phone: true,
+      teachUp: true,
+      teachGems: ['bend'],
+      held: 'channel',
+      slot: null,
+      board: null,
+    };
+    expect(pickInfo(a)).toBe('pin');
   });
 });
