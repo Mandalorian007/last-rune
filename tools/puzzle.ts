@@ -70,7 +70,7 @@ function metricsBlock(m: DifficultyMetrics, design: number): string {
     `solutions ${m.solutions}${m.capped ? '+' : ''}   min gems ${m.minGems}   tray ${m.trayTotal} (slack ${m.slack})   decoy kinds ${m.decoyKinds.join(', ') || '-'}`,
     `solver nodes ${m.nodes}   search bits ${m.searchBits}   informative fails ${Math.round(m.informative * 100)}%`,
     `novice bot: solved ${m.bot.solved}/${m.bot.sessions} sessions, median ${m.bot.expected} tries; fails dead ${m.bot.fails.dead} / under ${m.bot.fails.under} / over ${m.bot.fails.over}`,
-    `required ideas: ${m.required.join(', ') || '-'}   (concepts ${m.concepts})`,
+    `required ideas: ${m.required.join(', ') || '-'}   (concepts ${m.concepts})   turn load ${m.turnLoad}`,
     `intended shows: ${m.intendedMarkers.join(', ') || '-'}   path ${m.pathCells} sockets`,
   ].join('\n');
 }
@@ -105,8 +105,8 @@ function show(id: MachineId, opts: { json: boolean; solutions: number }): void {
 function table(ids: readonly MachineId[] = MACHINE_IDS, json = false): void {
   const all: DifficultyMetrics[] = [];
   const rows: string[] = [
-    '| # | Machine | Target | Score | Min (design / est.) | Solutions | Min gems | Slack | Bot tries | Bits | Concepts | Required ideas |',
-    '|---|---|---|---|---|---|---|---|---|---|---|---|',
+    '| # | Machine | Target | Score | Min (design / est.) | Solutions | Min gems | Slack | Bot tries | Bits | Concepts | Turns | Required ideas |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   let total = 0;
   for (const id of ids) {
@@ -116,7 +116,7 @@ function table(ids: readonly MachineId[] = MACHINE_IDS, json = false): void {
     const t = TARGETS[id];
     total += m.minutes;
     rows.push(
-      `| ${MACHINE_IDS.indexOf(id) + 1} | ${id} | ${t.score[0]}–${t.score[1]} | ${m.score} | ${PUZZLES[id].design.minutes} / ${m.minutes} | ${m.solutions}${m.capped ? '+' : ''} | ${m.minGems} | ${m.slack} | ${m.bot.expected} | ${m.searchBits} | ${m.concepts} | ${m.required.join(', ') || '-'} |`,
+      `| ${MACHINE_IDS.indexOf(id) + 1} | ${id} | ${t.score[0]}–${t.score[1]} | ${m.score} | ${PUZZLES[id].design.minutes} / ${m.minutes} | ${m.solutions}${m.capped ? '+' : ''} | ${m.minGems} | ${m.slack} | ${m.bot.expected} | ${m.searchBits} | ${m.concepts} | ${m.turnLoad} | ${m.required.join(', ') || '-'} |`,
     );
     process.stderr.write(`${id}: ${Date.now() - t0} ms\n`);
   }

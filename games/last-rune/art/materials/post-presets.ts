@@ -55,10 +55,11 @@ export const POST_PRESETS: Readonly<Record<PostPresetName, PostSettingsPatch>> =
       lightScatter: 0.8,
     },
     godRays: { enabled: true, x: 960, y: -80, intensity: 0.4, bloomSource: 0.2 },
+    // Lifted a touch (was 0.7 / 0.55) so the corner niches and floor props read.
     vignette: {
       enabled: true,
-      intensity: 0.7,
-      radius: 0.55,
+      intensity: 0.6,
+      radius: 0.6,
       softness: 0.55,
       color: [0.01, 0.01, 0.03],
     },

@@ -10,3 +10,4 @@ playwright-report/
 .vite/
 coverage/
 .claude/worktrees/
+docs/design/screens/local/

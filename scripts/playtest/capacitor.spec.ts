@@ -27,8 +27,15 @@ type P = { cell: { x: number; y: number }; gem: string; rot: number };
 function firstTry(id: MachineId): P[] {
   const p = puzzleFor(id);
   if (id === 'capacitor-bay') {
-    // Straight along the row through the ice.
-    return [0, 1, 2, 3, 4, 6, 7].map((x) => ({ cell: { x, y: 2 }, gem: 'channel', rot: 0 }));
+    // Up the lane, one Bend east, straight through the ice.
+    return [
+      { cell: { x: 4, y: 5 }, gem: 'channel', rot: 0 },
+      { cell: { x: 4, y: 4 }, gem: 'channel', rot: 0 },
+      { cell: { x: 4, y: 3 }, gem: 'channel', rot: 0 },
+      { cell: { x: 4, y: 2 }, gem: 'bend', rot: 1 },
+      { cell: { x: 6, y: 2 }, gem: 'channel', rot: 0 },
+      { cell: { x: 7, y: 2 }, gem: 'channel', rot: 0 },
+    ];
   }
   // The intended route with the ice swapped for a plain Channel: 4 + 4 on both strikes.
   return p.design.intended.map((q) =>

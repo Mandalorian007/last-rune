@@ -338,7 +338,7 @@ export class CathedralHallView implements HallView {
     const target = s.focus ?? s.hover ?? this.lastTarget;
     if (s.hover || s.focus) this.lastTarget = s.hover ?? s.focus;
     this.steerFuse(target, s, dt);
-    this.kit.candles.reducedMotion = s.reducedMotion;
+    this.kit.candles.reducedMotion = s.reducedMotion || !!s.reduceFlashes;
     this.kit.candles.update(this.allCandles, t);
   }
 
