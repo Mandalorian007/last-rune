@@ -101,5 +101,15 @@ Auto switches to Low for the session when the adapter is a software fallback
 0.6 floor would be over budget, or when dynamic resolution sits at its floor over budget
 for 4 s. It reads nothing else about the adapter. The DOM UI is always native resolution.
 
+**Phones (D-039, mobile-perf).** On a handheld (coarse pointer and a screen whose short side
+is ≤ 600 CSS px; `deviceTraits()` in `engine/platform/environment.ts`) Auto starts on Low
+(`autoReason` `handheld`). Tablets and desktops are unchanged. On Low with dynamic resolution
+(Auto→Low, or Low), if the scale sits at its 0.6 floor over budget **and** the median frame
+interval is over 20 ms for 4 s, the game caps itself at a steady 30 fps for the session
+(`GameLoop.maxFps`) and doubles the GPU budget, so resolution can climb back. Changing the
+Graphics setting lifts the cap. Desktop High and Auto never reach this rule at 1080p on any
+GPU that holds Low at 60. Details, sources and the real-device checklist:
+`docs/design/mobile.md`.
+
 ## Dev-only routes
 `?scene=<name>` or `?demo=<name>` query params may open dev demos and debug overlays in dev builds (`import.meta.env.DEV`). They must be stripped or inert in production.

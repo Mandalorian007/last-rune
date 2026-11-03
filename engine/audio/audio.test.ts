@@ -213,6 +213,59 @@ describe('AudioEngine', () => {
     audio.detach();
   });
 
+  it('an iOS interruption pauses, and the next gesture brings sound back', async () => {
+    const { ctx, audio } = setup();
+    const target = new EventTarget();
+    audio.attach({ target, pauseWhenHidden: false });
+    target.dispatchEvent(new Event('touchend'));
+    await vi.waitFor(() => expect(audio.state).toBe('running'));
+    // A call or Siri: Safari moves the context to 'interrupted' (not in the TS lib types).
+    (ctx as { state: string }).state = 'interrupted';
+    ctx.onstatechange?.();
+    expect(audio.state).toBe('suspended');
+    await audio.prepare();
+    expect(audio.loop('beep').playing).toBe(true);
+    target.dispatchEvent(new Event('pointerup'));
+    await vi.waitFor(() => expect(audio.state).toBe('running'));
+    audio.detach();
+  });
+
+  it('re-arms the gesture listeners when the browser suspends a running context', async () => {
+    const { ctx, audio } = setup();
+    const target = new EventTarget();
+    audio.attach({ target, pauseWhenHidden: false });
+    target.dispatchEvent(new Event('pointerdown'));
+    await vi.waitFor(() => expect(audio.state).toBe('running'));
+    // Android/iOS suspended it behind our back, and refuses a resume without a gesture.
+    ctx.state = 'suspended';
+    ctx.allowResume = false;
+    ctx.onstatechange?.();
+    expect(audio.state).toBe('suspended');
+    target.dispatchEvent(new Event('keydown'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(audio.state).toBe('suspended');
+    ctx.allowResume = true;
+    target.dispatchEvent(new Event('click'));
+    await vi.waitFor(() => expect(audio.state).toBe('running'));
+    // Only 'closed' is final.
+    ctx.state = 'closed';
+    ctx.onstatechange?.();
+    expect(audio.state).toBe('unavailable');
+    audio.detach();
+  });
+
+  it('does not re-arm while paused on purpose', async () => {
+    const { ctx, audio } = setup();
+    const target = new EventTarget();
+    audio.attach({ target, pauseWhenHidden: false });
+    await audio.unlock();
+    await audio.suspend();
+    target.dispatchEvent(new Event('pointerdown'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ctx.state).toBe('suspended');
+    audio.detach();
+  });
+
   it('defers loops until unlock and drops one-shots while locked', async () => {
     const { ctx, audio } = setup();
     const music = audio.loop('beep', { gain: 0.5 });

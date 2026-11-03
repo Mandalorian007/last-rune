@@ -8,10 +8,10 @@
  * underneath just waits for input.
  */
 import {
+  deviceTraits,
   fullscreenAvailable,
   isFullscreen,
   isPortrait,
-  isTouchOnly,
   toggleFullscreen,
   watchFullscreen,
 } from '@engine/platform';
@@ -55,8 +55,7 @@ export interface PhoneChrome {
 
 /**
  * `hudLayer`: the overlay layer the Full screen button lives in. The card is shown when the
- * screen is upright and the game is in phone mode on a touch device (a narrow desktop window
- * never gets "turn your phone").
+ * screen is upright on a handheld (see `deviceTraits`).
  */
 export function createPhoneChrome(hudLayer: HTMLElement, device: DeviceMode): PhoneChrome {
   const doc = hudLayer.ownerDocument;
@@ -97,9 +96,10 @@ export function createPhoneChrome(hudLayer: HTMLElement, device: DeviceMode): Ph
   hudLayer.append(fsBtn);
 
   const update = () => {
-    const touchy =
-      device.touch || isTouchOnly() || win.matchMedia?.('(any-pointer: coarse)').matches;
-    card.hidden = !(isPortrait(win) && touchy && device.phone);
+    // A phone (the perf tiers' `handheld`), or a finger on a phone-scale screen; a narrow
+    // desktop window never gets "turn your phone".
+    const phoneInHand = deviceTraits().handheld || (device.touch && device.phone);
+    card.hidden = !(isPortrait(win) && phoneInHand);
     fsBtn.hidden = !(fsWanted && device.phone && fullscreenAvailable(doc) && !isFullscreen(doc));
   };
   const offDevice = device.onChange(update);

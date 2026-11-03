@@ -14,7 +14,16 @@
  * - `auto` (default): starts with high effects and native resolution, with dynamic resolution
  *   on. It settles on `low` for the session when the adapter is a software fallback, when the
  *   first seconds of frames show the GPU cannot get near budget even at reduced scale, or
- *   when dynamic resolution sits at its floor and frames are still over budget.
+ *   when dynamic resolution sits at its floor and frames are still over budget. On a
+ *   handheld (phone-sized touch device; D-039) it starts on `low`: small battery, tiled GPU,
+ *   thermal throttling, and a screen where Low's 0.92 MP is already ~1.5× DPR.
+ *
+ * Steady 30: on `low` with dynamic resolution at its floor, if the GPU is still over budget
+ * and frames really are missing vsync (median interval over `SLOW_FRAME_MS`) for
+ * `HALF_RATE_MS`, the controller caps the frame rate at 30 for the session, rather than leave
+ * a jittery 40–50. The GPU budget doubles with it, so dynamic resolution can climb back up.
+ * Frame intervals gate it, so the queue-latency fallback timer (which can read several times
+ * the real cost) can't trigger it on its own.
  *
  * Pure apart from the `GraphicsTargets` it drives (unit-tested with fakes).
  */
@@ -62,6 +71,8 @@ export interface GraphicsTargets {
   setParticleScale(k: number): void;
   /** Sample GPU time every N frames (0 = off). */
   setTiming(every: number): void;
+  /** Cap the frame rate (null = display rate). */
+  setFrameCap?(fps: number | null): void;
 }
 
 export interface GraphicsOptions {
@@ -69,6 +80,8 @@ export interface GraphicsOptions {
   fallbackAdapter?: boolean;
   /** GPU time budget per frame (ms). Default 14. */
   budgetMs?: number;
+  /** A phone-sized touch device (`deviceTraits().handheld`): auto starts on low. */
+  handheld?: boolean;
 }
 
 /** Auto: ignore the first second (pipelines warming, scene loading). */
@@ -81,13 +94,25 @@ const PROBE_MIN_SAMPLES = 20;
 const SATURATED_MS = 4000;
 /** Dynamic resolution never goes below this scale of the tier's budget. */
 const MIN_SCALE = 0.6;
+/** Steady 30: a median frame interval above this is not holding 60 fps (ms). */
+const SLOW_FRAME_MS = 20;
+/** Steady 30: saturated and slow for this long before capping at 30 (ms). */
+const HALF_RATE_MS = 4000;
+/** Frame intervals kept for the median (about 1 s at 60 fps). */
+const FRAME_WINDOW = 60;
 
 export class GraphicsController {
   private pref: GraphicsPref = 'auto';
   private _tier: GraphicsTier = 'high';
   /** Auto settled on low for this session. */
   private autoLow: boolean;
-  private readonly dr: DynamicResolution;
+  private dr: DynamicResolution;
+  /** Capped at 30 fps for the session (see the class comment). */
+  private halfRate = false;
+  private slowSince = -1;
+  private readonly frames = new Float32Array(FRAME_WINDOW);
+  private readonly framesSorted = new Float32Array(FRAME_WINDOW);
+  private frameCount = 0;
   private readonly budgetMs: number;
   private probeStart = -1;
   private probeSamples: number[] = [];
@@ -105,8 +130,9 @@ export class GraphicsController {
   ) {
     this.budgetMs = opts.budgetMs ?? 14;
     this.dr = new DynamicResolution({ budgetMs: this.budgetMs, minScale: MIN_SCALE });
-    this.autoLow = !!opts.fallbackAdapter;
-    if (this.autoLow) this.autoReason = 'fallback adapter';
+    this.autoLow = !!opts.fallbackAdapter || !!opts.handheld;
+    if (opts.fallbackAdapter) this.autoReason = 'fallback adapter';
+    else if (opts.handheld) this.autoReason = 'handheld';
     this.apply();
   }
 
@@ -132,6 +158,11 @@ export class GraphicsController {
   /** Current dynamic-resolution scale (1 when off). */
   get scale(): number {
     return this.dynamic ? this.dr.scale : 1;
+  }
+
+  /** Capped at 30 fps (steady 30; see the class comment). */
+  get frameCapped(): boolean {
+    return this.halfRate;
   }
 
   /** Smoothed GPU time estimate (ms), -1 before samples. */
@@ -190,6 +221,38 @@ export class GraphicsController {
   }
 
   /**
+   * Feed a rendered frame's interval (ms since the previous frame). Drives the steady-30 rule;
+   * allocation-free.
+   */
+  frame(intervalMs: number, nowMs: number): void {
+    if (this.halfRate || !this.dynamic || this._tier !== 'low') return;
+    this.frames[this.frameCount % FRAME_WINDOW] = intervalMs;
+    this.frameCount++;
+    if (this.frameCount < FRAME_WINDOW || !this.dr.saturated) {
+      this.slowSince = -1;
+      return;
+    }
+    this.framesSorted.set(this.frames);
+    this.framesSorted.sort();
+    if (this.framesSorted[FRAME_WINDOW >> 1]! <= SLOW_FRAME_MS) {
+      this.slowSince = -1;
+      return;
+    }
+    if (this.slowSince < 0) this.slowSince = nowMs;
+    else if (nowMs - this.slowSince >= HALF_RATE_MS) this.capHalfRate(nowMs);
+  }
+
+  private capHalfRate(nowMs: number): void {
+    this.halfRate = true;
+    this.slowSince = -1;
+    // Twice the time per frame: dynamic resolution may climb back up within it.
+    const scale = this.dr.scale;
+    this.dr = new DynamicResolution({ budgetMs: this.budgetMs * 2, minScale: MIN_SCALE });
+    this.dr.reset(scale, nowMs);
+    this.targets.setFrameCap?.(30);
+  }
+
+  /**
    * First seconds on auto: if the median GPU time at full scale predicts that even the
    * dynamic-resolution floor would be over budget, go straight to low instead of crawling
    * down step by step.
@@ -222,6 +285,14 @@ export class GraphicsController {
     const changed = tier !== this._tier;
     this._tier = tier;
     const spec = TIERS[tier];
+    if (this.halfRate) {
+      // A new preference (or tier) starts again at the display rate.
+      this.halfRate = false;
+      this.dr = new DynamicResolution({ budgetMs: this.budgetMs, minScale: MIN_SCALE });
+      this.targets.setFrameCap?.(null);
+    }
+    this.slowSince = -1;
+    this.frameCount = 0;
     this.dr.reset(1, nowMs);
     this.saturatedSince = -1;
     this.targets.setResolution({ maxPixels: this.maxPixels, scale: 1 });
