@@ -25,6 +25,8 @@ const TIER = process.env.PERF_TIER ?? '';
 const BREAKDOWN = !!process.env.PERF_BREAKDOWN;
 const SHOTS = process.env.PERF_SHOTS ? resolve(process.env.PERF_SHOTS) : null;
 const WINDOW_MS = Number(process.env.PERF_MS ?? 3000);
+/** Timestamp-query sampling while measuring: every Nth frame (0 = leave the game's setting). */
+const TS_EVERY = Number(process.env.PERF_TS_EVERY ?? 4);
 
 interface Stats {
   frames: number;
@@ -32,6 +34,14 @@ interface Stats {
   frame: { avg: number; p50: number; p95: number; max: number };
   /** GPU work per frame: submit → onSubmittedWorkDone (vsync on, so the queue is idle). */
   gpu: { avg: number; p50: number; p95: number; max: number };
+  /**
+   * GPU work per frame from timestamp queries (first pass → last pass), when the device has
+   * `timestamp-query`. Unlike `gpu` it excludes queueing, so it stays honest when the GPU is
+   * saturated. Samples about every other frame.
+   */
+  gpuTs?: { avg: number; p50: number; p95: number; max: number };
+  /** Mean GPU ms per pass label (timestamp queries only). */
+  passes?: Record<string, number>;
   /** CPU: beginFrame → endFrame returns (scene record + encode + submit). */
   cpu: { avg: number; p50: number; p95: number; max: number };
 }
@@ -99,63 +109,114 @@ function summarise(xs: number[]) {
  * beginFrame/endFrame in the page, so it works on any build with the DEV handle.
  */
 async function measure(page: Page, ms = WINDOW_MS): Promise<Stats> {
-  const raw = await page.evaluate(async (ms) => {
-    const w = window as unknown as {
-      __game: G;
-      __perf?: { on: boolean; gpu: number[]; cpu: number[] };
-    };
-    const r = w.__game.renderer;
-    if (!w.__perf) {
-      const perf = { on: false, gpu: [] as number[], cpu: [] as number[] };
-      w.__perf = perf;
-      const begin = r.beginFrame.bind(r);
-      const end = r.endFrame.bind(r);
-      let t0 = 0;
-      r.beginFrame = (t: number, dt: number) => {
-        t0 = performance.now();
-        return begin(t, dt);
+  const raw = await page.evaluate(
+    async ({ ms, tsEvery }) => {
+      const w = window as unknown as {
+        __game: G;
+        __perf?: {
+          on: boolean;
+          gpu: number[];
+          cpu: number[];
+          ts: number[];
+          passes: Record<string, number[]>;
+        };
       };
-      r.endFrame = () => {
-        end();
-        const t1 = performance.now();
-        if (!perf.on) return;
-        perf.cpu.push(t1 - t0);
-        r.device.queue.onSubmittedWorkDone().then(() => perf.gpu.push(performance.now() - t1));
+      const r = w.__game.renderer;
+      if (!w.__perf) {
+        const perf = {
+          on: false,
+          gpu: [] as number[],
+          cpu: [] as number[],
+          ts: [] as number[],
+          passes: {} as Record<string, number[]>,
+        };
+        w.__perf = perf;
+        // Timestamp queries (newer builds): every resolved frame, total and per pass.
+        if (r.gpuTimer) {
+          r.gpuTimer.onResult((res: { totalMs: number; passes: Record<string, number> }) => {
+            if (!perf.on || !(res.totalMs > 0)) return;
+            perf.ts.push(res.totalMs);
+            for (const [k, v] of Object.entries(res.passes)) {
+              const list = perf.passes[k] ?? [];
+              list.push(v);
+              perf.passes[k] = list;
+            }
+          });
+        }
+        const begin = r.beginFrame.bind(r);
+        const end = r.endFrame.bind(r);
+        let t0 = 0;
+        r.beginFrame = (t: number, dt: number) => {
+          t0 = performance.now();
+          return begin(t, dt);
+        };
+        r.endFrame = () => {
+          end();
+          const t1 = performance.now();
+          if (!perf.on) return;
+          perf.cpu.push(t1 - t0);
+          r.device.queue.onSubmittedWorkDone().then(() => perf.gpu.push(performance.now() - t1));
+        };
+      }
+      const perf = w.__perf;
+      perf.gpu.length = 0;
+      perf.cpu.length = 0;
+      perf.ts.length = 0;
+      perf.passes = {};
+      const every = r.timingEvery;
+      if (r.gpuTimer && tsEvery > 0) r.timingEvery = tsEvery;
+      perf.on = true;
+      const ts: number[] = [];
+      await new Promise<void>((done) => {
+        const t0 = performance.now();
+        const loop = (t: number) => {
+          ts.push(t);
+          if (t - t0 < ms) requestAnimationFrame(loop);
+          else done();
+        };
+        requestAnimationFrame(loop);
+      });
+      await r.device.queue.onSubmittedWorkDone();
+      await new Promise((done) => setTimeout(done, 50));
+      perf.on = false;
+      r.timingEvery = every;
+      const passes: Record<string, number> = {};
+      for (const [k, v] of Object.entries(perf.passes)) {
+        passes[k] = v.reduce((a, b) => a + b, 0) / Math.max(1, v.length);
+      }
+      return {
+        frame: ts.slice(1).map((t, i) => t - ts[i]!),
+        gpu: perf.gpu.slice(),
+        cpu: perf.cpu.slice(),
+        ts: perf.ts.slice(),
+        passes,
       };
-    }
-    const perf = w.__perf;
-    perf.gpu.length = 0;
-    perf.cpu.length = 0;
-    perf.on = true;
-    const ts: number[] = [];
-    await new Promise<void>((done) => {
-      const t0 = performance.now();
-      const loop = (t: number) => {
-        ts.push(t);
-        if (t - t0 < ms) requestAnimationFrame(loop);
-        else done();
-      };
-      requestAnimationFrame(loop);
-    });
-    perf.on = false;
-    await r.device.queue.onSubmittedWorkDone();
-    return {
-      frame: ts.slice(1).map((t, i) => t - ts[i]!),
-      gpu: perf.gpu.slice(),
-      cpu: perf.cpu.slice(),
-    };
-  }, ms);
-  return {
+    },
+    { ms, tsEvery: TS_EVERY },
+  );
+  const out: Stats = {
     frames: raw.frame.length,
     frame: summarise(raw.frame),
     gpu: summarise(raw.gpu),
     cpu: summarise(raw.cpu),
   };
+  if (raw.ts.length) {
+    out.gpuTs = summarise(raw.ts);
+    const r = (x: number) => Math.round(x * 100) / 100;
+    out.passes = Object.fromEntries(Object.entries(raw.passes).map(([k, v]) => [k, r(v)]));
+  }
+  return out;
 }
 
 function fmt(s: Stats): string {
   const f = (x: number) => x.toFixed(2).padStart(6);
-  return `frame p50 ${f(s.frame.p50)} p95 ${f(s.frame.p95)} | gpu p50 ${f(s.gpu.p50)} p95 ${f(s.gpu.p95)} | cpu p50 ${f(s.cpu.p50)} p95 ${f(s.cpu.p95)}`;
+  const ts = s.gpuTs ? ` | ts p50 ${f(s.gpuTs.p50)} p95 ${f(s.gpuTs.p95)}` : '';
+  const passes = s.passes
+    ? ` [${Object.entries(s.passes)
+        .map(([k, v]) => `${k} ${v.toFixed(2)}`)
+        .join(', ')}]`
+    : '';
+  return `frame p50 ${f(s.frame.p50)} p95 ${f(s.frame.p95)} | gpu p50 ${f(s.gpu.p50)} p95 ${f(s.gpu.p95)}${ts} | cpu p50 ${f(s.cpu.p50)} p95 ${f(s.cpu.p95)}${passes}`;
 }
 
 async function info(page: Page) {

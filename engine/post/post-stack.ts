@@ -14,6 +14,7 @@ import {
 import { COMPOSITE_WGSL, DOWN_WGSL, PREFILTER_WGSL, RAYS_WGSL, UP_WGSL } from './shaders';
 
 const HDR: GPUTextureFormat = 'rgba16float';
+const COMPOSITE_CLEAR: GPUColorDict = { r: 0, g: 0, b: 0, a: 1 };
 
 /**
  * The painterly post stack: bloom (mip chain), floor mist, god rays, ACES tonemap, colour
@@ -221,12 +222,20 @@ export class PostStack implements PostProcessor {
     );
     const needBloomChain = s.bloom.enabled || (s.godRays.enabled && s.godRays.bloomSource > 0);
     this.composite.setUniforms(this.uniforms);
+    // GPU timing labels (undefined unless this frame is sampled; see Renderer.gpuTimer).
+    const timer = r.gpuTimer;
 
     if (needBloomChain) {
       this.prefilter.setUniforms(this.uniforms);
-      this.prefilter.encode(encoder, this.mipViews[0]!, { bindGroup: this.prefilterGroup! });
+      this.prefilter.encode(encoder, this.mipViews[0]!, {
+        bindGroup: this.prefilterGroup!,
+        timestampWrites: timer?.pass('bloom'),
+      });
       for (let i = 1; i < this.levels; i++) {
-        this.down.encode(encoder, this.mipViews[i]!, { bindGroup: this.downGroups[i]! });
+        this.down.encode(encoder, this.mipViews[i]!, {
+          bindGroup: this.downGroups[i]!,
+          timestampWrites: timer?.pass('bloom'),
+        });
       }
       const k = Math.min(Math.max(s.bloom.scatter, 0), 1);
       this.blendConstant.r = k;
@@ -237,6 +246,7 @@ export class PostStack implements PostProcessor {
           bindGroup: this.upGroups[i]!,
           clear: this.noClear,
           blendConstant: this.blendConstant,
+          timestampWrites: timer?.pass('bloom'),
         });
       }
     }
@@ -244,12 +254,16 @@ export class PostStack implements PostProcessor {
 
     if (s.godRays.enabled) {
       this.rays.setUniforms(this.uniforms);
-      this.rays.encode(encoder, this.raysView!, { bindGroup: this.raysGroup! });
+      this.rays.encode(encoder, this.raysView!, {
+        bindGroup: this.raysGroup!,
+        timestampWrites: timer?.pass('rays'),
+      });
     }
 
     this.composite.encode(encoder, output, {
       bindGroup: this.compositeGroup!,
-      clear: { r: 0, g: 0, b: 0, a: 1 },
+      clear: COMPOSITE_CLEAR,
+      timestampWrites: timer?.pass('composite'),
     });
   }
 

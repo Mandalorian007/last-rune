@@ -23,6 +23,8 @@ export interface FullscreenEncodeOptions {
   /** Use an explicit bind group (see `createBindGroup`) instead of the managed one. */
   bindGroup?: GPUBindGroup;
   blendConstant?: GPUColor;
+  /** Timestamp writes for this pass (see `GpuTimer.pass`). */
+  timestampWrites?: GPURenderPassTimestampWrites;
 }
 
 /**
@@ -110,6 +112,7 @@ export class FullscreenPass {
       ca.loadOp = 'clear';
       ca.clearValue = opts.clear ?? { r: 0, g: 0, b: 0, a: 0 };
     }
+    this.passDesc.timestampWrites = opts.timestampWrites;
     const pass = encoder.beginRenderPass(this.passDesc);
     pass.setPipeline(this.pipeline);
     const group = opts.bindGroup ?? this.bindings?.bindGroup;
