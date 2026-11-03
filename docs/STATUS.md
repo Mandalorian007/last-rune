@@ -44,6 +44,7 @@ _Last updated: 2026-11-02 by PM_
 | difficulty-2 | ws/difficulty-2 | ✅ merged | D-037: turn load in the score; press-unit-4 9→2, capacitor-bay 11→1 (re-laid, single south lane), conveyor-a kept at 4 on purpose; all 16 in band, finale highest; intake-desk first visit 4 FUSE cards → 1; est. 54.5 min |
 | bug-bash | ws/bug-bash | ✅ merged | Settings two-column + sticky Done (no scroll at 100/125/150%); Codex fits at 150%; live strike chip (got N = newest chip); corrupt-save toast + backup; altar tag/storm-label/subtitle fixes; ending clears toasts; lint clean; 21 new e2e (robustness, layout-fit); full run 0 console errors. Deferred S3/S4 in its log |
 | perf-low | ws/perf-low | 🟡 running | GPU timestamps, Low composite at scene res, ending flood at DPR 2, weak-GPU estimate, first-frame timing |
+| finish-1 | ws/finish-1 | 🟡 running | bug-bash leftovers: serif toasts/ending line, unclear end-card prop, tag flip jump, ending fresh-eyes pass |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
