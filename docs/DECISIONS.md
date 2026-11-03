@@ -65,3 +65,10 @@ Format: `D-NNN · date · decision · why · who`.
 - Embed context (itch frame vs top level) is detected, not assumed. Facts: docs/research/itch-webgpu.md "Clipboard and popups".
 - Game code (Join ThunderClap Gaming, Ko-fi, future links) uses only this API. Do not add per-game link handling.
 - D-036 addendum (merge): the gamepad path uses `window.open` without `noreferrer` so a blocked tab can be detected; `opener` is nulled, and the browser default policy sends only the origin. Engine `input` now counts a repeat press of the same key on adjacent frames as a new press. PadNav routes A through `activateLink`.
+
+## D-037: Difficulty phase 2 on PM judgement (2026-11-02, PM)
+- The user asked the PM to make the quality calls, and playtest data will come later. Puzzle tuning therefore follows designer judgement, with the solver metrics as a guide.
+- Turn choice is scored as a **turn load** (Bend 0.5, Split 1, Gate 1, fixed gems 0, taken from the lightest-turning solution), weighted 0.08. The solver and the novice bot don't simulate wrong turns, because the route preview shows a refusing side with ✕ before Strike.
+- Loose puzzles are tightened: press-unit-4 goes 9 → 2 solutions and capacitor-bay 11 → 1 (re-laid as a single lane from the south). conveyor-a stays at 4, because "either half works" is its lesson.
+- Intake-desk's first visit has one FUSE card. The gem info card, the lit socket and the idle nudge do the rest of the teaching.
+- Revisit with playtest times: roof-array and control-booth score the same (5.4); relay-tower → crane is the biggest step on the curve; conveyor-a introduces amber and magenta together.
