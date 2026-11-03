@@ -125,7 +125,9 @@ test.describe('verdicts', () => {
   test('fail verdict', async ({ page }) => {
     await toAltar(page, 'intake-desk', { hallIntro: true });
     await advance(page, 1500);
+    await shotTrace(page, 'pre-key');
     await key(page, 'KeyF');
+    await shotTrace(page, 'post-key');
     await until(page, () => {
       const v = document.querySelector<HTMLElement>('.lr-altar-verdict');
       return v && !v.hidden && v.dataset.outcome;
@@ -170,6 +172,8 @@ test.describe('ending', () => {
         return posts[posts.length - 1]?.textContent?.trim() === 'Day 1.';
       },
       240_000,
+      undefined,
+      { stepMs: 250, settleMs: 5 },
     );
     await advance(page, 500);
     await shot(page, 'ending-hangout');

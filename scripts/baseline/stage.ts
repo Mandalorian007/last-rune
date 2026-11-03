@@ -101,15 +101,29 @@ export async function stage(page: Page, save: ReturnType<typeof saveData> | null
   await page.clock.install({ time: CLOCK_START - 60_000 });
   await page.clock.pauseAt(CLOCK_START);
   await page.addInitScript(
-    ({ key, env }) => {
+    ({ key, env, start }) => {
+      // performance.now from the fake Date: the fake clock's own performance.now carries a
+      // page-load offset of a few real ms, which shifts the fixed-step phase between runs.
+      const t0 = start - 1000;
+      performance.now = () => Date.now() - t0;
       // mulberry32, fixed seed: every page load replays the same sequence.
       let a = 0x1d2c3b4a;
+      const w = window as unknown as { __randomCalls: number };
+      w.__randomCalls = 0;
       Math.random = () => {
+        w.__randomCalls++;
         a = (a + 0x6d2b79f5) | 0;
         let t = Math.imul(a ^ (a >>> 15), 1 | a);
         t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
       };
+      // No realtime audio: unlocking it starts real-time async work (context resume, the sound
+      // pre-render) that interleaves with game frames differently on every run. The engine
+      // treats a missing AudioContext as "unavailable" and plays silently; nothing visual
+      // depends on it.
+      for (const k of ['AudioContext', 'webkitAudioContext']) {
+        Object.defineProperty(window, k, { value: undefined, configurable: true });
+      }
       try {
         localStorage.clear();
         if (env) localStorage.setItem(key, env);
@@ -119,41 +133,53 @@ export async function stage(page: Page, save: ReturnType<typeof saveData> | null
     },
     {
       key: SAVE_KEY,
+      start: CLOCK_START,
       env: save ? JSON.stringify({ v: 1, t: CLOCK_START, d: save }) : null,
     },
   );
   await page.goto(DEV_URL);
-  await until(page, () => (window as G).__game?.flow.state === 'title', 60_000);
+  // Boot (GPU adapter, device, pipelines) is real async work: wait for it in real time with the
+  // clock still, so the game loop always starts at exactly CLOCK_START.
+  await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', undefined, {
+    polling: 50,
+    timeout: 60_000,
+  });
   // A few frames so the first render is on screen and pipelines have compiled.
   await advance(page, 200);
 }
 
-/** Run the game for `ms` of fake time, a frame at a time, letting real GPU work settle. */
+/**
+ * Run the game for `ms` of fake time one frame at a time. Each frame is its own round trip to
+ * the page, so real async work (GPU queue, audio renders) keeps pace with game time.
+ */
 export async function advance(page: Page, ms: number) {
-  // Chunks keep the GPU queue short (each chunk awaits a real round trip to the page).
-  const CHUNK = FRAME_MS * 8;
-  for (let t = 0; t < ms; t += CHUNK) await page.clock.runFor(Math.min(CHUNK, ms - t));
+  for (let t = 0; t < ms; t += FRAME_MS) await page.clock.runFor(Math.min(FRAME_MS, ms - t));
 }
 
 /**
- * Advance fake time until `fn` is true in the page. Boot and pipeline compiles are real async
- * work, so each step also yields real time.
+ * Advance fake time until `fn` is true in the page, spending as little game time as possible.
+ * Boot, the GPU and audio renders are real async work that the fake clock does not drive, so
+ * before each step the condition gets `settleMs` of real time to come true by itself. Without
+ * that, how much game time passed would depend on machine load, and so would the shot.
+ * `stepMs` > one frame trades exactness for speed on long waits.
  */
 export async function until<A>(
   page: Page,
   fn: (arg: A) => unknown,
   maxFakeMs = 30_000,
   arg?: A,
+  { stepMs = FRAME_MS, settleMs = 40 } = {},
 ): Promise<number> {
   let spent = 0;
+  const check = () => page.evaluate(fn as (a: unknown) => unknown, arg as unknown);
   while (spent <= maxFakeMs) {
-    if (await page.evaluate(fn as (a: unknown) => unknown, arg as unknown)) return spent;
-    await page.clock.runFor(FRAME_MS * 4);
-    spent += FRAME_MS * 4;
-    // Real time for promises that are not on the fake clock (GPU, fetch, module loads).
-    await page.waitForTimeout(5);
+    if (await check()) return spent;
+    await page.waitForTimeout(settleMs);
+    if (await check()) return spent;
+    await page.clock.runFor(stepMs);
+    spent += stepMs;
   }
-  throw new Error(`baseline: condition not met after ${maxFakeMs} ms of game time: ${fn}`);
+  throw new Error(`baseline: condition not met after  ms of game time: `);
 }
 
 /** Run something against the game handle in the page. */
@@ -179,6 +205,13 @@ export async function key(page: Page, k: string) {
 /** The snapshot: a settled frame, then the compare (or a write, under BASELINE_UPDATE). */
 export async function shot(page: Page, name: string) {
   await advance(page, FRAME_MS * 4);
+  if (process.env.BASELINE_TRACE) {
+    const t = await page.evaluate(() => {
+      const w = window as G;
+      return [w.__game.loop.time.frame, w.__game.loop.time.simTime.toFixed(3), w.__randomCalls];
+    });
+    console.log(`  trace ${name}: frame ${t[0]} sim ${t[1]} random ${t[2]}`);
+  }
   const png = await page.screenshot({ animations: 'disabled', caret: 'hide', scale: 'css' });
   await matchBaseline(png, name);
 }

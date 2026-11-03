@@ -19,7 +19,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
-import { decodeIndexed, decodePng, encodeIndexed, mapToPalette, quantize } from './png';
+import {
+  decodeIndexed,
+  decodePng,
+  encodeIndexed,
+  type Indexed,
+  mapToPalette,
+  quantize,
+  type Rgba,
+} from './png';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 export const BASELINE_DIR = resolve(root, 'docs/design/screens/v1.0');
@@ -33,6 +41,42 @@ const OUT_DIR = resolve(root, 'test-results/baseline');
  * `BASELINE_MAX_DIFF` overrides it (0 = exact).
  */
 export const MAX_DIFF_RATIO = Number(process.env.BASELINE_MAX_DIFF ?? 0.0005);
+
+/**
+ * Band-edge slack, in RGB distance (0–441). A pixel whose nearest palette entry differs from
+ * the baseline's still counts as unchanged when its colour is within this much of being as
+ * close to the baseline's entry: it sat on the edge between two bands and moved a level or
+ * two. See README.md for the measurements.
+ */
+export const EDGE_SLACK = Number(process.env.BASELINE_EDGE_SLACK ?? 8);
+
+/**
+ * Pixels of `actual` that no longer match the baseline. `index[i]` is the pixel's nearest
+ * baseline-palette entry, or -1 where it changed (for the diff image).
+ */
+export function countChanged(actual: Rgba, base: Indexed, slack = EDGE_SLACK) {
+  const near = mapToPalette(actual, base.palette);
+  const index = new Int16Array(near.length);
+  const pal = base.palette;
+  const d = actual.data;
+  let changed = 0;
+  for (let i = 0; i < near.length; i++) {
+    const b = base.index[i]!;
+    const n = near[i]!;
+    index[i] = n;
+    if (n === b) continue;
+    const r = d[i * 4]!;
+    const g = d[i * 4 + 1]!;
+    const bl = d[i * 4 + 2]!;
+    const dist = (p: number) =>
+      Math.hypot(r - pal[p * 3]!, g - pal[p * 3 + 1]!, bl - pal[p * 3 + 2]!);
+    if (dist(b) - dist(n) > slack) {
+      changed++;
+      index[i] = -1;
+    }
+  }
+  return { changed, index };
+}
 
 export async function matchBaseline(png: Buffer, name: string) {
   const info = test.info();
@@ -54,9 +98,7 @@ export async function matchBaseline(png: Buffer, name: string) {
       `${name}: size ${actual.width}×${actual.height}, baseline ${base.width}×${base.height}`,
     );
   }
-  const index = mapToPalette(actual, base.palette);
-  let changed = 0;
-  for (let i = 0; i < index.length; i++) if (index[i] !== base.index[i]) changed++;
+  const { changed, index } = countChanged(actual, base);
   const ratio = changed / index.length;
   const line = `${info.project.name}/${name}: ${changed} px changed (${(ratio * 100).toFixed(4)}%)`;
   info.annotations.push({ type: 'baseline', description: line });
@@ -74,7 +116,7 @@ export async function matchBaseline(png: Buffer, name: string) {
       const p = base.index[i]! * 3;
       const lum =
         base.palette[p]! * 0.3 + base.palette[p + 1]! * 0.59 + base.palette[p + 2]! * 0.11;
-      diff[i] = index[i] !== base.index[i] ? 255 : Math.round(lum * 0.35);
+      diff[i] = index[i] === -1 ? 255 : Math.round(lum * 0.35);
     }
     const diffPng = encodeIndexed({
       width: base.width,
