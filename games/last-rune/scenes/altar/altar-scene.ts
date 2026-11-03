@@ -2833,6 +2833,7 @@ export class AltarScene implements GameScene {
     this.dom.toggleAttribute('data-zoomable', on);
     if (!on) return;
     this.zoomUi = new ZoomUi(this.dom, this.actionsEl, () => this.zoomToggle());
+    this.zoomUi.setSockets((x, y) => !this.board.isBlocked({ x, y }));
     this.zoomApply();
   }
 
@@ -2846,7 +2847,10 @@ export class AltarScene implements GameScene {
 
   private zoomTo(c: Cam): void {
     this.zoomCam.go(c, this.ctx.settings.reducedMotion);
-    if (c.z > 1) this.zoomLast = c;
+    if (c.z > 1) {
+      this.zoomLast = c;
+      zoomTaught.zoomed = true;
+    }
     this.zoomUi?.setZoomed(c.z > 1);
     this.zoomApply();
   }
@@ -2926,6 +2930,7 @@ export class AltarScene implements GameScene {
         const dy = p.y - zp.y;
         if (!zp.pan && !zp.fit && Math.hypot(dx, dy) > PAN_CSS * this.ctx.device.cssPx) {
           zp.pan = true;
+          zoomTaught.panned = true;
           // The scene's own press (aim, or a placed gem) lets go: a pan places nothing.
           if (!zp.own) this.press = null;
         }
@@ -2986,6 +2991,25 @@ export class AltarScene implements GameScene {
     this.zoomPress = { x: p.x, y: p.y, cam, own: !scene, pan: false, fit: false };
     if (!scene) this.keyboard = false;
     return !scene;
+  }
+
+  /**
+   * The zoom's line in the how-to slot (mobile-6-integrate; `setHintLine('zoom', …)`):
+   * - at the whole board, "Tap the board to zoom in" until the player first zooms, and again
+   *   while a gem is in hand where the how-to line would say "Now tap a socket" (a tap there
+   *   zooms; it places nothing);
+   * - zoomed, "Drag to look around" until the player first pans. A gem in hand beats it: the
+   *   how-to line then says what the "Holding" pill implies, "Now tap a socket".
+   */
+  private updateZoomHint(): void {
+    let line: string | null = null;
+    if (this.zoomable && this.mode === 'edit') {
+      const holding = !!this.hand && !this.hand.from;
+      if (!this.zoomCam.zoomed) {
+        if (!zoomTaught.zoomed || (holding && !this.hintRetired)) line = ZOOM_IN_LINE;
+      } else if (!holding && !zoomTaught.panned) line = ZOOM_PAN_LINE;
+    }
+    this.setHintLine('zoom', line);
   }
 
   /** A still tap on the zoomed board that no press was waiting for. */
@@ -3055,6 +3079,7 @@ export class AltarScene implements GameScene {
     this.updateNudges(dt);
     this.updateQuip();
     this.updateFuse();
+    this.updateZoomHint();
     this.updateHint();
     this.updateTray();
     if (this.introLeft > 0 && this.mode === 'edit') {
@@ -4152,6 +4177,12 @@ export class AltarScene implements GameScene {
     this.view.render(frame);
   }
 }
+
+/** The zoom's lines in the how-to slot (phones, dense boards). */
+const ZOOM_IN_LINE = 'Tap the board to zoom in';
+const ZOOM_PAN_LINE = 'Drag to look around';
+/** What the player has done with the zoom this session: each line retires once it is known. */
+const zoomTaught = { zoomed: false, panned: false };
 
 type HintMode = 'mouse' | 'keys' | 'strike' | 'touch' | 'touchHeld' | 'touchStrike' | 'off';
 

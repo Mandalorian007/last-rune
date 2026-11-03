@@ -235,5 +235,147 @@ for (const vp of PHONES) {
 
       expect(problems).toEqual([]);
     });
+
+    // mobile-6-integrate: zoomed, no Gives/Needs card (nor the chip it shrinks to when its
+    // gauge is off the view) covers a socket's tap circle, and the zoom teaches itself in the
+    // how-to slot without contradicting the "Holding" pill.
+    test(`zoomed cards never cover a socket; the zoom's hint lines (${vp.name})`, async ({
+      page,
+    }) => {
+      await insets(page, vp.inset);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(DEV_URL);
+      await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+        timeout: 30_000,
+      });
+      await page.evaluate(() => {
+        document.dispatchEvent(
+          new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }),
+        );
+        const g = (window as G).__game;
+        g.save.update((d: G) => {
+          d.flags.hallIntro = true;
+          d.settings.captionSpeed = 'instant';
+        });
+        g.flow.continueGame();
+      });
+      await expect(page.locator('.tc-overlay')).toHaveAttribute('data-phone', '');
+      // The overlay's box changes with each altar's framing (phones crop to fill): measure it
+      // at each tap.
+      const tap = async (x: number, y: number) => {
+        const ob = (await page.locator('.tc-overlay').boundingBox())!;
+        const k = ob.width / 1920;
+        await page.touchscreen.tap(ob.x + x * k, ob.y + y * k);
+      };
+      const hint = () => page.locator('.lr-altar-hint').textContent();
+      const problems: string[] = [];
+      /** Every card (and every word in it) against the open sockets' tap circles, now. */
+      const covered = (id: MachineId, at: string) =>
+        page.evaluate(
+          ({ at, blocked }) => {
+            const S = (window as unknown as { __altarLayout: AltarLayout }).__altarLayout;
+            const ov = document.querySelector<HTMLElement>('.tc-overlay')!.getBoundingClientRect();
+            const k = ov.width / 1920;
+            const r = 0.4 * S.pitch;
+            const out: string[] = [];
+            for (const el of document.querySelectorAll<HTMLElement>('.lr-altar-need')) {
+              if (el.hidden || getComputedStyle(el).display === 'none') continue;
+              const boxes = [el, ...el.querySelectorAll<HTMLElement>('*')]
+                .map((e) => e.getBoundingClientRect())
+                .filter((q) => q.width > 0.5 && q.height > 0.5)
+                .map((q) => ({
+                  x0: (q.left - ov.left) / k,
+                  x1: (q.right - ov.left) / k,
+                  y0: (q.top - ov.top) / k,
+                  y1: (q.bottom - ov.top) / k,
+                }));
+              for (let y = 0; y < S.rows; y++)
+                for (let x = 0; x < S.cols; x++) {
+                  if (blocked.some((c) => c.x === x && c.y === y)) continue;
+                  const cx = S.left + S.margin + S.pitch * (x + 0.5);
+                  const cy = S.top + S.margin + S.pitch * (y + 0.5);
+                  const on = boxes.some((b) => {
+                    const dx = cx - Math.max(b.x0, Math.min(cx, b.x1));
+                    const dy = cy - Math.max(b.y0, Math.min(cy, b.y1));
+                    return dx * dx + dy * dy < r * r;
+                  });
+                  if (on)
+                    out.push(
+                      `${at}: "${el.textContent.replace(/\s+/g, ' ')}"${el.dataset.off ? ` (chip ${el.dataset.off})` : ''} on socket ${x},${y}`,
+                    );
+                }
+            }
+            return out;
+          },
+          { at: `${id} ${at}`, blocked: puzzleFor(id).blocked },
+        );
+      const dense: MachineId[] = [];
+      for (const id of MACHINE_IDS) {
+        await open(page, id);
+        if (await page.locator('.lr-altar[data-zoomable]').count()) dense.push(id);
+      }
+      expect(dense).toContain('the-last-rune');
+      let first = true;
+      for (const id of dense) {
+        await open(page, id);
+        const L = await layout(page);
+        if (first)
+          expect(await hint(), 'the first dense board teaches the zoom').toContain(
+            'Tap the board to zoom in',
+          );
+        // Zoom in at nine points over the board, and check the cards at each view.
+        for (const fy of [0, 0.5, 1])
+          for (const fx of [0, 0.5, 1]) {
+            const c = center(L, fx * (L.cols - 1), fy * (L.rows - 1));
+            await tap(c.x, c.y);
+            await waitFrames(page, 4);
+            if (first) {
+              expect(await hint(), 'zoomed, the hint says a drag pans').toContain(
+                'Drag to look around',
+              );
+              first = false;
+            }
+            problems.push(...(await covered(id, `zoomed at ${fx},${fy}`)));
+            await page.locator('[data-action="zoom"]').tap();
+            await waitFrames(page, 4);
+          }
+      }
+
+      // The Last Rune: the hint line and the held gem agree.
+      const id: MachineId = 'the-last-rune';
+      await open(page, id);
+      const L = await layout(page);
+      await tap(L.tray[0]!.x, L.tray[0]!.y);
+      await waitFrames(page, 4);
+      await expect(page.locator('.lr-altar-holding')).toBeVisible();
+      expect(await hint(), 'at the whole board a tap zooms; it places nothing').not.toContain(
+        'tap a socket',
+      );
+      const c = center(L, (L.cols - 1) / 2, (L.rows - 1) / 2);
+      await tap(c.x, c.y);
+      await waitFrames(page, 4);
+      expect(await hint(), 'a gem in hand beats the zoom line').not.toContain(
+        'Drag to look around',
+      );
+      // Put the gem back, then pan: "Drag to look around" retires.
+      await tap(L.tray[0]!.x, L.tray[0]!.y);
+      await waitFrames(page, 4);
+      const cdp = await page.context().newCDPSession(page);
+      const v = L.phone!;
+      const mid = { x: (v.padL + v.colL) / 2, y: (v.visT + v.visB) / 2 };
+      const ob = (await page.locator('.tc-overlay').boundingBox())!;
+      const k = ob.width / 1920;
+      await drag(
+        cdp,
+        ob.x + mid.x * k,
+        ob.y + mid.y * k,
+        ob.x + mid.x * k - 80,
+        ob.y + mid.y * k - 50,
+      );
+      await waitFrames(page, 4);
+      problems.push(...(await covered(id, 'panned')));
+      expect(await hint()).not.toContain('Drag to look around');
+      expect(problems).toEqual([]);
+    });
   });
 }

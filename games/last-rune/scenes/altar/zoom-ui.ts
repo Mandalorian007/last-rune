@@ -8,7 +8,16 @@ import { button, h } from '@engine/ui';
 import { cpx, P, tpx } from '../../ui/phone-styles';
 import { scaleFontSizes } from '../../ui/text-scale';
 import type { AltarLayout, PropSpot } from './layout';
-import { type Cam, offEdges, type Rect, viewRect } from './zoom';
+import {
+  type Cam,
+  clearSpot,
+  offEdges,
+  type Rect,
+  rectHitsCircle,
+  socketHits,
+  transformLayout,
+  viewRect,
+} from './zoom';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -47,6 +56,12 @@ export class ZoomUi {
   private readonly edges: HTMLElement[];
   private labels: Tracked[] = [];
   private zoomed: boolean | null = null;
+  private box: ((el: HTMLElement) => Rect) | null = null;
+  private sizes = new Map<
+    HTMLElement,
+    { key: string; l: number; t: number; r: number; b: number }
+  >();
+  private open: (x: number, y: number) => boolean = () => true;
 
   constructor(host: HTMLElement, actions: HTMLElement, onTap: () => void) {
     ensureZoomStyles(host.ownerDocument);
@@ -102,8 +117,11 @@ export class ZoomUi {
    * them where the camera shows their gauges.
    */
   record(items: [HTMLElement, PropSpot][], box: (el: HTMLElement) => Rect): void {
+    this.box = box;
+    this.sizes.clear();
     this.labels = items.map(([el, spot]) => {
       el.removeAttribute('data-off');
+      el.removeAttribute('data-free');
       const left = Number.parseFloat(el.style.left) || 0;
       const top = Number.parseFloat(el.style.top) || 0;
       const b = box(el);
@@ -111,39 +129,118 @@ export class ZoomUi {
     });
   }
 
+  /** Which cells are sockets (carved stone is not), for keeping cards off them when zoomed. */
+  setSockets(open: (x: number, y: number) => boolean): void {
+    this.open = open;
+  }
+
   /**
-   * Each card moves with its gauge; one whose gauge is off the view waits at the view's edge
-   * on that side, with an arrow the way to it, so the player always knows where it is.
+   * A card's box at (x, y) as it is drawn now: the card and every word in it (a word may run
+   * past the card's own box). Cached per look, since a pan asks every frame.
+   */
+  private extent(k: Tracked, x: number, y: number): Rect {
+    const el = k.el;
+    const key = `${el.dataset.off ?? ''}|${el.dataset.align ?? ''}|${el.hasAttribute('data-left')}|${el.textContent}`;
+    let r = this.sizes.get(el);
+    if (!r || r.key !== key) {
+      const box = this.box;
+      if (!box) return { x0: x + k.l, y0: y + k.t, x1: x + k.r, y1: y + k.b };
+      const lx = Math.round(x);
+      const ty = Math.round(y);
+      el.style.left = `${lx}px`;
+      el.style.top = `${ty}px`;
+      const u = box(el);
+      for (const c of el.querySelectorAll<HTMLElement>('*')) {
+        const q = box(c);
+        if (q.x1 - q.x0 < 0.5 || q.y1 - q.y0 < 0.5) continue;
+        u.x0 = Math.min(u.x0, q.x0);
+        u.y0 = Math.min(u.y0, q.y0);
+        u.x1 = Math.max(u.x1, q.x1);
+        u.y1 = Math.max(u.y1, q.y1);
+      }
+      r = { key, l: u.x0 - lx, t: u.y0 - ty, r: u.x1 - lx, b: u.y1 - ty };
+      this.sizes.set(el, r);
+    }
+    return { x0: x + r.l, y0: y + r.t, x1: x + r.r, y1: y + r.b };
+  }
+
+  /**
+   * Each card moves with its gauge. Zoomed, the board fills the view, so no card may sit on a
+   * socket's tap circle or on a gauge (mobile-6-integrate):
+   * - a card whose gauge is in view takes the nearest clear spot to where it would hang;
+   * - one whose gauge is off the view shrinks to a one-line chip with an arrow the way to it,
+   *   at that edge of the view, slid along the edge to the nearest clear spot.
    */
   placeLabels(L: AltarLayout, c: Cam): void {
-    const v = viewRect(L);
+    const css = L.phone?.cssPx ?? 1;
     const e = L.phone?.edge ?? 0;
+    if (c.z <= 1) {
+      for (const k of this.labels) {
+        k.el.style.left = `${Math.round(k.left)}px`;
+        k.el.style.top = `${Math.round(k.top)}px`;
+        k.el.removeAttribute('data-off');
+        k.el.removeAttribute('data-free');
+      }
+      return;
+    }
+    const v = viewRect(L);
+    const S = transformLayout(L, c);
+    const sockets = socketHits(S, this.open);
+    const gauges = [S.storm, ...S.machines].map((sp) => ({
+      x: sp.x,
+      y: sp.y,
+      r: sp.size * (sp === S.storm ? 0.26 : 0.46),
+    }));
+    // The edge cues' chevrons, mid-way along each side the board runs on past.
+    const placed: Rect[] = [];
+    const ch = 13 * css;
+    const mx = (v.x0 + v.x1) / 2;
+    const my = (v.y0 + v.y1) / 2;
+    const [n, ea, so, w] = offEdges(L, c);
+    if (n) placed.push({ x0: mx - ch, y0: v.y0, x1: mx + ch, y1: v.y0 + 2 * ch });
+    if (ea) placed.push({ x0: v.x1 - 2 * ch, y0: my - ch, x1: v.x1, y1: my + ch });
+    if (so) placed.push({ x0: mx - ch, y0: v.y1 - 2 * ch, x1: mx + ch, y1: v.y1 });
+    if (w) placed.push({ x0: v.x0, y0: my - ch, x1: v.x0 + 2 * ch, y1: my + ch });
+    const pad = 4 * css;
+    const near = (r: Rect) =>
+      placed.some(
+        (p) => r.x0 < p.x1 + pad && r.x1 > p.x0 - pad && r.y0 < p.y1 + pad && r.y1 > p.y0 - pad,
+      );
+    const onGauge = (r: Rect) => gauges.some((g) => rectHitsCircle(r, g.x, g.y, g.r));
+    const all = (r: Rect) => sockets(r) || onGauge(r) || near(r);
+    const bounds = { x0: v.x0 + e, y0: v.y0 + e, x1: v.x1 - e, y1: v.y1 - e };
+    const step = 4 * css;
     for (const k of this.labels) {
       const gx = c.ox + c.z * k.spot.x;
       const gy = c.oy + c.z * k.spot.y;
       let x = k.left + (gx - k.spot.x);
       let y = k.top + (gy - k.spot.y);
       let off = '';
-      if (c.z > 1) {
-        if (gy < v.y0) off = 'n';
-        else if (gy > v.y1) off = 's';
-        else if (gx > v.x1) off = 'e';
-        else if (gx < v.x0) off = 'w';
-        // The arrow's room (CSS above): the card grows on that side.
-        const a = 16 * (L.phone?.cssPx ?? 1);
-        const r = k.r + (off === 'e' ? a : 0);
-        const l = k.l - (off === 'w' ? a : 0);
-        const t = k.t - (off === 'n' ? a : 0);
-        const b = k.b + (off === 's' ? a : 0);
-        x = Math.min(Math.max(x, v.x0 + e - l), v.x1 - e - r);
-        y = Math.min(Math.max(y, v.y0 + e - t), v.y1 - e - b);
-      }
-      k.el.style.left = `${Math.round(x)}px`;
-      k.el.style.top = `${Math.round(y)}px`;
+      if (gy < v.y0) off = 'n';
+      else if (gy > v.y1) off = 's';
+      else if (gx > v.x1) off = 'e';
+      else if (gx < v.x0) off = 'w';
       if ((k.el.dataset.off ?? '') !== off) {
         if (off) k.el.dataset.off = off;
         else k.el.removeAttribute('data-off');
       }
+      const want = this.extent(k, x, y);
+      // Pinned at a side, the chip keeps to that side and slides along it.
+      const wx = off === 'e' || off === 'w' ? 6 : 1;
+      const wy = off === 'n' || off === 's' ? 6 : 1;
+      const at =
+        clearSpot(want, bounds, all, step, 4 * S.pitch, wx, wy) ??
+        clearSpot(want, bounds, sockets, step, 8 * S.pitch, wx, wy) ??
+        clearSpot(want, bounds, () => false, step, 0);
+      const dx = at?.dx ?? 0;
+      const dy = at?.dy ?? 0;
+      x += dx;
+      y += dy;
+      placed.push({ x0: want.x0 + dx, y0: want.y0 + dy, x1: want.x1 + dx, y1: want.y1 + dy });
+      k.el.style.left = `${Math.round(x)}px`;
+      k.el.style.top = `${Math.round(y)}px`;
+      // Slid off its gauge: the notch would point at nothing.
+      k.el.toggleAttribute('data-free', !off && Math.hypot(dx, dy) > 3 * css);
     }
   }
 
@@ -151,6 +248,7 @@ export class ZoomUi {
     this.button.remove();
     for (const el of this.edges) el.remove();
     this.labels = [];
+    this.sizes.clear();
   }
 }
 
@@ -185,8 +283,12 @@ ${A}[data-zoomable] .lr-zoom-btn:not(#lr-none) { display: flex; }
 .tc-overlay .lr-zoom-edge[data-side="e"]::after { content: '\\25B6'; }
 .tc-overlay .lr-zoom-edge[data-side="w"]::after { content: '\\25C0'; }
 
-/* A card whose gauge is off the view: at the edge, its notch traded for an arrow that way. */
-${A} .lr-altar-need[data-off]::before { display: none; }
+/* A card whose gauge is off the view: a one-line chip at the edge, its notch traded for an
+   arrow that way (mobile-6-integrate). A card slid off its gauge to clear the sockets drops
+   its notch too. */
+${A} .lr-altar-need:is([data-off], [data-free])::before { display: none; }
+${A} .lr-altar-need[data-off] :is(.lr-need-note, .lr-storm-row, .lr-need-got, .lr-need-strikes) { display: none; }
+${A} .lr-altar-need[data-off] { white-space: nowrap; max-width: none !important; }
 ${A} .lr-altar-need[data-off]::after {
   position: absolute; color: var(--lr-gold, #e8c06a); font-size: ${tpx(14)}; line-height: 1;
   text-shadow: 0 0 ${cpx(3)} #000;

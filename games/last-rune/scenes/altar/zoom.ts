@@ -247,3 +247,104 @@ export function rendererCam(
   out.x = (w / 2 - c.ox) / c.z - w / 2;
   out.y = (h / 2 - c.oy) / c.z - h / 2;
 }
+
+// ── Cards on the zoomed board (mobile-6-integrate) ──────────────────────────────────────────
+// Zoomed, the Gives/Needs cards ride over a board that fills the view, so a card left where
+// its gauge puts it (or pinned at the view's edge) sits on sockets. Each card instead takes
+// the nearest spot clear of every socket's tap circle and every gauge.
+
+/** A socket's tap circle, in pitches: the drawn hole (0.36), its rim and the legal ring. */
+export const SOCKET_CLEAR = 0.42;
+
+/** Whether a rectangle and a circle overlap. */
+export function rectHitsCircle(r: Rect, x: number, y: number, rad: number): boolean {
+  const dx = x - Math.max(r.x0, Math.min(x, r.x1));
+  const dy = y - Math.max(r.y0, Math.min(y, r.y1));
+  return dx * dx + dy * dy < rad * rad;
+}
+
+/**
+ * A test for "this rectangle covers a socket's tap circle" on the screen layout `S`.
+ * `open(x, y)` says which cells are sockets (carved stone is not). Looks only at the cells
+ * the rectangle can reach, so it is cheap enough to call thousands of times a frame.
+ */
+export function socketHits(
+  S: AltarLayout,
+  open: (x: number, y: number) => boolean,
+): (r: Rect) => boolean {
+  const p = S.pitch;
+  const rad = p * SOCKET_CLEAR;
+  const x0 = S.left + S.margin;
+  const y0 = S.top + S.margin;
+  return (r) => {
+    const i0 = Math.max(0, Math.floor((r.x0 - rad - x0) / p));
+    const i1 = Math.min(S.cols - 1, Math.floor((r.x1 + rad - x0) / p));
+    const j0 = Math.max(0, Math.floor((r.y0 - rad - y0) / p));
+    const j1 = Math.min(S.rows - 1, Math.floor((r.y1 + rad - y0) / p));
+    for (let j = j0; j <= j1; j++)
+      for (let i = i0; i <= i1; i++)
+        if (open(i, j) && rectHitsCircle(r, x0 + p * (i + 0.5), y0 + p * (j + 0.5), rad))
+          return true;
+    return false;
+  };
+}
+
+/**
+ * The nearest shift of `box` that keeps it inside `bounds` and clear of `hits`, searched on a
+ * `step` grid out to `reach` px; the cost weighs x and y moves by `wx`, `wy` (a card pinned at
+ * a side keeps to that side). Starts from `box` clamped into `bounds`. Null when nothing within
+ * reach is clear (or the box is bigger than the bounds).
+ */
+export function clearSpot(
+  box: Rect,
+  bounds: Rect,
+  hits: (r: Rect) => boolean,
+  step: number,
+  reach: number,
+  wx = 1,
+  wy = 1,
+): { dx: number; dy: number } | null {
+  const lox = bounds.x0 - box.x0;
+  const hix = bounds.x1 - box.x1;
+  const loy = bounds.y0 - box.y0;
+  const hiy = bounds.y1 - box.y1;
+  if (lox > hix || loy > hiy) return null;
+  const bx = Math.min(hix, Math.max(lox, 0));
+  const by = Math.min(hiy, Math.max(loy, 0));
+  const r: Rect = { x0: 0, y0: 0, x1: 0, y1: 0 };
+  let best: { dx: number; dy: number } | null = null;
+  let bestCost = Number.POSITIVE_INFINITY;
+  const wmin = Math.min(wx, wy);
+  const kmax = Math.ceil(reach / step);
+  const tryAt = (dx: number, dy: number) => {
+    if (dx < lox || dx > hix || dy < loy || dy > hiy) return;
+    const cost = wx * (dx - bx) ** 2 + wy * (dy - by) ** 2;
+    if (cost >= bestCost) return;
+    r.x0 = box.x0 + dx;
+    r.x1 = box.x1 + dx;
+    r.y0 = box.y0 + dy;
+    r.y1 = box.y1 + dy;
+    if (hits(r)) return;
+    best = { dx, dy };
+    bestCost = cost;
+  };
+  for (let k = 0; k <= kmax; k++) {
+    // Every spot on ring k costs at least this much: stop once the best found beats it.
+    if (wmin * (k * step) ** 2 >= bestCost) break;
+    if (k === 0) {
+      tryAt(bx, by);
+      continue;
+    }
+    const s = k * step;
+    for (let t = -k; t <= k; t++) {
+      const u = t * step;
+      tryAt(bx + u, by - s);
+      tryAt(bx + u, by + s);
+      if (t > -k && t < k) {
+        tryAt(bx - s, by + u);
+        tryAt(bx + s, by + u);
+      }
+    }
+  }
+  return best;
+}
