@@ -42,6 +42,8 @@ async function main(): Promise<void> {
     forceUnsupported: import.meta.env.DEV && qs.has('nogpu'),
   });
   if (!res.ok) return;
+  // Load timing (User Timing marks; read by scripts/perf/load.spec.ts, free at runtime).
+  performance.mark('lr:gpu-ready');
   installGpuErrorLogging(res.gpu.device);
 
   if (import.meta.env.DEV && qs.get('demo') === 'render') {

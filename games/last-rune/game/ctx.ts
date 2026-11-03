@@ -181,7 +181,10 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   audio.attach();
   persistMixer(audio, { game: SAVE_GAME_ID });
   defineUiSounds(audio);
-  const sound = createGameAudio(audio);
+  // Load timing: the audio pre-render runs after the first gesture (scripts/perf/load.spec.ts).
+  const sound = createGameAudio(audio, {
+    onPrepared: (stats) => performance.mark('lr:audio-ready', { detail: stats }),
+  });
   // UI sounds route to the game sound bank; recipes above remain as the fallback names.
   const sfx = (name: UiSound, gain = 1) => {
     switch (name) {
@@ -321,6 +324,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   };
 
   // ── Loop ───────────────────────────────────────────────────────────────
+  let firstFrame = true;
   const loop = new GameLoop({
     update: (dt: number) => {
       input.update();
@@ -348,6 +352,10 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
       const frame = renderer.beginFrame(time.realTime, time.frameDt);
       stack.render(frame, alpha);
       renderer.endFrame();
+      if (firstFrame) {
+        firstFrame = false;
+        performance.mark('lr:first-frame');
+      }
       // The caption portrait animates while FUSE talks, then rests on one idle frame.
       if (fuse.speaking || portraitTalking) {
         portraitTalking = fuse.speaking;
