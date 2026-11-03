@@ -748,8 +748,9 @@ fn grate_cut(q: vec2f, open: f32) -> f32 {
   }
 
   let world = in.world;
-  // Colour of the work lamp that lights an open (available) niche: warmer white than the candles.
-  let SPOT = mix(C_WARM, vec3f(1.0, 0.86, 0.6), 0.55);
+  // Colour of the work lamp that lights an open (available) niche: lamp gold, a shade paler
+  // than the candles (tidy-3: the old warm white read white-gold on the pale desk wood).
+  let SPOT = mix(C_WARM, vec3f(1.0, 0.8, 0.48), 0.3);
   let cold = 1.0 - g_op;
   let avail = g_op * (1.0 - g_al);
   let pulse = 0.5 + 0.5 * sin(g_now * 2.6 + g_seed);
@@ -768,7 +769,7 @@ fn grate_cut(q: vec2f, open: f32) -> f32 {
     let kfall = 0.55 + 0.45 * smoothstep(-70.0, 80.0, q.y);
     let kdiff = max(dot(ln, kd), 0.0);
     let kspec = pow(max(dot(ln, normalize(kd + vec3f(0.0, 0.0, 1.0))), 0.0), 24.0) * (0.3 + S.met);
-    col += (S.alb * kdiff * 1.5 + C_GOLD * kspec * 0.6) * SPOT * kfall * avail;
+    col += (S.alb * kdiff * 1.7 + C_GOLD * kspec * 0.6) * SPOT * kfall * avail;
     // Locked: dim, drained of colour, with a cold rim so the silhouette shows behind the grate.
     let lum = dot(col, vec3f(0.3, 0.55, 0.15));
     col = mix(col, vec3f(lum) * vec3f(0.8, 0.9, 1.15), 0.65 * cold) * (1.0 - 0.35 * cold);
@@ -821,8 +822,11 @@ fn grate_cut(q: vec2f, open: f32) -> f32 {
   let mask = cover(niche.x, g_aa) * (1.0 - grate_cut(q, g_op)) * in.color.a;
   var o: FragOut;
   o.color = vec4f(rgb, a) * mask;
-  // Only true light sources bloom; the niche's fills and the doorway stay out of the bloom.
-  let bloomSrc = g_glow * (1.0 - 0.6 * cold) + back + doorway * 0.3 + coldBack * 0.5;
+  // Only true light sources bloom; the niche's fills stay out of the bloom. An open doorway
+  // spills a little lamp gold, so the floor mist in front of it (which takes its tint from the
+  // bloom) glows gold rather than white.
+  let spill = C_GOLD * avail * 0.05 * (0.8 + 0.2 * pulse) * smoothstep(-70.0, 40.0, q.y);
+  let bloomSrc = g_glow * (1.0 - 0.6 * cold) + back + doorway * 0.3 + coldBack * 0.5 + spill;
   o.emissive = vec4f((S.emi * S.cov + bloomSrc) * in.emissive * mask, a * mask);
   return o;
 }
