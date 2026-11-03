@@ -100,3 +100,17 @@ Format: `D-NNN · date · decision · why · who`.
     - The hangout on phones has no dead controls: an info badge, not a chevron, unless it actually navigates.
     - Phone altar: ↻ Turn sits at the bottom of the left bar (Back/Undo/Clear/Turn), so the right column can hold the tray, card lane, FUSE and Strike. Phones use one even work light (no candles, fog or vignette); desktop and iPad keep the candle-lit look.
     - The old mobile-2 info-lane rules (`--lr-info-l/-w`) are dead on altars and can be deleted in a later tidy.
+  - *Addendum 2 (gate review 1, 2026-11-03):* the blind re-review after mobile-3 scored 6, 6, 6.5 and 6.5, so the gate failed. The calls:
+    - **Phone blocked cells.** On phones a blocked cell is not drawn as a socket at all (no disc or plate). Only real sockets show as holes. All 4 reviewers could not tell grey from navy.
+    - **Fixed gems.** The "kept as designed" fixed-gem brackets are reversed. Fixed gems get a bolted-collar treatment on all platforms, because dashed brackets read as selection.
+    - **Phone tray and labels.**
+      - The tray hides types the puzzle starts with zero of; types depleted during play dim.
+      - Gives/Needs labels use one two-line format.
+      - Every gauge and label sits at least 4 px inside the play area.
+    - **Menus and title.**
+      - Settings scrolls (no "More ▾" dropdown look).
+      - The Journal on phones drops "Back to the hall" in favour of ✕.
+      - "Full screen" is hidden where the API is unavailable (iPhone).
+    - **Hangout.** It has no inert input on phones.
+    - **Hall.** The hall's welcome line must agree with the Start here marker.
+    - **Next.** mobile-4-board and mobile-4-chrome, then gate review 2.
