@@ -158,21 +158,14 @@ for (const vp of PHONES) {
           await page.waitForTimeout(600);
           await shot(`11-${id}-fuse`);
           await page.evaluate(() => (window as G).__game.fuse.hush());
-          // Dense board (mobile-6-integrate): a gem in hand, then a tap on the board zooms in
-          // (at the whole board a tap zooms; it places nothing).
+          // Dense board, whole-board view: a gem in hand (the Holding pill and the hint line).
           const L = await page.evaluate(() => (window as G).__altarLayout);
           const box = (await page.locator('.tc-overlay').boundingBox())!;
           const k = box.width / 1920;
           const tap = (x: number, y: number) => page.touchscreen.tap(box.x + x * k, box.y + y * k);
           await tap(L.tray[0].x, L.tray[0].y);
           await waitFrames(page, 4);
-          if ((await page.locator('.lr-altar[data-zoomable]').count()) > 0) {
-            const c = { x: 0, y: 0 };
-            cellCenter(L, { x: Math.floor(L.cols / 2), y: Math.floor(L.rows / 2) }, c);
-            await tap(c.x, c.y);
-            await page.waitForTimeout(800);
-          }
-          await shot(`10-${id}-zoomed`);
+          await shot(`10-${id}-holding`);
           // A fail verdict on the dense board: put the gem back and strike as it stands.
           await tap(L.tray[0].x, L.tray[0].y);
           await waitFrames(page, 4);

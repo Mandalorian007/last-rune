@@ -410,10 +410,7 @@ test('upright, the phone shows the turn-sideways card; turning it back hides it'
   await expect(card).toBeHidden();
 });
 
-// mobile-6-zoom: the Last Rune's sockets are under 44 CSS px apart at the whole board, so a
-// gem dragged from the tray and let go there zooms in (it stays in hand, nothing is placed);
-// a tap then sets it on the meant socket at ≥44 px. (Was: the loupe at the whole board.)
-test('the Last Rune at 667×375: a finger drag from the tray zooms in, then a tap lands on the meant socket', async ({
+test('the Last Rune at 667×375: a finger drag from the tray shows the loupe and lands on the meant socket', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 667, height: 375 });
@@ -426,20 +423,26 @@ test('the Last Rune at 667×375: a finger drag from the tray zooms in, then a ta
   const L = await liveLayout(page);
   const box = (await page.locator('.tc-overlay').boundingBox())!;
   const k = box.width / 1920;
+  // Sockets here are under 44 CSS px apart: the loupe's whole reason.
   expect(L.pitch * k).toBeLessThan(44);
+  // A gem the design puts high enough on the board that the finger, 56 CSS px under the aim,
+  // is still on the screen.
   const g = p.design.intended.find((q) => q.cell.y <= 3)!;
   const slot = L.tray.find((s) => s.gem === g.gem)!;
   const target = { x: 0, y: 0 };
   cellCenter(L, g.cell as Cell, target);
   const client = (x: number, y: number) => ({ x: box.x + x * k, y: box.y + y * k });
   const from = client(slot.x, slot.y);
-  const end = client(target.x, target.y);
+  // The finger ends 56 CSS px below the socket, a third of a pitch off to the side.
+  const aim = client(target.x + L.pitch * 0.3, target.y);
+  const end = { x: aim.x, y: aim.y + 56 };
   const cdp = await page.context().newCDPSession(page);
   const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
     cdp.send('Input.dispatchTouchEvent', {
       type,
       touchPoints: type === 'touchEnd' ? [] : [{ x, y }],
     });
+  const loupe = page.locator('.lr-loupe');
   await touch('touchStart', from.x, from.y);
   await waitFrames(page, 3);
   for (let i = 1; i <= 10; i++) {
@@ -451,27 +454,33 @@ test('the Last Rune at 667×375: a finger drag from the tray zooms in, then a ta
     await waitFrames(page, 1);
   }
   await waitFrames(page, 3);
-  // No loupe on a board that zooms instead.
-  await expect(page.locator('.lr-loupe[data-on]')).toHaveCount(0);
-  await touch('touchEnd');
-  await waitFrames(page, 6);
-  const state = () =>
-    page.evaluate(() => {
-      const v = (window as unknown as { __altarView: { zoom: { z: number }; held: unknown } })
-        .__altarView;
-      return { z: v.zoom.z, held: !!v.held };
-    });
-  expect(await state()).toEqual({ z: expect.any(Number), held: true });
-  expect((await state()).z).toBeGreaterThan(1);
-  const Z = await liveLayout(page);
-  expect(Z.pitch * k).toBeGreaterThanOrEqual(44);
-  cellCenter(Z, g.cell as Cell, target);
-  const at = client(target.x, target.y);
-  await page.touchscreen.tap(at.x, at.y);
-  await waitFrames(page, 4);
-  await page.screenshot({
-    path: 'docs/design/screens/local/mobile-ui/667x375/13-altar-the-last-rune-zoomed.png',
+  await expect(loupe).toHaveAttribute('data-on', '');
+  await expect(loupe).toHaveCSS('opacity', '1');
+  await expect(page.locator('.lr-altar')).toHaveAttribute('data-loupe', `${g.cell.x},${g.cell.y}`);
+  // The loupe sits beside the finger, not under it, and stays on screen.
+  const lb = (await loupe.boundingBox())!;
+  expect(
+    end.x >= lb.x && end.x <= lb.x + lb.width && end.y >= lb.y && end.y <= lb.y + lb.height,
+  ).toBe(false);
+  expect(lb.x).toBeGreaterThanOrEqual(0);
+  expect(lb.y).toBeGreaterThanOrEqual(0);
+  expect(lb.x + lb.width).toBeLessThanOrEqual(667);
+  // It shows the board, not a dark disc (a WebGPU canvas copied at the wrong moment is blank).
+  const lit = await loupe.evaluate((el) => {
+    const cv = el.querySelector('canvas')!;
+    const d = cv.getContext('2d')!.getImageData(0, 0, cv.width, cv.height).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i]! + d[i + 1]! + d[i + 2]! > 120) n++;
+    return n / (d.length / 4);
   });
+  expect(lit).toBeGreaterThan(0.05);
+  await page.screenshot({
+    path: 'docs/design/screens/local/mobile-ui/667x375/13-altar-the-last-rune-loupe.png',
+  });
+  await touch('touchEnd');
+  await waitFrames(page, 3);
+  await expect(loupe).not.toHaveAttribute('data-on', '');
+  await expect(loupe).toHaveCSS('opacity', '0');
   await expect
     .poll(async () => (await readSave(page))?.puzzles['the-last-rune']?.placements ?? [])
     .toContainEqual({ gem: g.gem, cell: g.cell, rot: 0 });
