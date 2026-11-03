@@ -1,6 +1,7 @@
-# Gate for main, as two jobs (D-041):
-#   engine: @thunderclap/engine typecheck + lint + unit tests (packages/engine).
-#   game:   game typecheck + lint + import-boundary check + unit tests, production build, itch zip.
+# Gate for main, as three jobs (D-041):
+#   engine:     @thunderclap/engine typecheck + lint + unit tests (packages/engine).
+#   engine-e2e: engine platform e2e on the harness matrix (D-041 addendum 2); not a gate yet.
+#   game:       game typecheck + lint + import-boundary check + unit tests, production build, itch zip.
 # No secrets are used or needed. Nothing is uploaded to itch.io (see docs/shipping-itch.md).
 name: CI
 
@@ -38,6 +39,39 @@ jobs:
 
       # typecheck + lint + unit tests of packages/engine only.
       - run: pnpm check:engine
+
+  engine-e2e:
+    # Engine platform e2e (D-041 addendum 2): the harness smoke on the viewport/device/iframe
+    # matrix (packages/engine/playwright.config.ts). Same container and runner as e2e.yml, where
+    # SwiftShader WebGPU was verified. Keep the tag in lockstep with @playwright/test.
+    name: engine e2e
+    # Not a merge gate yet. In this container locally, SwiftShader lost the WebGPU device
+    # ("A valid external Instance reference no longer exists") on about 1 test in 8 (any project).
+    # Make it gate main once it has been green on GitHub's runners.
+    continue-on-error: true
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - run: pnpm install --frozen-lockfile
+
+      # GitHub sets CI=true: retries and the HTML report (packages/engine/playwright.config.ts).
+      - run: pnpm test:e2e:engine
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: engine-e2e-report
+          path: |
+            packages/engine/playwright-report/
+            packages/engine/test-results/
+          retention-days: 7
 
   game:
     # Keeps the pre-split job name so an existing required status check still matches.

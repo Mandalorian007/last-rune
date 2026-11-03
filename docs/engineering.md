@@ -6,7 +6,7 @@
 - **TypeScript 7**, strict, `noEmit` (Vite bundles). Three projects: `packages/engine/tsconfig.json` (the engine alone), `tsconfig.json` (browser: games and unit tests, plus the engine sources they import) and `tsconfig.node.json` (configs, scripts, e2e).
 - **Vite 8** dev server and build (`base: './'` for itch).
 - **Vitest 5** for unit tests, colocated as `*.test.ts`.
-- **Playwright** for browser/e2e smoke and the automated playtest (`tests/e2e/`).
+- **Playwright** for browser/e2e smoke and the automated playtest (`tests/e2e/`). The engine has its own Playwright project (`packages/engine/playwright.config.ts`), which runs platform specs on a noun-free harness page across a viewport, device and itch-iframe matrix (D-041 addendum 2). Game specs test product only.
 - **Biome** for lint and format (2-space indent, single quotes, width 100). Auto-format is on (D-024): a checked-in Claude Code hook (`.claude/settings.json`) runs `biome check --write` on every file an agent edits, and `pnpm fix` does the whole repo. CI stays strict (`pnpm check` fails on unformatted code), so run `pnpm fix` before committing anything edited outside an agent.
 
 ## Commands
@@ -20,6 +20,7 @@ pnpm check:boundaries  # import-boundary check (scripts/check-boundaries.mjs)
 pnpm fix            # format + safe lint fixes + organize imports, whole repo
 pnpm build          # typecheck + production build to dist/
 pnpm test:e2e       # Playwright (ports in tests/e2e/ports.ts; worktrees auto-offset, or E2E_PORT_OFFSET)
+pnpm test:e2e:engine  # engine e2e: harness smoke on the viewport/device/iframe matrix (packages/engine/e2e)
 pnpm package:itch   # build + zip for itch upload
 ```
 

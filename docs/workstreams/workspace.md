@@ -66,9 +66,43 @@ Plan: [../engine/refactor-plan.md](../engine/refactor-plan.md), "Phase 1" → ws
   - `pnpm baseline` (v1-baselines) and mobile-7-teach have not landed on main yet. When the PM says they have, I merge main, fix any `@engine` imports they add (the boundary check names each one), and run `pnpm baseline`.
   - After merging main (7268ccc), I reran the full `pnpm test:e2e` (load average ~40): 125 passed, 1 failed, 2 skipped. Full-run was 16/16 again. The one failure was `mobile.spec.ts:416`, the same load flake as before; it passes alone (1/1, 4.2 s).
 
+### 2026-11-03: engine e2e harness (D-041 addendum 2)
+- **Harness page** `packages/engine/harness/` (`index.html`, `main.ts`, `state.ts`). It is noun-free: it calls `boot()` and gets a 1920×1080 letterboxed `Surface`, one `Input` action (`tap` = mouse 0, which covers touch and pen), and a `GameLoop` that clears and presents the swapchain each frame. It publishes `window.__harness`: gpu status and format, embedded, frames, resizes, rect, container, backbuffer, the presented texture size, and taps with their logical position and device. Vite serves it (`vite.harness.config.ts`, root `harness/`). Run it by hand with `pnpm --filter @thunderclap/engine harness`.
+- **Its own Playwright project**, `packages/engine/playwright.config.ts` (testDir `e2e/`). It is separate from the game's `tests/e2e` and uses the same WebGPU flags.
+  - Matrix: `desktop-1280`, `desktop-1920`, `ipad` (1180×820), `phone-se`, `phone-iphone`, `phone-promax` and `phone-android` (the mobile specs' sizes; touch projects use isMobile, hasTouch and DPR 2), plus `itch-iframe`.
+  - `itch-iframe`: `e2e/wrapper.mjs` serves a page on `localhost` that embeds the harness from `127.0.0.1` (cross-site) in a 960×540 iframe with itch's exact attributes and `allow` list.
+  - The fixture option `wrapper: 'top' | 'itch-iframe'` hands specs the right frame (`e2e/fixtures.ts`).
+  - Ports (`e2e/ports.ts`) use the same per-worktree offset as the game's and end in 7 and 8, so they never collide with the game's.
+- **Seed spec** `e2e/smoke.spec.ts`, one test per project:
+  - WebGPU boots (`gpu: 'ok'`, bgra8unorm or rgba8unorm) and frames present.
+  - The surface is the centred contain fit of its container, with DPR ≤ 2, the backbuffer keeping the aspect, and the swapchain presenting at the backbuffer size.
+  - After a resize to 60% width (the viewport, or the wrapper's iframe box), it follows again.
+  - One tap (touch projects) or click at the canvas centre gives exactly one `tap` press at logical (960, 540) from `touch` or `mouse`.
+  - Negative check: with `E2E_CHROMIUM_ARGS=--disable-gpu` it fails on "WebGPU boot: no-adapter", as it should.
+- **Scripts and config:**
+  - Engine: `test:e2e`, `harness`; `typecheck` also runs `tsconfig.e2e.json` (adds node types for e2e/ and configs only, so `src/` stays DOM-only).
+  - Root: `pnpm test:e2e:engine`.
+  - Engine devDeps: `@playwright/test` and `@types/node`, both already in the root lockfile. No runtime deps.
+- **CI:** a new `engine e2e` job in ci.yml. It uses the same `ubuntu-24.04-arm` runner and Playwright container as e2e.yml, runs `pnpm test:e2e:engine` and uploads the report on failure. It is `continue-on-error: true`, so it runs on every push and PR but does not gate main yet.
+  - Why not a gate: in that container (run locally under Docker), SwiftShader intermittently loses the WebGPU device ("A valid external Instance reference no longer exists"). The engine shows its device-lost screen, and the test times out.
+    - With 5 workers: 6 of 20 phone runs (with the resize) and 7 of 20 (without). iPad passed 8/8 both times.
+    - With 1 worker: the phones passed 12/12. Over the full matrix twice, 2 of 16 failed (one phone-iphone, one desktop-1280).
+    - So it is not resize-related.
+    - The config therefore uses `workers: 1` and `retries: 1` under CI. Promote the job to a gate after a few green runs on GitHub.
+    - Worth knowing for the game e2e too: the same SwiftShader path backs e2e.yml.
+  - macOS (Metal) passes 8/8 with 5 workers, so locally it is solid.
+- **Docs:**
+  - `packages/engine/ARCHITECTURE.md` (package shape and test ownership), `CHANGELOG.md`, `docs/engineering.md`.
+  - Dropped the obsolete zoom.ts → camera2d mentions (addendum 1) from ARCHITECTURE.md and from the open issues below.
+- No game specs moved. The game's `pnpm test:e2e` is untouched (testDir `tests/e2e`).
+
 ### Open issues for later Phase 1 workstreams
 - **host:** create `packages/engine/src/host/` and add `"./host": "./src/host/index.ts"` to the exports map; the boundary check picks it up. Today `window.open`/`navigator.clipboard`/`localStorage` appear in `platform/links.ts`, `ui/link.ts`, `ui/padnav.ts`, `save/storage.ts`, `save/store.ts`.
-- **promote-ui:** new engine files go under `packages/engine/src/<module>/` and are re-exported from that module's `index.ts`. Moving `zoom.ts` → `render/camera2d.ts` must keep the game importing `@thunderclap/engine/render`, not a deep path. List each promotion in `CHANGELOG.md`.
+- **promote-ui:** new engine files go under `packages/engine/src/<module>/` and are re-exported from that module's `index.ts`. The game must import the promoted code from its module subpath (`@thunderclap/engine/ui`, …), not a deep path. (The zoom.ts → camera2d promotion is off since D-041 addendum 1.) List each promotion in `CHANGELOG.md`.
+- **Engine e2e (whoever moves specs per `docs/engine/test-split.md`):**
+  - Add a probe to `harness/main.ts` and a spec under `packages/engine/e2e/`; every spec runs on the whole matrix.
+  - Phone safe-area insets (iphone 47, promax 59) are not emulated yet; the layout contract should add that.
+  - `itch-iframe` runs at desktop size only. Add a phone-sized iframe entry if a capability needs it.
 - **create-game:** if `core/game.ts` needs other modules it imports them relatively. Consider whether `createGame` belongs on `./core` or a new top-level `"."` export.
 - **PM:**
   - CLAUDE.md still says "`engine/` has zero game nouns" (PM-owned, not edited). PLAN/STATUS rows are yours.
