@@ -10,6 +10,10 @@ User (2026-11-02): "make sure the discord link and kofi link have a copy option 
 - Keep D-013/D-034: nothing opens or copies without the user acting. No network calls. Reachable by keyboard, gamepad (menu-nav) and screen reader; axe stays clean. Must not crowd Play/Join or collide with FUSE's title caption or the release label.
 - URLs come from the existing constants only.
 
+## Scope change (D-036): build it in the engine
+- Put the general logic in `engine/platform/links.ts` and a reusable widget in `engine/ui/`, with no game nouns, unit tests and a short API section in engine/ui/README.md (or the architecture doc's engine section).
+- `games/last-rune/ui/coffee.ts`, the end-card Join button and the title Ko-fi pill become thin callers. Remove any duplicate game-side link code.
+
 ## Done when
 - e2e covers both pages:
   - each copy button puts the right URL on the clipboard (grant clipboard permissions in Playwright);
