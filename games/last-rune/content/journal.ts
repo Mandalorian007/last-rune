@@ -169,7 +169,7 @@ export const JOURNAL: readonly JournalPage[] = [
     unlockedBy: 'capacitor-bay',
     dateline: 'Day 13,512',
     source: 'new',
-    text: 'Cut the ice one last. It holds a bolt for later. Ran the sums on later. Later is short.',
+    text: 'Cut the ice one last. It holds a charge for later. Ran the sums on later. Later is short.',
     rebuttal: 'Later was short. I know. This unit knows. Somebody knows.',
     clues: [5],
   },

@@ -32,7 +32,7 @@ export type FizzleCause =
   | 'facing' // a Bend/Gate/Split that does not accept that side
   | 'odd-split' // odd charge into a Split
   | 'gate-alone' // a Gate input with no partner
-  | 'spent'; // the gem was already used this strike (or two bolts met in it)
+  | 'spent'; // the gem was already used this strike (or two charges met in it)
 
 /** The root fizzle of a failed attempt, as FUSE hears about it. */
 export interface RootFizzle {
@@ -454,7 +454,7 @@ const DEFS: Def[] = [
     when: 'altar:8x6',
     tier: 2,
     source: N,
-    text: 'Capacitor bay. Double bolt, bigger altar. Saving for later. Later is the one thing this facility has in stock.',
+    text: 'Capacitor bay. Double charge, bigger altar. Saving for later. Later is the one thing this facility has in stock.',
   },
   {
     kind: 'locked',
@@ -623,7 +623,7 @@ const DEFS: Def[] = [
     capability: 'storm:2',
     tier: 1,
     source: N,
-    text: 'Two rings. Wants a double bolt. Storm Cell II makes those. Under a tarp. Someone put a tarp on it.',
+    text: 'Two rings. Wants a double charge. Storm Cell II makes those. Under a tarp. Someone put a tarp on it.',
   },
   {
     kind: 'socket',
@@ -664,7 +664,7 @@ const DEFS: Def[] = [
     cause: 'facing',
     tier: 1,
     source: N,
-    text: 'Bolt knocked on the back of a gem. Nobody answered. The gem has other priorities.',
+    text: 'The charge knocked on the back of a gem. Nobody answered. The gem has other priorities.',
   },
   {
     kind: 'reaction',
@@ -672,7 +672,7 @@ const DEFS: Def[] = [
     cause: 'empty',
     tier: 1,
     source: N,
-    text: 'Empty socket. The bolt stopped to ask directions. Nobody was there. Very on-brand for this facility.',
+    text: 'Empty socket. The charge stopped to ask directions. Nobody was there. Very on-brand for this facility.',
   },
   {
     kind: 'reaction',
@@ -680,7 +680,7 @@ const DEFS: Def[] = [
     cause: 'ground',
     tier: 1,
     source: N,
-    text: 'Bolt left the altar and went into the floor. The floor is fully charged now. Nobody asked the floor.',
+    text: 'The charge left the altar and went into the floor. The floor is fully charged now. Nobody asked the floor.',
   },
   {
     kind: 'reaction',
@@ -688,7 +688,7 @@ const DEFS: Def[] = [
     cause: 'blocked',
     tier: 1,
     source: N,
-    text: 'Bolt met carved stone. Stone won. Stone usually wins. Long career.',
+    text: 'The charge met carved stone. Stone won. Stone usually wins. Long career.',
   },
   {
     kind: 'reaction',
@@ -712,14 +712,14 @@ const DEFS: Def[] = [
     cause: 'spent',
     tier: 1,
     source: N,
-    text: 'Two bolts, one gem. First come, first served. The second bolt has filed a complaint.',
+    text: 'Two charges, one gem. First come, first served. The second charge has filed a complaint.',
   },
   {
     kind: 'reaction',
     outcome: 'dead',
     tier: 1,
     source: N,
-    text: 'Bolt went nowhere. Very calm about it. Regulation 4: nowhere is not a destination.',
+    text: 'The charge went nowhere. Very calm about it. Regulation 4: nowhere is not a destination.',
   },
   {
     kind: 'reaction',
@@ -740,7 +740,7 @@ const DEFS: Def[] = [
     outcome: 'dead',
     tier: 2,
     source: N,
-    text: "Dead end. The bolt knew. You'll know next time. That's how it went the first time, too.",
+    text: "Dead end. The charge knew. You'll know next time. That's how it went the first time, too.",
   },
   {
     kind: 'reaction',
@@ -819,7 +819,7 @@ const DEFS: Def[] = [
     gem: 'capacitor',
     tier: 3,
     source: N,
-    text: "Keeps a bolt for later. Ice keeps things. That's what ice is for.",
+    text: "Keeps a charge for later. Ice keeps things. That's what ice is for.",
   },
 
   // ── Altar: exact solves and idle nudges (written for the altar; same voice) ──

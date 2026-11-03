@@ -944,6 +944,9 @@ ${A} .lr-altar-slot[data-empty]::after { content: '✓'; }
 ${A} .lr-altar-count[data-empty] {
   opacity: 1; color: #bfae8a; border-color: transparent; background: none; text-decoration: none;
   padding: 0; font-size: ${tpx(13)}; letter-spacing: -0.4px;
+  /* The UI face, not the counts' mono: two "placed" side by side must not run together
+     (mobile-6-integrate; SE, The Last Rune). */
+  font-family: var(--tc-font-ui);
 }
 /* Disabled rail buttons: a 3:1 outline on the dark bar, the label dimmed (not faded away). */
 ${P} .lr-altar-actions button:disabled, ${A} .lr-altar-turnbtn:disabled {

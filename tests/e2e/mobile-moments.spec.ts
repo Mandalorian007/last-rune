@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { MACHINE_IDS } from '../../games/last-rune/rules/types';
-import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
+import { type AltarLayout, cellCenter } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-5-moments (D-040 addendum 3): the altar's moments show one thing at a time, on four
@@ -144,6 +144,7 @@ async function columnProblems(page: Page, at: string): Promise<string[]> {
       ['tray', '.lr-altar-count'],
       ['strike', '[data-action="strike"]'],
       ['label', '.lr-altar-need'],
+      ['holding', '.lr-altar-holding'],
     ];
     const boxes: { name: string; r: DOMRect }[] = [];
     for (const [name, sel] of parts)
@@ -454,6 +455,65 @@ for (const vp of PHONES) {
           problems.push(`${id} verdict: a tag over the board`);
         await page.evaluate(() => (window as G).__game.flow.closePuzzle());
         await waitFrames(page, 4);
+      }
+
+      // The same with the board zoomed (mobile-6-integrate): the board slides under the column,
+      // the cards move with it, and the column still has one owner at a time. The "Holding"
+      // pill and the hint line agree.
+      const id = 'the-last-rune';
+      await seed(page, MACHINE_IDS.slice(0, MACHINE_IDS.indexOf(id)) as unknown as string[]);
+      await page.evaluate((id) => (window as G).__game.flow.openPuzzle(id), id);
+      await expect(page.locator('.lr-altar')).toBeVisible();
+      await waitFrames(page, 6);
+      // The Last Rune's board is dense on every phone.
+      await expect(page.locator('.lr-altar[data-zoomable]')).toHaveCount(1);
+      {
+        const L = await page.evaluate(
+          () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+        );
+        const tap = async (x: number, y: number) => {
+          const ob = (await page.locator('.tc-overlay').boundingBox())!;
+          const k = ob.width / 1920;
+          await page.touchscreen.tap(ob.x + x * k, ob.y + y * k);
+          await waitFrames(page, 6);
+        };
+        const zoomed = () => page.evaluate(() => (window as G).__altarView.zoom.z > 1);
+        const pt = { x: 0, y: 0 };
+        // A corner of the board, so the zoomed view sits hard against the column.
+        cellCenter(L, { x: L.cols - 1, y: 0 }, pt);
+        await tap(pt.x, pt.y);
+        await page.waitForTimeout(600);
+        expect(await zoomed(), 'a tap on the dense board zooms').toBe(true);
+        await talk(LINE);
+        await waitFrames(page, 6);
+        problems.push(...(await columnProblems(page, `${id} zoomed (FUSE)`)));
+        // A gem in hand, zoomed: the tip, FUSE, the pill and the hint line.
+        await tap(L.tray[0]!.x, L.tray[0]!.y);
+        await talk(LINE);
+        await waitFrames(page, 6);
+        problems.push(...(await columnProblems(page, `${id} zoomed, holding`)));
+        const pill = await shownBox(page, '.lr-altar-holding');
+        const hint = (await page.locator('.lr-altar-hint').textContent()) ?? '';
+        if (!pill) problems.push(`${id} zoomed, holding: no Holding pill`);
+        if (/zoom in|look around|tap a gem|take a gem/i.test(hint))
+          problems.push(`${id} zoomed, holding: the hint says "${hint}" under the Holding pill`);
+        // The gem back, then a fail with the board zoomed: Strike eases to the whole board.
+        await tap(L.tray[0]!.x, L.tray[0]!.y);
+        if (await shownBox(page, '.lr-altar-holding'))
+          problems.push(`${id} zoomed: the Holding pill stays after the gem went back`);
+        await page.locator('[data-action="strike"]').tap();
+        await waitFrames(page, 4);
+        const sure = page.locator('.lr-confirm .lr-gold-button');
+        if (await sure.isVisible()) await sure.tap();
+        await expect(page.locator('.lr-altar-verdict')).toBeVisible({ timeout: 20_000 });
+        await waitFrames(page, 6);
+        problems.push(...(await columnProblems(page, `${id} zoomed, verdict`)));
+        // Zoomed again on top of the verdict, with FUSE talking.
+        await tap(pt.x, pt.y);
+        await page.waitForTimeout(600);
+        await talk(LINE);
+        await waitFrames(page, 6);
+        problems.push(...(await columnProblems(page, `${id} verdict, zoomed again (FUSE)`)));
       }
       expect(problems).toEqual([]);
     });

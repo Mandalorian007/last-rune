@@ -13,7 +13,7 @@ export default definePuzzle({
     machineAt('E', 3, '6x4', 2),
   ],
   tray: { channel: 7, bend: 3, split: 3 },
-  insight: 'A double bolt feeds four boilers: a tree of three splits.',
+  insight: 'A double charge feeds four boilers: a tree of three splits.',
   minutes: 4,
   assumes: [gem('bend'), gem('split'), storm2],
   essential: ['split'],
