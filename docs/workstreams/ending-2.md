@@ -32,3 +32,10 @@ The ending says FUSE **went to ThunderClap Gaming and found friends**. Nothing i
 ## Done means
 - `pnpm check`, `pnpm build` and `pnpm test:e2e` green. Update `tests/e2e/ending.spec.ts`: no chat window, new title copy, ThunderSoap in the credits, and the link is still click-only.
 - Fresh-eyes screenshots of the door → white → gold with captions → title card → credits → end card, at 1920 and at 1280 with 150% text, plus one with Reduce flashes. Put them in your scratchpad and list them in your report.
+
+## Added scope: Ko-fi link (D-034)
+- `KOFI_URL = 'https://ko-fi.com/thundersoap'` in `content/ending.ts` beside DISCORD_INVITE_URL.
+- End card: secondary button under "Join ThunderClap Gaming", e.g. "Buy ThunderSoap a coffee". Optional FUSE quip: "This unit runs on lightning. ThunderSoap runs on coffee."
+- Title menu: small, warm secondary link (not a menu item that competes with Play), e.g. a corner "☕ Buy ThunderSoap a coffee". Must not collide with FUSE's title stroll/caption or the release label.
+- Click-only, new tab, noopener noreferrer, no widget/script/iframe/remote image. Procedural cup icon. Keyboard + gamepad reachable, axe clean.
+- e2e: the link exists on both screens with the right href/rel and nothing opens without a click. Screenshots at 1920 and 1280/150%.

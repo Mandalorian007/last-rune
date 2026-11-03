@@ -39,3 +39,9 @@ Format: `D-NNN · date · decision · why · who`.
 - Capacitors are the one exception to "preview shows direction only": a dashed plan label states what each strike does (from the sim trace), on every altar with a Capacitor.
 - Multi-strike altars: Needs cards say "in one strike"; storm pips on the Gives card and Strike button; 1.4 s between strikes; Capacitor card shows its full rule. rules.md storm pips = these.
 - index.html drops `maximum-scale=1.0, user-scalable=no` (axe meta-viewport, WCAG 1.4.4). Accidental zoom is still blocked by `touch-action` and the gesture/ctrl-wheel handlers.
+
+## D-034: Ko-fi support link on the title menu and end card (2026-11-02, user)
+- User: "put a fun donate/buy me a coffee thing on main menu and end screen with my kofi: https://ko-fi.com/thundersoap".
+- Plain link only, same rules as the Discord door (D-013): opens on click in a new tab, `rel="noopener noreferrer"`, never automatic. No Ko-fi widget, script, iframe, image or other runtime network call. The icon is procedural (CSS/SVG).
+- Secondary to Play on the title and to "Join ThunderClap Gaming" on the end card. Keyboard and screen-reader reachable.
+- URL lives in one constant in content (next to DISCORD_INVITE_URL).
