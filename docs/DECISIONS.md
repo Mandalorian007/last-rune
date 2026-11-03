@@ -98,3 +98,5 @@ Format: `D-NNN · date · decision · why · who`.
     - `ViewContext.phone?: () => boolean` is accepted.
     - The engine's `computeFillWidth` and `Surface.setFill` are generic, accepted engine API.
     - The hangout on phones has no dead controls: an info badge, not a chevron, unless it actually navigates.
+    - Phone altar: ↻ Turn sits at the bottom of the left bar (Back/Undo/Clear/Turn), so the right column can hold the tray, card lane, FUSE and Strike. Phones use one even work light (no candles, fog or vignette); desktop and iPad keep the candle-lit look.
+    - The old mobile-2 info-lane rules (`--lr-info-l/-w`) are dead on altars and can be deleted in a later tidy.
