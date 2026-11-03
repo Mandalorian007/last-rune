@@ -15,8 +15,9 @@
 
 import type { StorageLike } from '@engine/save';
 import { createSaveStore, type Infer, type Migrations, type SaveStore, s } from '@engine/save';
+import { puzzleFor } from '../content/puzzles';
 import { type ProgressState, parseProgressState } from '../rules/progression';
-import { GEM_KINDS, type GemKind, type MachineId } from '../rules/types';
+import { GEM_KINDS, type GemKind, MACHINE_IDS, type MachineId } from '../rules/types';
 
 export const SAVE_GAME_ID = 'last-rune';
 export const SAVE_VERSION = 1;
@@ -91,8 +92,16 @@ export const SaveV1 = s.object({
     found: s.array(s.number({ min: 1, int: true }), { maxLength: 64 }),
     read: s.array(s.number({ min: 1, int: true }), { maxLength: 64 }),
   }),
-  /** Codex pages the player has opened (drives "new" markers). */
-  codex: s.object({ seen: s.array(Gem, { maxLength: 16 }) }),
+  codex: s.object({
+    /** Codex pages the player has opened (drives "new" markers). */
+    seen: s.array(Gem, { maxLength: 16 }),
+    /**
+     * Gems the player has met at an altar (fixed on the board or in the tray). Their Codex
+     * pages open as soon as they are met, before the gem is earned. Optional: saves written
+     * before it existed are backfilled on load (`repairSave`).
+     */
+    met: s.optional(s.array(Gem, { maxLength: 16 })),
+  }),
   /** In-progress altar per machine id. */
   puzzles: s.record(PuzzleProgress),
   settings: Settings,
@@ -113,7 +122,7 @@ export function defaultSave(): SaveData {
   return {
     progress: { solved: [] },
     journal: { found: [], read: [] },
-    codex: { seen: [] },
+    codex: { seen: [], met: [] },
     puzzles: {},
     settings: defaultSettings(),
     stats: { playSeconds: 0, breakersTripped: 0, attempts: 0, startedAt: 0, completedAt: 0 },
@@ -153,13 +162,24 @@ export function createGameSave(opts: GameSaveOptions = {}): GameSave {
   return store;
 }
 
-/** Drops unknown/unreachable solves and stale journal pages. Returns true if it changed anything. */
+/**
+ * Drops unknown/unreachable solves, and backfills `codex.met` for saves written before it
+ * existed (every altar already solved or started counts as met). Returns true if it changed
+ * anything.
+ */
 export function repairSave(store: GameSave): boolean {
   const cur = store.get();
   const fixed = parseProgressState(cur.progress);
-  if (fixed.solved.length === cur.progress.solved.length) return false;
+  const solvesOk = fixed.solved.length === cur.progress.solved.length;
+  const metOk = cur.codex.met !== undefined;
+  if (solvesOk && metOk) return false;
   store.update((d) => {
-    d.progress.solved = [...fixed.solved];
+    if (!solvesOk) d.progress.solved = [...fixed.solved];
+    if (!metOk) {
+      d.codex.met = [];
+      const visited = new Set<string>([...d.progress.solved, ...Object.keys(d.puzzles)]);
+      for (const id of MACHINE_IDS) if (visited.has(id)) markGemsMet(d, gemsAt(id));
+    }
   });
   return true;
 }
@@ -186,4 +206,31 @@ export function newGameData(prev: SaveData, now: number): SaveData {
 
 export function markCodexSeen(d: SaveData, gem: GemKind): void {
   if (!d.codex.seen.includes(gem)) d.codex.seen.push(gem);
+}
+
+/** Gems a player sees at this machine's altar: fixed on the board or offered in the tray. */
+export function gemsAt(machine: MachineId): GemKind[] {
+  const p = puzzleFor(machine);
+  const out = new Set<GemKind>(p.fixed.map((f) => f.gem));
+  for (const g of GEM_KINDS) if ((p.tray[g] ?? 0) > 0) out.add(g);
+  return GEM_KINDS.filter((g) => out.has(g));
+}
+
+/** Gems met at an altar so far (see `codex.met`). */
+export function metGems(d: SaveData): readonly GemKind[] {
+  return d.codex.met ?? [];
+}
+
+/** Record gems as met. Returns the ones that were new. */
+export function markGemsMet(d: SaveData, gems: readonly GemKind[]): GemKind[] {
+  const met = d.codex.met ?? [];
+  d.codex.met = met;
+  const added: GemKind[] = [];
+  for (const g of gems) {
+    if (!met.includes(g)) {
+      met.push(g);
+      added.push(g);
+    }
+  }
+  return added;
 }

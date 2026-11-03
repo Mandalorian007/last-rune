@@ -186,31 +186,67 @@ const CSS = /* css */ `
   background: linear-gradient(90deg, transparent, rgba(60,35,10,0.35) 45%, rgba(30,15,5,0.55) 50%, rgba(60,35,10,0.35) 55%, transparent);
 }
 .tc-overlay .lr-codex-page {
-  position: relative; padding: 52px 64px 40px; color: var(--lr-ink);
+  position: relative; padding: 44px 60px 34px; color: var(--lr-ink);
   background:
     radial-gradient(ellipse at 50% 45%, #f4e9cf 0%, #e6d4ad 70%, #c9ad7c 100%);
-  display: grid; grid-template-columns: 1fr 230px; grid-template-rows: auto auto 1fr auto; column-gap: 28px;
+  display: grid; grid-template-columns: 1fr 230px; grid-template-rows: auto auto auto auto auto 1fr auto; column-gap: 28px;
+  overflow-y: auto; overscroll-behavior: contain;
 }
 .tc-overlay .lr-codex-page h3 {
-  grid-column: 1 / -1; margin: 0 0 18px; font-family: var(--tc-font-display); font-size: 52px; letter-spacing: 2px;
-  color: #3b2414; border-bottom: 2px solid rgba(59,36,20,0.3); padding-bottom: 10px;
+  grid-column: 1 / -1; margin: 0; font-family: var(--tc-font-display); font-size: 52px; letter-spacing: 2px;
+  color: #3b2414; border-bottom: 2px solid rgba(59,36,20,0.3); padding-bottom: 8px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px;
 }
-.tc-overlay .lr-codex-page h3 small { font-size: 24px; letter-spacing: 1px; color: #7a5a3a; margin-left: 14px; }
+/* Where you stand with the gem: Yours (filled), Seen (outlined), Not met yet (grey). */
+.tc-overlay .lr-status {
+  font-size: 20px; letter-spacing: 2px; text-transform: uppercase;
+  padding: 3px 14px; border-radius: 999px; border: 2px solid currentColor; line-height: 1.3;
+}
+.tc-overlay .lr-status[data-status='yours'] { color: #fff7e0; background: #5f4316; border-color: #5f4316; }
+.tc-overlay .lr-status[data-status='seen'] { color: #5f4316; background: rgba(255,255,255,0.35); border-style: dashed; }
+.tc-overlay .lr-status[data-status='unknown'] { color: #5d5650; }
+.tc-overlay .lr-codex-status { grid-column: 1 / -1; margin: 10px 0 14px; font-size: 22px; font-style: italic; color: #5d4630; }
+.tc-overlay .lr-codex-status[data-status='seen'] { color: #6a3f12; }
+/* The gem on a square of altar stone, with the bolt going in and out of it. */
+.tc-overlay .lr-plate {
+  grid-column: 1; grid-row: 3; justify-self: center; position: relative; width: 270px; height: 270px;
+  border-radius: 20px; overflow: hidden; background: #22262f;
+  box-shadow: 0 0 0 3px #3b2414, 0 0 0 6px rgba(214,169,78,0.55), 0 8px 18px rgba(0,0,0,0.45);
+}
+.tc-overlay .lr-plate-gem { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.tc-overlay .lr-plate-gem--css::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 46%; height: 46%; transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 14%; background: radial-gradient(circle at 35% 30%, #fff 0%, var(--gem) 30%, color-mix(in srgb, var(--gem) 45%, #000) 100%);
+  box-shadow: 0 0 40px 8px color-mix(in srgb, var(--gem) 60%, transparent);
+}
+.tc-overlay .lr-plate-bolt { position: absolute; inset: 0; pointer-events: none; }
+.tc-overlay .lr-plate-bolt svg { width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 3px rgba(80,200,255,0.9)); }
+.tc-overlay .lr-plate-bolt line { stroke: #9cf0ff; stroke-width: 3.2; stroke-linecap: round; }
+.tc-overlay .lr-plate-bolt polygon { fill: #9cf0ff; stroke: #9cf0ff; stroke-width: 1; stroke-linejoin: round; }
+/* Charge chips and fizzle marks: the altar's own look (scenes/altar/altar-styles.ts). */
+.tc-overlay .lr-plate-chip {
+  position: absolute; transform: translate(-50%, -50%); min-width: 1.5em; padding: 0 0.35em; box-sizing: border-box; border-radius: 999px; white-space: nowrap;
+  font-family: var(--tc-font-display); font-size: 20px; line-height: 1.25; text-align: center; color: #eaf8ff;
+  background: rgba(10,18,26,0.88); border: 2px solid rgba(120,200,255,0.75); box-shadow: 0 0 10px rgba(80,180,255,0.45);
+}
+.tc-overlay .lr-plate-chip[data-kind='out'] { border-color: #3fe0ff; color: #dff9ff; }
+.tc-overlay .lr-plate-nogo {
+  position: absolute; width: 24px; height: 24px; transform: translate(-50%, -50%); border-radius: 50%;
+  background: rgba(30,6,4,0.9); border: 2px solid #ff5a3c; box-shadow: 0 0 8px rgba(255,90,60,0.7);
+}
+.tc-overlay .lr-plate-nogo::before, .tc-overlay .lr-plate-nogo::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 13px; height: 3px; background: #ffb4a4;
+  border-radius: 2px; transform: translate(-50%, -50%) rotate(45deg);
+}
+.tc-overlay .lr-plate-nogo::after { transform: translate(-50%, -50%) rotate(-45deg); }
 .tc-overlay .lr-niche {
-  grid-column: 1; justify-self: center; width: 250px; height: 250px; border-radius: 50%; position: relative;
+  grid-column: 1; grid-row: 3; justify-self: center; width: 230px; height: 230px; border-radius: 50%; position: relative;
   background: radial-gradient(circle at 50% 40%, #59606e, #2c313b 60%, #161920 100%);
   box-shadow: inset 0 10px 24px rgba(0,0,0,0.75), inset 0 -4px 8px rgba(255,255,255,0.08), 0 2px 0 rgba(255,255,255,0.4);
 }
-.tc-overlay .lr-niche .lr-gem {
-  position: absolute; left: 50%; top: 50%; width: 140px; height: 140px; transform: translate(-50%, -50%) rotate(45deg);
-  border-radius: 18px; background: radial-gradient(circle at 35% 30%, #fff 0%, var(--gem) 30%, color-mix(in srgb, var(--gem) 45%, #000) 100%);
-  box-shadow: 0 0 40px 8px color-mix(in srgb, var(--gem) 60%, transparent), inset 0 0 18px rgba(255,255,255,0.4);
-  animation: lr-gem-glow 3s ease-in-out infinite;
-}
-@keyframes lr-gem-glow { 50% { box-shadow: 0 0 64px 16px color-mix(in srgb, var(--gem) 70%, transparent), inset 0 0 22px rgba(255,255,255,0.55); } }
 .tc-overlay .lr-niche--locked { filter: saturate(0.4); }
 .tc-overlay .lr-niche--locked::before, .tc-overlay .lr-niche--locked::after {
-  content: ''; position: absolute; left: -20px; top: 50%; width: 290px; height: 28px; border-radius: 14px;
+  content: ''; position: absolute; left: -20px; top: 50%; width: 270px; height: 28px; border-radius: 14px;
   background: repeating-linear-gradient(90deg, #8d8f96 0 22px, #3e4048 22px 26px, #b5b7bd 26px 44px, #3e4048 44px 48px);
   box-shadow: 0 3px 6px rgba(0,0,0,0.6);
 }
@@ -224,31 +260,29 @@ const CSS = /* css */ `
   content: ''; position: absolute; left: 12px; top: -30px; width: 40px; height: 40px; box-sizing: border-box;
   border: 8px solid #a8a9ae; border-bottom: none; border-radius: 20px 20px 0 0;
 }
-.tc-overlay .lr-codex-rule { grid-column: 1; margin: 26px 0 0; font-size: 30px; line-height: 1.4; }
+.tc-overlay .lr-codex-rule { grid-column: 1 / -1; grid-row: 4; margin: 22px 0 0; font-size: 28px; line-height: 1.4; }
 .tc-overlay .lr-codex-maths {
-  grid-column: 1; margin: 18px 0 0; font-family: var(--tc-font-mono); font-size: 24px; color: #5a3d22;
-  padding: 12px 16px; border-left: 4px solid rgba(90,61,34,0.4); background: rgba(90,61,34,0.07);
+  grid-column: 1 / -1; grid-row: 5; justify-self: start; margin: 14px 0 0; font-family: var(--tc-font-mono); font-size: 24px; color: #5a3d22;
+  padding: 10px 16px; border-left: 4px solid rgba(90,61,34,0.4); background: rgba(90,61,34,0.07);
 }
-.tc-overlay .lr-codex-locked { grid-column: 1; margin: 26px 0 0; font-size: 28px; font-style: italic; color: #5d4630; }
 .tc-overlay .lr-margin {
-  grid-column: 2; grid-row: 2 / 5; align-self: start; margin-top: 10px; padding: 16px 14px;
+  grid-column: 2; grid-row: 3; align-self: center; padding: 16px 14px;
   font-family: var(--tc-font-mono); font-size: 20px; line-height: 1.4; color: #6b3b10;
   transform: rotate(2deg); border-left: 3px dashed rgba(140,80,20,0.45);
 }
+.tc-overlay .lr-margin:empty { border: none; }
 .tc-overlay .lr-margin b { display: block; font-size: 16px; letter-spacing: 2px; margin-bottom: 6px; }
-.tc-overlay .lr-codex-folio { grid-column: 1 / -1; align-self: end; text-align: center; font-size: 22px; color: #5e4329; }
-/* Bigger text: the niche and FUSE's note share a row and the rule runs the page's full width,
-   so a page still fits the spread. */
-.tc-overlay[data-text-scale] .lr-codex-page { padding: 40px 56px 32px; grid-template-rows: auto auto auto auto 1fr auto; }
-.tc-overlay[data-text-scale] .lr-codex-page h3 { margin-bottom: 12px; }
+.tc-overlay .lr-codex-folio { grid-column: 1 / -1; grid-row: 7; align-self: end; text-align: center; font-size: 22px; color: #5e4329; }
+/* Bigger text: the plate keeps its size and FUSE's note takes the rest of the row, so the
+   note stays short and the page still fits the spread (it scrolls if it ever doesn't). */
+.tc-overlay[data-text-scale] .lr-codex-page { padding: 32px 48px 22px; column-gap: 26px; grid-template-columns: 240px 1fr; }
+.tc-overlay[data-text-scale] .lr-plate { width: 240px; height: 240px; }
 .tc-overlay[data-text-scale] .lr-niche { width: 180px; height: 180px; }
-.tc-overlay[data-text-scale] .lr-niche .lr-gem { width: 100px; height: 100px; }
 .tc-overlay[data-text-scale] .lr-niche--locked::before, .tc-overlay[data-text-scale] .lr-niche--locked::after { width: 220px; }
-.tc-overlay[data-text-scale] .lr-margin { grid-row: 2; align-self: center; margin-top: 0; }
-.tc-overlay[data-text-scale] .lr-codex-rule,
-.tc-overlay[data-text-scale] .lr-codex-maths,
-.tc-overlay[data-text-scale] .lr-codex-locked { grid-column: 1 / -1; margin-top: 18px; }
-.tc-overlay[data-text-scale] .lr-codex-folio { grid-row: 6; }
+.tc-overlay[data-text-scale] .lr-margin { transform: none; }
+.tc-overlay[data-text-scale] .lr-codex-status { margin: 6px 0 12px; }
+.tc-overlay[data-text-scale] .lr-codex-rule { margin-top: 14px; }
+.tc-overlay[data-text-scale] .lr-codex-maths { margin-top: 10px; }
 .tc-overlay .lr-codex-head {
   position: absolute; left: 0; right: 0; top: -2px; z-index: 3; text-align: center; pointer-events: none;
   font-size: 22px; letter-spacing: 2px; color: #f0d79c; text-shadow: 0 1px 2px #000;
@@ -263,7 +297,9 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-codex-nav button[aria-current='true'] { background: linear-gradient(180deg, #fff6d0, #e8c06a); box-shadow: 0 0 14px rgba(255,214,120,0.7); }
 .tc-overlay .lr-codex-nav button:focus-visible { outline: var(--tc-focus-ring) solid var(--tc-color-focus); outline-offset: 3px; }
-.tc-overlay .lr-codex-nav .lr-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 8px; vertical-align: 0; }
+.tc-overlay .lr-codex-nav .lr-dot { display: inline-block; width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; margin-right: 8px; vertical-align: 0; background: var(--gem); }
+.tc-overlay .lr-codex-nav [data-status='seen'] .lr-dot { background: transparent; border: 3px solid var(--gem); }
+.tc-overlay .lr-codex-nav [data-status='unknown'] .lr-dot { background: #6c7488; }
 .tc-overlay .lr-codex-close {
   position: absolute; right: 46px; top: 46px; z-index: 4; width: 56px; height: 56px; min-height: 0; padding: 0;
   border-radius: 50%; font-size: 30px; line-height: 1; cursor: pointer; color: #3b2414;

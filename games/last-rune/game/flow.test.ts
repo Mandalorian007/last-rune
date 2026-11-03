@@ -55,6 +55,21 @@ function solve(f: Setup, id: MachineId): SolveMoment {
   return m!;
 }
 
+describe('GameFlow codex sightings', () => {
+  it('opening an altar marks its gems as met before they are earned', () => {
+    const f = setup();
+    f.flow.newGame();
+    expect(f.flow.openPuzzle('intake-desk')).toBe(true);
+    expect(f.save.get().codex.met).toContain('bend');
+    expect(f.save.get().codex.met).not.toContain('amplify');
+    f.flow.completePuzzle('intake-desk');
+    f.flow.finishSolve();
+    expect(f.flow.openPuzzle('furnace')).toBe(true);
+    expect(f.save.get().codex.met).toContain('amplify');
+    expect(f.save.get().progress.solved).not.toContain('furnace');
+  });
+});
+
 describe('GameFlow', () => {
   it('title → new game → hall', () => {
     const f = setup();

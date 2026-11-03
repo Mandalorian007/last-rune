@@ -36,6 +36,7 @@ export type {
   ResolutionOptions,
 } from './renderer';
 export { MIN_RESOLUTION_SCALE, Renderer, SCENE_FORMAT, sceneSize } from './renderer';
+export { type SnapshotOptions, SnapshotRenderer } from './snapshot';
 export type { PixelData, SamplerKind, TextureDesc, TextureLike, TextureSource } from './texture';
 export { bytesPerTexel, createSamplers, Texture } from './texture';
 export {
