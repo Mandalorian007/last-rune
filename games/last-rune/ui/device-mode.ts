@@ -31,6 +31,12 @@ export interface DeviceMode {
   readonly cssPx: number;
   /** Width of each letterbox bar beside the canvas, design px (0 when it fills the width). */
   readonly bar: number;
+  /**
+   * Design px cut off the top and bottom of the canvas when a phone scene fills the width
+   * (D-040; 0 otherwise): the visible band is `[cropT, 1080 - cropB]`.
+   */
+  readonly cropT: number;
+  readonly cropB: number;
   onChange(fn: () => void): () => void;
 }
 
@@ -56,6 +62,8 @@ export function createDeviceMode(root: HTMLElement): DeviceModeController {
   let touch = isTouchOnly();
   let cssPx = 1;
   let bar = 0;
+  let cropT = 0;
+  let cropB = 0;
   const subs = new Set<() => void>();
   const emit = () => {
     for (const f of subs) f();
@@ -83,6 +91,12 @@ export function createDeviceMode(root: HTMLElement): DeviceModeController {
     get bar() {
       return bar;
     },
+    get cropT() {
+      return cropT;
+    },
+    get cropB() {
+      return cropB;
+    },
     onChange(fn) {
       subs.add(fn);
       return () => subs.delete(fn);
@@ -97,9 +111,11 @@ export function createDeviceMode(root: HTMLElement): DeviceModeController {
       root.style.setProperty('--lr-crop-b', `${cb}px`);
       root.toggleAttribute('data-fill', ct + cb > 0);
       const b = Math.max(0, Math.round(barCss / s));
-      const resized = Math.abs(cssPx - 1 / s) > 1e-3 || b !== bar;
+      const resized = Math.abs(cssPx - 1 / s) > 1e-3 || b !== bar || ct !== cropT || cb !== cropB;
       cssPx = 1 / s;
       bar = b;
+      cropT = ct;
+      cropB = cb;
       if (p) {
         root.style.setProperty('--lr-text-min', `${(PHONE_TEXT_MIN / s).toFixed(1)}px`);
         root.style.setProperty('--lr-tap', `${(PHONE_TAP / s).toFixed(1)}px`);

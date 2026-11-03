@@ -217,6 +217,80 @@ fn floor_surf(pxIn: vec2f) -> Surf {
   return s;
 }
 
+// A cell carved solid (phones: blocked)?
+fn alt_solid(cell: vec2f) -> bool {
+  let ci = u32(cell.y * G.altar.x + cell.x);
+  return ((u32(G.solid[ci / ${SOLID_BITS}u]) >> (ci % ${SOLID_BITS}u)) & 1u) == 1u;
+}
+
+// Hugged slab (phones, mobile-5-board): signed distance to the top face as the union of one
+// rounded block per open cell, each a margin bigger than its cell. Solid cells are left out,
+// so the wall shows through where there is no socket.
+fn alt_hug(px: vec2f) -> f32 {
+  let pitch = G.altar.z;
+  let m = G.altar.w;
+  let base = round((px - m - pitch * 0.5) / pitch);
+  let half = vec2f(pitch * 0.5 + m - 3.0);
+  let rc = min(m * 0.9, 22.0);
+  var d = 1e5;
+  for (var dy = -1; dy <= 1; dy++) {
+    for (var dx = -1; dx <= 1; dx++) {
+      let cell = base + vec2f(f32(dx), f32(dy));
+      if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= G.altar.x || cell.y >= G.altar.y) {
+        continue;
+      }
+      if (alt_solid(cell)) { continue; }
+      let sc = m + pitch * 0.5 + cell * pitch;
+      d = min(d, st_rbox(px - sc, half, rc));
+    }
+  }
+  return d;
+}
+
+fn alt_open(cell: vec2f) -> bool {
+  if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= G.altar.x || cell.y >= G.altar.y) {
+    return false;
+  }
+  return !alt_solid(cell);
+}
+
+// How deep inside the hugged top face a point is (px, negative outside). The union's own
+// distance (alt_hug) is only good near its edge: between two open cells it reads a margin
+// deep, which would draw chipped seams across the stone. So deeper in, measure to the
+// nearest hole instead: each non-open cell, grown into non-open neighbours and shrunk away
+// from open ones by the same margin, so the holes tile the wall exactly.
+fn alt_depth(px: vec2f) -> f32 {
+  let u = -alt_hug(px);
+  let m = G.altar.w;
+  if (u < m * 0.5) { return u; }
+  let pitch = G.altar.z;
+  let k = m - 3.0;
+  let base = round((px - m - pitch * 0.5) / pitch);
+  var d = 1e5;
+  for (var dy = -1; dy <= 1; dy++) {
+    for (var dx = -1; dx <= 1; dx++) {
+      let cell = base + vec2f(f32(dx), f32(dy));
+      if (alt_open(cell)) { continue; }
+      let lo = m + cell * pitch - vec2f(
+        select(k + 2.0, -k, alt_open(cell + vec2f(-1.0, 0.0))),
+        select(k + 2.0, -k, alt_open(cell + vec2f(0.0, -1.0))));
+      let hi = m + (cell + 1.0) * pitch + vec2f(
+        select(k + 2.0, -k, alt_open(cell + vec2f(1.0, 0.0))),
+        select(k + 2.0, -k, alt_open(cell + vec2f(0.0, 1.0))));
+      d = min(d, st_rbox(px - (lo + hi) * 0.5, (hi - lo) * 0.5, 0.0));
+    }
+  }
+  return max(d, m * 0.5);
+}
+
+// Distance from the top face's outline, inset by k (negative inside): the full rounded rect,
+// or the hugged union on phones (which keeps its own corner radius, not r).
+fn alt_inset(px: vec2f, k: f32, r: f32) -> f32 {
+  if (G.altar2.w > 0.5) { return alt_hug(px) + k - 3.0; }
+  let inner = vec2f(G.size.x, G.altar2.z) * 0.5;
+  return st_rbox(px - inner, inner - k, r);
+}
+
 fn altar_surf(px: vec2f) -> Surf {
   var s: Surf;
   let seed = G.size.z;
@@ -227,38 +301,56 @@ fn altar_surf(px: vec2f) -> Surf {
   let margin = G.altar.w;
   let R = G.altar2.y;
   let hb = engine_hash21(vec2f(seed, 7.7));
+  let hug = G.altar2.w > 0.5;
 
-  // Outer silhouette with chips.
-  let full = vec2f(W, topH + fh);
-  var e = -st_rbox(px - full * 0.5, full * 0.5 - 3.0, 28.0);
+  // Outer silhouette with chips. Hugged: the top face swept down by the front face.
+  var uTop = 0.0;
+  var uUp = 0.0;
+  var e = 0.0;
+  if (hug) {
+    uTop = alt_depth(px);
+    uUp = alt_depth(px - vec2f(0.0, fh));
+    e = max(max(uTop, uUp), alt_depth(px - vec2f(0.0, fh * 0.5)));
+  } else {
+    let full = vec2f(W, topH + fh);
+    e = -st_rbox(px - full * 0.5, full * 0.5 - 3.0, 28.0);
+  }
   e -= (engine_fbm(px * 0.04 + 9.0, 4) - 0.4) * 10.0;
   e -= smoothstep(0.65, 0.9, engine_noise(px * 0.02 + seed)) * 18.0;
   s.alpha = smoothstep(0.0, 1.5, e);
 
   let lipY = topH;
-  if (px.y < lipY) {
+  // How far below the top face's lip a front-face pixel is (px).
+  var below = px.y - lipY;
+  var onTop = px.y < lipY;
+  if (hug) {
+    onTop = uTop > 0.0;
+    below = fh - clamp(uUp, 0.0, fh);
+  }
+  if (onTop) {
     // --- top face ---
-    let eFront = lipY - px.y;
+    let eFront = select(lipY - px.y, uTop, hug);
     let eTop = min(e, eFront + (engine_noise(px * 0.05) - 0.5) * 8.0);
     let hw = st_hewn(px, hb, eTop, 1.6);
     var h = 0.55 + hw.x * 0.45;
     var c = st_slate_albedo(px * 0.9, hb, 1.4) * 1.05;
     // Worn, smoother centre.
-    let inner = vec2f(W, topH) * 0.5;
-    let innerD = -st_rbox(px - inner, inner - margin, 18.0);
+    // (The worn centre and the moss keep to the whole rect, hugged or not.)
+    let innerD = -st_rbox(px - vec2f(W, topH) * 0.5, vec2f(W, topH) * 0.5 - margin, 18.0);
     c *= 1.0 + 0.12 * smoothstep(0.0, 80.0, innerD);
 
     // Carved border groove (double line).
     let gi = margin * 0.45;
-    let gd = abs(st_rbox(px - inner, inner - gi, 22.0));
+    let gd = abs(alt_inset(px, gi, 22.0));
     let groove = 1.0 - smoothstep(2.5, 6.0, gd);
-    let gd2 = abs(st_rbox(px - inner, inner - gi - 14.0, 16.0));
-    let groove2 = 1.0 - smoothstep(0.8, 2.2, gd2);
+    let gd2 = abs(alt_inset(px, gi + 14.0, 16.0));
+    // Hugged, the inner line would ring every cell on a thin phone margin: one line only.
+    let groove2 = (1.0 - smoothstep(0.8, 2.2, gd2)) * select(1.0, 0.0, hug);
     h -= groove * 0.35 + groove2 * 0.12;
     c *= 1.0 - groove * 0.45 - groove2 * 0.25;
     // Rune ticks between the outer edge and the groove.
-    let band = smoothstep(2.0, 6.0, -st_rbox(px - inner, inner - 6.0, 26.0)) *
-      (1.0 - smoothstep(-1.0, 3.0, -st_rbox(px - inner, inner - gi + 7.0, 24.0)));
+    let band = smoothstep(2.0, 6.0, -alt_inset(px, 6.0, 26.0)) *
+      (1.0 - smoothstep(-1.0, 3.0, -alt_inset(px, gi - 7.0, 24.0)));
     let along = (px.x + px.y) / 38.0;
     let tick = (1.0 - smoothstep(0.06, 0.12, abs(fract(along) - 0.5))) *
       step(0.35, engine_hash21(vec2f(floor(along), 3.0)));
@@ -303,7 +395,7 @@ fn altar_surf(px: vec2f) -> Surf {
     s.front = 0.0;
   } else {
     // --- front face (vertical, faces the viewer and down) ---
-    let fy = (px.y - lipY) / fh;
+    let fy = below / fh;
     let hw = st_hewn(px * vec2f(1.0, 2.0), hb + 0.3, e, 1.2);
     var c = st_slate_albedo(px * vec2f(1.0, 2.5), hb + 0.5, 1.0) * 1.05;
     // Horizontal chisel lines.
@@ -312,12 +404,19 @@ fn altar_surf(px: vec2f) -> Surf {
     let m = st_moss(px * vec2f(1.0, 1.5), 0.9) * smoothstep(0.3, 1.0, fy);
     c = mix(c, mix(MOSS, MOSS_TIP, engine_noise(px * 0.25)), clamp(m, 0.0, 0.85));
     // Bright worn lip at the top edge.
-    let lip = 1.0 - smoothstep(0.0, 8.0, px.y - lipY);
+    let lip = 1.0 - smoothstep(0.0, 8.0, below);
     c = mix(c, SLATE_LIGHT, lip * 0.5);
     s.h = hw.x * 0.5;
     s.albedo = c;
     s.ao = mix(0.75, 1.0, fy) * (1.0 - 0.45 * smoothstep(0.8, 1.0, fy));
     s.front = 1.0;
+  }
+  if (hug) {
+    // A soft contact shadow on the wall round the hugged stone, so it stands off the wall.
+    // The stone a shade paler than the wall too: on a phone the wall shows between islands.
+    let sh = 0.75 * (1.0 - smoothstep(0.0, 18.0, -e));
+    s.albedo = mix(SLATE_DARK * 0.15, s.albedo * 1.3, s.alpha);
+    s.alpha = max(s.alpha, sh);
   }
   return s;
 }
@@ -391,7 +490,8 @@ export const LIT_SURFACE_WGSL = /* wgsl */ `${LIGHTS_WGSL}
  */
 export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
 @fragment fn fs_main(in: VSOut) -> FragOut {
-  let p = (in.local * 2.0 - 1.0) * 1.3;   // socket radius = 1
+  // Socket radius = 1; the quad reaches 1.3 radii, or params.w when set (the collar's 1.42).
+  let p = (in.local * 2.0 - 1.0) * select(1.3, in.params.w, in.params.w > 0.0);
   let r = length(p);
   let state = i32(in.params.x + 0.5);
   let seed = in.params.y;
@@ -488,9 +588,10 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
   if (state == 6) {
     // Collar (fixed gems, every platform): a solid dark-iron ring bolted round the socket with
     // four rivets, so the gem reads as part of the machine. Lit metal, never a glow, so it
-    // cannot pass for a selection or hover mark.
+    // cannot pass for a selection or hover mark. mobile-5-board: thicker, with a pale bevel
+    // on the outer edge and bigger rivets, so it reads as fixed at a glance on any screen.
     let r0 = 0.98;
-    let r1 = 1.27;
+    let r1 = 1.38;
     let band = smoothstep(r0 - 0.03, r0 + 0.02, r) * (1.0 - smoothstep(r1 - 0.03, r1 + 0.01, r));
     let mid = (r0 + r1) * 0.5;
     let t = (r - mid) / ((r1 - r0) * 0.5); // -1 inner edge .. +1 outer edge
@@ -503,7 +604,7 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
     let rv = vec2f(q.x + q.y, abs(q.x - q.y));
     let rp = rv - vec2f(mid, 0.0);
     let rl = length(rp);
-    let rivR = 0.11;
+    let rivR = 0.15;
     let riv = 1.0 - smoothstep(rivR - 0.025, rivR + 0.01, rl);
     if (riv > 0.0) {
       // Domed head: the slope runs out from the rivet's centre (signs follow the quadrant).
@@ -522,6 +623,13 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
     // A dark seam at both edges so the ring reads cut, not painted, on any stone.
     col *= 1.0 - 0.6 * (exp(-pow((r - r0) * 30.0, 2.0)) + exp(-pow((r - r1) * 30.0, 2.0)));
     col = max(col, base * 0.25);
+    // Pale bevelled outer edge (filed steel), brightest toward the light above.
+    let bev = exp(-pow((r - (r1 - 0.06)) / 0.035, 2.0)) * (1.0 - riv);
+    col = mix(col, vec3f(0.30, 0.29, 0.27) * (0.7 + 0.3 * max(-rd.y, 0.0)), bev * 0.75);
+    // Rivet heads catch a fixed pale glint so they read even in the dark.
+    let rc = vec2f(p.x - sign(p.x) * mid * 0.70710678, p.y - sign(p.y) * mid * 0.70710678);
+    let glint = 1.0 - smoothstep(0.0, 0.5, length(rc / rivR + vec2f(0.35, 0.35)));
+    col = mix(col, vec3f(0.30, 0.29, 0.27), riv * 0.5 * glint);
     col *= lights_floor(in.world);
     let a = max(band, riv) * 0.98;
     o.color = vec4f(col, a);

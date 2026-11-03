@@ -310,6 +310,8 @@ export class AltarScene implements GameScene {
   private turnBtn!: HTMLButtonElement;
   /** Touch: a ↻ mark on the gem the button turns (not a target itself: taps pass through). */
   private turnMark!: HTMLElement;
+  /** Whether Turn has a gem to turn (null: not yet decided since the DOM was built). */
+  private turnShown: boolean | null = null;
   private turnTarget: Cell | 'hand' | null = null;
   private lastPlaced: Cell | null = null;
   /** Scene time the gem in hand was taken from the tray. */
@@ -394,7 +396,7 @@ export class AltarScene implements GameScene {
   private capEls: HTMLElement[] = [];
   /** Phones: the column lane under the tray (gem chip, verdict, Capacitor read-outs). */
   private lane: HTMLElement | null = null;
-  /** Phones: Strike's "×2" / "1/2" for multi-strike altars (the pips are for big screens). */
+  /** Phones: Strike's "twice" / "1 of 2" for multi-strike altars (the pips are for big screens). */
   /** Gives/Needs card sizes when last placed (phone). */
   private labelKey = '';
   private strikeCount: HTMLElement | null = null;
@@ -543,8 +545,8 @@ export class AltarScene implements GameScene {
   /** The phone frame the layout was built for ('' off phones). */
   private frameKey(): string {
     const d = this.ctx.device;
-    const f = phoneFrameFor(d.phone, d.cssPx, d.bar);
-    return f ? `${f.padL},${f.padR},${f.cssPx.toFixed(3)}` : '';
+    const f = phoneFrameFor(d);
+    return f ? `${f.padL},${f.padR},${f.cssPx.toFixed(3)},${f.top},${f.bottom}` : '';
   }
 
   /**
@@ -766,6 +768,7 @@ export class AltarScene implements GameScene {
       { className: 'lr-altar-turnbtn lr-touch-only', ariaLabel: 'Turn the gem (R)' },
     );
     this.turnBtn.hidden = true;
+    this.turnShown = null;
     // Docked just right of the tray, so it never covers a socket the player may tap next.
     const trayRight = Math.max(...L.tray.map((s) => s.x), TRAY_CENTER_X);
     this.turnBtn.style.left = `${trayRight + 80}px`;
@@ -827,13 +830,13 @@ export class AltarScene implements GameScene {
       this.stormLabel.append(h('span', { class: 'lr-storm-row' }, stormPips, this.strikeRow));
       const btnPips = pips();
       this.strikeBtn.firstElementChild?.insertBefore(btnPips, this.strikeBtn.querySelector('kbd'));
-      // Phones read the count as text: "×2" before, "1/2" while the strikes run.
+      // Phones read the count as text: "twice" before, "1 of 2" while the strikes run.
       this.strikeCount = h('span', { class: 'lr-strike-n', 'aria-hidden': 'true' });
       this.strikeBtn.firstElementChild?.insertBefore(
         this.strikeCount,
         this.strikeBtn.querySelector('kbd'),
       );
-      this.strikeBtn.setAttribute('aria-label', `Strike (F), ${pulses} strikes`);
+      this.strikeBtn.setAttribute('aria-label', `Strike (F): one tap strikes ${timesWord(pulses)}`);
       this.strikePips = [...stormPips.children, ...btnPips.children] as HTMLElement[];
       this.setStrikeRow(-1);
     }
@@ -1077,7 +1080,7 @@ export class AltarScene implements GameScene {
         el.style.left = `${lb.x}px`;
         el.style.top = `${lb.y}px`;
         // Off the bottom of the screen: up over the gauge's top instead.
-        if (box(el).b > 1080 - band.edge) {
+        if (box(el).b > band.visB - band.edge) {
           el.dataset.align = 'above';
           el.style.top = `${Math.round(gauge(sp).t)}px`;
         }
@@ -1131,10 +1134,18 @@ export class AltarScene implements GameScene {
   private setStrikeRow(now: number): void {
     if (!this.strikeRow) return;
     const n = this.puzzle.pulses;
-    // Phones: "×2 strikes" under "Gives N" (the pips are hidden there).
-    const ph = this.view.layout.phone ? '\u00d7' : '';
-    this.strikeRow.textContent = now < 0 ? `${ph}${n} strikes` : `Strike ${now + 1} of ${n}`;
-    if (this.strikeCount) this.strikeCount.textContent = now < 0 ? `\u00d7${n}` : `${now + 1}/${n}`;
+    // Phones (mobile-5-board): the storm's card says the number is per strike ("Gives 8" /
+    // "per strike") and Strike says what one tap does ("Strike" / "twice"), then counts the run
+    // ("1 of 2"). The pips are hidden there, and the card keeps "per strike" through the run
+    // (the button counts it), so it fits the gauge's gutter at 13 px.
+    const phone = !!this.view.layout.phone;
+    this.strikeRow.textContent = phone
+      ? 'per strike'
+      : now < 0
+        ? `${n} strikes`
+        : `Strike ${now + 1} of ${n}`;
+    if (this.strikeCount)
+      this.strikeCount.textContent = now < 0 ? timesWord(n) : `${now + 1} of ${n}`;
     this.strikePips.forEach((el, i) => {
       el.toggleAttribute('data-lit', i % n <= now);
     });
@@ -1500,12 +1511,16 @@ export class AltarScene implements GameScene {
       // never sits beside only "Strike 1: 2" and reads as strike 1's total.
       const live = this.pulse >= 0 && rs.length <= this.pulse;
       if (this.puzzle.pulses > 1 && (rs.length > 0 || live)) {
+        // Phones (mobile-5-board): "Strike" once, then "1: 0  2: 0", so two cards side by
+        // side at 13 px stay clear of each other.
+        const phone = !!this.view.layout.phone;
         const chip = (r: number, k: number, state: string) =>
-          h('span', { 'data-state': state }, `Strike ${k + 1}: ${r}`);
+          h('span', { 'data-state': state }, phone ? `${k + 1}: ${r}` : `Strike ${k + 1}: ${r}`);
         kids.push(
           h(
             'span',
             { class: 'lr-need-strikes' },
+            ...(phone ? [h('i', { class: 'lr-need-strike-lead' }, 'Strike')] : []),
             ...rs.map((r, k) => chip(r, k, r === need ? 'exact' : r > need ? 'over' : 'under')),
             ...(live ? [chip(got, this.pulse, 'live')] : []),
           ),
@@ -1975,6 +1990,9 @@ export class AltarScene implements GameScene {
     this.ctx.sound.sfx.play('gemPlace', { gem: hand.kind, pan: this.panOf(cell) });
     if (existing) this.logRemove(existing.gem, cell);
     this.logPlace(cell, null);
+    // Phones (mobile-5-board): setting a gem down ends the hold, so the valid-socket rings
+    // clear and Turn turns the gem just placed; the next tap on the tray takes another.
+    if (this.view.layout.phone) this.hand = null;
     this.changed(cell);
   }
 
@@ -3294,8 +3312,6 @@ export class AltarScene implements GameScene {
     let target: Cell | 'hand' | null = null;
     const pt = { x: 0, y: 0 };
     const held = this.view.held;
-    let size = L.gemSize;
-    let lift = 0;
     if (this.mode !== 'strike' && this.touch && !this.keyboard && !this.press) {
       const pl = this.lastPlaced ? this.board.at(this.lastPlaced) : undefined;
       if (this.lastPlaced && pl && isRotational(pl.gem)) {
@@ -3305,30 +3321,23 @@ export class AltarScene implements GameScene {
         target = 'hand';
         pt.x = held.x;
         pt.y = held.y;
-        size = held.size ?? L.gemSize;
-        lift = held.snapped ? 0.6 : 1;
       }
     }
     this.turnTarget = target;
     const show = target !== null;
-    if (this.turnBtn.hidden === show) {
-      this.turnBtn.hidden = !show;
-      this.turnMark.hidden = !show;
-      if (this.view.layout.phone) this.updateHint();
+    const phone = !!L.phone;
+    if (this.turnShown !== show) {
+      this.turnShown = show;
+      // Phones (mobile-5-board): one rotate control. Turn stays on the left rail, dim until a
+      // Bend, Gate or Split is in hand or just placed, then lit; no ↻ chip on the gem.
+      this.turnBtn.hidden = !show && !phone;
+      this.turnBtn.disabled = phone && !show;
+      this.turnBtn.toggleAttribute('data-active', show);
+      this.turnMark.hidden = !show || phone;
+      if (phone) this.updateHint();
       this.avoidTray();
     }
-    if (!show) return;
-    const band = L.phone;
-    if (band) {
-      // Phones (mobile-4-board): a small badge centred on the gem's top-right corner, as
-      // drawn (lifted 16 px, gems.ts GEM_LIFT_PX), kept on screen.
-      const half = band.badge / 2;
-      const x = pt.x + size * 0.42;
-      const y = pt.y - 16 * lift - size * 0.42;
-      this.turnMark.style.left = `${Math.round(Math.min(band.colR - half, x))}px`;
-      this.turnMark.style.top = `${Math.round(Math.max(band.edge + half, y))}px`;
-      return;
-    }
+    if (!show || phone) return;
     const r = L.gemSize * 0.5;
     this.turnMark.style.left = `${Math.round(pt.x + r)}px`;
     this.turnMark.style.top = `${Math.round(pt.y - r)}px`;
@@ -3708,4 +3717,9 @@ function boxesTouch(a: HTMLElement, b: HTMLElement, pad: number): boolean {
   const r = designBox(a);
   const q = designBox(b);
   return r.l < q.r + pad && r.r > q.l - pad && r.t < q.b + pad && r.b > q.t - pad;
+}
+
+/** "twice", "3 times": how many strikes one tap of Strike fires (mobile-5-board). */
+function timesWord(n: number): string {
+  return n === 2 ? 'twice' : `${n} times`;
 }

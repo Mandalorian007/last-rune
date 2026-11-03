@@ -86,20 +86,40 @@ export interface PhoneFrame {
   padL: number;
   padR: number;
   cssPx: number;
+  /** The visible band, design y (the canvas is cropped top and bottom when it fills the width). */
+  top?: number;
+  bottom?: number;
 }
 
 /** Width of a phone's edge button column, CSS px (a 44 px target plus a little air). */
 export const PHONE_COL_CSS = 50;
+/** The right-hand column holds Strike 12 CSS px in from the screen's edge (mobile-5-board). */
+export const PHONE_STRIKE_CSS = 58;
+
+/** What `phoneFrameFor` reads off the device (ui/device-mode.ts). */
+export interface PhoneDevice {
+  readonly phone: boolean;
+  readonly cssPx: number;
+  readonly bar: number;
+  readonly cropT?: number;
+  readonly cropB?: number;
+}
 
 /**
  * The phone frame for a device, or null off phones. `cssPx` is design px per CSS px and `bar`
  * the letterbox bar each side (design px); the columns use the bars and take from the canvas
- * only what a bar lacks.
+ * only what a bar lacks. `cropT`/`cropB`: design px cut off the top and bottom.
  */
-export function phoneFrameFor(phone: boolean, cssPx: number, bar: number): PhoneFrame | null {
-  if (!phone) return null;
-  const pad = Math.max(0, Math.round(PHONE_COL_CSS * cssPx - bar));
-  return { padL: pad, padR: pad, cssPx };
+export function phoneFrameFor(d: PhoneDevice): PhoneFrame | null {
+  if (!d.phone) return null;
+  const pad = (css: number) => Math.max(0, Math.round(css * d.cssPx - d.bar));
+  return {
+    padL: pad(PHONE_COL_CSS),
+    padR: pad(PHONE_STRIKE_CSS),
+    cssPx: d.cssPx,
+    top: d.cropT ?? 0,
+    bottom: DESIGN_H - (d.cropB ?? 0),
+  };
 }
 
 /**
@@ -133,6 +153,9 @@ export interface PhoneBand {
   badge: number;
   /** Slab margin and front face (thinner than the desktop slab's). */
   front: number;
+  /** The visible band, design y (mobile-5-board: the altar fills a wide phone's width). */
+  visT: number;
+  visB: number;
 }
 
 export interface AltarLayout {
@@ -355,10 +378,19 @@ const PH = {
   gutter: 66,
   /** The right-hand column: narrowest, widest; and its gap from the board block. */
   colMin: 140,
+  /** mobile-5-board: a tray of up to four types stands two to a row in a narrower column. */
+  colMin2: 116,
+  /** A phone narrower than `wideCss` (an SE) keeps the column ≥ `laneMin` CSS px, so a gem
+   *  chip or a verdict stays four or five lines (at 116 px they ran to six). */
+  laneMin: 140,
+  wideCss: 720,
   colMax: 216,
   colGap: 4,
-  /** Biggest socket pitch (6×4 boards stop here; the column takes what is left). */
-  maxPitch: 52,
+  /**
+   * Biggest socket pitch (6×4 boards stop here; the column takes what is left). mobile-5-board:
+   * raised from 52 now that the altar fills a wide phone's width, so the board fills its height.
+   */
+  maxPitch: 76,
   /**
    * Tray (mobile-4-board): gems as big as three to a row allow, between these; the gap between
    * gems and the count line under each; the title line above. A held gem (lifted, ↻ badge at
@@ -372,9 +404,12 @@ const PH = {
   badge: 26,
   /** FUSE's bubble / the hint sit this far above the canvas bottom (clear of Strike, 64 px). */
   bubbleUp: 68,
-  /** Height of a card beside a north/south gauge: one line, or two on multi-strike altars. */
-  label1: 20,
-  label2: 30,
+  /**
+   * Height of a card beside a north/south gauge: one line, or two on multi-strike altars
+   * (mobile-5-board: the number 15 px, the note 13 px).
+   */
+  label1: 22,
+  label2: 35,
 } as const;
 
 /** A lifted gem rises this far (design px; gems.ts GEM_LIFT_PX) and grows 7%. */
@@ -415,9 +450,20 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
       has[3] ? PH.gutter * c : edge,
     ];
   };
+  // The visible band (mobile-5-board: the canvas crops top and bottom when it fills the width).
+  const T = f.top ?? 0;
+  const B = f.bottom ?? DESIGN_H;
   const x0 = f.padL;
   const x1 = DESIGN_W - f.padR - edge;
-  const boardRoom = x1 - x0 - (PH.colMin + PH.colGap) * c;
+  // Tray rows (mobile-5-board): up to four types two to a row, so the column can be narrower
+  // and the board wider; five or six, three to a row.
+  const kinds = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
+  const per = kinds.length <= 4 ? Math.min(2, Math.max(1, kinds.length)) : 3;
+  const nRows = Math.max(1, Math.ceil(kinds.length / per));
+  // Wide phones take the width from the column; a narrow one (an SE) keeps its lane readable.
+  const narrow = DESIGN_W / c < PH.wideCss;
+  const colMin = Math.max(per <= 2 ? PH.colMin2 : PH.colMin, narrow ? PH.laneMin : 0) * c;
+  const boardRoom = x1 - x0 - colMin - PH.colGap * c;
   const dims = (pitch: number, slab = 0) => {
     const m = Math.round(pitch * PHONE_SLAB[slab]![0]);
     const front = Math.round(pitch * PHONE_SLAB[slab]![1]);
@@ -432,7 +478,7 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
   };
   let pitch = Math.round(PH.maxPitch * c);
   let slab = 0;
-  const fits = (d: ReturnType<typeof dims>) => d.w <= boardRoom && d.h <= DESIGN_H;
+  const fits = (d: ReturnType<typeof dims>) => d.w <= boardRoom && d.h <= B - T;
   for (; pitch > 24; pitch--) {
     if (fits(dims(pitch, 0))) break;
     if (fits(dims(pitch, 1))) {
@@ -450,7 +496,7 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
   // The board block: centred in what the column leaves, and in the height.
   const blockL = x0 + (colL - PH.colGap * c - x0 - d.w) / 2;
   const left = Math.round(blockL + ext[3]);
-  const top = Math.round((DESIGN_H - d.h) / 2 + ext[0]);
+  const top = Math.round(T + (B - T - d.h) / 2 + ext[0]);
   const width = cols * pitch + margin * 2;
   const topH = rows * pitch + margin * 2;
   const right = left + width;
@@ -530,13 +576,10 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
 
   // Tray: rows of up to three under the title, centred in the column, the gems as big as
   // the column allows (types the puzzle starts without are left out).
-  const kinds = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
-  const nRows = Math.max(1, Math.ceil(kinds.length / 3));
-  const per = Math.ceil(kinds.length / nRows);
   const colX = (colL + colR) / 2;
   const slot = Math.max(
     PH.slotMin,
-    Math.min(PH.slotMax, Math.floor((colR - colL) / c / Math.max(per, 3) - PH.slotGap)),
+    Math.min(PH.slotMax, Math.floor((colR - colL) / c / Math.max(per, 2) - PH.slotGap)),
   );
   const slotDX = slot + PH.slotGap;
   const slotDY = Math.max(44, slot + PH.countH + 4);
@@ -551,7 +594,7 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
     return {
       gem,
       x: Math.round(colX + (j - (inRow - 1) / 2) * slotDX * c),
-      y: Math.round((row0 + row * slotDY) * c),
+      y: Math.round(T + (row0 + row * slotDY) * c),
       size: Math.round(slot * c),
     };
   });
@@ -561,11 +604,11 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
       padL: f.padL,
       colL,
       colR,
-      laneTop: Math.round((lastRow + slot / 2 + 1 + PH.countH + 6) * c),
+      laneTop: Math.round(T + (lastRow + slot / 2 + 1 + PH.countH + 6) * c),
       bubbleL: colL,
-      bubbleB: Math.round(DESIGN_H - PH.bubbleUp * c),
+      bubbleB: Math.round(B - PH.bubbleUp * c),
       fuseX: Math.round(colL + 22 * c),
-      fuseY: Math.round(DESIGN_H - 2 * c),
+      fuseY: Math.round(B - 2 * c),
       fuseScale: Math.round(25 * c),
       cssPx: c,
       edge,
@@ -574,6 +617,8 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
       trayHitY: Math.round((slotDY / 2) * c),
       badge: Math.round(PH.badge * c),
       front,
+      visT: T,
+      visB: B,
     },
     cols,
     rows,
@@ -590,7 +635,7 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
     storm,
     machines,
     tray,
-    trayY: tray[0]?.y ?? row0 * c,
+    trayY: tray[0]?.y ?? T + row0 * c,
     titleX: Math.round(colX),
     titleMax: Math.round(colR - colL),
   };

@@ -26,6 +26,17 @@ import { DEV_URL, waitFrames } from './helpers';
 //     covers the tray or its counts; the hint is never cut and never runs under Strike.
 //  9. Blocked cells are not sockets on phones: no mark is drawn on them (socket-looks.test.ts
 //     covers the rule; this checks the live marks).
+// mobile-5-board (D-040 gate review 2), on four phones:
+// 10. The board fills the height: board, gauges and cards take ≥ HSHARE_MIN of the app's
+//     height (85% where the phone allows it), and the pitch floors are raised (PITCH_MIN).
+// 11. Every socket stands on the hugged slab (socket-looks.test.ts checks the shape against
+//     each layout; here, the live layout's sockets fall inside the slab's rect).
+// 12. Text floors: Gives/Needs numbers ≥15 px, every other board label, gem count and the
+//     hint ≥13 px (rendered size, CSS px). The hint may wrap to two lines at 13 px; in a
+//     lane under 150 px a gem chip may take five lines and the verdict six.
+// 13. One rotate control: no ↻ chip on a phone; the rail's Turn lights up for a placed turner.
+// 14. Strike stands ≥12 px in from the app's right edge.
+// 15. The valid-socket rings show while a gem is held and clear once it is placed.
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0 },
@@ -44,11 +55,27 @@ const HEIGHT_BOUND = 0.75;
 
 /** Least socket pitch, CSS px, by board class (6×4, 8×6, 10×8), per phone (mobile-3-board). */
 const PITCH_MIN: Record<(typeof PHONES)[number]['name'], [number, number, number]> = {
-  iphone: [44, 38, 30],
-  se: [39.6, 34.2, 27],
-  promax: [44, 38, 30],
-  android: [44, 38, 30],
+  // mobile-5-board: raised to what the fill-width altar reaches (log: mobile-5-board.md).
+  iphone: [57, 37, 28.5],
+  se: [43, 32.5, 25],
+  promax: [66, 43, 32.5],
+  android: [62, 40, 30.5],
 };
+/**
+ * Least board height share (board + gauges + cards over the app height), per phone. 85% is
+ * the goal; 6×4 boards with west/east gauges are width-bound (two 66 px gutters and the tray
+ * column), so the floor is what they reach (mobile-5-board log).
+ */
+const HSHARE_MIN: Record<(typeof PHONES)[number]['name'], number> = {
+  iphone: 0.78,
+  se: 0.58,
+  promax: 0.8,
+  android: 0.85,
+};
+/** Rendered text floors, CSS px (mobile-5-board). */
+const TEXT_MIN = { number: 15, label: 13 };
+/** Strike's clearance from the app's right edge, CSS px. */
+const STRIKE_IN = 12;
 const pitchClass = (cols: number) => (cols <= 6 ? 0 : cols <= 8 ? 1 : 2);
 /** A Gives/Needs card's clearance from the board, CSS px. */
 const LABEL_CLEAR = 8;
@@ -245,6 +272,26 @@ async function measure(page: Page) {
             text: hintEl.textContent.trim(),
           }
         : null;
+    // Rendered text sizes (CSS px): the computed size times the overlay's scale.
+    const ovEl = document.querySelector<HTMLElement>('.tc-overlay')!;
+    const ovScale = ov.width / (ovEl.offsetWidth || ov.width);
+    const textMin: { sel: string; px: number; text: string }[] = [];
+    for (const [sel, kind] of [
+      ['.lr-altar-need .lr-need-row b', 'number'],
+      ['.lr-altar-need *', 'label'],
+      ['.lr-altar-need', 'label'],
+      ['.lr-altar-count', 'label'],
+      ['.lr-altar-count *', 'label'],
+      ['.lr-altar-hint', 'label'],
+      ['.lr-altar-hint *', 'label'],
+    ] as const) {
+      for (const el of document.querySelectorAll<HTMLElement>(sel)) {
+        const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim());
+        if (!own || !shown(el)) continue;
+        const px = Number.parseFloat(getComputedStyle(el).fontSize) * ovScale;
+        textMin.push({ sel: kind, px, text: el.textContent?.trim().slice(0, 24) ?? '' });
+      }
+    }
     // Marks drawn on blocked cells (phones draw none: the slab is solid there).
     const marks = (view as unknown as { marks: { col: number; row: number; state: string }[] })
       .marks;
@@ -260,6 +307,19 @@ async function measure(page: Page) {
       hint,
       strike: one('[data-action="strike"]'),
       marks: marks.map((k) => ({ x: k.col, y: k.row, state: k.state })),
+      textMin,
+      turnActive: !!document.querySelector('.lr-altar-turnbtn[data-active]:not(:disabled)'),
+      sockets: (() => {
+        const out: Box[] = [];
+        for (let y = 0; y < L.rows; y++)
+          for (let x = 0; x < L.cols; x++) {
+            const cx = L.left + L.margin + L.pitch * (x + 0.5);
+            const cy = L.top + L.margin + L.pitch * (y + 0.5);
+            const r = L.pitch * 0.36;
+            out.push({ l: X(cx - r), r: X(cx + r), t: Y(cy - r), b: Y(cy + r) });
+          }
+        return out;
+      })(),
       slab,
       board,
       usable,
@@ -292,11 +352,14 @@ function cardProblems(m: M, label: string): string[] {
   for (const c of m.cards) {
     const w = c.box.r - c.box.l;
     if (w > m.screenW / 3 + 1) out.push(`${label}: ${c.name} ${w.toFixed(0)}px wide "${c.text}"`);
-    if (c.lines > 3) out.push(`${label}: ${c.name} ${c.lines} lines "${c.text}"`);
+    // The board takes the width from the column (mobile-5-board): in a lane under 150 px a gem
+    // chip may take five lines and the verdict six (each has the lane's height to itself).
+    const maxLines = w >= 150 || c.name === 'hint' ? 3 : c.name === 'verdict' ? 6 : 5;
+    if (c.lines > maxLines) out.push(`${label}: ${c.name} ${c.lines} lines "${c.text}"`);
     if (hit(c.box, m.slab)) out.push(`${label}: ${c.name} over the board "${c.text}"`);
     if (m.labels.some((b) => hit(c.box, b)))
       out.push(`${label}: ${c.name} over a Gives/Needs card "${c.text}"`);
-    if (c.name === 'hint' && c.lines > 1) out.push(`${label}: hint ${c.lines} lines "${c.text}"`);
+    if (c.name === 'hint' && c.lines > 2) out.push(`${label}: hint ${c.lines} lines "${c.text}"`);
   }
   const grown = (b: Box, d: number): Box => ({ l: b.l - d, t: b.t - d, r: b.r + d, b: b.b + d });
   m.labels.forEach((b, i) => {
@@ -336,8 +399,18 @@ function cardProblems(m: M, label: string): string[] {
     b.l >= m.usable.l && b.r <= m.usable.r && b.t >= m.usable.t && b.b <= m.usable.b;
   if (m.held && m.title && hit(m.held, m.title)) out.push(`${label}: held gem over the title`);
   if (m.held && !onScreen(m.held)) out.push(`${label}: held gem off screen`);
-  if (m.badge && m.title && hit(m.badge, m.title)) out.push(`${label}: ↻ badge over the title`);
-  if (m.badge && !onScreen(m.badge)) out.push(`${label}: ↻ badge off screen`);
+  // mobile-5-board: one rotate control on phones, the rail's Turn; no ↻ chip on the gem.
+  if (m.badge) out.push(`${label}: ↻ chip shown on a phone`);
+  if (m.strike && m.usable.r - m.strike.r < STRIKE_IN - 0.5)
+    out.push(`${label}: Strike ${(m.usable.r - m.strike.r).toFixed(1)}px from the edge`);
+  for (const t of m.textMin) {
+    const min = TEXT_MIN[t.sel as keyof typeof TEXT_MIN];
+    // (0.25 px: the text scale is rounded through calc().)
+    if (t.px < min - 0.25) out.push(`${label}: ${t.sel} text ${t.px.toFixed(1)}px "${t.text}"`);
+  }
+  for (const s of m.sockets)
+    if (s.l < m.slab.l || s.r > m.slab.r || s.t < m.slab.t || s.b > m.slab.b)
+      out.push(`${label}: a socket hangs off the slab`);
   if (m.tip && m.tray.some((t) => hit(m.tip!, t))) out.push(`${label}: gem chip over the tray`);
   if (m.hint) {
     if (m.hint.cut) out.push(`${label}: hint cut off "${m.hint.text}"`);
@@ -398,7 +471,7 @@ for (const vp of PHONES) {
         await waitFrames(page, 8);
         const m = await measure(page);
         const wMin = m.hShare >= HEIGHT_BOUND ? 0 : 0.45;
-        if (m.hShare < 0.55)
+        if (m.hShare < HSHARE_MIN[vp.name] - 0.005)
           problems.push(`${id}: board ${(m.hShare * 100).toFixed(0)}% of height`);
         if (m.wShare < wMin) problems.push(`${id}: board ${(m.wShare * 100).toFixed(0)}% of width`);
         if (m.chromeShare > 0.2)
@@ -444,18 +517,27 @@ for (const vp of PHONES) {
           await waitFrames(page, 4);
         }
 
-        // A turnable gem set down: the ↻ badge on it, and the hint with (or without) its ↻.
+        // A turnable gem set down: Turn lit on the rail, the rings gone, the hint.
         const turner = L.tray.find((t) => ['bend', 'gate', 'split'].includes(t.gem));
         if (turner) {
           const pz = puzzleFor(id);
           const taken = (x: number, y: number) =>
             [...pz.blocked, ...pz.fixed.map((f) => f.cell)].some((c) => c.x === x && c.y === y);
+          const hum = (x: M) => x.marks.filter((k) => k.state === 'highlighted').length;
+          // Nothing in hand to start (Esc drops a gem the chip taps left held).
+          if (await page.evaluate(() => !!(window as G).__altarView.held)) {
+            await page.keyboard.press('Escape');
+            await waitFrames(page, 3);
+          }
+          const before = hum(await measure(page));
+          let heldHum = 0;
           let placed = false;
           for (let y = 0; y < L.rows && !placed; y++)
             for (let x = 0; x < L.cols && !placed; x++) {
               if (taken(x, y)) continue;
               await page.touchscreen.tap(ob.x + turner.x * k, ob.y + turner.y * k);
               await waitFrames(page, 3);
+              heldHum = Math.max(heldHum, hum(await measure(page)));
               const cx = L.left + L.margin + L.pitch * (x + 0.5);
               const cy = L.top + L.margin + L.pitch * (y + 0.5);
               await page.touchscreen.tap(ob.x + cx * k, ob.y + cy * k);
@@ -469,7 +551,12 @@ for (const vp of PHONES) {
           await waitFrames(page, 6);
           const mp = await measure(page);
           problems.push(...cardProblems(mp, `${id} placed ${turner.gem}`));
-          if (!mp.badge) problems.push(`${id}: no ↻ badge on the placed ${turner.gem}`);
+          if (!mp.turnActive) problems.push(`${id}: Turn not lit for the placed ${turner.gem}`);
+          // The rings: shown while held, gone once the gem is down (a mark or two for the
+          // tapped gem and the wire's next socket may stay).
+          if (heldHum <= before) problems.push(`${id}: no valid-socket rings while held`);
+          if (hum(mp) > before + 2)
+            problems.push(`${id}: ${hum(mp) - before} rings left after placing`);
           await page.locator('[data-action="clear"]').tap();
           await waitFrames(page, 4);
         }

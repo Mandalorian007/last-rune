@@ -64,6 +64,10 @@ export const DESIGN_H = 1080;
 const FILL_BANDS: Record<string, { minVisible: number; focusY: number }> = {
   title: { minVisible: 760, focusY: 520 },
   hall: { minVisible: 985, focusY: 544 },
+  // The altar (mobile-5-board): the board and its column lay out inside the visible band
+  // (layout.ts phoneLayout), so wide phones trade dead side bars for a bigger board.
+  puzzle: { minVisible: 860, focusY: 540 },
+  solve: { minVisible: 860, focusY: 540 },
 };
 
 export type GameScene = Scene<GameCtx, Frame>;
@@ -310,7 +314,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   const ctx = {} as GameCtx;
   const stack = new SceneStack<GameCtx, Frame>(ctx);
   // A scene is built and entered before the flow announces its state, so the fill (above) is
-  // set for it first: the altar lays out against the plain letterbox, never the hall's fill.
+  // set for it first: the altar lays out against its own band, never the hall's fill.
   const entering =
     <A extends unknown[]>(state: string, make: (...a: A) => GameScene) =>
     (...a: A) => {
