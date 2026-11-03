@@ -30,7 +30,7 @@ pnpm package:itch   # build + zip for itch upload
 1. `pnpm check` and `pnpm build` pass in the worktree.
 2. Tests cover the logic (rules and content get thorough tests; rendering gets a smoke test or demo route).
 3. Module README or doc updated; the workstream log in `docs/workstreams/<ws>.md` is updated with what was done, decisions, and open issues.
-4. No secrets, no personal data, no external network calls at runtime (except the Discord link the user clicks).
+4. No secrets, no personal data, no external network calls at runtime (except the Join ThunderClap Gaming and Ko-fi links, which open only on click; D-013, D-034).
 
 ## Performance budget
 - 60 fps on an integrated GPU (M1/M2 MacBook Air, Intel Iris Xe) at 1080p fullscreen.

@@ -38,7 +38,7 @@ _(agent appends progress, decisions, open issues here)_
   - 94.5% of open states have 2 or more doors.
 - Pitch lines over 20 words (13 of them) are kept verbatim and split at sentence boundaries into ≤ 20-word cards (`cardsOf`). Every new line is ≤ 20 words.
 - "I" count by tier (FUSE lines and plates): T1 0, T2 2, T3 16, finale 2. New Tier 2 lines add no "I".
-- `DISCORD_INVITE_URL = 'https://discord.gg/thunderclap'` (PM). Blank or non-https URLs hide the button. `TIP_JAR_URL` is empty, so its button is hidden.
+- `DISCORD_INVITE_URL = 'https://discord.gg/thunderclap'` (PM). Blank or non-https URLs hide the button. `KOFI_URL (was TIP_JAR_URL; D-034)` is empty, so its button is hidden.
 
 **Open issues.**
 - The relay puzzle (rules-puzzles) must produce two full signals without a player-owned Split.
