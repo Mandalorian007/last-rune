@@ -193,6 +193,12 @@ for (const vp of VIEWPORTS) {
         await page.evaluate(() => (window as G).__game.openSettings());
         await page.waitForTimeout(500);
         await shot('03-settings');
+        // Phones show settings as two tabs (mobile-6-chrome): the end is the second tab.
+        const tab = page.getByRole('tab', { name: 'Graphics & Save' });
+        if (await tab.isVisible()) {
+          await tab.click();
+          await page.waitForTimeout(300);
+        }
         await page.evaluate(() => {
           for (const e of document.querySelectorAll('.lr-settings-cols, .lr-settings'))
             e.scrollTo(0, 99999);
