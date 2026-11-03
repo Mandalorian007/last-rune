@@ -6,11 +6,19 @@ import { DEV_URL } from './helpers';
 // capacitor-clarity: a two-strike altar says so before Strike, the Capacitor reads out what it
 // keeps on strike 1 and lets out on strike 2 (in the plan and as it plays), and the verdict
 // names the strike and tells what the ice did. Capacitor Bay: storm gives 8, two strikes, a
-// fixed Capacitor at (5,2); the straight row keeps 8 then lets out 16 into a machine needing 8.
+// fixed Capacitor at (5,2); the first try (up the lane, one Bend east through the ice) keeps 8
+// then lets out 16 into a machine needing 8.
 
 const ID: MachineId = 'capacitor-bay';
 const ORDER = playOrder();
-const ROW = [0, 1, 2, 3, 4, 6, 7].map((x) => ({ cell: { x, y: 2 }, gem: 'channel', rot: 0 }));
+const ROW = [
+  { cell: { x: 4, y: 5 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 4 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 3 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 2 }, gem: 'bend', rot: 1 },
+  { cell: { x: 6, y: 2 }, gem: 'channel', rot: 0 },
+  { cell: { x: 7, y: 2 }, gem: 'channel', rot: 0 },
+];
 
 test.setTimeout(90_000);
 

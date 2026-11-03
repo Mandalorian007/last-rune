@@ -5,7 +5,7 @@ import { altarDims } from '../../rules/model';
 import type { MachineId } from '../../rules/types';
 import { chargeChips, guideHops, liveSockets, previewPath } from './circuit-model';
 import { CAPTION_LANE, computeLayout, FUSE_LANE, traySlotAt, trayTipX } from './layout';
-import { firstSentence, newGems, nudgeGems } from './teach';
+import { arrivalNudges, firstSentence, newGems, nudgeGems } from './teach';
 
 const P = (gem: Placement['gem'], x: number, y: number, rot: Placement['rot'] = 0): Placement => ({
   gem,
@@ -115,6 +115,9 @@ describe('new gems', () => {
   it('has a FUSE nudge for every new gem, Channel included', () => {
     const intake = newGems(puzzleFor('intake-desk'), []);
     expect(nudgeGems(intake)).toEqual(['bend', 'channel']);
+    // The teaching altar queues none: the arrive line is its only card.
+    expect(arrivalNudges(intake, true)).toEqual([]);
+    expect(arrivalNudges(intake, false)).toEqual(['bend', 'channel']);
     for (const p of Object.values(PUZZLES)) {
       const news = newGems(p, []);
       const kinds = [...news.fixed.map((f) => f.gem), ...news.tray];

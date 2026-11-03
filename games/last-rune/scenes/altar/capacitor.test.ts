@@ -4,12 +4,15 @@ import { type Placement, simulate } from '../../rules';
 import { capacitorBeats, capBeatText } from './circuit-model';
 import { failText, strikeStory } from './strike';
 
-/** The first thing a newcomer tries at Capacitor Bay: straight along the row through the ice. */
-const bayRow: Placement[] = [0, 1, 2, 3, 4, 6, 7].map((x) => ({
-  cell: { x, y: 2 },
-  gem: 'channel',
-  rot: 0,
-}));
+/** The first thing a newcomer tries at Capacitor Bay: up the lane, one Bend east, through the ice. */
+const bayRow: Placement[] = [
+  { cell: { x: 4, y: 5 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 4 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 3 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 2 }, gem: 'bend', rot: 1 },
+  { cell: { x: 6, y: 2 }, gem: 'channel', rot: 0 },
+  { cell: { x: 7, y: 2 }, gem: 'channel', rot: 0 },
+];
 
 function noIce(id: 'lift-shaft' | 'roof-array'): Placement[] {
   return puzzleFor(id).design.intended.map((q) =>

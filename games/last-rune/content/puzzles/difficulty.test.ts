@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { analyseSolution, measure, minutesFor, noviceBot, scoreOf } from '../../rules/difficulty';
+import {
+  analyseSolution,
+  measure,
+  minutesFor,
+  noviceBot,
+  scoreOf,
+  turnLoadOf,
+} from '../../rules/difficulty';
+import type { GemKind } from '../../rules/types';
 import { MACHINE_IDS } from '../../rules/types';
 import { PUZZLES } from './index';
 import { TARGETS } from './targets';
@@ -26,6 +34,15 @@ describe('analyseSolution', () => {
   it('sees a route around a pre-set gem', () => {
     const p = PUZZLES['control-booth'];
     expect(analyseSolution(p, p.design.intended).markers).toContain('avoid-fixed');
+  });
+});
+
+describe('turnLoadOf', () => {
+  it('weighs Splits and Gates over Bends and ignores gems that do not turn (D-031)', () => {
+    const at = (gem: GemKind) => ({ gem, cell: { x: 0, y: 0 }, rot: 0 as const });
+    expect(turnLoadOf([at('channel'), at('amplify'), at('capacitor')])).toBe(0);
+    expect(turnLoadOf([at('bend'), at('bend')])).toBe(1);
+    expect(turnLoadOf([at('split'), at('gate'), at('bend')])).toBe(2.5);
   });
 });
 
@@ -59,6 +76,7 @@ describe('scoreOf', () => {
     expect(scoreOf({ ...base, concepts: 4 })).toBeGreaterThan(s);
     expect(scoreOf({ ...base, minGems: 20 })).toBeGreaterThan(s);
     expect(scoreOf({ ...base, solutions: 64 })).toBeLessThan(s);
+    expect(scoreOf({ ...base, turnLoad: 5 })).toBeGreaterThan(s);
   });
 
   it('reads as minutes, at least one', () => {

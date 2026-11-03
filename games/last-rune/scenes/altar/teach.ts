@@ -64,6 +64,14 @@ export function nudgeGems(news: NewGems): GemKind[] {
   return [...news.fixed.map((f) => f.gem), ...news.tray].filter((g) => !!gemNudge(g));
 }
 
+/**
+ * The nudges to queue on arrival. On the teaching altar the lit socket, the gem info card and
+ * the arrive line already carry the lesson, so FUSE stays quiet there (one card, not four).
+ */
+export function arrivalNudges(news: NewGems, teaching: boolean): GemKind[] {
+  return teaching ? [] : nudgeGems(news);
+}
+
 /** The first sentence of a codex rule: the one-line hint pinned beside a new gem. */
 export function firstSentence(rule: string): string {
   const m = /^.*?[.!?](?=\s|$)/.exec(rule.trim());

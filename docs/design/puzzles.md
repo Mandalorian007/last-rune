@@ -68,13 +68,13 @@ Channel and Bend are left out of that column unless the puzzle is about them.
 | 3 | splitter-mill | 6×4 | 1× | 2 (2, 2) | bend | 8 | 2 | A split sends halves out of its sides, never straight on: feed it from above. |
 | 4 | relay-tower | 6×4 | 1× | 1 (4) | bend | 9 | 2 | The emerald fires only when both sides are live: bring both halves of the split home. |
 | 5 | conveyor-a | 6×4 | 1× | 1 (4) | bend | 6 | 2 | The stuck amber doubles the bolt; route it through the old magenta to halve it again. |
-| 6 | press-unit-4 | 6×4 | 1× | 2 (4, 4) | amplify, split | 11 | 3 | Amber before magenta: amplify once, then split, so both halves are full. |
+| 6 | press-unit-4 | 6×4 | 1× | 2 (4, 4) | amplify, split | 10 | 2 | 3 | Amber before magenta: amplify once, then split, so both halves are full. |
 | 7 | storm-cell-2 | 6×4 | 1× | 3 (2, 1, 1) | split | 11 | 3 | Split a split: one half goes up whole, the other is halved again. |
 | 8 | crane | 6×4 | 1× | 1 (3) | gate | 11 | 4 | Three from four: merge a half with a quarter in the emerald, let the last quarter go. |
 | 9 | boiler-room | 6×4 | 2× | 4 (2 each) | split | 13 | 4 | A double bolt feeds four boilers: a tree of three splits. |
 | 10 | archive | 8×6 | 1× | 2 (3, 1) | gate | 20 | 3 | 5 | Every spark has a drawer: two and one for the big cabinet, one for the small. |
 | 11 | foundry | 6×4 | 1× | 1 (6) | amplify, gate | 10 | 4 | Six: amplify only one half of the split, then merge them. |
-| 12 | capacitor-bay | 8×6 | 2×, 2 strikes | 2 (2, 8) | split (+ fixed capacitor) | 13 | 11 | 5 | The ice hands its whole first strike to the second: give it half, and it gives the machine double. |
+| 12 | capacitor-bay | 8×6 | 2×, 2 strikes | 2 (2, 8) | split (+ fixed capacitor) | 9 | 1 | 5 | The ice hands its whole first strike to the second: give it half, and it gives the machine double. |
 | 13 | lift-shaft | 8×6 | 2×, 2 strikes | 1 (12) | split, gate, capacitor | 10 | 3 | 6 | Twelve from eight: bank one half, and on the second strike merge the release with the other. |
 | 14 | roof-array | 8×6 | 2×, 2 strikes | 2 (2, 10) | split, gate, capacitor | 18 | 5 | 6 | The emerald waits for the ice: alone on the first strike, it adds to the release on the second. |
 | 15 | control-booth | 8×6 | 4× | 2 (4, 20) | split, amplify, gate | 16 | 1 | 7 | Twenty from sixteen: amplify one half, split the other, and merge. |
@@ -90,10 +90,15 @@ the work without the search blowing up.
   new gem is pre-set where the bolt has to use it.
 - **press-unit-4** is the pitch's "amber before magenta, never after". Split then Amplify gives
   2 and 2 per side, which is enough for one machine, but the second Amplify isn't in the tray.
+  Carved stone in the middle of the storm's row turns the bolt down into the one junction, so
+  the work is the order of the two gems, not where along a run they sit (2 solutions, was 9).
 - **crane** and **foundry** use the Gate to add unequal charges (2 + 1, 4 + 2), which no other
   gem can make.
 - **capacitor-bay** grants Capacitor, so its Capacitor is pre-set. The pre-set Capacitor is
   essential: take it away and the puzzle can't be solved.
+  The storm comes up a single lane and the tray holds one Bend, so the first try is "turn east
+  through the ice": it keeps 8 and lets out 16 (over). The fix is a Split where the lane meets
+  the row, and a second Split for the small machine (1 solution, was 11).
 - **control-booth** has a Capacitor in the tray as a red herring. There is only one strike, so
   anything banked never comes out. The solver confirms Capacitor isn't essential.
 - **the-last-rune** has 4 canonical solutions (was 72, which were variations of where the
