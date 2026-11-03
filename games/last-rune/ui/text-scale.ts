@@ -13,7 +13,7 @@ export type TextScale = (typeof TEXT_SCALES)[number];
 export const TEXT_SCALE_VAR = '--lr-text-scale';
 /**
  * Phones only (ui/device-mode.ts): the smallest font size in design px, so no text drops under
- * 14 CSS px. Unset (0) on desktop and tablets, where nothing changes.
+ * 12 CSS px. Unset (0) on desktop and tablets, where nothing changes.
  */
 export const TEXT_MIN_VAR = '--lr-text-min';
 const MIN = `var(${TEXT_MIN_VAR}, 0px)`;

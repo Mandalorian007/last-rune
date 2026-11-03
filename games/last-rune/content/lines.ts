@@ -1057,13 +1057,21 @@ export function countI(text: string): number {
     .filter((w) => /^I(?:['’](?:ll|ve|d|m))?(?![\p{L}])/u.test(w)).length;
 }
 
+/** Phones (mobile-2): FUSE's caption is a slim bubble, so a card holds fewer words. */
+export const PHONE_WORDS_PER_CARD = 12;
+
 /**
- * Splits a line into corner cards of at most 20 words, breaking only between
+ * Splits a line into corner cards of at most `max` words (20, D-015), breaking only between
  * sentences (or after "…"), as evenly as possible. Lines that fit are one card.
+ *
+ * With a smaller `max` (the phone bubble), a sentence longer than `max` is first broken into
+ * phrases, after a comma, semicolon, colon or dash where one falls near the even split, else
+ * between words. The words never change; only where the card breaks.
  */
-export function cardsOf(text: string): string[] {
-  if (wordCount(text) <= MAX_WORDS_PER_CARD) return [text];
-  const sentences = text.split(/(?<=[.!?…]['"’”]?)\s+/);
+export function cardsOf(text: string, max: number = MAX_WORDS_PER_CARD): string[] {
+  if (wordCount(text) <= max) return [text];
+  let sentences = text.split(/(?<=[.!?…]['"’”]?)\s+/);
+  if (max < MAX_WORDS_PER_CARD) sentences = sentences.flatMap((t) => phrasesOf(t, max));
   const n = sentences.length;
   // Fewest cards, then the most even split: DP over sentence boundaries.
   const words = sentences.map(wordCount);
@@ -1073,7 +1081,7 @@ export function cardsOf(text: string): string[] {
     let w = 0;
     for (let i = j - 1; i >= 0; i--) {
       w += words[i]!;
-      if (w > MAX_WORDS_PER_CARD) break;
+      if (w > max) break;
       const b = best[i]!;
       const cards = b.cards + 1;
       const worst = Math.max(b.worst, w);
@@ -1088,5 +1096,29 @@ export function cardsOf(text: string): string[] {
   for (let j = n; j > 0; j = best[j]!.prev) {
     out.unshift(sentences.slice(best[j]!.prev, j).join(' '));
   }
+  return out;
+}
+
+/** One sentence as phrases of at most `max` words, split as evenly as the punctuation allows. */
+function phrasesOf(sentence: string, max: number): string[] {
+  const total = wordCount(sentence);
+  if (total <= max) return [sentence];
+  const tokens = sentence.split(/\s+/).filter((t) => t.length > 0);
+  const size = Math.ceil(tokens.length / Math.ceil(total / max));
+  const out: string[] = [];
+  let start = 0;
+  while (tokens.length - start > size) {
+    // Prefer a break after punctuation a few words before the even split, never past it.
+    let cut = start + size;
+    for (let k = start + size; k > start + Math.max(1, size - 4); k--) {
+      if (/[,;:—–]$/.test(tokens[k - 1]!)) {
+        cut = k;
+        break;
+      }
+    }
+    out.push(tokens.slice(start, cut).join(' '));
+    start = cut;
+  }
+  out.push(tokens.slice(start).join(' '));
   return out;
 }

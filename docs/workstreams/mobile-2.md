@@ -51,3 +51,91 @@ Keep from mobile-ui what works:
 - **Gates.** `pnpm check`, `pnpm build` and `pnpm test:e2e` pass.
 
 ## Log
+
+**Before (main at 7043c23; sheets in `docs/design/screens/local/mobile-2/before-*.png`; iphone, se, promax, android).**
+
+The desktop layout, scaled to about 0.33 and then inflated by the 14 px text floor:
+- **Bars.** The 16:9 canvas sits between two dead black bars that hold nothing.
+- **Altar buttons.**
+  - Undo, Clear, Back and Strike are a row of desktop pills along the top right.
+  - Codex and Settings are stacked top left, eating the board's corners.
+  - All six are drawn at 44 px boxes.
+- **Altar help.**
+  - The tray hint wraps to 2 lines over the tray.
+  - The gem chip is a 4-line card over the tray and the board's bottom row.
+  - The verdict stacks on top of the hint, so they collide into an unreadable pile (relay verdict).
+  - FUSE's caption is a 4–5 line box at the lower right, covering the Needs gauge and the board edge (intake, the Last Rune).
+- **Hall.** Journal, Codex and Settings sit along the bottom, reaching toward the centre.
+- **Title.** FUSE's line is a 5-line box over the glow.
+- **Settings.** It overflows: the save buttons are cut off at the bottom.
+- **Journal.** The slips overlap: 14 px text in 13 px rows.
+- **Codex.** The header collides with the pages.
+- **End card.** The safety record is clipped under the buttons.
+
+**Built (this branch).**
+- **Altar phone layout.** `computeLayout(p, phoneFrameFor(...))` returns a phone layout:
+  - The board is sized to the canvas minus a 58 px top and a 196 px tray band, centred in the canvas.
+  - FUSE sits small in the bottom-left corner.
+  - The tray is centred just right of the middle.
+  - A `phone` band names the caption lane (right of FUSE, left of the tray) and the info lane (right of the tray, up to Strike).
+  - It relayouts if the frame changes (rotation, toolbar), but only in edit mode.
+- **Buttons in the bars** (`overflow: visible` on the phone overlay; #app still clips):
+  - The left bar holds Back (top), then Undo and Clear (icon above label, 44×44).
+  - The right bar holds ☰ (top) and Strike (bottom, tall).
+  - ↻ Turn sits in the right bar, mid-height.
+  - Hall: only the ☰ shows. It opens Journal, Codex and Settings in a column and carries the journal's unread dot; a tap outside closes it.
+- **Text.**
+  - The phone floor is 12 CSS px, with body text at 12–13.
+  - Buttons are compact (28 px tall drawn); their hit areas stay 44 px through the ::before padding.
+- **Help.** Every transient card is capped at `--lr-third`, a third of the screen width (set by device-mode), and sits in a lane below the board:
+  - **Hint, chip, verdict.** These sit in the info lane, bottom-anchored, one at a time (chip > verdict > hint).
+    - The chip is the gem name plus its one-line rule, cut with an ellipsis.
+    - A long-press on a tray gem or a placed gem pins the full text; the next tap closes it.
+    - The verdict runs as one line of text: the verdict, then its story or next step, wrapping to ≤3 lines.
+  - **FUSE's caption.** A slim bubble beside FUSE, ≤3 lines. On phones a card is ≤12 words, split at phrase breaks (`cardsOf(text, PHONE_WORDS_PER_CARD)`): same words, more pages, and a tap advances.
+- **Other scenes.**
+  - Codex: the pages get room for their header.
+  - Journal: the slips are sized to their 13 px rows, with a smaller head.
+  - Settings, the confirm dialog and the title links are compacted.
+- **Tests.**
+  - `tests/e2e/mobile-budget.spec.ts` covers every altar at 667×320 and at 844×340 with 47 px insets. On each one it checks four states (open, FUSE's longest line, the gem chip, the verdict):
+    - board ≥55% of height and ≥45% of width (except height-bound boards, listed in the spec);
+    - chrome ≤20%;
+    - every card ≤⅓ of the screen wide and ≤3 lines, with no card or chrome over the slab;
+    - no page scroll.
+  - `mobile.spec.ts` taps from the live layout (`window.__altarLayout`); its text floor is now 11 px.
+
+**Budgets measured** (board share of height and width; chrome share; widest card as a share of the screen):
+
+| Viewport | Height | Width | Chrome | Widest card |
+|---|---|---|---|---|
+| SE 667×320 | 74–81% | 35–63% | 4.9–5.3% | ≤32% |
+| iPhone 844×340, insets | 74–81% | 33–59% | 4.1–4.4% | ≤31% |
+
+**Couldn't fit.** These boards are height-bound: lift-shaft (33%), press-unit-4 (40%), capacitor-bay (41%), roof-array (42%) and intake (43%) can't reach 45% of the width on the iPhone. The usable area there is 750×340, so a square board at full height is 45% of the width before its storm and gauges take room. They already use about 80% of the height, so the spec gives them lower width floors instead of shrinking anything. **PM decision proposed:** for height-bound boards, accept "≥75% of height" in place of the 45% width rule.
+
+**PM review fixes (round 2).**
+- **No cut-off text.**
+  - The gem chip no longer uses an ellipsis. Each gem now has a codex `chip` line: the whole rule in ≤68 characters, fizzles included. It wraps to at most 3 lines in a third of the screen. A long-press still shows the codex `rule` in full.
+  - The hint's line clamp is gone.
+  - Hangout: the sidebar is wider on phones, and channel and server names show in full.
+  - New tests:
+    - The budget spec checks every element in the overlay (excluding screen-reader-only text) for an ellipsis, a line clamp or clipped overflow. It now checks the chip of every tray gem, not just the first.
+    - The fits test in `mobile.spec.ts` does the same check in the hall, Settings, Codex and every altar.
+- **↻ only where it applies.** The touch hint says "↻ turns it" only when the tray holds a gem that turns. That part never splits; on the Last Rune and Control Booth it drops to its own line.
+- **Verdict.** A " · " now separates the verdict from its story or next step.
+- **Budget rule.** The per-altar floors are replaced by the PM rule: a board with ≥75% of the height is exempt from the 45% width rule.
+- **Recaptured.** All four sheets were recaptured from the final code: `docs/design/screens/local/mobile-2/after-{iphone,se,promax,android}.png`. I looked at every frame:
+  - title;
+  - hall, with and without FUSE;
+  - Settings, Codex and journal;
+  - intake, relay (open, held, placed, verdict), furnace, archive, control-booth and the Last Rune, with and without FUSE;
+  - solve card, ending, hangout and end card.
+
+  What I fixed from that review:
+  - the hangout's truncated names, and Skip overlapping the message box;
+  - the verdict running into its next step;
+  - the overlapping journal slips and the Codex header colliding with the pages (both pre-existing);
+  - the intake hint mentioning ↻.
+
+  Pro Max and Android have the same layout with more room; nothing else looked wrong to a first-time player.

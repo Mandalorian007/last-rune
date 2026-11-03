@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { GEM_KINDS } from '../rules/types';
-import { CODEX, CODEX_MATHS_MAX_CHARS, CODEX_RULE_MAX_WORDS, CODEX_SPARKS } from './codex';
+import {
+  CODEX,
+  CODEX_CHIP_MAX_CHARS,
+  CODEX_MATHS_MAX_CHARS,
+  CODEX_RULE_MAX_WORDS,
+  CODEX_SPARKS,
+} from './codex';
 import { wordCount } from './lines';
 
 describe('codex content', () => {
@@ -19,6 +25,8 @@ describe('codex content', () => {
       expect(e.rule.length, `${gem} rule`).toBeGreaterThan(0);
       expect(e.maths.length, `${gem} maths`).toBeLessThanOrEqual(CODEX_MATHS_MAX_CHARS);
       expect(e.maths).not.toContain('\n');
+      expect(e.chip.length, `${gem} chip`).toBeLessThanOrEqual(CODEX_CHIP_MAX_CHARS);
+      expect(e.chip.length, `${gem} chip`).toBeGreaterThan(0);
     }
   });
 

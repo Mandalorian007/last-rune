@@ -22,6 +22,8 @@ export interface FuseOptions {
    * `fuse.onChar`, which throttles and pitches itself). Takes precedence over `onChar`.
    */
   voice?: (text: string) => ((ch: string, index: number) => void) | undefined;
+  /** Words per card right now (phones show a slim bubble; D-015's twenty otherwise). */
+  cardWords?: () => number | undefined;
 }
 
 export function placeholderPortrait(): Node {
@@ -73,7 +75,7 @@ export class Fuse {
           if (n++ % 3 === 0) this.opts.onChar!();
         }
       : undefined;
-    const cards = cardsOf(text);
+    const cards = cardsOf(text, this.opts.cardWords?.());
     const portrait = this.portraitFactory();
     await Promise.all(
       cards.map((card) =>

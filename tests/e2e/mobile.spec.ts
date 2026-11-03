@@ -2,12 +2,13 @@ import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { isRotational } from '../../games/last-rune/rules';
 import { type Cell, MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
-import { cellCenter, computeLayout } from '../../games/last-rune/scenes/altar/layout';
+import { type AltarLayout, cellCenter } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, readSave, trackProblems, waitFrames } from './helpers';
 
 // Phones (D-039): every altar action works by finger alone, turning included (the ↻ Turn
-// button), and each scene fits a landscape phone: no page scroll, text at least 14 CSS px,
-// buttons at least 44 CSS px to the finger. The game runs with touch emulation; no mouse or
+// button), and each scene fits a landscape phone: no page scroll, text at least 11 CSS px
+// (body 12–13, mobile-2), buttons at least 44 CSS px to the finger. Phones get their own altar
+// layout (board first, buttons in the side bars), so taps use the live one (`__altarLayout`). The game runs with touch emulation; no mouse or
 // key is used in the play tests.
 
 interface GameHandle {
@@ -59,6 +60,11 @@ async function tapAt(page: Page, x: number, y: number) {
   await waitFrames(page, 4);
 }
 
+/** The altar layout in use (the phone layout on a phone). */
+async function liveLayout(page: Page): Promise<AltarLayout> {
+  return page.evaluate(() => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout);
+}
+
 async function openAltar(page: Page, id: MachineId) {
   await page.evaluate((id) => {
     const g = (window as unknown as { __game: GameHandle }).__game;
@@ -75,7 +81,7 @@ async function openAltar(page: Page, id: MachineId) {
  */
 async function buildByTouch(page: Page, id: MachineId): Promise<number> {
   const p = puzzleFor(id);
-  const L = computeLayout(p);
+  const L = await liveLayout(page);
   const turnBtn = page.locator('.lr-altar-turnbtn');
   let turns = 0;
   for (const g of p.design.intended) {
@@ -121,7 +127,7 @@ test('intake desk by touch alone: tap gems onto sockets, tap Strike, tap Continu
   await expect
     .poll(async () => (await readSave(page))?.puzzles['intake-desk']?.placements.length)
     .toBe(p.design.intended.length - 1);
-  const L = computeLayout(p);
+  const L = await liveLayout(page);
   const last = p.design.intended.at(-1)!;
   const pt = { x: 0, y: 0 };
   cellCenter(L, last.cell, pt);
@@ -169,8 +175,7 @@ test('a gem in hand turns by ↻ before it is placed; dragging a placed gem off 
 }) => {
   await boot(page, ['intake-desk']);
   await openAltar(page, 'furnace');
-  const p = puzzleFor('furnace');
-  const L = computeLayout(p);
+  const L = await liveLayout(page);
   const slot = L.tray.find((s) => s.gem === 'bend')!;
   await tapAt(page, slot.x, slot.y);
   await expect(page.locator('.lr-altar-turnbtn')).toBeVisible();
@@ -211,8 +216,8 @@ test('a gem in hand turns by ↻ before it is placed; dragging a placed gem off 
  * overlap, or any of them on a tray gem. Text boxes are the text itself (a Range), not padding.
  * A tray count sits on its own gem by design.
  */
-async function overlapProblems(page: Page, id: MachineId): Promise<string[]> {
-  const L = computeLayout(puzzleFor(id));
+async function overlapProblems(page: Page): Promise<string[]> {
+  const L = await liveLayout(page);
   const tray = L.tray.map((t) => ({ name: `tray gem ${t.gem}`, x: t.x, y: L.trayY }));
   return page.evaluate((tray) => {
     type B = { name: string; l: number; t: number; r: number; b: number; el?: Element };
@@ -220,6 +225,8 @@ async function overlapProblems(page: Page, id: MachineId): Promise<string[]> {
     const ov = document.querySelector<HTMLElement>('.tc-overlay')!;
     const o = ov.getBoundingClientRect();
     const k = o.width / 1920;
+    // On screen: inside the app's box (phones put buttons in the bars beside the 16:9 canvas).
+    const app = (document.getElementById('app') ?? document.body).getBoundingClientRect();
     const shown = (el: Element) => {
       const r = el.getBoundingClientRect();
       const cs = getComputedStyle(el);
@@ -263,7 +270,7 @@ async function overlapProblems(page: Page, id: MachineId): Promise<string[]> {
       Math.min(a.r, b.r) - Math.max(a.l, b.l) > 1 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 1;
     for (let i = 0; i < boxes.length; i++) {
       const a = boxes[i]!;
-      if (a.l < o.left - 1 || a.r > o.right + 1 || a.t < o.top - 1 || a.b > o.bottom + 1)
+      if (a.l < app.left - 1 || a.r > app.right + 1 || a.t < app.top - 1 || a.b > app.bottom + 1)
         out.push(`${a.name} off screen`);
       for (let j = i + 1; j < boxes.length; j++) {
         const b = boxes[j]!;
@@ -277,7 +284,7 @@ async function overlapProblems(page: Page, id: MachineId): Promise<string[]> {
   }, tray);
 }
 
-/** Text under 14 CSS px, and buttons whose finger target is under 44 CSS px, in view now. */
+/** Text under 11 CSS px, and buttons whose finger target is under 44 CSS px, in view now. */
 async function fitProblems(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const out: string[] = [];
@@ -294,8 +301,27 @@ async function fitProblems(page: Page): Promise<string[]> {
       if (!visible(el) || el.closest('.tc-sr-only,[aria-hidden="true"]')) continue;
       const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim());
       const fs = Number.parseFloat(getComputedStyle(el).fontSize) * k;
-      if (own && fs < 13.5)
+      if (own && fs < 10.8)
         out.push(`text ${fs.toFixed(1)}px: ${el.textContent?.trim().slice(0, 30)}`);
+      // Cut-off text (D-027, mobile-2): no ellipsis, line clamp or clipped overflow on phones.
+      const cs = getComputedStyle(el);
+      const wide = el.scrollWidth > el.clientWidth + 1;
+      const what = el.textContent?.trim().slice(0, 30);
+      if (own && cs.textOverflow === 'ellipsis' && wide) out.push(`ellipsis: ${what}`);
+      if (
+        cs.webkitLineClamp &&
+        cs.webkitLineClamp !== 'none' &&
+        el.scrollHeight > el.clientHeight + 1
+      )
+        out.push(`line-clamped: ${what}`);
+      if (
+        own &&
+        cs.overflowX !== 'visible' &&
+        cs.overflowX !== 'auto' &&
+        cs.overflowX !== 'scroll' &&
+        wide
+      )
+        out.push(`clipped: ${what}`);
     }
     for (const el of document.querySelectorAll<HTMLElement>(
       '.tc-overlay button, .tc-overlay a[href]',
@@ -360,7 +386,7 @@ for (const vp of [
       }, id);
       await expect(page.locator('.lr-altar')).toBeVisible();
       await check(id);
-      const o = await overlapProblems(page, id);
+      const o = await overlapProblems(page);
       if (o.length) found[`${id} overlaps`] = o;
       await page.evaluate(() =>
         (window as unknown as { __game: GameHandle }).__game.flow.closePuzzle(),
@@ -394,7 +420,7 @@ test('the Last Rune at 667×375: a finger drag from the tray shows the loupe and
   );
   await openAltar(page, 'the-last-rune');
   const p = puzzleFor('the-last-rune');
-  const L = computeLayout(p);
+  const L = await liveLayout(page);
   const box = (await page.locator('.tc-overlay').boundingBox())!;
   const k = box.width / 1920;
   // Sockets here are under 44 CSS px apart: the loupe's whole reason.

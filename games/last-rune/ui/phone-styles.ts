@@ -1,26 +1,41 @@
 /**
- * Phone and touch overrides (D-039; flags from ui/device-mode.ts).
+ * Phone and touch overrides (D-039, mobile-2; flags from ui/device-mode.ts).
  *
  * - `[data-touch]`: key caps hide (a finger has no keys).
- * - `[data-phone]`: the design is drawn at 0.33–0.40 CSS px per design px. Font sizes already
- *   floor at 14 CSS px through `--lr-text-min` (text-scale.ts); this sheet makes room for that
- *   text and gives every control a hit area of at least 44 CSS px (`--lr-tap`).
+ * - `[data-phone]`: the design is drawn at 0.30–0.35 CSS px per design px. A phone gets its own
+ *   layout, board first: chrome is compact icon buttons in the letterbox bars beside the 16:9
+ *   canvas (`--lr-bar`), the HUD folds behind one ☰, and every transient card (gem chip, hint,
+ *   verdict, FUSE's bubble) keeps to a margin of the screen, never over the board. Text is
+ *   12–13 CSS px (`--lr-text-min` floors every scaled size at 12). Controls keep a 44 CSS px
+ *   hit area (`--lr-tap`) through an invisible `::before`; drawn boxes stay compact.
  *
- * Sizes here are written in CSS px through `cpx(n)` (n CSS px in design px), so they hold on
- * every phone. Overrides use `P`, which outranks any scene stylesheet whatever the load order.
+ * Sizes here are written in CSS px through `cpx(n)` (n CSS px in design px) or `tpx(n)` (the
+ * same, following Settings → Text size), so they hold on every phone. Overrides use `P`, which
+ * outranks any scene stylesheet whatever the load order.
  */
 
 /** n CSS px, as a design-px length (phones only; the variable is unset elsewhere). */
 export const cpx = (n: number) => `calc(var(--lr-css-px, 1px) * ${n})`;
+/** n CSS px of text, grown by Settings → Text size. */
+export const tpx = (n: number) => `calc(var(--lr-css-px, 1px) * ${n} * var(--lr-text-scale, 1))`;
 /** Phone root selector, ranked above every `.tc-overlay .class` rule. */
 export const P = '.tc-overlay[data-phone]:not(#lr-none)';
 /** Touch root selector, same rank. */
 export const T = '.tc-overlay[data-touch]:not(#lr-none)';
 
+/** Left edge of the left bar column / right edge of the right one, 3 CSS px in from the bar's edge. */
+const BAR_IN = `calc(-1 * var(--lr-bar, 0px) + ${cpx(3)})`;
+/** An edge-column button: 44 CSS px square. */
+const COL = cpx(44);
+
 export const PHONE_CSS = /* css */ `
+/* The edge columns live in the letterbox bars, outside the 16:9 box (#app still clips). */
+${P} { overflow: visible; }
 /* ── Touch: no key caps anywhere ────────────────────────────────────────── */
 ${T} kbd, ${T} .lr-keys-only { display: none !important; }
 .tc-overlay:not([data-touch]) .lr-touch-only { display: none !important; }
+.tc-overlay:not([data-phone]) .lr-ph-ico, .tc-overlay:not([data-phone]) .lr-hud-menu { display: none !important; }
+${P} kbd { display: none !important; }
 
 /* ── Phone hit areas ───────────────────────────────────────────────────────
    Every button and link gets an invisible target at least 44 CSS px each way, centred on it.
@@ -31,88 +46,193 @@ ${T} kbd, ${T} .lr-keys-only { display: none !important; }
   top: min(0px, calc(50% - var(--lr-tap) / 2)); bottom: min(0px, calc(50% - var(--lr-tap) / 2));
   left: min(0px, calc(50% - var(--lr-tap) / 2)); right: min(0px, calc(50% - var(--lr-tap) / 2));
 }
-${P} select, ${P} input[type="range"] { min-height: ${cpx(36)}; }
-${P} input[type="checkbox"] { width: ${cpx(28)}; height: ${cpx(28)}; }
+${P} input[type="checkbox"] { width: ${cpx(18)}; height: ${cpx(18)}; }
 
-/* ── HUD (Codex, Settings, Journal) ─────────────────────────────────────── */
-${P} .lr-hud { left: ${cpx(8)}; top: ${cpx(6)}; gap: ${cpx(8)}; }
-${P} .lr-hud button { min-height: ${cpx(38)}; padding: 0 ${cpx(12)}; border-radius: ${cpx(8)}; }
-${P} .lr-nameplate { padding: ${cpx(4)} ${cpx(10)}; }
-/* In the hall the top-left corner is an alcove at phone button sizes: the bar moves to the
-   empty floor bottom left, in a row. */
-${P} .lr-hud[data-scene="hall"] { top: auto; bottom: ${cpx(6)}; flex-direction: row; }
+/* ── Compact controls ───────────────────────────────────────────────────── */
+${P} .tc-button, ${P} .lr-stone-button, ${P} .lr-gold-button {
+  min-width: 0; min-height: ${cpx(28)}; padding: 0 ${cpx(10)}; font-size: ${tpx(13)};
+  border-radius: ${cpx(7)}; border-width: 1px;
+}
+${P} .lr-gold-button { padding: 0 ${cpx(14)}; }
 
-/* ── Panels: use the whole screen ───────────────────────────────────────── */
+/* ── HUD: one ☰ in the top-right corner of the right bar ──────────────────
+   Tapped, it lists Journal, Codex and Settings below it; the ☰ carries the journal's dot. */
+${P} .lr-hud { left: auto; right: ${BAR_IN}; top: ${cpx(4)}; gap: ${cpx(4)}; align-items: flex-end; }
+${P} .lr-hud > button:not(.lr-hud-menu) { display: none; }
+${P} .lr-hud[data-open] > button:not(.lr-hud-menu):not([hidden]) {
+  display: inline-flex; align-items: center; min-height: ${cpx(32)}; padding: 0 ${cpx(12)}; font-size: ${tpx(13)};
+  box-shadow: 0 ${cpx(2)} ${cpx(8)} rgba(0,0,0,0.7);
+}
+${P} .lr-hud .lr-hud-menu {
+  display: flex; align-items: center; justify-content: center; width: ${COL}; height: ${cpx(36)}; min-height: 0;
+  padding: 0; font-size: ${cpx(20)}; line-height: 1;
+}
+${P} .lr-hud .lr-hud-menu[data-unread]::after {
+  content: ''; position: absolute; right: ${cpx(4)}; top: ${cpx(4)}; width: ${cpx(8)}; height: ${cpx(8)};
+  border-radius: 50%; background: #ff8a3c; box-shadow: 0 0 ${cpx(4)} #ff8a3c;
+}
+${P} .lr-hud[data-scene="solve"] { display: none; }
+${P} .lr-nameplate { padding: ${cpx(2)} ${cpx(8)}; font-size: ${tpx(12)}; border-radius: ${cpx(6)}; }
+
+/* ── FUSE's caption: a slim bubble, paged by tap (ui/fuse.ts pages it at 12 words) ───────── */
+${P} { --tc-caption-margin: ${cpx(6)}; --tc-caption-max-width: min(${cpx(280)}, var(--lr-third, 100vw)); }
+${P} .tc-caption {
+  gap: ${cpx(6)}; padding: ${cpx(4)} ${cpx(9)}; border-radius: ${cpx(8)}; border-width: 1px;
+}
+${P} .tc-caption-side { display: none; }
+${P} .tc-caption-text { font-size: ${tpx(12.5)}; line-height: 1.3; }
+/* At an altar: beside FUSE in the bottom band, left of the tray (altar-scene phoneCaption). */
+${P}:has(.lr-altar[data-phone]) .tc-caption {
+  left: var(--lr-cap-l) !important; right: auto !important; top: auto !important;
+  bottom: ${cpx(3)} !important; max-width: min(var(--lr-cap-w), var(--lr-third)) !important;
+}
+
+/* ── Panels ─────────────────────────────────────────────────────────────── */
 ${P} .tc-panel { max-width: 99%; max-height: 98%; }
-${P} .tc-card { padding: ${cpx(10)} ${cpx(14)}; }
-${P} .tc-button, ${P} .lr-stone-button, ${P} .lr-gold-button { min-height: ${cpx(38)}; }
-${P} .lr-stone-button { min-width: 0; padding: 0 ${cpx(14)}; }
-${P} .lr-gold-button { min-width: ${cpx(150)}; padding: 0 ${cpx(20)}; }
+${P} .tc-card { padding: ${cpx(8)} ${cpx(12)}; border-radius: ${cpx(10)}; }
 
-/* Settings: the two columns stay, nearly full width; Done stays pinned while it scrolls. */
-${P} .lr-settings { width: 1820px; gap: ${cpx(4)}; }
-${P} .lr-settings-cols { gap: 0 ${cpx(24)}; }
-${P} .lr-settings-col, ${P} .lr-settings section { gap: ${cpx(4)}; }
-${P} .lr-settings .tc-field > span { flex: 0 0 7em; }
-${P} .lr-settings select { min-height: ${cpx(38)}; padding: 0 ${cpx(8)}; }
-${P} .lr-settings textarea { height: ${cpx(44)}; }
-${P} .lr-settings .lr-row { gap: ${cpx(8)}; }
-${P} .lr-settings .lr-settings-done { padding: ${cpx(6)} 0 ${cpx(2)}; }
-${P} .lr-confirm { width: 1400px; }
+/* Settings: two columns, nearly full width; Done stays pinned while it scrolls. */
+${P} .lr-settings { width: 1820px; gap: ${cpx(2)}; font-size: ${tpx(12)}; }
+${P} .lr-settings h2 { font-size: ${tpx(14)}; margin: 0; }
+${P} .lr-settings h3 { font-size: ${tpx(12)}; margin: ${cpx(4)} 0 0; }
+${P} .lr-settings-cols { gap: 0 ${cpx(20)}; }
+${P} .lr-settings-col, ${P} .lr-settings section { gap: ${cpx(2)}; }
+${P} .lr-settings .tc-field { min-height: ${cpx(28)}; font-size: ${tpx(12)}; }
+${P} .lr-settings .tc-field > span { flex: 0 0 8em; }
+${P} .lr-settings select { min-height: ${cpx(26)}; padding: 0 ${cpx(6)}; font-size: ${tpx(12)}; }
+${P} .lr-settings input[type="range"] { min-height: ${cpx(24)}; }
+${P} .lr-settings textarea { height: ${cpx(34)}; font-size: ${tpx(11)}; }
+${P} .lr-settings .lr-row { gap: ${cpx(6)}; }
+${P} .lr-settings .lr-settings-done { padding: ${cpx(4)} 0 0; }
+${P} .lr-confirm { width: 1300px; }
 
 /* Codex: the tome fills the screen; each page keeps its plate with FUSE's note beside it and
-   scrolls if it has to; the tabs sit in their own strip under the pages. */
-${P} .lr-codex { width: 1900px; height: 1056px; padding: ${cpx(8)} ${cpx(8)} ${cpx(50)}; border-radius: ${cpx(10)}; }
-${P} .lr-codex-page { padding: ${cpx(12)} ${cpx(16)} ${cpx(8)}; grid-template-columns: ${cpx(96)} 1fr; column-gap: ${cpx(12)}; }
-${P} .lr-codex-page h3 { padding-bottom: ${cpx(2)}; }
-${P} .lr-codex-status { margin: ${cpx(4)} 0 ${cpx(6)}; }
-${P} .lr-plate { width: ${cpx(96)}; height: ${cpx(96)}; border-radius: ${cpx(8)}; }
-${P} .lr-niche { width: ${cpx(80)}; height: ${cpx(80)}; }
-${P} .lr-niche--locked::before, ${P} .lr-niche--locked::after { width: ${cpx(96)}; left: ${cpx(-8)}; }
-${P} .lr-margin { grid-column: 2; transform: none; padding: ${cpx(4)} ${cpx(8)}; align-self: start; }
-${P} .lr-codex-rule { margin-top: ${cpx(8)}; line-height: 1.3; }
-${P} .lr-codex-maths { margin-top: ${cpx(6)}; padding: ${cpx(4)} ${cpx(8)}; }
-${P} .lr-codex-head { top: ${cpx(-2)}; }
-${P} .lr-codex-nav { bottom: ${cpx(6)}; gap: ${cpx(6)}; }
-${P} .lr-codex-nav button { min-height: ${cpx(36)}; height: auto; padding: 0 ${cpx(10)}; border-radius: ${cpx(18)}; }
-${P} .lr-codex-nav .lr-dot { width: ${cpx(9)}; height: ${cpx(9)}; margin-right: ${cpx(4)}; }
-${P} .lr-codex-close { width: ${cpx(40)}; height: ${cpx(40)}; right: ${cpx(14)}; top: ${cpx(14)}; }
+   scrolls if it has to; the tabs sit in a strip under the pages. */
+${P} .lr-codex { width: 1900px; height: 1056px; padding: ${cpx(15)} ${cpx(6)} ${cpx(38)}; border-radius: ${cpx(10)}; }
+${P} .lr-codex-page { padding: ${cpx(8)} ${cpx(12)} ${cpx(6)}; grid-template-columns: ${cpx(76)} 1fr; column-gap: ${cpx(10)}; font-size: ${tpx(12)}; }
+${P} .lr-codex-page h3 { padding-bottom: ${cpx(2)}; font-size: ${tpx(15)}; }
+${P} .lr-codex-status { margin: ${cpx(2)} 0 ${cpx(4)}; font-size: ${tpx(11)}; }
+${P} .lr-plate { width: ${cpx(76)}; height: ${cpx(76)}; border-radius: ${cpx(8)}; }
+${P} .lr-niche { width: ${cpx(64)}; height: ${cpx(64)}; }
+${P} .lr-niche--locked::before, ${P} .lr-niche--locked::after { width: ${cpx(76)}; left: ${cpx(-6)}; }
+${P} .lr-margin { grid-column: 2; transform: none; padding: ${cpx(2)} ${cpx(6)}; align-self: start; font-size: ${tpx(11.5)}; line-height: 1.3; }
+${P} .lr-codex-rule { margin-top: ${cpx(6)}; line-height: 1.3; font-size: ${tpx(12)}; }
+${P} .lr-codex-maths { margin-top: ${cpx(4)}; padding: ${cpx(3)} ${cpx(6)}; font-size: ${tpx(11)}; }
+${P} .lr-codex-head { top: ${cpx(1)}; font-size: ${tpx(11)}; letter-spacing: 1px; }
+${P} .lr-codex-nav { bottom: ${cpx(5)}; gap: ${cpx(4)}; }
+${P} .lr-codex-nav button { min-height: ${cpx(26)}; height: auto; padding: 0 ${cpx(8)}; border-radius: ${cpx(13)}; font-size: ${tpx(12)}; }
+${P} .lr-codex-nav .lr-dot { width: ${cpx(7)}; height: ${cpx(7)}; margin-right: ${cpx(3)}; }
+${P} .lr-codex-close { width: ${cpx(30)}; height: ${cpx(30)}; right: ${cpx(10)}; top: ${cpx(10)}; font-size: ${tpx(16)}; }
 
 /* Journal: the slips are an index 16 CSS px apart, so they keep their exact size (no grown hit
-   area to steal the neighbour's tap); the big page arrows and a swipe on the book turn pages. */
-${P} .lr-journal .lr-j-slip { line-height: 1; padding: 0 ${cpx(4)} 0 ${cpx(6)}; gap: ${cpx(4)}; }
+   area to steal the neighbour's tap); the page arrows and a swipe on the book turn pages. */
+${P} .lr-journal .lr-j-slip { line-height: 1; padding: 0 ${cpx(4)} 0 ${cpx(6)}; gap: ${cpx(4)}; font-size: ${tpx(11.5)}; }
+${P} .lr-journal .lr-j-slip[data-blank] { font-size: ${tpx(11)}; letter-spacing: 0; border-width: 1px; }
+${P} .lr-j-slip b, ${P} .lr-j-slip[data-blank] b { font-size: ${tpx(11.5)}; }
+${P} .lr-j-slip .lr-j-new { font-size: ${tpx(11)}; letter-spacing: 0.5px; padding: 0 ${cpx(4)}; border-radius: ${cpx(6)}; line-height: 1.1; }
+${P} .lr-j-head h1 { font-size: ${tpx(16)}; letter-spacing: 1px; }
+${P} .lr-j-head p { font-size: ${tpx(11)}; letter-spacing: 0.5px; margin: 0; }
 ${P} .lr-journal .lr-j-slip::before { display: none; }
 ${P} .lr-j-slip b { min-width: 1.4em; }
-${P} .lr-journal .lr-j-turn { width: ${cpx(44)}; height: ${cpx(44)}; line-height: ${cpx(40)}; font-size: ${cpx(34)}; background: #ffffff1c; }
-${P} .lr-j-plate { font-size: var(--lr-text-min); padding: 0 ${cpx(14)}; }
+${P} .lr-journal .lr-j-turn { width: ${cpx(36)}; height: ${cpx(36)}; line-height: ${cpx(32)}; font-size: ${cpx(26)}; background: #ffffff1c; }
+${P} .lr-j-plate { font-size: var(--lr-text-min); padding: 0 ${cpx(10)}; }
 
-/* Altar: the action row and the title keep to CSS-px sizes; the hint line sits centred under
-   the tray and may wrap. */
-${P} .lr-altar-actions { right: ${cpx(8)}; top: ${cpx(6)}; gap: ${cpx(6)}; }
-${P} .lr-altar-actions .lr-stone-button { min-height: ${cpx(38)}; padding: 0 ${cpx(10)}; }
-${P} .lr-altar-actions .lr-gold-button { min-height: ${cpx(44)}; min-width: 0; padding: 0 ${cpx(16)}; }
-/* The title sits right-aligned under the action row: over the board it lands on top gauges. */
-${P} .lr-altar-title { left: auto !important; max-width: none !important; right: ${cpx(10)}; top: ${cpx(54)}; transform: none; text-align: right; }
-${P} .lr-altar-title h2 { white-space: nowrap; }
-/* The storm's Gives card already says what the subtitle says; the title gets the room. */
+/* Hangout: the window fills the screen and the sidebar is wide enough for every channel's
+   whole name (no ellipsis on phones); Skip keeps the strip on the right. */
+${P} .lr-hg { left: 30px; top: 30px; width: 1640px; height: 1020px; }
+${P} .lr-hg-rail { width: ${cpx(30)}; padding-top: ${cpx(6)}; }
+${P} .lr-hg-badge { width: ${cpx(22)}; height: ${cpx(22)}; border-radius: ${cpx(6)}; font-size: ${tpx(12)}; }
+${P} .lr-hg-rail::before { top: ${cpx(8)}; height: ${cpx(14)}; }
+${P} .lr-hg-side { width: 660px; }
+${P} .lr-hg-server { height: ${cpx(24)}; padding: 0 ${cpx(8)}; font-size: ${tpx(13)}; text-overflow: clip; overflow: visible; }
+${P} .lr-hg-list { padding: ${cpx(4)} ${cpx(4)} 0 ${cpx(6)}; }
+${P} .lr-hg-ch { height: auto; min-height: ${cpx(13)}; margin: 0; padding: 0 ${cpx(18)} 0 ${cpx(4)}; gap: ${cpx(3)}; font-size: ${tpx(11)}; line-height: 1.15; }
+${P} .lr-hg-ch .lr-emo { min-width: ${cpx(12)}; font-size: ${tpx(11)}; }
+${P} .lr-hg-hash { min-width: ${cpx(5)}; font-size: ${tpx(11)}; }
+${P} .lr-hg-name { overflow: visible; text-overflow: clip; }
+${P} .lr-hg-cat { margin: ${cpx(1)} 0 ${cpx(2)}; font-size: ${tpx(11)}; letter-spacing: 1px; }
+
+/* ── Altar: board first ────────────────────────────────────────────────────
+   Left bar: Back (top), Undo and Clear. Right bar: ☰ (top, the HUD), ↻ Turn, Strike (bottom).
+   Bottom band (layout.ts PhoneBand): FUSE and his bubble, the tray, then the info lane where
+   the gem chip, the verdict or the hint shows, one at a time. The title is one line on top. */
+${P} .lr-altar-actions { inset: 0; display: block; pointer-events: none; }
+${P} .lr-altar-actions button {
+  position: absolute; width: ${COL}; height: ${COL}; min-height: 0; padding: 0; border-radius: ${cpx(8)};
+  display: flex; align-items: center; justify-content: center; font-family: var(--tc-font-ui); font-size: ${tpx(11)};
+  line-height: 1.1; letter-spacing: 0; pointer-events: auto;
+}
+${P} .lr-altar-actions button > span { display: flex; flex-direction: column; align-items: center; gap: 0; }
+${P} .lr-altar-actions .lr-ph-ico { font-style: normal; font-size: ${cpx(17)}; line-height: 1; color: var(--lr-gold); }
+${P} .lr-altar-actions [data-action="back"] { left: ${BAR_IN}; top: ${cpx(4)}; }
+${P} .lr-altar-actions [data-action="undo"] { left: ${BAR_IN}; top: 34%; }
+${P} .lr-altar-actions [data-action="clear"] { left: ${BAR_IN}; top: calc(34% + ${cpx(52)}); }
+${P} .lr-altar-actions [data-action="strike"] {
+  right: ${BAR_IN}; bottom: ${cpx(6)}; height: ${cpx(58)}; font-family: var(--tc-font-display); font-size: ${tpx(12)};
+}
+${P} .lr-altar-actions .lr-gold-button .lr-strike-pips { margin: ${cpx(3)} 0 0; vertical-align: 0; }
+${P} .lr-altar .lr-altar-turnbtn {
+  left: auto !important; right: ${BAR_IN}; top: 50% !important; width: ${COL}; height: ${cpx(52)}; min-height: 0;
+  padding: 0; border-radius: ${cpx(10)}; border-width: 1px; font-family: var(--tc-font-ui); font-size: ${tpx(11)}; line-height: 1.1;
+}
+${P} .lr-altar .lr-altar-turnbtn > span { display: flex; flex-direction: column; align-items: center; }
+${P} .lr-altar .lr-altar-turnbtn b { font-size: ${cpx(20)}; }
+
+${P} .lr-altar-title { top: ${cpx(1)}; max-width: none !important; line-height: 1.1; }
+${P} .lr-altar-title h2 { font-size: ${tpx(13)}; letter-spacing: 0.5px; white-space: nowrap; }
+/* The storm's Gives card already says what the subtitle says. */
 ${P} .lr-altar-title small { display: none; }
-/* The hint sits in the free strip above the tray (the band under the board is kept clear of
-   props), not under it where the count chips are. A gem's card shows in the same strip, and
-   while it does the hint steps aside. */
-${P} .lr-altar-hint { left: 770px; transform: translateX(-50%); min-width: 0; max-width: 700px; white-space: normal; padding: 0 ${cpx(8)}; bottom: 164px; }
-${P} .lr-altar:has(.lr-altar-tip:not([hidden])) .lr-altar-hint { visibility: hidden; }
+
+${P} .lr-altar-need { padding: ${cpx(1)} ${cpx(6)} ${cpx(2)}; border-width: 1px; border-radius: ${cpx(6)}; font-size: ${tpx(11)}; line-height: 1.1; }
+${P} .lr-altar-need[data-align="below"] { transform: translate(-50%, ${cpx(4)}); }
+${P} .lr-altar-need[data-align="right"] { transform: translate(${cpx(5)}, -50%); }
+${P} .lr-altar-need b { font-size: ${tpx(14)}; margin-left: ${cpx(2)}; }
+${P} .lr-altar-need .lr-need-got { font-size: ${tpx(11)}; }
+${P} .lr-altar-need .lr-need-got b { font-size: ${tpx(12)}; }
+${P} .lr-altar-need .lr-need-note { font-size: ${tpx(11)}; margin-top: 0; }
+${P} .lr-altar-need .lr-need-strikes { font-size: ${tpx(11)}; gap: ${cpx(2)}; }
+
+${P} .lr-altar-count { padding: 0 ${cpx(5)}; min-width: 0; border-radius: ${cpx(6)}; font-size: ${tpx(11)}; gap: ${cpx(2)}; line-height: 1.2; }
+
+/* The info lane: gem chip, verdict and hint share it, bottom-aligned; the chip wins, then the
+   verdict. Each is one to three short lines; a tap anywhere clears the chip and the verdict. */
+${P} .lr-altar-tip, ${P} .lr-altar-verdict, ${P} .lr-altar-hint {
+  top: auto !important; bottom: ${cpx(3)}; transform: none; text-align: left; box-sizing: border-box;
+  font-family: var(--tc-font-body, serif); font-size: ${tpx(12)}; line-height: 1.3; letter-spacing: 0;
+  border-radius: ${cpx(7)}; border-width: 1px; box-shadow: 0 ${cpx(2)} ${cpx(8)} rgba(0,0,0,0.6);
+}
+${P} .lr-altar-tip { width: max-content; padding: ${cpx(3)} ${cpx(8)}; }
+${P} .lr-altar-tip::after { display: none; }
+${P} .lr-altar-tip .lr-info-row { white-space: normal; }
+${P} .lr-altar-tip .lr-info-tag { display: none; }
+${P} .lr-altar-tip b { margin-right: ${cpx(2)}; }
+/* Long-pressed: the whole card, growing upward from the lane. */
+${P} .lr-altar-tip[data-full] .lr-info-row { white-space: normal; }
+${P} .lr-altar-tip[data-full] .lr-info-tag { display: inline-block; font-size: ${tpx(11)}; padding: 0 ${cpx(4)}; margin-right: ${cpx(3)}; border-radius: ${cpx(4)}; }
+${P} .lr-altar-verdict { width: max-content; padding: ${cpx(3)} ${cpx(8)}; animation: none; }
+/* One run of text: the verdict, then its story or next step on the same line, so it wraps to
+   at most three lines in the lane. */
+${P} .lr-altar-verdict { font-family: var(--tc-font-display); font-size: ${tpx(12)}; line-height: 1.25; }
+${P} .lr-altar-verdict .lr-verdict-story, ${P} .lr-altar-verdict .lr-verdict-hint {
+  display: inline; margin: 0; max-width: none; font-size: ${tpx(11.5)}; line-height: 1.25;
+}
+/* The verdict has no full stop of its own: a dot keeps it from running into what follows. */
+${P} .lr-altar-verdict .lr-verdict-story::before, ${P} .lr-altar-verdict .lr-verdict-hint::before { content: ' · '; }
+${P} .lr-altar-hint {
+  left: var(--lr-info-l) !important; right: auto; width: auto; max-width: min(var(--lr-info-w), var(--lr-third)) !important; min-width: 0;
+  padding: ${cpx(2)} ${cpx(6)}; white-space: normal; background: rgba(16,13,10,0.7); border: 0; box-shadow: none;
+}
+${P} .lr-altar-hint:empty { display: none; }
+${P} .lr-altar-hint .lr-nowrap { white-space: nowrap; }
+${P} .lr-altar[data-phone]:has(.lr-altar-tip:not([hidden])) :is(.lr-altar-verdict, .lr-altar-hint) { visibility: hidden; }
+${P} .lr-altar[data-phone]:has(.lr-altar-verdict:not([hidden])) .lr-altar-hint { visibility: hidden; }
 /* The tray card covers the gem in hand for its first moments; its ↻ mark waits too. */
-${T} .lr-altar:has(.lr-altar-tip[data-source="tray"]:not([hidden])) .lr-altar-turnmark { visibility: hidden; }
-${P} .lr-altar-count { padding: 0 ${cpx(6)}; margin-top: calc(${cpx(-14)}); }
-${P} .lr-altar-verdict { padding: ${cpx(4)} ${cpx(10)}; }
-${P} .lr-altar-tip { max-width: 1000px; padding: ${cpx(3)} ${cpx(8)}; }
+${T} .lr-altar:not([data-phone]):has(.lr-altar-tip[data-source="tray"]:not([hidden])) .lr-altar-turnmark { visibility: hidden; }
+${P} .lr-altar-tag { font-size: ${tpx(11)}; padding: ${cpx(1)} ${cpx(5)}; border-radius: ${cpx(5)}; }
 
-/* Title: the Ko-fi link and the engine's Copy link (0.75 × the small size) keep phone sizes. */
-${P} .tc-link-copy, ${P} .tc-link-message { font-size: var(--lr-text-min); min-height: ${cpx(32)}; }
-${P} .lr-title-links { right: ${cpx(8)}; bottom: ${cpx(6)}; }
-${P} .lr-title-coffee { min-height: ${cpx(32)}; padding: 0 ${cpx(12)}; }
-${P} .lr-release { font-size: var(--lr-text-min); }
-
-/* Solve card: the HUD steps away so the card has the top-left corner (Continue leads). */
-${P} .lr-hud[data-scene="solve"] { display: none; }
+/* ── Title ──────────────────────────────────────────────────────────────── */
+${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cpx(2)} ${cpx(8)}; }
+${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }
+${P} .lr-title-coffee { min-height: ${cpx(24)}; padding: 0 ${cpx(8)}; font-size: ${tpx(11)}; }
+${P} .lr-release { font-size: ${tpx(11)}; }
 `;

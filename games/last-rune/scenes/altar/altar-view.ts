@@ -24,7 +24,15 @@ import type { Cell, GemKind } from '../../rules/types';
 import { type AltarAssets, altarAssets, ensureBolts } from './assets';
 import type { BoardState } from './board';
 import type { PathHop } from './circuit-model';
-import { type AltarLayout, anchorOf, cellCenter, computeLayout, DESIGN_W } from './layout';
+import {
+  type AltarLayout,
+  anchorOf,
+  cellCenter,
+  computeLayout,
+  DESIGN_W,
+  PHONE_FUSE,
+  phoneFrameFor,
+} from './layout';
 import type { StrikeTimeline } from './strike';
 
 const W = DESIGN_W;
@@ -162,7 +170,8 @@ export class AltarView {
     const r = ctx.renderer;
     this.assets = altarAssets(r, ctx.particles);
     ensureBolts(this.assets, r, ctx.particles, Math.max(1, puzzle.pulses));
-    const L = computeLayout(puzzle);
+    const dev = ctx.device;
+    const L = computeLayout(puzzle, phoneFrameFor(dev.phone, dev.cssPx, dev.bar));
     this.layout = L;
     this.slab = this.assets.slab(L.cols, L.rows, L.pitch);
     this.slab.place(L.cx, L.cy);
@@ -193,7 +202,13 @@ export class AltarView {
     this.trayLift = L.tray.map(() => 0);
     this.heldInst.size = L.gemSize;
     const fuse = this.assets.fuse;
-    fuse.place(300, 1046);
+    if (L.phone) {
+      fuse.scale = PHONE_FUSE.scale;
+      fuse.place(L.phone.fuseX, PHONE_FUSE.y);
+    } else {
+      fuse.scale = 112;
+      fuse.place(300, 1046);
+    }
     fuse.mood = 'idle';
     fuse.lookAt(null);
     for (const b of this.assets.bolts) b.clear();

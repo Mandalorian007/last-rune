@@ -34,6 +34,7 @@ import {
   moodFor,
   type SceneName,
 } from '../audio';
+import { PHONE_WORDS_PER_CARD } from '../content/lines';
 import { storyTier } from '../rules/progression';
 import type { MachineId } from '../rules/types';
 import type { ViewContext, ViewCue, ViewFactories } from '../scenes/views';
@@ -184,9 +185,9 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   surface.onResize(({ rect, backbuffer }) => {
     renderer.resize(backbuffer.width, backbuffer.height);
     ui.setRect(rect);
-    device.setScale(ui.scale);
+    device.setScale(ui.scale, rect.x);
   });
-  device.setScale(ui.scale);
+  device.setScale(ui.scale, ui.rect.x);
 
   // ── Audio ──────────────────────────────────────────────────────────────
   const audio = new AudioEngine();
@@ -256,6 +257,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
 
   const fuse = new Fuse(ui.caption, {
     voice: (text) => sound.fuse.onChar(fuseModeForTier(tier()), text),
+    cardWords: () => (device.phone ? PHONE_WORDS_PER_CARD : undefined),
   });
   // Animated FUSE portrait in the caption card (one canvas, reused for every line).
   const portrait = createFusePortrait(renderer, { size: 96, zoom: 0.46 });

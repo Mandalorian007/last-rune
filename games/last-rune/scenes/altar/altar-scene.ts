@@ -25,6 +25,7 @@ import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
 import type { BoltHandle, StormCellHandle } from '../../audio';
+import { codexEntry } from '../../content/codex';
 import { exactLine, gemNudge, machineLine, reactionLine, TEACH_NUDGE } from '../../content/lines';
 import { puzzleFor } from '../../content/puzzles';
 import type { GameCtx, GameScene } from '../../game/ctx';
@@ -66,6 +67,8 @@ import {
   cellAt,
   cellCenter,
   FUSE_LANE,
+  type PhoneBand,
+  phoneFrameFor,
   snapCell,
   TRAY_CENTER_X,
   traySlotAt,
@@ -362,6 +365,12 @@ export class AltarScene implements GameScene {
   private pendingNudges: GemKind[] = [];
   /** Seconds left on the arrival card for this altar's new gems (0 = gone). */
   private introLeft = 0;
+  /** Phones: a long press opened this gem's full card; the next tap closes it. */
+  private infoPin: { gem: GemKind; how: InfoHow } | null = null;
+  /** Phones: the frame the layout was built for, and a rebuild waiting for edit mode. */
+  private frame = '';
+  private relayoutPending = false;
+  private offDevice: (() => void) | null = null;
   /** Charge read-outs on the route preview through a new fixed gem (see `updatePreviewChips`). */
   private previewChipEls: HTMLElement[] = [];
   private previewChipKey = '';
@@ -434,6 +443,10 @@ export class AltarScene implements GameScene {
     ensureAltarStyles(ctx.ui.root.ownerDocument);
     this.buildDom();
     this.refreshHud();
+    this.frame = this.frameKey();
+    this.offDevice = ctx.device.onChange(() => {
+      this.relayoutPending = this.frameKey() !== this.frame;
+    });
     // On the first altar the card (with the gold-ring line) stays until the first placement.
     this.introLeft =
       this.introRows().length === 0 ? 0 : this.teachCell ? Number.POSITIVE_INFINITY : INTRO_SECS;
@@ -463,27 +476,17 @@ export class AltarScene implements GameScene {
 
   exit(): void {
     this.ctx.fuse.avoid(null);
+    this.phoneCaption(false);
+    this.offDevice?.();
+    this.offDevice = null;
     setHintTarget(null);
     this.ctx.flow.savePlacements(this.machine, this.board.serialise());
     this.boltSound?.stop(0.2);
     this.boltSound = null;
     this.hum?.stop(0.4);
     this.hum = null;
-    this.view.dispose();
-    this.loupe?.destroy();
-    this.loupe = null;
     if (this.announceTimer !== null) clearTimeout(this.announceTimer);
-    this.dom.remove();
-    this.chipEls.length = 0;
-    this.previewChipEls.length = 0;
-    this.noGoEls.length = 0;
-    this.capEls.length = 0;
-    this.capLines.length = 0;
-    this.capBeats = [];
-    this.capKey = '';
-    this.strikePips.length = 0;
-    this.strikeRow = null;
-    this.pins.length = 0;
+    this.teardownView();
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
     this.ctx.particles.clear();
     emitPuzzleEvent({
@@ -497,6 +500,62 @@ export class AltarScene implements GameScene {
       outcomes: { ...this.outcomes },
       placements: this.board.serialise(),
     });
+  }
+
+  /** The board's view and every DOM label on it (exit, and a phone relayout). */
+  private teardownView(): void {
+    this.view.dispose();
+    this.loupe?.destroy();
+    this.loupe = null;
+    this.dom.remove();
+    this.chipEls.length = 0;
+    this.previewChipEls.length = 0;
+    this.noGoEls.length = 0;
+    this.capEls.length = 0;
+    this.capLines.length = 0;
+    this.capBeats = [];
+    this.capKey = '';
+    this.strikePips.length = 0;
+    this.strikeRow = null;
+    this.pins.length = 0;
+  }
+
+  /** The phone frame the layout was built for ('' off phones). */
+  private frameKey(): string {
+    const d = this.ctx.device;
+    const f = phoneFrameFor(d.phone, d.cssPx, d.bar);
+    return f ? `${f.padL},${f.padR}` : '';
+  }
+
+  /**
+   * A phone turned, or the window crossed the phone size: rebuild the board's layout and its
+   * labels for the new frame. Waits for the edit mode (never mid-strike or on a verdict).
+   */
+  private relayout(): void {
+    this.relayoutPending = false;
+    this.frame = this.frameKey();
+    this.teardownView();
+    this.view = new AltarView(this.ctx, this.puzzle);
+    this.view.reducedMotion = this.ctx.settings.reducedMotion;
+    this.view.reduceFlashes = this.ctx.settings.reduceFlashes;
+    this.view.syncBoard(this.board);
+    this.press = null;
+    this.infoPin = null;
+    this.circuitRev = -1;
+    this.circuitMode = null;
+    this.cursorKey = '';
+    this.idleRev = -1;
+    this.validRev = -1;
+    this.tipKey = '';
+    this.pinsRev = -1;
+    this.focusKey = '';
+    this.previewChipKey = '';
+    this.ghostKey = '';
+    this.noGoKey = '';
+    this.buildDom();
+    this.refreshHud();
+    this.updateHint();
+    this.settleFrames = 4;
   }
 
   pause(): void {
@@ -533,6 +592,11 @@ export class AltarScene implements GameScene {
    */
   private avoidTray(): void {
     const L = this.view.layout;
+    // Phones: the caption has its own bubble in the bottom band (phoneCaption).
+    if (L.phone) {
+      this.ctx.fuse.avoid(null);
+      return;
+    }
     const regions: Rect[] = [];
     const xs = L.tray.map((s) => s.x);
     if (xs.length) {
@@ -597,7 +661,9 @@ export class AltarScene implements GameScene {
             : 'mouse';
     if (mode === this.hintMode) return;
     this.hintMode = mode;
-    this.hint.replaceChildren(...hintLine(mode));
+    // Only mention ↻ where a gem can turn (the Turn button shows only then).
+    const turns = this.view.layout.tray.some((t) => isRotational(t.gem));
+    this.hint.replaceChildren(...hintLine(mode, turns));
     this.hint.dataset.mode = mode;
     this.avoidTray();
   }
@@ -610,9 +676,23 @@ export class AltarScene implements GameScene {
 
   private buildDom(): void {
     const L = this.view.layout;
-    const btn = (label: string, key: string, fn: () => void, gold = false, action = '') => {
+    const btn = (
+      label: string,
+      key: string,
+      fn: () => void,
+      gold = false,
+      action = '',
+      icon = '',
+    ) => {
       const b = button(
-        h('span', null, label, h('kbd', { 'aria-hidden': 'true' }, key)),
+        h(
+          'span',
+          null,
+          // Phones only (CSS): an icon over the word, for the narrow edge columns.
+          icon ? h('i', { class: 'lr-ph-ico', 'aria-hidden': 'true' }, icon) : null,
+          label,
+          h('kbd', { 'aria-hidden': 'true' }, key),
+        ),
         (e) => {
           (e.currentTarget as HTMLElement).blur();
           this.ctx.sound.sfx.play('uiClick');
@@ -624,10 +704,10 @@ export class AltarScene implements GameScene {
       if (action) b.dataset.action = action;
       return b;
     };
-    this.undoBtn = btn('Undo', 'Z', () => this.undo(), false, 'undo');
-    this.clearBtn = btn('Clear', 'Del', () => this.clear(), false, 'clear');
+    this.undoBtn = btn('Undo', 'Z', () => this.undo(), false, 'undo', '\u21b6');
+    this.clearBtn = btn('Clear', 'Del', () => this.clear(), false, 'clear', '\u2715');
     this.strikeBtn = btn('Strike', 'F', () => this.strike(), true, 'strike');
-    const back = btn('Back', 'Esc', () => this.back(), false, 'back');
+    const back = btn('Back', 'Esc', () => this.back(), false, 'back', '\u2190');
     this.subtitle = h('small');
     // The visible verdict is not a live region: it is unhidden and filled in the same frame,
     // which screen readers miss. `announcer` speaks it (and the needs) instead.
@@ -674,7 +754,9 @@ export class AltarScene implements GameScene {
         // Bigger text lifts the count up the gem so the hint line below stays clear.
         style: {
           left: `${s.x}px`,
-          top: `calc(${s.y + 40}px - (var(--lr-text-scale, 1) - 1) * 50px)`,
+          top: L.phone
+            ? `${s.y + s.size / 2 - 4}px`
+            : `calc(${s.y + 40}px - (var(--lr-text-scale, 1) - 1) * 50px)`,
         },
       }),
     );
@@ -755,7 +837,34 @@ export class AltarScene implements GameScene {
       this.hint,
     );
     this.dom.toggleAttribute('data-first', !!this.teachCell);
+    const band = L.phone;
+    this.dom.toggleAttribute('data-phone', !!band);
+    if (band) {
+      // The info lane (gem chip, hint, verdict) right of the tray, in the bottom band.
+      this.dom.style.setProperty('--lr-info-l', `${band.infoL}px`);
+      this.dom.style.setProperty('--lr-info-w', `${band.infoR - band.infoL}px`);
+    }
+    this.phoneCaption(true);
     this.ctx.ui.layers.hud.append(this.dom);
+    // Dev/e2e handle: the layout in use (tests tap cells and slots by it on phones).
+    if (import.meta.env.DEV)
+      (window as unknown as { __altarLayout: AltarLayout }).__altarLayout = L;
+  }
+
+  /**
+   * Phones: FUSE's caption is a bubble beside him in the bottom band, left of the tray (CSS
+   * reads these variables off the overlay root; ui/phone-styles.ts). Off phones, nothing.
+   */
+  private phoneCaption(on: boolean): void {
+    const st = this.ctx.ui.root.style;
+    const band = this.view.layout.phone;
+    if (on && band) {
+      st.setProperty('--lr-cap-l', `${band.bubbleL}px`);
+      st.setProperty('--lr-cap-w', `${band.bubbleR - band.bubbleL}px`);
+    } else {
+      st.removeProperty('--lr-cap-l');
+      st.removeProperty('--lr-cap-w');
+    }
   }
 
   private refreshHud(): void {
@@ -805,6 +914,10 @@ export class AltarScene implements GameScene {
     const L = this.view.layout;
     const ui = this.ctx.ui;
     if (!this.dom.isConnected) return;
+    if (L.phone) {
+      this.fitPhone(L.phone);
+      return;
+    }
     const origin = ui.root.getBoundingClientRect().left;
     const toDesign = (px: number) => (px - origin) / ui.scale;
     let hudRight = 0;
@@ -841,6 +954,41 @@ export class AltarScene implements GameScene {
     this.verdict.removeAttribute('data-docked');
     if (!this.verdict.hidden) this.clearRootMark(lo, hi);
     this.avoidTray();
+  }
+
+  /**
+   * Phones: the title is one line over the board's centre; the verdict sits in the info lane
+   * (bottom right, beside the tray), bottom-aligned, never over the board.
+   */
+  private fitPhone(band: PhoneBand): void {
+    const L = this.view.layout;
+    this.titleEl.style.maxWidth = '';
+    this.titleEl.style.left = `${Math.round(L.titleX)}px`;
+    // A gauge on a top machine stands in the title's line: the title steps aside, to the
+    // side with more room.
+    const k = this.ctx.ui.scale;
+    const t = this.titleEl.getBoundingClientRect();
+    const ox = this.ctx.ui.root.getBoundingClientRect().left;
+    for (const el of [...this.needs, this.stormLabel]) {
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (r.top > t.bottom + 4 || r.bottom < t.top || r.right < t.left - 8 || r.left > t.right + 8)
+        continue;
+      const half = t.width / 2;
+      const right = (r.right - ox) / k + 16 + half / k;
+      const left = (r.left - ox) / k - 16 - half / k;
+      const x = right + half / k <= band.infoR ? right : left;
+      this.titleEl.style.left = `${Math.round(x)}px`;
+      break;
+    }
+    const v = this.verdict;
+    v.removeAttribute('data-docked');
+    v.removeAttribute('data-narrow');
+    v.style.left = `${band.infoL}px`;
+    v.style.maxWidth = `min(${band.infoR - band.infoL}px, var(--lr-third))`;
+    v.style.top = '';
+    if (this.stormLabel) this.clearOfBoard(this.stormLabel);
+    this.ctx.fuse.avoid(null);
   }
 
   /**
@@ -1190,7 +1338,7 @@ export class AltarScene implements GameScene {
    * readings) into the action row; drop it just below the row when it would touch.
    */
   private clearOfActions(el: HTMLElement): void {
-    if (!this.dom.isConnected || !this.actionsEl) return;
+    if (!this.dom.isConnected || !this.actionsEl || this.view.layout.phone) return;
     el.style.marginTop = '';
     const a = this.actionsEl.getBoundingClientRect();
     const r = el.getBoundingClientRect();
@@ -1480,6 +1628,12 @@ export class AltarScene implements GameScene {
     const whole =
       r.how === 'tray' || r.how === 'turnsTray' || r.gem === 'capacitor' || r.gem === 'gate';
     return whole ? rule : firstSentence(rule);
+  }
+
+  /** A phone chip's rule: the whole rule in one short line (the codex's `chip`). */
+  private chipRule(r: { gem: GemKind; how: InfoHow }): string {
+    const line = codexEntry(r.gem).chip;
+    return r.how === 'turns' ? `${line} Turn it to fit.` : line;
   }
 
   /** New fixed gems have been struck through: stop pulsing them, close the arrival card. */
@@ -2294,6 +2448,7 @@ export class AltarScene implements GameScene {
     if (this.settleFrames > 0 && --this.settleFrames % 2 === 0) this.avoidTray();
     this.view.reducedMotion = ctx.settings.reducedMotion;
     this.view.reduceFlashes = ctx.settings.reduceFlashes;
+    if (this.relayoutPending && this.mode === 'edit' && !this.press) this.relayout();
 
     if (this.mode === 'strike') this.updateStrike(dt);
     else this.updateEdit(dt);
@@ -2445,7 +2600,11 @@ export class AltarScene implements GameScene {
     this.hoverSlot = live && !lift ? traySlotAt(L, p.x, p.y) : -1;
 
     // ── Pointer ──
+    // Phones: a tap while a gem's full card is open only closes it.
+    const closing = input.pressed('select') && !!this.infoPin;
+    if (closing) this.infoPin = null;
     if (
+      !closing &&
       input.pressed('select') &&
       p.inside &&
       finger &&
@@ -2463,7 +2622,7 @@ export class AltarScene implements GameScene {
         dragging: false,
         t: this.time,
       };
-    } else if (input.pressed('select') && p.inside) {
+    } else if (!closing && input.pressed('select') && p.inside) {
       this.keyboard = false;
       if (this.hoverSlot >= 0) {
         const kind = L.tray[this.hoverSlot]!.gem;
@@ -2518,7 +2677,26 @@ export class AltarScene implements GameScene {
       // A long touch on a placed gem shows its card and selects it for ↻; it does not pick up.
       if (!press.dragging && this.time - press.t >= HOLD_SECS && !this.hand) {
         this.lastPlaced = { x: press.cell.x, y: press.cell.y };
+        const pl = this.board.at(press.cell);
+        if (L.phone && pl && !this.infoPin)
+          this.infoPin = { gem: pl.gem, how: isRotational(pl.gem) ? 'boardTurns' : 'board' };
       }
+    }
+    // Phones: a long press on a tray gem opens its full card too.
+    if (
+      press &&
+      L.phone &&
+      finger &&
+      input.held('select') &&
+      press.origin === 'tray' &&
+      !press.dragging &&
+      !this.infoPin &&
+      this.time - press.t >= HOLD_SECS &&
+      this.hand &&
+      !this.hand.from
+    ) {
+      const gem = this.hand.kind;
+      this.infoPin = { gem, how: this.turnTeach.has(gem) ? 'turnsTray' : 'tray' };
     }
     if (press && input.released('select')) {
       this.press = null;
@@ -2745,12 +2923,17 @@ export class AltarScene implements GameScene {
     if (slot < 0 && this.hand && !this.hand.from && !strike && !overPlaced && !cardOff) {
       slot = L.tray.findIndex((t) => t.gem === this.hand!.kind);
     }
-    const s = slot >= 0 ? L.tray[slot] : undefined;
+    if (strike) this.infoPin = null;
+    const pin = this.infoPin;
+    const s = !pin && slot >= 0 ? L.tray[slot] : undefined;
     const focus =
       !strike && (!this.hand || overPlaced) ? (this.keyboard ? this.cursor : this.hoverCell) : null;
     const fixedHere = focus ? this.board.fixedAt(focus) : undefined;
     const onBoard = focus ? (this.board.at(focus) ?? fixedHere) : undefined;
-    if (s) {
+    if (pin) {
+      rows = [pin];
+      key = `p${pin.gem}${pin.how}`;
+    } else if (s) {
       rows = [{ gem: s.gem, how: this.turnTeach.has(s.gem) ? 'turnsTray' : 'tray' }];
       slotX = s.x;
       key = `t${slot}`;
@@ -2785,6 +2968,9 @@ export class AltarScene implements GameScene {
       return;
     }
     this.tip.dataset.source = key === 'intro' ? 'intro' : key[0] === 't' ? 'tray' : 'board';
+    // Phones: a chip, each row its gem's name and first whole sentence (never cut mid-rule);
+    // a long-press pins the full card.
+    const chip = !!L.phone && !key.startsWith('p');
     this.tip.replaceChildren(
       ...rows.map((r) => {
         const tag = this.tagOf(r.how);
@@ -2793,7 +2979,8 @@ export class AltarScene implements GameScene {
           { class: 'lr-info-row', 'data-how': r.how },
           h('b', null, GEM_NAME[r.gem]),
           tag ? h('span', { class: 'lr-info-tag', 'data-how': r.how }, tag) : null,
-          ` ${this.infoRule(r)}`,
+          ' ',
+          h('span', { class: 'lr-info-rule' }, chip ? this.chipRule(r) : this.infoRule(r)),
         );
       }),
       ...(key === 'intro' && this.teachCell
@@ -2802,11 +2989,20 @@ export class AltarScene implements GameScene {
               'div',
               { class: 'lr-info-row', 'data-how': 'ring' },
               h('b', null, RING_NAME),
-              ` ${RING_RULE}`,
+              ' ',
+              h('span', { class: 'lr-info-rule' }, RING_RULE),
             ),
           ]
         : []),
     );
+    this.tip.toggleAttribute('data-full', key.startsWith('p'));
+    if (L.phone) {
+      // Phones: a chip in the info lane, bottom-aligned (CSS), never over the board.
+      this.tip.hidden = false;
+      this.tipSlotX = null;
+      this.placeTip(L);
+      return;
+    }
     // Bottom edge just above the tray slots (translate -100%), clear of the board's sockets.
     const s0 = L.tray[0];
     const size = s0?.size ?? 92;
@@ -2818,6 +3014,13 @@ export class AltarScene implements GameScene {
 
   /** Over its slot (or the tray's middle), never over FUSE (left) or the caption (right). */
   private placeTip(L: AltarLayout): void {
+    if (L.phone) {
+      this.tipRight = this.captionLeft(L);
+      this.tip.style.left = `${L.phone.infoL}px`;
+      this.tip.style.top = '';
+      this.tip.style.maxWidth = `min(${L.phone.infoR - L.phone.infoL}px, var(--lr-third))`;
+      return;
+    }
     const right = this.captionLeft(L);
     this.tipRight = right;
     // Narrower than the gap if it must be (a phone's caption is wide); wraps to more lines.
@@ -3238,7 +3441,7 @@ export class AltarScene implements GameScene {
 type HintMode = 'mouse' | 'keys' | 'strike' | 'touch' | 'touchStrike';
 
 /** The key-hint line for each mode. Short enough to sit under the tray at 150% text. */
-function hintLine(mode: HintMode): (Node | string)[] {
+function hintLine(mode: HintMode, turns = true): (Node | string)[] {
   const b = (t: string) => h('b', null, t);
   switch (mode) {
     case 'mouse':
@@ -3268,7 +3471,13 @@ function hintLine(mode: HintMode): (Node | string)[] {
     case 'strike':
       return ['Hold ', b('F'), ' to speed up · ', b('Click'), ' or ', b('Enter'), ' to skip'];
     case 'touch':
-      return [b('Tap'), ' a gem, then a socket · ', b('\u21bb'), ' turns it'];
+      return turns
+        ? [
+            b('Tap'),
+            ' a gem, then a socket · ',
+            h('span', { class: 'lr-nowrap' }, b('\u21bb'), ' turns it'),
+          ]
+        : [b('Tap'), ' a gem, then a socket'];
     case 'touchStrike':
       return [b('Tap'), ' to skip'];
   }
