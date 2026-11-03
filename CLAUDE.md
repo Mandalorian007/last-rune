@@ -3,7 +3,7 @@
 Start here: `docs/README.md` → `docs/PLAN.md`, `docs/STATUS.md`, `docs/architecture.md`, `docs/engineering.md`. If you are a workstream agent, your brief is `docs/workstreams/<name>.md`.
 
 Non-negotiables:
-- **Intuitiveness matters (D-027).** New players must get the goal, the target and each piece without a manual. Visuals must match the rules exactly. Clear, clean, intuitive UI/UX beats features. Screenshot your work as a first-time player would see it.
+- **Intuitiveness matters (D-027).** New players must get the goal, the target and each piece without a manual. Visuals must match the rules exactly. Clear, clean, intuitive UI/UX beats features. Screenshot your work as a first-time player would see it. Save screenshots to `docs/design/screens/local/`, which git ignores; don't commit images (see docs/design/screens/README.md).
 - **pnpm only** (never npm/yarn). `pnpm check` and `pnpm build` must pass before you report done.
 - TypeScript strict. Biome formats and lints (`pnpm format`).
 - `engine/` has zero game nouns; `games/last-rune/rules/` is pure TS (no DOM/GPU).
