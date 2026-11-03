@@ -7,7 +7,7 @@ Move what is already generic out of the game and into `@thunderclap/engine`, wit
 - `games/last-rune/ui/menu-nav.ts` → `engine/ui/menu-nav.ts`.
 - `games/last-rune/ui/text-scale.ts` → engine tokens `--tc-text-scale` and `--tc-text-min`, plus a `scaleFontSizes()` helper. The game keeps `--lr-*` aliases only if removing them would touch layout. Say which.
 - `ui/device-mode.ts` → `engine/platform/device-mode.ts` and `ui/phone-chrome.ts` → `engine/ui/rotate-card.ts`, as interim API (both retire in Phase 2). Copy is game content, so the engine takes strings as options.
-- `scenes/altar/zoom.ts` pure functions → `engine/render/camera2d.ts`, with `AltarLayout` replaced by a plain `Rect`. The altar keeps calling it. This seeds Phase 3's Camera.
+- ~~`zoom.ts` → `camera2d.ts`~~: dropped. The phone altar zoom was removed (zoom-removal, D-041). Phase 3's Camera builds `fitRect` from scratch, and `zoom.ts` stays in git history for reference.
 - Move or port the unit tests with each module. List every promoted module in `packages/engine/CHANGELOG.md`.
 
 ## Rules

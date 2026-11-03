@@ -237,3 +237,7 @@ Format: `D-NNN · date · decision · why · who`.
     - the chrome must work in portrait;
     - the altar in portrait is best effort and does not gate 1.1;
     - landscape stays the must (D-039).
+- **Addendum 1 (2026-11-03, user + PM):** the phone altar zoom is removed entirely: button, badge, minimap, arrows, gutter chips, hints and code (`docs/workstreams/zoom-removal.md`).
+  - Phones get their dense-board answer from the Phase 2 layout and camera model.
+  - promote-ui no longer promotes `zoom.ts` to `camera2d.ts`; Phase 3's Camera builds `fitRect` itself.
+  - Browser-zoom blocking and the loupe stay.
