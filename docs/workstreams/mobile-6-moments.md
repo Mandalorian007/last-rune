@@ -67,8 +67,10 @@ counts, Strike and board labels may intersect.
 
 **Verdict off the board (phones).**
 - The red ring on the socket stays.
-- The cause tag over the top row is gone; the root cause is now a line in the verdict, between
-  the outcome and the "Try:" line (`.lr-verdict-cause`).
+- The cause tag over the top row is gone; the root cause is now in the verdict. When nothing
+  arrived it is the headline ("Empty socket: charge lost", then the "Try:" line). On an
+  over/under it is a small line (`.lr-verdict-cause`), unless the strike's story already fills
+  the verdict. This keeps the verdict inside mobile-budget's line caps.
 - The storm's tick-0 "4" chip is not drawn on phones, because the `Gives 4` card already says
   it. Changes and arrivals keep their chips. Big screens are unchanged.
 - The verdict lives in the lane, right of the Needs/got card, so the "got 0" label is never

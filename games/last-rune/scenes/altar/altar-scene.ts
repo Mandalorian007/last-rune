@@ -2619,20 +2619,22 @@ export class AltarScene implements GameScene {
         this.fizzleList.map((f) => f.cause),
         this.touch && !this.keyboard,
       );
-      // Phones: the root cause is a line in the verdict; the red mark on the socket says where.
+      // Phones: the root cause is in the verdict (the headline when nothing arrived, else a line
+      // unless the strike's story already fills it); the red mark on the socket says where.
       const phone = !!L.phone;
       const why = phone ? rootFizzle('dead', this.fizzleList) : undefined;
       const cause = why ? causeText(why.cause) : '';
       if (o === 'over') {
         const m = ms[over]!;
         const text = say(over, failText(m, 'over', this.puzzle.pulses));
-        this.showVerdict(text, 'over', story, hint, cause);
+        this.showVerdict(text, 'over', story, hint, story ? '' : cause);
       } else if (o === 'under') {
         const m = ms[under] ?? ms[0]!;
         const text = say(under, failText(m, 'under', this.puzzle.pulses));
-        this.showVerdict(text, 'under', story, hint, cause);
+        this.showVerdict(text, 'under', story, hint, story ? '' : cause);
       } else {
-        this.showVerdict('No charge reached the machine', 'dead', '', hint, cause);
+        // On a phone the cause is the headline ("Empty socket: charge lost"): the lane is narrow.
+        this.showVerdict(cause || 'No charge reached the machine', 'dead', '', hint);
       }
       // Idle hints ("Bend already here") give way to the verdict and its fizzle tags.
       this.clearTags();
