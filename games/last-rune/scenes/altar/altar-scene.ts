@@ -20,7 +20,7 @@
  * `completePuzzle` on exact (swaps to the solve moment), `closePuzzle` on back.
  */
 import type { Frame, RGBA } from '@engine/render';
-import { button, h, type Rect } from '@engine/ui';
+import { button, h, Loupe, type Rect } from '@engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
@@ -60,11 +60,13 @@ import { jumpCursor, stepCursor } from './cursor';
 import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
 import { setHintTarget } from './hints';
 import {
+  type AltarLayout,
   anchorOf,
   CAPTION_LANE,
   cellAt,
   cellCenter,
   FUSE_LANE,
+  snapCell,
   TRAY_CENTER_X,
   traySlotAt,
   trayTipX,
@@ -94,12 +96,27 @@ interface Hand {
 }
 
 interface Press {
-  origin: 'tray' | 'board';
+  /** `aim`: a finger down on the board with a gem in hand; it lands where the finger lifts. */
+  origin: 'tray' | 'board' | 'aim';
   cell: Cell | null;
   x: number;
   y: number;
   dragging: boolean;
+  /** Scene time at the press (a long touch shows the info card instead of picking up). */
+  t: number;
 }
+
+/** A touch held this long on a placed gem shows its card and selects it for ↻ (no pick-up). */
+const HOLD_SECS = 0.45;
+/** While a finger drags a gem, it aims this many CSS px above the fingertip, in plain sight. */
+const LIFT_CSS = 56;
+/** Touch: how long the held gem's card stays up after the pick (no hover to keep it). */
+const TOUCH_CARD_SECS = 2.5;
+/** Phones: under this socket pitch (CSS px) a finger aiming a gem gets the loupe. */
+const LOUPE_PITCH_CSS = 44;
+/** The loupe: diameter (CSS px) and magnification. */
+const LOUPE_SIZE = 128;
+const LOUPE_ZOOM = 2.5;
 
 /** Where a gem on the info card is: hovered in the tray, on the board, fixed, or newly turnable. */
 type InfoHow = 'tray' | 'turnsTray' | 'board' | 'boardTurns' | 'fixed' | 'turns';
@@ -277,12 +294,27 @@ export class AltarScene implements GameScene {
   /** The gem info card: off the board, over the tray band (see `updateInfo`). */
   private tip!: HTMLElement;
   private tipKey = '';
+  /** The tray slot the info card points at (null: none), and the caption edge it was fit to. */
+  private tipSlotX: number | null = null;
+  private tipRight = 0;
   /** Iron brackets on fixed (and hint-locked) gems, rebuilt when the board changes. */
   private pins: HTMLElement[] = [];
   private pinsRev = -1;
   /** Turn arrow on a held Bend, Gate or Split, until the player has turned one here. */
   private turnBadge!: HTMLElement;
   private turned = false;
+  /** Touch: the on-screen turn control, by the held gem or the gem last placed or selected. */
+  private turnBtn!: HTMLButtonElement;
+  /** Touch: a ↻ mark on the gem the button turns (not a target itself: taps pass through). */
+  private turnMark!: HTMLElement;
+  private turnTarget: Cell | 'hand' | null = null;
+  private lastPlaced: Cell | null = null;
+  /** Scene time the gem in hand was taken from the tray. */
+  private handAt = 0;
+  /** Frames left in which avoidTray re-measures after enter. */
+  private settleFrames = 4;
+  /** Phones: the magnifier over the board while a finger aims a gem (made on first use). */
+  private loupe: Loupe | null = null;
   /** Board gem the keyboard cursor last announced. */
   private focusKey = '';
 
@@ -361,6 +393,7 @@ export class AltarScene implements GameScene {
 
   enter(ctx: GameCtx): void {
     this.ctx = ctx;
+    this.settleFrames = 4;
     this.puzzle = puzzleFor(this.machine);
     this.board = new BoardState(this.puzzle);
     this.board.restore(ctx.flow.placementsFor(this.machine) as Placement[]);
@@ -437,6 +470,8 @@ export class AltarScene implements GameScene {
     this.hum?.stop(0.4);
     this.hum = null;
     this.view.dispose();
+    this.loupe?.destroy();
+    this.loupe = null;
     if (this.announceTimer !== null) clearTimeout(this.announceTimer);
     this.dom.remove();
     this.chipEls.length = 0;
@@ -476,6 +511,23 @@ export class AltarScene implements GameScene {
   }
 
   /**
+   * Left edge (design px) of FUSE's caption card when it sits beside the tray, so the gem card
+   * stops short of it (a phone's caption is bigger than the lane the layout keeps for it).
+   */
+  private captionLeft(L: AltarLayout): number {
+    const ui = this.ctx.ui;
+    const cap = ui.root.querySelector<HTMLElement>('.tc-caption:not([hidden])');
+    const r = cap?.getBoundingClientRect();
+    if (!r || r.width === 0) return CAPTION_LANE.x;
+    const o = ui.root.getBoundingClientRect();
+    const top = (r.top - o.top) / ui.scale;
+    const left = (r.left - o.left) / ui.scale;
+    if (top > 1080 || (r.bottom - o.top) / ui.scale < L.trayY - 200 || left < TRAY_CENTER_X)
+      return CAPTION_LANE.x;
+    return Math.min(CAPTION_LANE.x, left - 16);
+  }
+
+  /**
    * Keep FUSE's caption card off the tray band (slots, counts, tooltips) and the key-hint line.
    * The hint is measured, so a longer line or a bigger text size moves the card as needed.
    */
@@ -500,25 +552,18 @@ export class AltarScene implements GameScene {
       width: FUSE_LANE.x,
       height: 1080 - (FUSE_LANE.y - 30),
     });
-    const hint = this.hint;
-    if (hint?.isConnected && hint.offsetWidth > 0) {
-      regions.push({
-        x: hint.offsetLeft,
-        y: hint.offsetTop,
-        width: hint.offsetWidth,
-        height: hint.offsetHeight,
-      });
-    }
     // Machine need labels, and the button rows, so the card never moves over them either
     // (bigger text makes the card taller, and it can reach a label beside an east machine).
     if (this.dom.isConnected) {
       const ui = this.ctx.ui;
       const o = ui.root.getBoundingClientRect();
       const els = [
+        this.hint,
         ...(this.verdict.hidden ? [] : [this.verdict]),
         ...this.needs,
         ...(this.stormLabel ? [this.stormLabel] : []),
         this.actionsEl,
+        ...(this.turnBtn.hidden ? [] : [this.turnBtn]),
         ...ui.root.querySelectorAll<HTMLElement>('.lr-hud'),
       ];
       for (const el of els) {
@@ -540,7 +585,16 @@ export class AltarScene implements GameScene {
    * once the player uses keys, or fast-forward while the bolt runs.
    */
   private updateHint(): void {
-    const mode: HintMode = this.mode === 'strike' ? 'strike' : this.keyboard ? 'keys' : 'mouse';
+    const mode: HintMode =
+      this.mode === 'strike'
+        ? this.touch
+          ? 'touchStrike'
+          : 'strike'
+        : this.keyboard
+          ? 'keys'
+          : this.touch
+            ? 'touch'
+            : 'mouse';
     if (mode === this.hintMode) return;
     this.hintMode = mode;
     this.hint.replaceChildren(...hintLine(mode));
@@ -595,6 +649,24 @@ export class AltarScene implements GameScene {
       'div',
       { class: 'lr-altar-turn', 'aria-hidden': 'true', hidden: true },
       h('span', { class: 'lr-turn-arrow' }, '\u21bb'),
+    );
+    this.turnBtn = button(
+      h('span', null, h('b', { 'aria-hidden': 'true' }, '\u21bb'), ' Turn'),
+      (e) => {
+        (e.currentTarget as HTMLElement).blur();
+        this.turnTapped();
+      },
+      { className: 'lr-altar-turnbtn lr-touch-only', ariaLabel: 'Turn the gem (R)' },
+    );
+    this.turnBtn.hidden = true;
+    // Docked just right of the tray, so it never covers a socket the player may tap next.
+    const trayRight = Math.max(...L.tray.map((s) => s.x), TRAY_CENTER_X);
+    this.turnBtn.style.left = `${trayRight + 80}px`;
+    this.turnBtn.style.top = `${L.trayY}px`;
+    this.turnMark = h(
+      'div',
+      { class: 'lr-altar-turnmark lr-touch-only', 'aria-hidden': 'true', hidden: true },
+      '\u21bb',
     );
     this.counts = L.tray.map((s) =>
       h('div', {
@@ -678,6 +750,8 @@ export class AltarScene implements GameScene {
       ...(this.stormLabel ? [this.stormLabel] : []),
       this.tip,
       this.turnBadge,
+      this.turnMark,
+      this.turnBtn,
       this.hint,
     );
     this.dom.toggleAttribute('data-first', !!this.teachCell);
@@ -1384,6 +1458,11 @@ export class AltarScene implements GameScene {
 
   /** The card's tag; a placed Bend, Gate or Split names the keys in use (mouse or keyboard). */
   private tagOf(how: InfoHow): string {
+    if (this.touch && !this.keyboard) {
+      if (how === 'turnsTray' || how === 'turns') return 'tap \u21bb to turn';
+      if (how === 'boardTurns') return '\u21bb turns · drag off the altar to remove';
+      if (how === 'board') return 'drag off the altar to remove';
+    }
     if (how === 'boardTurns') {
       // With a gem in hand a click does not pick this one up, so the card only says how to turn.
       if (this.hand) return this.keyboard ? 'R or Q to turn' : 'R or scroll to turn';
@@ -1417,6 +1496,7 @@ export class AltarScene implements GameScene {
     // The arrival card has done its job once the player starts building: let it fade.
     if (placed && this.introLeft > INTRO_FADE) this.introLeft = INTRO_FADE;
     this.view.syncBoard(this.board, placed);
+    if (placed) this.lastPlaced = { x: placed.x, y: placed.y };
     this.ctx.flow.savePlacements(this.machine, this.board.serialise());
     if (this.hand && !this.hand.from && this.board.remaining(this.hand.kind) <= 0) this.hand = null;
     this.refreshHud();
@@ -1460,8 +1540,10 @@ export class AltarScene implements GameScene {
     }
     const rot = keepRot && this.hand?.kind === kind ? this.hand.rot : 0;
     this.hand = { kind, rot, from: null };
+    this.lastPlaced = null; // ↻ now turns the gem in hand
+    this.handAt = this.time;
     this.teachTray.delete(kind);
-    const turns = isRotational(kind) ? ' R or Q turns it.' : '';
+    const turns = isRotational(kind) ? ` ${this.turnKeys} turns it.` : '';
     this.announce(`${GEM_NAME[kind]} in hand. ${this.rules[kind] ?? ''}${turns}`);
     this.ctx.sound.sfx.play('gemPick', { gem: kind });
     this.refreshHud();
@@ -1536,7 +1618,7 @@ export class AltarScene implements GameScene {
     if (existing) {
       if (existing.gem === hand.kind) {
         // Same gem already here: nothing to set down, and a click never turns it.
-        const keys = this.keyboard ? 'R or Q' : 'R or scroll';
+        const keys = this.keyboard ? 'R or Q' : this.touch ? '\u21bb' : 'R or scroll';
         const turn = isRotational(existing.gem) ? `: ${keys} turns it` : '';
         this.denyAt(cell, `${GEM_NAME[existing.gem]} already here${turn}`);
         return;
@@ -1564,6 +1646,7 @@ export class AltarScene implements GameScene {
     if (p) {
       this.board.remove(cell);
       this.hand = { kind: p.gem, rot: p.rot, from: null };
+      this.lastPlaced = null;
       this.ctx.sound.sfx.play('gemPick', { gem: p.gem, pan: this.panOf(cell) });
       this.announce(`${GEM_NAME[p.gem]} in hand.${this.turnNote(p.gem, p.rot)}`);
       this.logRemove(p.gem, cell);
@@ -1584,7 +1667,17 @@ export class AltarScene implements GameScene {
   private turnNote(gem: GemKind, rot: number): string {
     if (!isRotational(gem)) return '';
     const s = sidesText(gem, rot);
-    return ` ${s.charAt(0).toUpperCase()}${s.slice(1)}. R or Q turns it.`;
+    return ` ${s.charAt(0).toUpperCase()}${s.slice(1)}. ${this.turnKeys} turns it.`;
+  }
+
+  /** What turns a gem with the input in use: the keys, or the on-screen ↻ for a finger. */
+  private get turnKeys(): string {
+    return this.touch && !this.keyboard ? 'The \u21bb button' : 'R or Q';
+  }
+
+  /** The player's last input was a finger (see ui/device-mode.ts). */
+  private get touch(): boolean {
+    return this.ctx.device.touch;
   }
 
   /**
@@ -2196,6 +2289,9 @@ export class AltarScene implements GameScene {
     const ctx = this.ctx;
     const input = ctx.input;
     this.time += dt;
+    // The HUD settles into its altar spot after enter (the scene flag is set once the flow
+    // has switched): measure what FUSE's card must avoid again on the first frames.
+    if (this.settleFrames > 0 && --this.settleFrames % 2 === 0) this.avoidTray();
     this.view.reducedMotion = ctx.settings.reducedMotion;
     this.view.reduceFlashes = ctx.settings.reduceFlashes;
 
@@ -2250,6 +2346,8 @@ export class AltarScene implements GameScene {
     this.updateInfo();
     this.updatePins();
     this.updateTurnBadge();
+    this.updateTurnButton();
+    this.updateLoupe();
     // The keyboard cursor, for tests and tools (the gold ring is drawn on the GPU).
     const ck = `${this.cursor.x},${this.cursor.y}`;
     if (ck !== this.cursorKey) {
@@ -2258,6 +2356,70 @@ export class AltarScene implements GameScene {
     }
     this.buildMarks();
     this.view.update(dt);
+  }
+
+  /** A socket a held gem may be put in (or swapped into): not carved stone, not a fixed gem. */
+  private readonly aimable = (c: Cell) => !this.board.isBlocked(c) && !this.board.fixedAt(c);
+
+  /**
+   * Phones, small sockets: while a finger holds a gem down on the board, a round loupe beside
+   * it shows the socket under the aim point, 2.5× bigger, with the target ringed. It fades
+   * when the finger lifts. Mouse, keyboard and big boards never see it.
+   */
+  private updateLoupe(): void {
+    const dev = this.ctx.device;
+    const input = this.ctx.input;
+    const p = input.pointer;
+    const L = this.view.layout;
+    const press = this.press;
+    const lift = press?.dragging ? LIFT_CSS * dev.cssPx : 0;
+    const want =
+      dev.phone &&
+      p.type !== 'mouse' &&
+      !this.keyboard &&
+      !!this.hand &&
+      !!press &&
+      input.held('select') &&
+      (press.dragging || press.origin === 'aim') &&
+      L.pitch / dev.cssPx < LOUPE_PITCH_CSS &&
+      (!!this.hoverCell || !!cellAt(L, p.x, p.y - lift));
+    if (!want) {
+      if (this.loupe?.visible) {
+        this.loupe.hide();
+        delete this.dom.dataset.loupe;
+      }
+      return;
+    }
+    if (!this.loupe) {
+      this.loupe = new Loupe(this.ctx.surface.canvas, {
+        size: LOUPE_SIZE,
+        zoom: LOUPE_ZOOM,
+        className: 'lr-loupe',
+      });
+    }
+    const r = this.ctx.ui.root.getBoundingClientRect();
+    const k = r.width / 1920;
+    const cx = (x: number) => r.left + x * k;
+    const cy = (y: number) => r.top + y * k;
+    const fx = cx(p.x);
+    const ax = fx;
+    const ay = cy(p.y - lift);
+    // Above the aim point and off to the side of the finger, towards the middle of the screen.
+    const win = this.dom.ownerDocument.defaultView ?? window;
+    const half = LOUPE_SIZE / 2;
+    const side = fx > win.innerWidth / 2 ? -1 : 1;
+    const at = {
+      x: Math.min(win.innerWidth - half - 4, Math.max(half + 4, fx + side * (half + 28))),
+      y: Math.min(win.innerHeight - half - 4, Math.max(half + 4, ay - half * 0.6)),
+    };
+    let ring: { x: number; y: number; r: number } | null = null;
+    if (this.hoverCell) {
+      const c = { x: 0, y: 0 };
+      cellCenter(L, this.hoverCell, c);
+      ring = { x: cx(c.x), y: cy(c.y), r: L.pitch * k * 0.52 };
+    }
+    this.loupe.show({ focus: { x: ax, y: ay }, at, ring });
+    this.dom.dataset.loupe = this.hoverCell ? `${this.hoverCell.x},${this.hoverCell.y}` : '';
   }
 
   private updateEdit(_dt: number): void {
@@ -2270,27 +2432,68 @@ export class AltarScene implements GameScene {
       this.lastPointer.y = p.y;
       if (p.inside) this.keyboard = false;
     }
-    this.hoverCell = p.inside && !this.keyboard ? cellAt(L, p.x, p.y) : null;
-    this.hoverSlot = p.inside && !this.keyboard ? traySlotAt(L, p.x, p.y) : -1;
+    // A finger has no hover: between touches nothing is under it. While it drags a gem, it
+    // aims a little above the fingertip so the gem and its socket stay in sight.
+    const finger = p.type !== 'mouse';
+    const lift = finger && this.press?.dragging ? LIFT_CSS * this.ctx.device.cssPx : 0;
+    const live =
+      p.inside && !this.keyboard && (!finger || input.held('select') || input.released('select'));
+    // A finger holding a gem snaps to the nearest socket it could go in (layout snapCell).
+    const aimAt = (x: number, y: number) =>
+      finger && this.hand ? snapCell(L, x, y, this.aimable) : cellAt(L, x, y);
+    this.hoverCell = live ? aimAt(p.x, p.y - lift) : null;
+    this.hoverSlot = live && !lift ? traySlotAt(L, p.x, p.y) : -1;
 
     // ── Pointer ──
-    if (input.pressed('select') && p.inside) {
+    if (
+      input.pressed('select') &&
+      p.inside &&
+      finger &&
+      this.hand &&
+      !this.hand.from &&
+      this.hoverCell
+    ) {
+      // Touch: the gem lands where the finger lifts, so a press can slide to the right socket.
+      this.keyboard = false;
+      this.press = {
+        origin: 'aim',
+        cell: this.hoverCell,
+        x: p.x,
+        y: p.y,
+        dragging: false,
+        t: this.time,
+      };
+    } else if (input.pressed('select') && p.inside) {
       this.keyboard = false;
       if (this.hoverSlot >= 0) {
         const kind = L.tray[this.hoverSlot]!.gem;
         if (this.hand && !this.hand.from && this.hand.kind === kind) {
-          this.press = { origin: 'tray', cell: null, x: p.x, y: p.y, dragging: false };
+          this.press = {
+            origin: 'tray',
+            cell: null,
+            x: p.x,
+            y: p.y,
+            dragging: false,
+            t: this.time,
+          };
         } else {
           this.takeFromTray(kind);
           if (this.hand)
-            this.press = { origin: 'tray', cell: null, x: p.x, y: p.y, dragging: false };
+            this.press = {
+              origin: 'tray',
+              cell: null,
+              x: p.x,
+              y: p.y,
+              dragging: false,
+              t: this.time,
+            };
         }
       } else if (this.hoverCell) {
         const cell = this.hoverCell;
         if (this.hand) this.placeHand(cell);
         else if (this.board.at(cell)) {
           // A click picks it up (on release); a drag moves it.
-          this.press = { origin: 'board', cell, x: p.x, y: p.y, dragging: false };
+          this.press = { origin: 'board', cell, x: p.x, y: p.y, dragging: false, t: this.time };
         } else this.actOnGem(cell);
       } else if (this.hand) {
         this.dropHand();
@@ -2311,10 +2514,19 @@ export class AltarScene implements GameScene {
         }
       }
     }
+    if (press && input.held('select') && finger && press.origin === 'board' && press.cell) {
+      // A long touch on a placed gem shows its card and selects it for ↻; it does not pick up.
+      if (!press.dragging && this.time - press.t >= HOLD_SECS && !this.hand) {
+        this.lastPlaced = { x: press.cell.x, y: press.cell.y };
+      }
+    }
     if (press && input.released('select')) {
       this.press = null;
-      if (press.dragging) {
-        const cell = cellAt(L, p.x, p.y);
+      if (press.origin === 'aim') {
+        // On release: the socket under the aim point; anywhere else keeps the gem in hand.
+        if (this.hoverCell && this.hand) this.placeHand(this.hoverCell);
+      } else if (press.dragging) {
+        const cell = aimAt(p.x, p.y - lift);
         if (press.origin === 'board' && this.hand?.from) {
           if (cell) this.placeHand(cell);
           else {
@@ -2327,7 +2539,7 @@ export class AltarScene implements GameScene {
           else if (traySlotAt(L, p.x, p.y) < 0) this.dropHand();
         }
       } else if (press.origin === 'board' && press.cell) {
-        this.actOnGem(press.cell);
+        if (!(finger && this.time - press.t >= HOLD_SECS)) this.actOnGem(press.cell);
       }
     }
     if (input.pressed('alt')) {
@@ -2527,7 +2739,10 @@ export class AltarScene implements GameScene {
     // With a gem in hand over one of the player's gems, the card is that gem's: R turns it.
     const overPlaced = !strike && this.overPlaced();
     let slot = strike ? -1 : this.hoverSlot;
-    if (slot < 0 && this.hand && !this.hand.from && !strike && !overPlaced) {
+    // A finger has no hover: the held gem's card shows for a moment after the pick, then
+    // steps aside so the gem in hand (and its turn) stays in sight above the tray.
+    const cardOff = this.touch && !this.keyboard && this.time - this.handAt > TOUCH_CARD_SECS;
+    if (slot < 0 && this.hand && !this.hand.from && !strike && !overPlaced && !cardOff) {
       slot = L.tray.findIndex((t) => t.gem === this.hand!.kind);
     }
     const s = slot >= 0 ? L.tray[slot] : undefined;
@@ -2559,7 +2774,11 @@ export class AltarScene implements GameScene {
         ? Math.min(1, this.introLeft / INTRO_FADE)
         : 1;
     this.tip.style.opacity = fade < 1 ? fade.toFixed(3) : '';
-    if (key === this.tipKey) return;
+    if (key === this.tipKey) {
+      // FUSE may start (or stop) talking while the card is up: keep it clear of his caption.
+      if (!this.tip.hidden && this.captionLeft(L) !== this.tipRight) this.placeTip(L);
+      return;
+    }
     this.tipKey = key;
     if (rows.length === 0) {
       this.tip.hidden = true;
@@ -2593,8 +2812,20 @@ export class AltarScene implements GameScene {
     const size = s0?.size ?? 92;
     this.tip.style.top = `${L.trayY - size * 0.62}px`;
     this.tip.hidden = false;
-    // Over its slot (or the tray's middle), never over FUSE (left) or the caption (right).
-    const x = trayTipX(slotX ?? TRAY_CENTER_X, this.tip.offsetWidth);
+    this.tipSlotX = slotX;
+    this.placeTip(L);
+  }
+
+  /** Over its slot (or the tray's middle), never over FUSE (left) or the caption (right). */
+  private placeTip(L: AltarLayout): void {
+    const right = this.captionLeft(L);
+    this.tipRight = right;
+    // Narrower than the gap if it must be (a phone's caption is wide); wraps to more lines.
+    const room = right - FUSE_LANE.x;
+    this.tip.style.maxWidth = '';
+    if (this.tip.offsetWidth > room) this.tip.style.maxWidth = `${Math.max(320, room)}px`;
+    const slotX = this.tipSlotX;
+    const x = trayTipX(slotX ?? TRAY_CENTER_X, this.tip.offsetWidth, right);
     this.tip.style.left = `${x}px`;
     // The notch points at the slot; the card for a board gem or the arrival has none.
     if (slotX !== null) this.tip.style.setProperty('--lr-tip-dx', `${slotX - x}px`);
@@ -2667,6 +2898,47 @@ export class AltarScene implements GameScene {
         h('span', { class: 'lr-turn-keys' }, keys),
       );
     }
+  }
+
+  /**
+   * Touch: the ↻ Turn button (docked right of the tray) turns the Bend, Gate or Split last
+   * placed or selected (a long touch) on the board, else the one in hand; a ↻ mark on that gem
+   * shows which. Tapping a gem still only picks it up; turning is always this button (D-029).
+   * Hidden without touch (CSS `lr-touch-only`).
+   */
+  private updateTurnButton(): void {
+    const L = this.view.layout;
+    let target: Cell | 'hand' | null = null;
+    const pt = { x: 0, y: 0 };
+    const held = this.view.held;
+    if (this.mode !== 'strike' && this.touch && !this.keyboard && !this.press) {
+      const pl = this.lastPlaced ? this.board.at(this.lastPlaced) : undefined;
+      if (this.lastPlaced && pl && isRotational(pl.gem)) {
+        target = this.lastPlaced;
+        cellCenter(L, target, pt);
+      } else if (this.hand && !this.hand.from && held && isRotational(this.hand.kind)) {
+        target = 'hand';
+        pt.x = held.x;
+        pt.y = held.y;
+      }
+    }
+    this.turnTarget = target;
+    const show = target !== null;
+    if (this.turnBtn.hidden === show) {
+      this.turnBtn.hidden = !show;
+      this.turnMark.hidden = !show;
+      this.avoidTray();
+    }
+    if (!show) return;
+    const r = L.gemSize * 0.5;
+    this.turnMark.style.left = `${Math.round(pt.x + r)}px`;
+    this.turnMark.style.top = `${Math.round(pt.y - r)}px`;
+  }
+
+  private turnTapped(): void {
+    const t = this.turnTarget;
+    if (t === 'hand') this.turnAt(null, 1);
+    else if (t) this.turnAt(t, 1);
   }
 
   /**
@@ -2827,7 +3099,9 @@ export class AltarScene implements GameScene {
     } else {
       pt.x = p.x;
       pt.y = p.y;
-      if (this.keyboard || !p.inside) {
+      const finger = p.type !== 'mouse';
+      if (finger && this.press?.dragging) pt.y -= LIFT_CSS * this.ctx.device.cssPx;
+      if (this.keyboard || !p.inside || (finger && !this.press?.dragging)) {
         const i = L.tray.findIndex((s) => s.gem === hand.kind);
         const s = L.tray[Math.max(0, i)]!;
         pt.x = s.x;
@@ -2961,7 +3235,7 @@ export class AltarScene implements GameScene {
   }
 }
 
-type HintMode = 'mouse' | 'keys' | 'strike';
+type HintMode = 'mouse' | 'keys' | 'strike' | 'touch' | 'touchStrike';
 
 /** The key-hint line for each mode. Short enough to sit under the tray at 150% text. */
 function hintLine(mode: HintMode): (Node | string)[] {
@@ -2993,6 +3267,10 @@ function hintLine(mode: HintMode): (Node | string)[] {
       ];
     case 'strike':
       return ['Hold ', b('F'), ' to speed up · ', b('Click'), ' or ', b('Enter'), ' to skip'];
+    case 'touch':
+      return [b('Tap'), ' a gem, then a socket · ', b('\u21bb'), ' turns it'];
+    case 'touchStrike':
+      return [b('Tap'), ' to skip'];
   }
 }
 

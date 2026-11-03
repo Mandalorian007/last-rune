@@ -351,6 +351,43 @@ export function cellAt(L: AltarLayout, x: number, y: number): Cell | null {
   return { x: cx, y: cy };
 }
 
+/**
+ * Touch aiming: the socket a finger means. The socket under the point if `ok` accepts it;
+ * otherwise the nearest accepted socket whose edge is within half a pitch of the point (so a
+ * slightly-off aim at carved stone or a fixed gem lands next door instead of nowhere). Null
+ * when nothing accepted is that close.
+ */
+export function snapCell(
+  L: AltarLayout,
+  x: number,
+  y: number,
+  ok: (c: Cell) => boolean,
+): Cell | null {
+  const fx = (x - L.left - L.margin) / L.pitch;
+  const fy = (y - L.top - L.margin) / L.pitch;
+  const cx = Math.floor(fx);
+  const cy = Math.floor(fy);
+  let best: Cell | null = null;
+  let bestD = Number.POSITIVE_INFINITY;
+  for (let j = cy - 1; j <= cy + 1; j++) {
+    for (let i = cx - 1; i <= cx + 1; i++) {
+      if (i < 0 || j < 0 || i >= L.cols || j >= L.rows) continue;
+      // Distance from the point to the socket's square, in pitches (0 inside it).
+      const ox = Math.max(0, Math.abs(fx - (i + 0.5)) - 0.5);
+      const oy = Math.max(0, Math.abs(fy - (j + 0.5)) - 0.5);
+      if (ox > 0.5 || oy > 0.5) continue;
+      const c = { x: i, y: j };
+      if (!ok(c)) continue;
+      const d = Math.hypot(fx - (i + 0.5), fy - (j + 0.5));
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+  }
+  return best;
+}
+
 /** Tray slot under a logical point, or -1. */
 export function traySlotAt(L: AltarLayout, x: number, y: number): number {
   const half = L.tray.length > 1 ? Math.min(68, (L.tray[1]!.x - L.tray[0]!.x) / 2) : 68;
@@ -362,8 +399,8 @@ export function traySlotAt(L: AltarLayout, x: number, y: number): number {
 }
 
 /** Centre x for a box `w` wide over the tray: as near `x` as fits between FUSE and the caption. */
-export function trayTipX(x: number, w: number): number {
+export function trayTipX(x: number, w: number, right: number = CAPTION_LANE.x): number {
   const lo = FUSE_LANE.x + w / 2;
-  const hi = CAPTION_LANE.x - w / 2;
+  const hi = right - w / 2;
   return lo > hi ? (FUSE_LANE.x + CAPTION_LANE.x) / 2 : Math.max(lo, Math.min(hi, x));
 }

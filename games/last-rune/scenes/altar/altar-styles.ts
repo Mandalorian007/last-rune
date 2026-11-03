@@ -221,6 +221,23 @@ const CSS = /* css */ `
   animation: lr-turn-nudge 1.6s ease-in-out infinite;
 }
 @keyframes lr-turn-nudge { 0%, 60%, 100% { transform: rotate(0deg); } 30% { transform: rotate(90deg); } }
+/* Touch: the ↻ Turn button, docked right of the tray, and the ↻ mark on the gem it turns. */
+.tc-overlay .lr-altar .lr-altar-turnbtn {
+  position: absolute; transform: translate(0, -50%); min-width: 0; padding: 0 22px;
+  min-height: max(72px, var(--lr-tap, 0px)); border-radius: 999px; cursor: pointer; white-space: nowrap;
+  font-family: var(--tc-font-display); font-size: 28px; color: #f4e6c4;
+  background: rgba(20,16,12,0.92); border: 2px solid rgba(232,192,106,0.85); box-shadow: 0 3px 12px rgba(0,0,0,0.7);
+}
+.tc-overlay .lr-altar .lr-altar-turnbtn b { color: var(--lr-gold); font-size: 1.4em; line-height: 1; vertical-align: -0.1em; }
+.tc-overlay .lr-altar .lr-altar-turnbtn:active { background: rgba(70,56,30,0.95); }
+.tc-overlay .lr-altar .lr-altar-turnbtn[hidden], .tc-overlay .lr-altar-turnmark[hidden] { display: none; }
+.tc-overlay .lr-altar-turnmark {
+  position: absolute; transform: translate(-30%, -70%); pointer-events: none;
+  width: max(44px, calc(var(--lr-text-min, 0px) * 1.6)); height: max(44px, calc(var(--lr-text-min, 0px) * 1.6)); border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 30px; line-height: 1; color: var(--lr-gold);
+  background: rgba(20,16,12,0.9); border: 2px solid rgba(232,192,106,0.8); box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+.tc-overlay[data-touch] .lr-altar-turn { display: none; }
 
 .tc-overlay .lr-altar-verdict {
   position: absolute; left: 50%; top: 96px; transform: translateX(-50%); padding: 10px 30px; border-radius: 12px;
@@ -274,6 +291,12 @@ const CSS = /* css */ `
   background: radial-gradient(closest-side, #05060ab0, #05060a70 70%, #05060a00);
 }
 .tc-overlay .lr-altar-hint b { color: #e8c06a; font-weight: 600; }
+/* The phone loupe (engine Loupe, fixed, outside the scaled overlay; CSS px). */
+.lr-loupe {
+  z-index: 30; border-radius: 50%; overflow: hidden; border: 3px solid #e8c06a; box-sizing: border-box;
+  background: #000; box-shadow: 0 6px 22px rgba(0,0,0,0.7), 0 0 0 1px #000; transition: opacity 0.15s ease-out;
+}
+[data-reduced-motion] .lr-loupe { transition: none; }
 [data-reduced-motion] .tc-overlay .lr-altar-verdict,
 [data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-turn-arrow,
 [data-reduced-motion] .tc-overlay .lr-altar-cap,

@@ -11,6 +11,12 @@ export const TEXT_SCALES = [100, 125, 150] as const;
 export type TextScale = (typeof TEXT_SCALES)[number];
 
 export const TEXT_SCALE_VAR = '--lr-text-scale';
+/**
+ * Phones only (ui/device-mode.ts): the smallest font size in design px, so no text drops under
+ * 14 CSS px. Unset (0) on desktop and tablets, where nothing changes.
+ */
+export const TEXT_MIN_VAR = '--lr-text-min';
+const MIN = `var(${TEXT_MIN_VAR}, 0px)`;
 
 /** Sizes up to this scale fully; above it, text is only kept from falling behind. */
 const BODY_PX = 30;
@@ -23,8 +29,8 @@ export function scaledPx(px: number, scale: number): number {
 /** A CSS length for `px` that follows `--lr-text-scale`. */
 export function scalePxCss(px: number): string {
   const v = `var(${TEXT_SCALE_VAR}, 1)`;
-  if (px <= BODY_PX) return `calc(${px}px * ${v})`;
-  if (px < BODY_PX * 1.5) return `max(${px}px, calc(${BODY_PX}px * ${v}))`;
+  if (px <= BODY_PX) return `max(calc(${px}px * ${v}), ${MIN})`;
+  if (px < BODY_PX * 1.5) return `max(${px}px, calc(${BODY_PX}px * ${v}), ${MIN})`;
   return `${px}px`;
 }
 
@@ -42,7 +48,10 @@ export function scaleFontSizes(css: string): string {
 export function textScaleTokens(scale: number): Record<string, string> {
   const base = { fontSizeS: 24, fontSizeM: 30, fontSizeL: 40, fontSizeXl: 56, fontSizeXxl: 84 };
   const out: Record<string, string> = {};
-  for (const [k, px] of Object.entries(base)) out[k] = `${Math.round(scaledPx(px, scale))}px`;
+  for (const [k, px] of Object.entries(base)) {
+    const v = Math.round(scaledPx(px, scale));
+    out[k] = v < 50 ? `max(${v}px, ${MIN})` : `${v}px`;
+  }
   return out;
 }
 

@@ -17,6 +17,7 @@ export {
   type ExternalLinkOptions,
   externalLink,
 } from './link';
+export { Loupe, type LoupeOptions, type LoupeView } from './loupe';
 export { createOverlay, type Overlay, type OverlayOptions, type Rect } from './overlay';
 export { type PadLike, PadNav, type PadNavOptions } from './padnav';
 export {
