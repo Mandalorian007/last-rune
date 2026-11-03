@@ -43,7 +43,7 @@ _Last updated: 2026-11-02 by PM_
 | candle-light | ws/candle-light | ✅ merged | candles 25–32% darker with a slow warm breath (0.70–1, no pops; steady under Reduced motion/Reduce flashes); held gem, live sockets, Strike and the hall doorway beat them; puddles read as water, capacitor-bay cans no longer wash out, vignette lifted. 60fps, draws unchanged |
 | difficulty-2 | ws/difficulty-2 | ✅ merged | D-037: turn load in the score; press-unit-4 9→2, capacitor-bay 11→1 (re-laid, single south lane), conveyor-a kept at 4 on purpose; all 16 in band, finale highest; intake-desk first visit 4 FUSE cards → 1; est. 54.5 min |
 | bug-bash | ws/bug-bash | ✅ merged | Settings two-column + sticky Done (no scroll at 100/125/150%); Codex fits at 150%; live strike chip (got N = newest chip); corrupt-save toast + backup; altar tag/storm-label/subtitle fixes; ending clears toasts; lint clean; 21 new e2e (robustness, layout-fit); full run 0 console errors. Deferred S3/S4 in its log |
-| perf-low | ws/perf-low | 🟡 running | GPU timestamps, Low composite at scene res, ending flood at DPR 2, weak-GPU estimate, first-frame timing |
+| perf-low | ws/perf-low | ✅ merged | GPU timestamp timing per pass (DynamicResolution sees real cost; the old 'gpu' column was queue latency); Low composites at scene res + upscale; ending caps at DPR 1 (High DPR 2: 21.6→12.2 ms p50, in budget); audio pre-render yields (title keeps animating); first frame 0.1–0.16 s; perf harness `ts` column, baseline + load specs |
 | finish-1 | ws/finish-1 | 🟡 running | bug-bash leftovers: serif toasts/ending line, unclear end-card prop, tag flip jump, ending fresh-eyes pass |
 
 ## Blocked / needs user
@@ -56,7 +56,7 @@ _Last updated: 2026-11-02 by PM_
 - The master limiter is now on by default (above −1 dBFS only). Needs a human listen along with the rest of the audio.
 - Audio is only objectively checked (levels, clicks, loops). Needs a human listen; 52 MiB decoded audio may matter on low-memory devices.
 - Photosensitivity: the breaker flash whites out most of the frame for ~0.3 s. hall-art adds a "Reduce flashes" setting (on with reduced motion).
-- Perf measured on Apple M4 only. The game is fill-bound; Auto scales resolution (floor 0.6) and drops to Low if needed. The ending flood at DPR 2 on High is over budget (~17–20 ms GPU); Auto/Low handle it. Still want a real integrated-PC-GPU check.
+- Perf measured on Apple M4 only (GPU timestamps). Estimate: Iris Xe holds 60 fps at 1080p on Auto (~0.6–0.7 scene scale) or Low, 1440p needs Low; 680M runs High at 1080p. Unverified on real hardware; re-run tables on a quiet machine before quoting p95s.
 - Difficulty curve is calibrated to designer estimates, not players (D-022). Risk: early/mid puzzles may still feel too easy. Phase 2 (D-037) tuned on PM judgement; real playtest times still wanted. The novice bot can't plan gate merges and never solves capacitor-bay. Watch: roof-array = control-booth (5.4), relay-tower → crane step, conveyor-a meeting amber + magenta together.
 - Puzzle quality: 16 puzzles must be interesting, not just solvable. The solver gives difficulty metrics, and the PM reviews.
 - Procedural art reaching "painterly" quality: art R&D is front-loaded in wave 2.
