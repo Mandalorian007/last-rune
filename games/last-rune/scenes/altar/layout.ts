@@ -45,6 +45,7 @@ const PROP_OUT_V = 0.95;
 const PROP_OUT_H = 1.9;
 
 export type Side = 0 | 1 | 2 | 3; // N E S W
+export type LabelAlign = 'below' | 'right' | 'up' | 'down';
 
 export interface PropSpot {
   /** Prop centre. */
@@ -60,8 +61,12 @@ export interface PropSpot {
   cell: Cell;
   /** The socket it is wired to: where the storm's bolt enters, or where charge exits. */
   inner: Cell;
-  /** Where its "Needs N" label goes (machines): `x, y` is the anchor, `align` the side. */
-  label: { x: number; y: number; align: 'below' | 'right' };
+  /**
+   * Where its "Needs N" label goes: `x, y` is the anchor, `align` the side. Phones also use
+   * `up` / `down` (beside a north / south gauge, clear of the board) with `alt`, the anchor x
+   * for the same card on the gauge's other side.
+   */
+  label: { x: number; y: number; align: LabelAlign; alt?: number };
 }
 
 export interface TraySlot {
@@ -72,13 +77,15 @@ export interface TraySlot {
 }
 
 /**
- * A phone in landscape (mobile-2): the buttons live in the letterbox bars, so the board gets
- * nearly the whole canvas. `padL`/`padR` are what the edge button columns take inside the
- * canvas when a bar is too narrow for them (design px; 0 when the bars hold them).
+ * A phone in landscape (mobile-2, mobile-3-board): the buttons live in the letterbox bars, so
+ * the board gets nearly the whole canvas. `padL`/`padR` are what the edge button columns take
+ * inside the canvas when a bar is too narrow for them (design px; 0 when the bars hold them).
+ * `cssPx` is design px per CSS px: phone sizes are budgeted in CSS px (D-040).
  */
 export interface PhoneFrame {
   padL: number;
   padR: number;
+  cssPx: number;
 }
 
 /** Width of a phone's edge button column, CSS px (a 44 px target plus a little air). */
@@ -92,21 +99,38 @@ export const PHONE_COL_CSS = 50;
 export function phoneFrameFor(phone: boolean, cssPx: number, bar: number): PhoneFrame | null {
   if (!phone) return null;
   const pad = Math.max(0, Math.round(PHONE_COL_CSS * cssPx - bar));
-  return { padL: pad, padR: pad };
+  return { padL: pad, padR: pad, cssPx };
 }
 
-/** The bottom band on a phone: FUSE and his bubble, the tray, then the gem chip / hint / verdict. */
+/**
+ * The phone layout (mobile-3-board): the board and its gauges fill the canvas height on the
+ * left; a column on the right holds, top to bottom, the title, the tray, the lane (gem chip,
+ * verdict, Capacitor read-outs), FUSE's bubble or the hint, and FUSE. All design px.
+ */
 export interface PhoneBand {
-  /** Board block bottom; the band runs from here to the canvas bottom. */
-  top: number;
-  /** FUSE's spot (his feet), x. */
-  fuseX: number;
-  /** FUSE's speech bubble: left edge and right edge. */
+  /** The right-hand column. */
+  /** Left edge of the open canvas (past the left bar), design px. */
+  padL: number;
+  colL: number;
+  colR: number;
+  /** Top of the lane under the tray. */
+  laneTop: number;
+  /** FUSE's bubble and the hint: left edge and bottom (y). They reach on into the right bar. */
   bubbleL: number;
-  bubbleR: number;
-  /** The info lane (gem chip, hint, verdict): left and right edges. */
-  infoL: number;
-  infoR: number;
+  bubbleB: number;
+  /** FUSE: his feet, and his size. */
+  fuseX: number;
+  fuseY: number;
+  fuseScale: number;
+  /** Design px per CSS px, the canvas edge inset, and a label's clearance from the board. */
+  cssPx: number;
+  edge: number;
+  clear: number;
+  /** Half the hit box of a tray slot. */
+  trayHitX: number;
+  trayHitY: number;
+  /** Slab margin and front face (thinner than the desktop slab's). */
+  front: number;
 }
 
 export interface AltarLayout {
@@ -144,19 +168,8 @@ export function sideOf(c: Cell, cols: number, rows: number): Side {
   return 3; // c.x < 0
 }
 
-/** Phone: title line on top, the band at the bottom (design px). */
-const PHONE_TOP = 58;
-const PHONE_BAND = 196;
-const PHONE_MAX_PITCH = 170;
-const PHONE_MACHINE_MIN = 120;
-/** Phone: FUSE stands bottom-left, smaller (see AltarView). */
-export const PHONE_FUSE = { x: 92, y: 1052, scale: 84 } as const;
-/** Phone tray: slot size and widest spacing (design px); slot centres stay in this span. */
-const PHONE_SLOT = 84;
-const PHONE_TRAY_SPACING = 122;
-const PHONE_TRAY_SPAN = 500;
-
 export function computeLayout(p: PuzzleDef, phone: PhoneFrame | null = null): AltarLayout {
+  if (phone) return phoneLayout(p, phone);
   const { w: cols, h: rows } = altarDims(p.altar);
   const outside = [p.storm.at, ...p.machines.map((m) => m.at)];
   const has = [false, false, false, false];
@@ -168,9 +181,8 @@ export function computeLayout(p: PuzzleDef, phone: PhoneFrame | null = null): Al
   // overlaps its roof (splitter-mill).
   const shareOffset = (pitch: number) => Math.round(pitch * 2.1 * 0.3);
   const machineFactor = p.machines.length > 2 ? 1.6 : 1.85;
-  const machineMin = phone ? PHONE_MACHINE_MIN : MACHINE_MIN;
   const machineSizeAt = (pitch: number) =>
-    Math.round(Math.min(MACHINE_MAX, Math.max(machineMin, pitch * machineFactor)));
+    Math.round(Math.min(MACHINE_MAX, Math.max(MACHINE_MIN, pitch * machineFactor)));
 
   // How far the props on each side reach past the slab, in px, for a given pitch. Machines
   // keep a minimum size (MACHINE_MIN) however small the sockets get, so their reach is in px.
@@ -187,11 +199,9 @@ export function computeLayout(p: PuzzleDef, phone: PhoneFrame | null = null): Al
     }
     return out;
   };
-  const padL = phone?.padL ?? 0;
-  const padR = phone?.padR ?? 0;
-  const top0 = phone ? PHONE_TOP : TOP;
-  const availW = phone ? DESIGN_W - padL - padR - 40 : DESIGN_W - 120;
-  const availH = DESIGN_H - top0 - (phone ? PHONE_BAND : TRAY_BAND);
+  const top0 = TOP;
+  const availW = DESIGN_W - 120;
+  const availH = DESIGN_H - top0 - TRAY_BAND;
   const fits = (pitch: number) => {
     const r = reach(pitch);
     return (
@@ -199,7 +209,7 @@ export function computeLayout(p: PuzzleDef, phone: PhoneFrame | null = null): Al
       (rows + 1.6 + 0.42) * pitch + r[0] + r[2] <= availH
     );
   };
-  let pitch = phone ? PHONE_MAX_PITCH : MAX_PITCH;
+  let pitch = MAX_PITCH;
   while (pitch > 24 && !fits(pitch)) pitch--;
   const margin = Math.round(pitch * 0.8);
   const width = cols * pitch + margin * 2;
@@ -215,7 +225,7 @@ export function computeLayout(p: PuzzleDef, phone: PhoneFrame | null = null): Al
   const top = Math.round(blockTop + above);
   const cy = top + topH / 2;
   // Centre horizontally, nudged away from the heavier side.
-  const mid = phone ? padL + (DESIGN_W - padL - padR) / 2 : DESIGN_W / 2;
+  const mid = DESIGN_W / 2;
   const cx = Math.round(mid + (ext[3] - ext[1]) / 2);
   const left = cx - width / 2;
   const right = cx + width / 2;
@@ -294,52 +304,6 @@ export function computeLayout(p: PuzzleDef, phone: PhoneFrame | null = null): Al
 
   // Tray: canonical gem order, only what this puzzle offers.
   const kinds = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
-  if (phone) {
-    const trayY = DESIGN_H - 84;
-    const spacing =
-      kinds.length > 1
-        ? Math.min(PHONE_TRAY_SPACING, PHONE_TRAY_SPAN / (kinds.length - 1))
-        : PHONE_TRAY_SPACING;
-    const trayW = (kinds.length - 1) * spacing;
-    // The tray sits a little right of centre: FUSE and his bubble take the left.
-    const trayCx = Math.round(mid + 40);
-    const tray = kinds.map((gem, i) => ({
-      gem,
-      x: Math.round(trayCx - trayW / 2 + i * spacing),
-      y: trayY,
-      size: PHONE_SLOT,
-    }));
-    const tl = trayCx - trayW / 2 - spacing / 2;
-    const tr = trayCx + trayW / 2 + spacing / 2;
-    return {
-      phone: {
-        top: DESIGN_H - PHONE_BAND,
-        fuseX: padL + PHONE_FUSE.x,
-        bubbleL: padL + PHONE_FUSE.x + 70,
-        bubbleR: Math.round(tl - 16),
-        infoL: Math.round(tr + 16),
-        infoR: DESIGN_W - padR - 12,
-      },
-      cols,
-      rows,
-      pitch,
-      margin,
-      cx,
-      cy,
-      left,
-      right,
-      top,
-      bottom,
-      frontBottom: bottom + front,
-      gemSize: Math.round(pitch * 0.74),
-      storm,
-      machines,
-      tray,
-      trayY,
-      titleX: cx,
-      titleMax: 900,
-    };
-  }
   const trayY = DESIGN_H - 108;
   const spacing =
     kinds.length > 1
@@ -373,6 +337,230 @@ export function computeLayout(p: PuzzleDef, phone: PhoneFrame | null = null): Al
     trayY,
     titleX,
     titleMax,
+  };
+}
+
+/**
+ * Phone budgets, CSS px (mobile-3-board, D-040). The socket pitch is what is left once the
+ * gauges' gutters and the right-hand column are paid for.
+ */
+const PH = {
+  /** Canvas edge inset. */
+  edge: 3,
+  /** A label's clearance from the board. */
+  clear: 8,
+  /** A west/east side with a gauge: the gauge and its card (card ≤ gutter − clear − edge). */
+  gutter: 62,
+  /** The right-hand column: narrowest, widest; and its gap from the board block. */
+  colMin: 140,
+  colMax: 216,
+  colGap: 4,
+  /** Biggest socket pitch (6×4 boards stop here; the column takes what is left). */
+  maxPitch: 52,
+  /** Tray: gem size, slot spacing across and down, and the title line above it. */
+  slot: 38,
+  slotDX: 46,
+  slotDY: 56,
+  titleH: 22,
+  /** FUSE's bubble / the hint sit this far above the canvas bottom (clear of Strike, 64 px). */
+  bubbleUp: 68,
+  /** Height of a card beside a north/south gauge: one line, or two on multi-strike altars. */
+  label1: 18,
+  label2: 28,
+} as const;
+
+/** The widest a west/east gauge's card may be on a phone, CSS px (it wraps to fit). */
+export const PHONE_GUTTER_CARD = PH.gutter - PH.clear - PH.edge;
+
+/** Slab border and front face on a phone, in pitches (the desktop slab: 0.8 and 0.42). */
+const PHONE_MARGIN = 0.22;
+const PHONE_FRONT = 0.16;
+
+function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
+  const c = f.cssPx;
+  const { w: cols, h: rows } = altarDims(p.altar);
+  const has = [false, false, false, false];
+  for (const x of [p.storm.at, ...p.machines.map((m) => m.at)]) has[sideOf(x, cols, rows)] = true;
+  const edge = PH.edge * c;
+  const clear = PH.clear * c;
+  const labelH = (p.pulses > 1 ? PH.label2 : PH.label1) * c;
+  const machineSizeAt = (pitch: number) =>
+    Math.round(Math.min(52 * c, Math.max(40 * c, pitch * 1.2)));
+  const stormSizeAt = (pitch: number) => Math.round(Math.min(pitch * 1.9, 92 * c));
+  // How far each side's gauge and card reach past the slab (front face included at S).
+  const reach = (pitch: number): [number, number, number, number] => {
+    const m = machineSizeAt(pitch);
+    const r = 0.24 * stormSizeAt(pitch);
+    const v = Math.max(0.62 * m, 1.4 * r, clear + labelH) + edge;
+    return [
+      has[0] ? v : edge,
+      has[1] ? PH.gutter * c : edge,
+      has[2] ? v : edge,
+      has[3] ? PH.gutter * c : edge,
+    ];
+  };
+  const x0 = f.padL;
+  const x1 = DESIGN_W - f.padR - edge;
+  const boardRoom = x1 - x0 - (PH.colMin + PH.colGap) * c;
+  const dims = (pitch: number) => {
+    const m = Math.round(pitch * PHONE_MARGIN);
+    const front = Math.round(pitch * PHONE_FRONT);
+    const r = reach(pitch);
+    return {
+      m,
+      front,
+      r,
+      w: r[3] + cols * pitch + 2 * m + r[1],
+      h: r[0] + rows * pitch + 2 * m + front + r[2],
+    };
+  };
+  let pitch = Math.round(PH.maxPitch * c);
+  while (pitch > 24) {
+    const d = dims(pitch);
+    if (d.w <= boardRoom && d.h <= DESIGN_H) break;
+    pitch--;
+  }
+  const d = dims(pitch);
+  const margin = d.m;
+  const front = d.front;
+  const ext = d.r;
+  const colW = Math.min(PH.colMax * c, x1 - x0 - d.w - PH.colGap * c);
+  const colR = x1;
+  const colL = Math.round(colR - colW);
+  // The board block: centred in what the column leaves, and in the height.
+  const blockL = x0 + (colL - PH.colGap * c - x0 - d.w) / 2;
+  const left = Math.round(blockL + ext[3]);
+  const top = Math.round((DESIGN_H - d.h) / 2 + ext[0]);
+  const width = cols * pitch + margin * 2;
+  const topH = rows * pitch + margin * 2;
+  const right = left + width;
+  const bottom = top + topH;
+  const cx = left + width / 2;
+  const cy = top + topH / 2;
+  const cellX = (x: number) => left + margin + pitch * (x + 0.5);
+  const cellY = (y: number) => top + margin + pitch * (y + 0.5);
+  // West / east gauges stand in the middle of the room their card has in the gutter.
+  const gutterMid = (PH.gutter + PH.clear - PH.edge) * c * 0.5;
+
+  const spot = (at: Cell, size: number, kind: 'storm' | 'machine'): PropSpot => {
+    const side = sideOf(at, cols, rows);
+    const sx = side === 3 ? left - gutterMid : right + gutterMid;
+    let x = 0;
+    let y = 0;
+    let port = { x: 0, y: 0 };
+    let half = 0; // half the gauge's drawn width, for a card beside it
+    let under = 0; // the drawn gauge's bottom, below y
+    if (kind === 'storm') {
+      const r = 0.24 * size;
+      const sy = -0.048 * size;
+      half = r;
+      under = r - sy;
+      if (side === 3 || side === 1) {
+        x = sx;
+        y = cellY(at.y) - sy;
+      } else if (side === 0) {
+        x = cellX(at.x);
+        y = top - r * 0.35 - sy;
+      } else {
+        x = cellX(at.x);
+        y = bottom + front + r * 0.35 - sy;
+      }
+      port = { x, y: y + sy };
+    } else {
+      const k = size / 2;
+      half = 0.9 * k;
+      under = 0.7 * k;
+      if (side === 1) {
+        x = sx;
+        y = cellY(at.y) + 0.18 * k;
+        port = { x: x - 0.96 * k, y: y - 0.18 * k };
+      } else if (side === 3) {
+        x = sx;
+        y = cellY(at.y) + 0.18 * k;
+        port = { x: x + 0.86 * k, y: cellY(at.y) };
+      } else if (side === 0) {
+        x = cellX(at.x);
+        y = top - 0.45 * k;
+        port = { x, y: y + 0.55 * k };
+      } else {
+        x = cellX(at.x);
+        y = bottom + front + 0.5 * k;
+        port = { x, y: y - 0.6 * k };
+      }
+    }
+    const inner = {
+      x: Math.max(0, Math.min(cols - 1, at.x)),
+      y: Math.max(0, Math.min(rows - 1, at.y)),
+    };
+    const gap = 4 * c;
+    const label: PropSpot['label'] =
+      side === 0 || side === 2
+        ? {
+            x: Math.round(x + half + gap),
+            alt: Math.round(x - half - gap),
+            y: Math.round(side === 0 ? top - clear : bottom + front + clear),
+            align: side === 0 ? 'up' : 'down',
+          }
+        : { x: Math.round(x), y: Math.round(y + under), align: 'below' };
+    return { x, y, size, side, port, cell: { x: at.x, y: at.y }, inner, label };
+  };
+  const storm = spot(p.storm.at, stormSizeAt(pitch), 'storm');
+  const machineSize = machineSizeAt(pitch);
+  const machines = p.machines.map((m) => spot(m.at, machineSize, 'machine'));
+
+  // Tray: rows of up to three under the title, centred in the column.
+  const kinds = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
+  const nRows = Math.max(1, Math.ceil(kinds.length / 3));
+  const per = Math.ceil(kinds.length / nRows);
+  const colX = (colL + colR) / 2;
+  const trayTop = PH.titleH * c;
+  const tray: TraySlot[] = kinds.map((gem, i) => {
+    const row = Math.floor(i / per);
+    const inRow = Math.min(per, kinds.length - row * per);
+    const j = i - row * per;
+    return {
+      gem,
+      x: Math.round(colX + (j - (inRow - 1) / 2) * PH.slotDX * c),
+      y: Math.round(trayTop + (PH.slot / 2 + 2 + row * PH.slotDY) * c),
+      size: Math.round(PH.slot * c),
+    };
+  });
+  return {
+    phone: {
+      padL: f.padL,
+      colL,
+      colR,
+      laneTop: Math.round(trayTop + (nRows * PH.slotDY + 2) * c),
+      bubbleL: colL,
+      bubbleB: Math.round(DESIGN_H - PH.bubbleUp * c),
+      fuseX: Math.round(colL + 22 * c),
+      fuseY: Math.round(DESIGN_H - 2 * c),
+      fuseScale: Math.round(25 * c),
+      cssPx: c,
+      edge,
+      clear,
+      trayHitX: Math.round((PH.slotDX / 2) * c),
+      trayHitY: Math.round((PH.slotDY / 2) * c),
+      front,
+    },
+    cols,
+    rows,
+    pitch,
+    margin,
+    cx,
+    cy,
+    left,
+    right,
+    top,
+    bottom,
+    frontBottom: bottom + front,
+    gemSize: Math.round(pitch * 0.74),
+    storm,
+    machines,
+    tray,
+    trayY: tray[0]?.y ?? trayTop,
+    titleX: Math.round(colX),
+    titleMax: Math.round(colR - colL),
   };
 }
 
@@ -493,6 +681,14 @@ export function snapCell(
 
 /** Tray slot under a logical point, or -1. */
 export function traySlotAt(L: AltarLayout, x: number, y: number): number {
+  if (L.phone) {
+    const { trayHitX: hx, trayHitY: hy } = L.phone;
+    for (let i = 0; i < L.tray.length; i++) {
+      const s = L.tray[i]!;
+      if (Math.abs(x - s.x) < hx && Math.abs(y - s.y) < hy) return i;
+    }
+    return -1;
+  }
   const half = L.tray.length > 1 ? Math.min(68, (L.tray[1]!.x - L.tray[0]!.x) / 2) : 68;
   for (let i = 0; i < L.tray.length; i++) {
     const s = L.tray[i]!;

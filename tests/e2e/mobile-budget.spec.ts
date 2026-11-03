@@ -13,6 +13,11 @@ import { DEV_URL, waitFrames } from './helpers';
 //     and ≤3 lines, and none of them, nor any chrome, sits over the board.
 //  4. The page never scrolls, and no text is cut off (no ellipsis, line clamp or clipped
 //     overflow on anything in the overlay, D-027).
+// mobile-3-board (D-040):
+//  5. Socket pitch per board size (PITCH_MIN): the board is framed, not shrunk to fit chrome.
+//  6. Gives/Needs cards stand ≥8 px clear of the board and of each other; the Capacitor
+//     read-out, the verdict, the hint and FUSE's bubble sit over neither the board nor a card;
+//     the hint is one line.
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0 },
@@ -26,6 +31,15 @@ const PHONES = [
  * width rule (PM, mobile-2).
  */
 const HEIGHT_BOUND = 0.75;
+
+/** Least socket pitch, CSS px, by board class (6×4, 8×6, 10×8), per phone (mobile-3-board). */
+const PITCH_MIN: Record<(typeof PHONES)[number]['name'], [number, number, number]> = {
+  iphone: [44, 38, 30],
+  se: [39.6, 34.2, 27],
+};
+const pitchClass = (cols: number) => (cols <= 6 ? 0 : cols <= 8 ? 1 : 2);
+/** A Gives/Needs card's clearance from the board, CSS px. */
+const LABEL_CLEAR = 8;
 
 // biome-ignore lint/suspicious/noExplicitAny: dev handle
 type G = any;
@@ -77,8 +91,13 @@ async function measure(page: Page) {
         b: Y(p.y + p.size / 2),
       });
     }
+    const labels: Box[] = [];
     for (const el of document.querySelectorAll('.lr-altar-need'))
-      if (shown(el)) grow(box(el.getBoundingClientRect()));
+      if (shown(el)) labels.push(box(el.getBoundingClientRect()));
+    for (const b of labels) grow(b);
+    const caps: Box[] = [];
+    for (const el of document.querySelectorAll('.lr-altar-cap'))
+      if (shown(el)) caps.push(box(el.getBoundingClientRect()));
     const area = (b: Box) => Math.max(0, b.r - b.l) * Math.max(0, b.b - b.t);
     const chrome: { name: string; box: Box }[] = [];
     for (const sel of [
@@ -154,6 +173,11 @@ async function measure(page: Page) {
       slab,
       board,
       usable,
+      labels,
+      caps,
+      pitch: L.pitch * k,
+      cols: L.cols,
+      dims: `${L.cols}×${L.rows}`,
       hShare: (board.b - board.t) / (usable.b - usable.t),
       wShare: (board.r - board.l) / (usable.r - usable.l),
       chromeShare: chrome.reduce((s, c) => s + area(c.box), 0) / area(usable),
@@ -180,6 +204,22 @@ function cardProblems(m: M, label: string): string[] {
     if (w > m.screenW / 3 + 1) out.push(`${label}: ${c.name} ${w.toFixed(0)}px wide "${c.text}"`);
     if (c.lines > 3) out.push(`${label}: ${c.name} ${c.lines} lines "${c.text}"`);
     if (hit(c.box, m.slab)) out.push(`${label}: ${c.name} over the board "${c.text}"`);
+    if (m.labels.some((b) => hit(c.box, b)))
+      out.push(`${label}: ${c.name} over a Gives/Needs card "${c.text}"`);
+    if (c.name === 'hint' && c.lines > 1) out.push(`${label}: hint ${c.lines} lines "${c.text}"`);
+  }
+  const grown = (b: Box, d: number): Box => ({ l: b.l - d, t: b.t - d, r: b.r + d, b: b.b + d });
+  m.labels.forEach((b, i) => {
+    if (hit(b, grown(m.slab, LABEL_CLEAR - 1)))
+      out.push(`${label}: Gives/Needs card ${i} within ${LABEL_CLEAR}px of the board`);
+    if (m.labels.some((o, j) => j > i && hit(b, o)))
+      out.push(`${label}: Gives/Needs cards ${i} overlap`);
+    if (m.chrome.some((c) => hit(b, c.box)))
+      out.push(`${label}: Gives/Needs card ${i} under chrome`);
+  });
+  for (const c of m.caps) {
+    if (hit(c, m.slab)) out.push(`${label}: Capacitor read-out over the board`);
+    if (m.labels.some((b) => hit(c, b))) out.push(`${label}: Capacitor read-out over a card`);
   }
   for (const c of m.chrome) if (hit(c.box, m.slab)) out.push(`${label}: ${c.name} over the board`);
   if (m.scrolls) out.push(`${label}: page scrolls`);
@@ -244,6 +284,9 @@ for (const vp of PHONES) {
         if (m.wShare < wMin) problems.push(`${id}: board ${(m.wShare * 100).toFixed(0)}% of width`);
         if (m.chromeShare > 0.2)
           problems.push(`${id}: chrome ${(m.chromeShare * 100).toFixed(0)}%`);
+        const pMin = PITCH_MIN[vp.name][pitchClass(m.cols)];
+        if (m.pitch < pMin - 0.05)
+          problems.push(`${id}: ${m.dims} pitch ${m.pitch.toFixed(1)}px < ${pMin}px`);
         problems.push(...cardProblems(m, `${id} open`));
         let widest = 0;
         const note = (x: M) => {
@@ -291,7 +334,7 @@ for (const vp of PHONES) {
         note(mv);
 
         table.push(
-          `${id.padEnd(14)} board ${(m.hShare * 100).toFixed(0)}%H ${(m.wShare * 100).toFixed(0)}%W · chrome ${(m.chromeShare * 100).toFixed(1)}% · widest card ${(widest * 100).toFixed(0)}% of screen`,
+          `${id.padEnd(14)} ${m.dims.padEnd(5)} pitch ${m.pitch.toFixed(1)}px · board ${(m.hShare * 100).toFixed(0)}%H ${(m.wShare * 100).toFixed(0)}%W · chrome ${(m.chromeShare * 100).toFixed(1)}% · widest card ${(widest * 100).toFixed(0)}% of screen`,
         );
         await page.evaluate(() => (window as G).__game.flow.closePuzzle());
         await waitFrames(page, 4);

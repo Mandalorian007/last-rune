@@ -144,6 +144,8 @@ export class SolveScene implements GameScene {
     this.hum = null;
     this.view.dispose();
     this.dom.remove();
+    this.ctx.ui.root.style.removeProperty('--lr-scap-l');
+    this.ctx.ui.root.style.removeProperty('--lr-scap-w');
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
     this.ctx.particles.clear();
   }
@@ -208,6 +210,18 @@ export class SolveScene implements GameScene {
     this.contEl.dataset.action = 'continue';
     this.contEl.hidden = true;
     this.dom = h('div', { class: 'lr-solve' }, card, this.pageEl, this.contEl);
+    // Phones: the card stack takes the altar's right-hand column (and the free right bar), so
+    // the board on the left stays in view; FUSE's caption sits beside him under it.
+    const band = this.view.layout.phone;
+    if (band) {
+      this.dom.dataset.phone = '';
+      this.dom.style.setProperty('--lr-col-l', `${band.colL}px`);
+      this.dom.style.setProperty('--lr-col-w', `${band.colR - band.colL}px`);
+      const st = this.ctx.ui.root.style;
+      const capL = Math.round(band.colL + 46 * band.cssPx);
+      st.setProperty('--lr-scap-l', `${capL}px`);
+      st.setProperty('--lr-scap-w', `${1920 - capL}px`);
+    }
     this.ctx.ui.layers.hud.append(this.dom);
   }
 

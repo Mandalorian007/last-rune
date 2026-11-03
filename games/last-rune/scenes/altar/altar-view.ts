@@ -30,7 +30,6 @@ import {
   cellCenter,
   computeLayout,
   DESIGN_W,
-  PHONE_FUSE,
   phoneFrameFor,
 } from './layout';
 import type { StrikeTimeline } from './strike';
@@ -173,7 +172,9 @@ export class AltarView {
     const dev = ctx.device;
     const L = computeLayout(puzzle, phoneFrameFor(dev.phone, dev.cssPx, dev.bar));
     this.layout = L;
-    this.slab = this.assets.slab(L.cols, L.rows, L.pitch);
+    this.slab = L.phone
+      ? this.assets.slab(L.cols, L.rows, L.pitch, L.margin, L.phone.front)
+      : this.assets.slab(L.cols, L.rows, L.pitch);
     this.slab.place(L.cx, L.cy);
     this.storm = new StormCell(r, {
       x: L.storm.x,
@@ -203,8 +204,8 @@ export class AltarView {
     this.heldInst.size = L.gemSize;
     const fuse = this.assets.fuse;
     if (L.phone) {
-      fuse.scale = PHONE_FUSE.scale;
-      fuse.place(L.phone.fuseX, PHONE_FUSE.y);
+      fuse.scale = L.phone.fuseScale;
+      fuse.place(L.phone.fuseX, L.phone.fuseY);
     } else {
       fuse.scale = 112;
       fuse.place(300, 1046);
@@ -573,13 +574,19 @@ export class AltarView {
 
     // ── Lights ──
     const Ls = this.lights;
+    const ph = L.phone;
     Ls.begin(0.075, 0.078, 0.105, 0.5, 0.75);
-    a.candles.addLights(Ls, CANDLES);
+    // Phones (mobile-3-board): no candles; the board is lit evenly, edge to edge.
+    if (!ph) a.candles.addLights(Ls, CANDLES);
     Ls.add(W / 2, 40, 1500, ROOF, 0.42 + this.wake * 0.6, 700);
     // Work light over the slab: big boards sit far from the candles, and their lower rows
     // must read before the first strike.
     const span = Math.max(L.right - L.left, L.frontBottom - L.top);
-    Ls.add(L.cx, L.cy, span * 0.95, WORK, 0.5, span * 0.55);
+    if (ph) {
+      Ls.add(L.cx, L.cy, span * 1.5, WORK, 0.62, span);
+      // The tray in the column.
+      Ls.add((ph.colL + ph.colR) / 2, L.trayY, 700, WORK, 0.45, 400);
+    } else Ls.add(L.cx, L.cy, span * 0.95, WORK, 0.5, span * 0.55);
     const st = this.storm.light;
     Ls.add(st.x, st.y, L.pitch * 6, st.color, 0.55 * st.intensity, 160);
     let bx = 0;
@@ -630,8 +637,10 @@ export class AltarView {
     // ── Draw ──
     frame.clear(0, 0, 0, 1);
     a.wall.draw(frame, W / 2, 540);
-    a.floor.draw(frame, W / 2, 1080 - 150, W, 300, undefined, 1, 0.18);
-    a.candles.drawBodies(frame, CANDLES);
+    if (!ph) {
+      a.floor.draw(frame, W / 2, 1080 - 150, W, 300, undefined, 1, 0.18);
+      a.candles.drawBodies(frame, CANDLES);
+    }
     this.slab.draw(frame);
     this.drawCircuit(frame);
     for (const m of this.marks) {
@@ -671,7 +680,7 @@ export class AltarView {
     }
 
     for (let i = 0; i < this.activeBolts; i++) a.bolts[i]!.draw(frame);
-    a.candles.drawFlames(frame, CANDLES);
+    if (!ph) a.candles.drawFlames(frame, CANDLES);
     f.draw(frame, rig);
     frame.drawable(this.ctx.particles);
   }

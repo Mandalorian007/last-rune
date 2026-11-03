@@ -28,6 +28,9 @@ const BAR_IN = `calc(-1 * var(--lr-bar, 0px) + ${cpx(3)})`;
 /** An edge-column button: 44 CSS px square. */
 const COL = cpx(44);
 
+/** mobile-3-board: the phone altar root, ranked above the mobile-2 altar rules. */
+const A = `${P} .lr-altar[data-phone]`;
+
 /* mobile-3-chrome */
 /** The visible band's top and bottom edges when the art fills the width (D-040; 0 otherwise). */
 const CT = 'var(--lr-crop-t, 0px)';
@@ -429,6 +432,108 @@ ${P} .lr-altar[data-phone]:has(.lr-altar-verdict:not([hidden])) .lr-altar-hint {
 /* The tray card covers the gem in hand for its first moments; its ↻ mark waits too. */
 ${T} .lr-altar:not([data-phone]):has(.lr-altar-tip[data-source="tray"]:not([hidden])) .lr-altar-turnmark { visibility: hidden; }
 ${P} .lr-altar-tag { font-size: ${tpx(11)}; padding: ${cpx(1)} ${cpx(5)}; border-radius: ${cpx(5)}; }
+
+/* mobile-3-board ─ Altar: the board on the left, a column on the right ──────────────────
+   layout.ts phoneLayout: the board and its gauges fill the height on the left; the column
+   (--lr-col-l/-w) holds the title, the tray (counts under the gems), the lane (gem chip,
+   verdict, Capacitor read-outs; top-down from --lr-lane-t), then FUSE's bubble or the hint
+   (bottom-up from --lr-bub-b, reaching into the right bar), and FUSE. Gives/Needs cards sit
+   beside their gauges, 8 CSS px clear of the board (altar-scene placePhoneLabels). */
+${A} .lr-altar-title { top: ${cpx(3)}; width: max-content; }
+${A} .lr-altar-title h2 { font-size: ${tpx(13)}; }
+
+/* Tray: counts under the gems; a used-up gem is struck through, slot and count. */
+${A} .lr-altar-count { font-size: ${tpx(12)}; padding: 0 ${cpx(5)}; line-height: 1.2; }
+${A} .lr-altar-count[data-empty] { opacity: 0.75; color: #9c8f78; text-decoration: line-through; border-color: rgba(156,143,120,0.4); }
+${A} .lr-altar-slot { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; display: none; }
+${A} .lr-altar-slot[data-empty] {
+  display: block;
+  background: linear-gradient(to top right, transparent calc(50% - ${cpx(1.2)}), rgba(214,196,164,0.85) calc(50% - ${cpx(1.2)}),
+    rgba(214,196,164,0.85) calc(50% + ${cpx(1.2)}), transparent calc(50% + ${cpx(1.2)}));
+}
+/* First altar, until the first gem is taken: the tray breathes, so the eye finds it. */
+${A}[data-first]:not([data-picked]) .lr-altar-slot:not([data-empty]) {
+  display: block; box-shadow: 0 0 0 ${cpx(2)} rgba(232,192,106,0.85), 0 0 ${cpx(12)} ${cpx(2)} rgba(232,192,106,0.55);
+  animation: lr-m3-tray-pulse 1.6s ease-in-out infinite;
+}
+@keyframes lr-m3-tray-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+[data-reduced-motion] ${A}[data-first]:not([data-picked]) .lr-altar-slot { animation: none; }
+
+/* The lane: one card under another, never over the board. The gem chip outranks the verdict. */
+${A} .lr-altar-lane {
+  position: absolute; left: var(--lr-col-l); top: var(--lr-lane-t); width: var(--lr-col-w);
+  display: flex; flex-direction: column; align-items: flex-start; gap: ${cpx(4)}; pointer-events: none;
+}
+${A} .lr-altar-lane > * {
+  position: relative !important; left: auto !important; top: auto !important; bottom: auto !important;
+  transform: none !important; margin: 0; max-width: none !important; box-sizing: border-box;
+}
+/* The chip and the verdict may run on into the right bar (Turn stands in the left bar). */
+${A} .lr-altar-lane :is(.lr-altar-tip, .lr-altar-verdict) { width: min(calc(var(--lr-col-w) + var(--lr-bar, 0px) - ${cpx(3)}), var(--lr-third)); }
+${A}:has(.lr-altar-tip:not([hidden])) .lr-altar-lane .lr-altar-verdict { display: none; }
+${A} .lr-altar-lane .lr-altar-cap {
+  white-space: normal; gap: 0; padding: ${cpx(2)} ${cpx(7)} ${cpx(3)}; border-width: 1px; border-radius: ${cpx(7)};
+  font-size: ${tpx(12)}; line-height: 1.25; animation: none;
+}
+${A} .lr-cap-head { font-family: var(--tc-font-ui); font-size: ${tpx(11)}; letter-spacing: 0.5px; color: #9fc8ff; }
+
+/* The hint: one line where FUSE's bubble goes, while he is quiet. */
+${A} .lr-altar-hint {
+  left: var(--lr-bub-l) !important; bottom: var(--lr-bub-b) !important; white-space: nowrap;
+  max-width: min(calc(var(--lr-col-w) + var(--lr-bar, 0px) - ${cpx(3)}), var(--lr-third)) !important;
+}
+${P}:has(.tc-caption:not([hidden]):not([data-suspended])) .lr-altar[data-phone] .lr-altar-hint { visibility: hidden; }
+${P}:has(.lr-altar[data-phone]) .tc-caption {
+  bottom: var(--lr-cap-b) !important;
+  max-width: min(calc(var(--lr-cap-w) + var(--lr-bar, 0px) - ${cpx(3)}), var(--lr-third)) !important;
+}
+${P}:has(.lr-altar[data-crowd]) .tc-caption { visibility: hidden; }
+
+/* Turn: in the left bar under Clear, so the right bar between ☰ and Strike stays free for the
+   gem chip and FUSE's bubble. */
+${A} .lr-altar-turnbtn { left: ${BAR_IN} !important; right: auto; top: auto !important; bottom: ${cpx(6)}; }
+
+/* Gives / Needs: under a west/east gauge (wrapping to its gutter), beside a north/south one. */
+${A} .lr-altar-need { white-space: normal; text-align: center; }
+${A} .lr-altar-need[data-align="above"] { transform: translate(-50%, calc(-100% - ${cpx(4)})); }
+${A} .lr-altar-need[data-align="above"]::before { top: auto; bottom: -9px; transform: translateX(-50%) rotate(225deg); left: 50%; border-left-width: 2px; border-top-width: 2px; }
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"]) {
+  flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0 ${cpx(4)};
+  max-width: ${cpx(118)}; white-space: nowrap;
+}
+${A} .lr-altar-need[data-align="up"] { transform: translate(0, -100%); }
+${A} .lr-altar-need[data-align="down"] { transform: none; }
+${A} .lr-altar-need[data-align="up"][data-left] { transform: translate(-100%, -100%); }
+${A} .lr-altar-need[data-align="down"][data-left] { transform: translate(-100%, 0); }
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"])::before {
+  left: -9px; top: 50%; transform: translateY(-50%) rotate(45deg); border-left-width: 2px; border-bottom-width: 2px;
+}
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"])[data-left]::before {
+  left: auto; right: -9px; transform: translateY(-50%) rotate(225deg);
+}
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"]) .lr-need-strikes { margin-top: 0; }
+${A} .lr-altar-storm .lr-strike-pips { display: none; }
+
+/* Strike: full gold whenever it can fire (it glows once the route reaches a machine); a
+   multi-strike altar says "×2", then "1/2", in words not pips. */
+${A} .lr-altar-actions .lr-gold-button:not([data-ready]):not(:disabled) { filter: none; }
+${A} .lr-altar-actions .lr-gold-button .lr-strike-pips { display: none; }
+.tc-overlay .lr-strike-n { display: none; }
+${A} .lr-altar-actions .lr-strike-n { display: block; font-family: var(--tc-font-ui); font-size: ${tpx(12)}; line-height: 1.1; }
+
+/* Solve moment: card, journal page and Continue fill the altar's column and the free right
+   bar (solve-scene); FUSE speaks beside himself at the column's foot. */
+${P} .lr-solve[data-phone] {
+  left: var(--lr-col-l); top: ${cpx(4)}; width: calc(var(--lr-col-w) + var(--lr-bar, 0px) - ${cpx(3)}); gap: ${cpx(5)};
+}
+${P} .lr-solve[data-phone] .lr-solve-card { padding: ${cpx(5)} ${cpx(9)} ${cpx(6)}; }
+${P} .lr-solve[data-phone] .lr-page-note { margin: 0 ${cpx(6)}; padding: ${cpx(4)} ${cpx(9)}; }
+${P} .lr-solve[data-phone] .lr-page-note b { white-space: nowrap; margin-bottom: ${cpx(1)}; }
+${P}:has(.lr-solve[data-phone]) .tc-caption {
+  left: var(--lr-scap-l) !important; right: auto !important; top: auto !important; bottom: ${cpx(3)} !important;
+  max-width: min(calc(var(--lr-scap-w) + var(--lr-bar, 0px) - ${cpx(3)}), var(--lr-third)) !important;
+}
+/* mobile-3-board end */
 
 /* ── Title ──────────────────────────────────────────────────────────────── */
 ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cpx(2)} ${cpx(8)}; }

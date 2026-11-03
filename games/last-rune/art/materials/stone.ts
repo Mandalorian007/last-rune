@@ -128,7 +128,20 @@ export function createStoneFloor(renderer: Renderer, opts: StoneOptions = {}): S
   return new StoneSurface(renderer, t.albedo, t.normal, w, h, 'stone-floor');
 }
 
-export type SocketState = 'empty' | 'blocked' | 'highlighted' | 'wanted';
+/**
+ * `rim` and `plate` are the phone looks (mobile-3-board): a faint pale lip on an open socket,
+ * and a blocked socket as a plain recessed plate (no carved X).
+ */
+export type SocketState = 'empty' | 'blocked' | 'highlighted' | 'wanted' | 'rim' | 'plate';
+
+const SOCKET_STATE_ID: Record<SocketState, number> = {
+  empty: 0,
+  blocked: 1,
+  highlighted: 2,
+  wanted: 3,
+  rim: 4,
+  plate: 5,
+};
 
 export interface AltarOptions {
   cols: number;
@@ -137,6 +150,8 @@ export interface AltarOptions {
   pitch?: number;
   /** Border around the socket grid in px. Default 0.8 × pitch. */
   margin?: number;
+  /** Height of the front face in px. Default 0.42 × pitch. */
+  front?: number;
   seed?: number;
 }
 
@@ -168,7 +183,7 @@ export class AltarSlab {
     this.pitch = opts.pitch ?? 118;
     this.margin = opts.margin ?? Math.round(this.pitch * 0.8);
     this.socketRadius = Math.round(this.pitch * 0.36);
-    this.frontHeight = Math.round(this.pitch * 0.42);
+    this.frontHeight = opts.front ?? Math.round(this.pitch * 0.42);
     this.width = this.cols * this.pitch + this.margin * 2;
     this.topHeight = this.rows * this.pitch + this.margin * 2;
     const h = this.topHeight + this.frontHeight;
@@ -229,7 +244,7 @@ export class AltarSlab {
     const dp = this.dp;
     const o = this.socketCenter(col, row, dp);
     const p = dp.params as number[];
-    p[0] = state === 'blocked' ? 1 : state === 'highlighted' ? 2 : 3;
+    p[0] = SOCKET_STATE_ID[state];
     p[1] = col * 7.3 + row * 3.1;
     p[2] = intensity;
     dp.x = o.x;
