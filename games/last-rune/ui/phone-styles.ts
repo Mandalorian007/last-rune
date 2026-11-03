@@ -243,6 +243,58 @@ ${P} .lr-title-coffee, ${P} .lr-title-links .tc-link-copy {
 `;
 /* end mobile-3-chrome */
 
+/* mobile-4-chrome */
+const CHROME4_CSS = /* css */ `
+/* ── mobile-4-chrome: the last clarity gaps in the menus (D-040 addendum 2) ───────────── */
+/* Settings: the columns scroll natively beside a drawn thumb (iOS hides its own until you
+   scroll); the bottom fade shows only while there is more below; "Graphics & Save ▾" jumps. */
+${P} .lr-settings-scroll { position: relative; display: flex; flex: 1 1 auto; min-height: 0; }
+${P} .lr-settings-scroll > .lr-settings-cols {
+  position: relative; flex: 1 1 auto; min-width: 0; scrollbar-width: none; padding-right: ${cpx(16)};
+}
+${P} .lr-settings-scroll > .lr-settings-cols::-webkit-scrollbar { display: none; }
+${P} .lr-settings-rail {
+  position: absolute; right: ${cpx(3)}; top: ${cpx(4)}; bottom: ${cpx(8)}; width: ${cpx(5)};
+  border-radius: ${cpx(3)}; background: rgb(232 192 106 / 0.16); pointer-events: none;
+}
+${P} .lr-settings-rail[hidden] { display: none; }
+${P} .lr-settings-thumb {
+  position: absolute; left: 0; right: 0; min-height: ${cpx(24)}; border-radius: ${cpx(3)};
+  background: rgb(240 205 125 / 0.85);
+}
+${P} .lr-settings-more { min-height: ${cpx(40)}; padding: 0 ${cpx(14)}; border-radius: ${cpx(20)}; }
+
+/* Codex: the ✕ gets a gutter of its own in the leather, right of the pages, so it never
+   touches a header; the page number goes (it cost a line on the shortest phones); a page that
+   still runs long scrolls with a fade at its foot while more is below. */
+${P} .lr-codex { padding-right: ${cpx(50)}; }
+${P} .lr-codex-close { top: ${cpx(32)}; right: ${cpx(7)}; background: rgb(255 240 200 / 0.14); color: #f8e6b8; border-color: rgb(232 192 106 / 0.6); }
+${P} .lr-codex-page h3 { padding-right: 0; }
+${P} .lr-codex-folio { display: none; }
+${P} .lr-codex-page[data-more] { mask-image: linear-gradient(#000 calc(100% - ${cpx(20)}), rgb(0 0 0 / 0.15)); }
+
+/* Journal: the handwriting at a readable size in dark ink; the Day list in larger print with a
+   quiet "new" marker so the dates scan; one exit, the ✕ (D-040). */
+${P} .lr-j-body, ${P} .lr-j-body[data-long] {
+  /* The paper's rule pitch (54, desk-wgsl), unless larger text needs more. */
+  font-size: ${tpx(15.5)}; line-height: max(54px, 1.15em); color: #140b05; font-weight: 700;
+  text-shadow: 0 0 1px #140b0599;
+}
+${P} .lr-j-date { font-size: ${tpx(15)}; color: #24160b; }
+/* The larger hand runs page 16 two rules further down its right leaf: the signature follows. */
+${P} .lr-j-sign { transform: translateY(108px); }
+${P} .lr-journal .lr-j-back { display: none; }
+${P} .lr-journal .lr-j-slip { font-size: ${tpx(14.5)}; min-height: ${cpx(38)}; }
+${P} .lr-j-slip b { font-size: ${tpx(15)}; }
+${P} .lr-j-slip span { font-weight: 700; }
+/* "New" is a red dot after the date (the head says "1 new"), so the day number is never cut. */
+${P} .lr-j-slip .lr-j-new {
+  flex: none; margin-left: auto; width: ${cpx(9)}; height: ${cpx(9)}; padding: 0; border-radius: 50%;
+  font-size: 0; color: transparent; box-shadow: none;
+}
+`;
+/* end mobile-4-chrome */
+
 export const PHONE_CSS = /* css */ `
 /* The edge columns live in the letterbox bars, outside the 16:9 box (#app still clips). */
 ${P} { overflow: visible; }
@@ -569,4 +621,4 @@ ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cp
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }
 ${P} .lr-title-coffee { min-height: ${cpx(24)}; padding: 0 ${cpx(8)}; font-size: ${tpx(11)}; }
 ${P} .lr-release { font-size: ${tpx(11)}; }
-${CHROME_CSS}`;
+${CHROME_CSS}${CHROME4_CSS}`;

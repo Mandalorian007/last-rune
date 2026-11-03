@@ -144,6 +144,8 @@ function mergePost(a: PostSettingsPatch, b: PostSettingsPatch): PostSettingsPatc
 const FLOOD_LOOK = mergePost(POST_PRESETS.ending, FLOOD_POST);
 const FLOOD_LOOK_CALM = mergePost(POST_PRESETS.ending, FLOOD_POST_CALM);
 /** Fog and rays come back from nothing when the gold floods in. */
+/** Phone end card (mobile-4-chrome): each Copy button names the link it copies. */
+const END_COPY_PHONE = { join: 'Copy invite link', coffee: 'Copy Ko-fi link' } as const;
 const FLOOD_FROM = { fog: { enabled: true, density: 0 }, godRays: { enabled: true, intensity: 0 } };
 
 /** A scalar eased from `from` to `to` over `dur` seconds of scene time. Allocation-free. */
@@ -569,12 +571,17 @@ export class EndingScene implements GameScene {
    */
   private addEndLinks(): void {
     const links: HTMLElement[] = [];
+    // Phones: the two Copy buttons sit close together, so each says which link it copies.
+    const phone = this.ctx.ui.root.hasAttribute('data-phone');
     const join = this.card.join;
     const joinLink = join
       ? externalLink({
           url: join.href,
           content: join.label,
-          labels: linkLabels('the ThunderClap Gaming invite'),
+          labels: {
+            ...linkLabels('the ThunderClap Gaming invite'),
+            ...(phone ? { copy: END_COPY_PHONE.join } : {}),
+          },
           linkClass: 'lr-end-join',
           className: 'lr-end-links',
           action: 'ending-join',
@@ -589,6 +596,7 @@ export class EndingScene implements GameScene {
           action: 'ending-coffee',
           place: 'below',
           align: 'center',
+          ...(phone ? { copy: END_COPY_PHONE.coffee } : {}),
         })
       : null;
     if (coffeeLink) links.push(coffeeLink.element);

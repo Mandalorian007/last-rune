@@ -270,6 +270,29 @@ for (const vp of PHONES) {
       );
       // The header has no dead controls (D-027): no chevron, and the unread count is plain text.
       expect(await hg.locator('.lr-hg-back').count()).toBe(0);
+      // mobile-4-chrome: nothing in the hangout takes focus or looks typeable; the bar reads
+      // "Read-only channel"; one "#introductions" header (the top bar), no repeated start block.
+      const inert = await page.evaluate(() => {
+        const hg = document.querySelector('.lr-hg')!;
+        const focusable = [
+          ...hg.querySelectorAll<HTMLElement>(
+            'input, textarea, select, [contenteditable], [tabindex]:not([tabindex="-1"])',
+          ),
+        ].map((e) => e.outerHTML.slice(0, 60));
+        const bar = document.querySelector('.lr-hg-compose')!;
+        return {
+          focusable,
+          bar: bar.hasAttribute('data-typing')
+            ? 'typing'
+            : getComputedStyle(bar, '::before').content,
+          starts: [...hg.querySelectorAll<HTMLElement>('.lr-hg-start')].filter(
+            (e) => e.getClientRects().length > 0,
+          ).length,
+        };
+      });
+      expect(inert.focusable, 'focusable controls in the hangout').toEqual([]);
+      if (inert.bar !== 'typing') expect(inert.bar).toContain('Read-only channel');
+      expect(inert.starts, 'a repeated channel start header').toBe(0);
       expect(meets(chat.skip, chat.log)).toBe(false);
 
       // ── Skip still works by finger: on to the end card ──────────────────
@@ -303,6 +326,33 @@ for (const vp of PHONES) {
           expect(meets(boxes[i]!, boxes[j]!), `${sels[i]} meets ${sels[j]}`).toBe(false);
         }
       }
+      // mobile-4-chrome: each Copy button names its link; the closing line reads ≥4.5:1.
+      const copies = await page.locator('.lr-end-card .tc-link-copy').allTextContents();
+      expect(copies.map((t) => t.trim())).toEqual(['Copy invite link', 'Copy Ko-fi link']);
+      const contrast = await page.evaluate(() => {
+        const f = document.querySelector('.lr-end-footer')!;
+        const cs = getComputedStyle(f);
+        const rgba = (c: string) => {
+          const n = c.match(/[\d.]+/g)!.map(Number);
+          return [n[0]!, n[1]!, n[2]!, n[3] ?? 1] as const;
+        };
+        const lum = (r: number, g: number, b: number) => {
+          const ch = (v: number) => {
+            const x = v / 255;
+            return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+        };
+        const [tr, tg, tb] = rgba(cs.color);
+        const [br, bg, bb, ba] = rgba(cs.backgroundColor);
+        // The plate over the brightest gold behind it (worst case).
+        const gold = [255, 214, 120];
+        const mix = (v: number, i: number) => v * ba + gold[i]! * (1 - ba);
+        const lt = lum(tr, tg, tb);
+        const lb = lum(mix(br, 0), mix(bg, 1), mix(bb, 2));
+        return (Math.max(lt, lb) + 0.05) / (Math.min(lt, lb) + 0.05);
+      });
+      expect(contrast, 'end card closing line contrast').toBeGreaterThanOrEqual(4.5);
       // The clipboard stays a prop: clear of every control, with room to spare.
       const clip = (await boxOf(page, '.lr-clip-note'))!;
       for (const b of boxes) {
