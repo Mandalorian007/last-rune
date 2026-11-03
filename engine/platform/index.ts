@@ -1,5 +1,15 @@
 export type { BootOptions, BootResult } from './boot';
 export { boot } from './boot';
+export type { PointerKind } from './device';
+export {
+  fullscreenAvailable,
+  isFullscreen,
+  isPortrait,
+  isTouchOnly,
+  toggleFullscreen,
+  watchFullscreen,
+  watchPointerKind,
+} from './device';
 export { prefersReducedMotion, watchReducedMotion, watchVisibility } from './environment';
 export type { GpuContext, GpuFailureReason, GpuInitOptions, GpuInitResult } from './gpu';
 export { initGpu } from './gpu';

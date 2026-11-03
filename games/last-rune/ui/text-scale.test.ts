@@ -12,8 +12,12 @@ describe('text scale', () => {
   });
 
   it('CSS lengths follow the variable and agree with scaledPx', () => {
-    expect(scalePxCss(20)).toBe('calc(20px * var(--lr-text-scale, 1))');
-    expect(scalePxCss(40)).toBe('max(40px, calc(30px * var(--lr-text-scale, 1)))');
+    expect(scalePxCss(20)).toBe(
+      'max(calc(20px * var(--lr-text-scale, 1)), var(--lr-text-min, 0px))',
+    );
+    expect(scalePxCss(40)).toBe(
+      'max(40px, calc(30px * var(--lr-text-scale, 1)), var(--lr-text-min, 0px))',
+    );
     expect(scalePxCss(62)).toBe('62px');
   });
 
@@ -21,8 +25,12 @@ describe('text scale', () => {
     const css =
       '.a { font-size: 19px; } .b { font: 400 26px/1.4 system-ui; } .c { font-size: 62px; }';
     const out = scaleFontSizes(css);
-    expect(out).toContain('.a { font-size: calc(19px * var(--lr-text-scale, 1)); }');
-    expect(out).toContain('.b { font: 400 calc(26px * var(--lr-text-scale, 1))/1.4 system-ui; }');
+    expect(out).toContain(
+      '.a { font-size: max(calc(19px * var(--lr-text-scale, 1)), var(--lr-text-min, 0px)); }',
+    );
+    expect(out).toContain(
+      '.b { font: 400 max(calc(26px * var(--lr-text-scale, 1)), var(--lr-text-min, 0px))/1.4 system-ui; }',
+    );
     expect(out).toContain('.c { font-size: 62px; }');
     // Other lengths are left alone.
     expect(scaleFontSizes('.d { width: 24px; margin: 30px; }')).toBe(
@@ -32,14 +40,14 @@ describe('text scale', () => {
 
   it('engine font tokens', () => {
     expect(textScaleTokens(1)).toEqual({
-      fontSizeS: '24px',
-      fontSizeM: '30px',
-      fontSizeL: '40px',
+      fontSizeS: 'max(24px, var(--lr-text-min, 0px))',
+      fontSizeM: 'max(30px, var(--lr-text-min, 0px))',
+      fontSizeL: 'max(40px, var(--lr-text-min, 0px))',
       fontSizeXl: '56px',
       fontSizeXxl: '84px',
     });
-    expect(textScaleTokens(1.5).fontSizeS).toBe('36px');
-    expect(textScaleTokens(1.5).fontSizeL).toBe('45px');
+    expect(textScaleTokens(1.5).fontSizeS).toBe('max(36px, var(--lr-text-min, 0px))');
+    expect(textScaleTokens(1.5).fontSizeL).toBe('max(45px, var(--lr-text-min, 0px))');
   });
 
   it('unknown saved values mean 100%', () => {

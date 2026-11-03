@@ -2,6 +2,7 @@
  * Game-specific overlay CSS (design px; the overlay scales it). Procedural only:
  * gradients and shadows, no images or fonts fetched. Scoped under `.tc-overlay`.
  */
+import { PHONE_CSS } from './phone-styles';
 import { scaleFontSizes } from './text-scale';
 
 /** Palette names from the pitch, as CSS colours for DOM UI. */
@@ -376,5 +377,9 @@ export function ensureGameStyles(doc: Document = document): void {
   const el = doc.createElement('style');
   el.dataset.lr = 'game';
   el.textContent = scaleFontSizes(CSS);
-  doc.head.append(el);
+  // Phone overrides outrank scene sheets by specificity, so their load order doesn't matter.
+  const phone = doc.createElement('style');
+  phone.dataset.lr = 'phone';
+  phone.textContent = scaleFontSizes(PHONE_CSS);
+  doc.head.append(el, phone);
 }

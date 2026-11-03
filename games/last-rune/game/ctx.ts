@@ -37,8 +37,10 @@ import { storyTier } from '../rules/progression';
 import type { MachineId } from '../rules/types';
 import type { ViewContext, ViewCue, ViewFactories } from '../scenes/views';
 import { Codex } from '../ui/codex';
+import { createDeviceMode, type DeviceMode } from '../ui/device-mode';
 import { Fuse } from '../ui/fuse';
 import { Hud } from '../ui/hud';
+import { createPhoneChrome } from '../ui/phone-chrome';
 import { openSettings } from '../ui/settings-panel';
 import { ensureGameStyles } from '../ui/styles';
 import { applyTextScale } from '../ui/text-scale';
@@ -80,6 +82,8 @@ export interface GameCtx {
   /** Game sound bank, music moods and FUSE's voice (games/last-rune/audio). */
   readonly sound: GameAudio;
   readonly ui: Overlay;
+  /** Phone-sized screen and touch input flags (ui/device-mode.ts, D-039). */
+  readonly device: DeviceMode;
   readonly save: GameSave;
   readonly settings: SettingsController;
   /** Quality tier and resolution control (game/graphics.ts). */
@@ -171,10 +175,13 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   // Input is blocked while a modal panel is up, so the pad drives panels through this:
   // d-pad moves focus, A activates, B closes (as Tab, Enter and Esc do).
   const padNav = new PadNav(ui.stack);
+  const device = createDeviceMode(ui.root);
   surface.onResize(({ rect, backbuffer }) => {
     renderer.resize(backbuffer.width, backbuffer.height);
     ui.setRect(rect);
+    device.setScale(ui.scale);
   });
+  device.setScale(ui.scale);
 
   // ── Audio ──────────────────────────────────────────────────────────────
   const audio = new AudioEngine();
@@ -302,10 +309,15 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     const j = save.get().journal;
     return j.found.filter((p) => !j.read.includes(p)).length;
   };
+  // Phones: the upright "turn sideways" card, and Full screen on the title (D-039).
+  const phoneChrome = createPhoneChrome(ui.layers.hud, device);
+  phoneChrome.showFullscreen(flow.state === 'title' || flow.state === 'boot');
   flow.onChange((state) => {
+    phoneChrome.showFullscreen(state === 'title');
     // Scenes own their caption avoid regions; leaving the altar must never strand one.
     if (state !== 'puzzle') fuse.avoid(null);
     hud.visible = state === 'hall' || state === 'puzzle' || state === 'solve';
+    hud.root.dataset.scene = state;
     hud.journalShown(state === 'hall', unreadPages());
     hud.plate(null);
   });
@@ -384,6 +396,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     input,
     audio,
     ui,
+    device,
     save,
     settings,
     graphics,

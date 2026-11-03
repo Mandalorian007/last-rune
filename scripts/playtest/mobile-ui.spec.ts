@@ -1,7 +1,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import { puzzleFor } from '../../games/last-rune/content/puzzles';
+import { isRotational } from '../../games/last-rune/rules';
 import { MACHINE_IDS } from '../../games/last-rune/rules/types';
+import { cellCenter, computeLayout } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, waitFrames } from '../../tests/e2e/helpers';
 
 // mobile-ui (D-039): every scene on an emulated phone (touch, DPR 3), landscape and portrait.
@@ -156,6 +159,27 @@ for (const vp of SIZES) {
           await page.waitForTimeout(1500);
           await shot(`10-altar-${id}`);
           if (id === 'relay-tower') {
+            // By finger: a turning gem from the tray onto its socket, with the ↻ Turn button.
+            const p = puzzleFor(id);
+            const L = computeLayout(p);
+            const g = p.design.intended.find((q) => isRotational(q.gem))!;
+            const slot = L.tray.find((t) => t.gem === g.gem)!;
+            const box = (await page.locator('.tc-overlay').boundingBox())!;
+            const k = box.width / 1920;
+            const tap = (x: number, y: number) =>
+              page.touchscreen.tap(box.x + x * k, box.y + y * k);
+            await tap(slot.x, slot.y);
+            await waitFrames(page, 4);
+            await shot(`12-altar-${id}-touch-held`);
+            const pt = { x: 0, y: 0 };
+            cellCenter(L, g.cell, pt);
+            await tap(pt.x, pt.y);
+            await waitFrames(page, 4);
+            await shot(`12-altar-${id}-touch-placed`);
+            await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+            await seed(all);
+            await page.evaluate((id) => (window as G).__game.flow.openPuzzle(id), id);
+            await page.waitForTimeout(800);
             // A failed strike: verdict + tags.
             await page.keyboard.press('KeyF');
             await page.waitForTimeout(300);
