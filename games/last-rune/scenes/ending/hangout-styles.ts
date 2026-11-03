@@ -89,6 +89,8 @@ export const HANGOUT_CSS = /* css */ `
 }
 .tc-overlay .lr-hg-top .lr-emo { font-size: 25px; }
 .tc-overlay .lr-hg-top .lr-hg-hash { font-size: 28px; width: auto; }
+/* Phone-only parts (ending-phone-styles.ts): the header's ‹ and server name, a channel's start. */
+.tc-overlay .lr-hg-back, .tc-overlay .lr-hg-top-server, .tc-overlay .lr-hg-start { display: none; }
 .tc-overlay .lr-hg-logs { flex: 1; min-height: 0; position: relative; }
 .tc-overlay .lr-hg-log {
   position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end;

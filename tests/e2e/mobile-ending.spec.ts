@@ -1,0 +1,261 @@
+import { expect, type Page, test } from '@playwright/test';
+import { MACHINE_IDS } from '../../games/last-rune/rules/types';
+import { DEV_URL, waitFrames } from './helpers';
+
+// mobile-3-ending (D-040): the ending on the four realistic phone viewports (browser bars
+// showing, notch insets emulated), replayed so Skip is there:
+//  - Skip has its own lane: on screen, ≥44 CSS px to the finger, never under FUSE's caption;
+//    the caption is ~14 px with a "Tap to continue" cue.
+//  - The hangout is one conversation: messages use ≥80% of the screen's usable width, nothing
+//    in them is cut off, text is ~14 px, and the form's "Builder, then foreman" stays on one line.
+//  - Tapping Skip goes to the end card, whose controls are ≥40 drawn / ≥44 to the finger,
+//    clear of each other and of the clipboard.
+
+const PHONES = [
+  { name: 'iphone', width: 844, height: 340, inset: 47 },
+  { name: 'se', width: 667, height: 320, inset: 0 },
+  { name: 'promax', width: 932, height: 380, inset: 59 },
+  { name: 'android', width: 915, height: 360, inset: 0 },
+] as const;
+
+// biome-ignore lint/suspicious/noExplicitAny: dev handle
+type G = any;
+type Box = { l: number; t: number; r: number; b: number };
+
+test.setTimeout(240_000);
+
+async function insets(page: Page, px: number) {
+  if (!px) return;
+  await page.addInitScript((px) => {
+    const s = document.createElement('style');
+    s.textContent = `#app { left: ${px}px !important; right: ${px}px !important; }`;
+    document.addEventListener('DOMContentLoaded', () => document.head.append(s));
+  }, px);
+}
+
+const meets = (a: Box, b: Box) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+
+/** Box of a selector's first visible match, client px, or null. */
+function boxOf(page: Page, sel: string) {
+  return page.evaluate((sel) => {
+    for (const el of document.querySelectorAll(sel)) {
+      if (el.closest('[hidden]')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width && r.height) return { l: r.left, t: r.top, r: r.right, b: r.bottom };
+    }
+    return null;
+  }, sel);
+}
+
+/** The usable screen: #app (inside the emulated safe areas). */
+const appBox = (page: Page) => boxOf(page, '#app') as Promise<Box>;
+
+/** Drawn size and finger size (the phone ::before target) of a control. */
+function control(page: Page, sel: string) {
+  return page.evaluate((sel) => {
+    const el = document.querySelector<HTMLElement>(sel)!;
+    const r = el.getBoundingClientRect();
+    const k = document.querySelector('.tc-overlay')!.getBoundingClientRect().width / 1920;
+    const b = getComputedStyle(el, '::before');
+    const hit =
+      b.content && b.content !== 'none'
+        ? {
+            w: Math.max(r.width, parseFloat(b.width) * k),
+            h: Math.max(r.height, parseFloat(b.height) * k),
+          }
+        : { w: r.width, h: r.height };
+    return { box: { l: r.left, t: r.top, r: r.right, b: r.bottom }, w: r.width, h: r.height, hit };
+  }, sel);
+}
+
+for (const vp of PHONES) {
+  test.describe(vp.name, () => {
+    test.use({
+      viewport: { width: vp.width, height: vp.height },
+      isMobile: true,
+      hasTouch: true,
+      deviceScaleFactor: 2,
+    });
+
+    test(`ending, hangout and end card fit a ${vp.name} (${vp.width}×${vp.height})`, async ({
+      page,
+    }) => {
+      await insets(page, vp.inset);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(DEV_URL);
+      await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+        timeout: 30_000,
+      });
+      await page.evaluate(() =>
+        document.dispatchEvent(
+          new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }),
+        ),
+      );
+      // A replay (everything already solved), so Skip is offered.
+      await page.evaluate(
+        (all) => {
+          const g = (window as G).__game;
+          g.save.update((d: G) => {
+            d.flags.hallIntro = true;
+            d.settings.captionSpeed = 'instant';
+            d.progress.solved = all;
+            d.puzzles = {};
+          });
+          g.flow.continueGame();
+          g.flow.openPuzzle('the-last-rune');
+          g.flow.completePuzzle('the-last-rune');
+          g.flow.finishSolve();
+        },
+        MACHINE_IDS as unknown as string[],
+      );
+      const app = await appBox(page);
+
+      // ── FUSE's caption and Skip ─────────────────────────────────────────
+      const skip = page.locator('.lr-end-skip');
+      await expect(skip).toBeVisible();
+      await expect(page.locator('.tc-caption:not([hidden])')).toBeVisible({ timeout: 30_000 });
+      await waitFrames(page, 4);
+      const sk = await control(page, '.lr-end-skip');
+      expect(sk.hit.w).toBeGreaterThanOrEqual(43.5);
+      expect(sk.hit.h).toBeGreaterThanOrEqual(43.5);
+      expect(sk.box.l).toBeGreaterThanOrEqual(app.l - 0.5);
+      expect(sk.box.r).toBeLessThanOrEqual(app.r + 0.5);
+      expect(sk.box.t).toBeGreaterThanOrEqual(app.t - 0.5);
+      const cap = (await boxOf(page, '.tc-caption'))!;
+      expect(meets(cap, sk.box), 'the caption covers Skip').toBe(false);
+      expect(cap.r, 'the caption ends before the Skip lane').toBeLessThanOrEqual(sk.box.l);
+      const capText = await page.evaluate(() => {
+        const t = document.querySelector('.tc-caption-text')!;
+        const body = document.querySelector('.tc-caption-body')!;
+        return {
+          size: parseFloat(getComputedStyle(t).fontSize),
+          cue: getComputedStyle(body, '::after').content,
+        };
+      });
+      expect(capText.size).toBeGreaterThanOrEqual(13.5);
+      expect(capText.cue).toContain('Tap to continue');
+      // Skip is on top where it sits: a finger on it lands on it.
+      const onSkip = await page.evaluate(
+        ({ x, y }) => {
+          const el = document.elementFromPoint(x, y);
+          return !!el?.closest('.lr-end-skip');
+        },
+        { x: (sk.box.l + sk.box.r) / 2, y: (sk.box.t + sk.box.b) / 2 },
+      );
+      expect(onSkip).toBe(true);
+
+      // ── The hangout: one conversation ───────────────────────────────────
+      const hg = page.locator('.lr-hg');
+      await expect(hg).toBeVisible({ timeout: 120_000 });
+      await expect(hg.locator('.lr-hg-side')).toBeHidden();
+      await expect(hg.locator('.lr-hg-top')).toContainText('ThunderClap Gaming');
+      await expect(hg.locator('.lr-hg-form')).toBeVisible({ timeout: 60_000 });
+      await waitFrames(page, 20);
+      const chat = await page.evaluate(() => {
+        const log = document.querySelector<HTMLElement>('.lr-hg-log:not([hidden])')!;
+        const lr = log.getBoundingClientRect();
+        const msgs = [
+          ...log.querySelectorAll<HTMLElement>(':scope > .lr-hg-msg, :scope > .lr-hg-sys'),
+        ];
+        const cut: string[] = [];
+        for (const el of log.querySelectorAll<HTMLElement>(
+          '.lr-hg-text, .lr-hg-meta, .lr-hg-form p, .lr-hg-sys',
+        )) {
+          if (el.scrollWidth > el.clientWidth + 1) cut.push(el.textContent ?? '');
+        }
+        const rows = msgs.map((m) => {
+          const r = m.getBoundingClientRect();
+          return { w: r.width, t: r.top, b: r.bottom, l: r.left, r: r.right };
+        });
+        const form = [...log.querySelectorAll<HTMLElement>('.lr-hg-form p')].map((p) => ({
+          text: p.textContent ?? '',
+          h: p.getBoundingClientRect().height,
+          lh: parseFloat(getComputedStyle(p).lineHeight),
+        }));
+        const text = parseFloat(getComputedStyle(log.querySelector('.lr-hg-text')!).fontSize);
+        const skip = document.querySelector('.lr-end-skip')!.getBoundingClientRect();
+        const top = document.querySelector('.lr-hg-top')!.getBoundingClientRect();
+        const compose = document.querySelector('.lr-hg-compose')!.getBoundingClientRect();
+        const typing = document.querySelector('.lr-hg-typing')!.getBoundingClientRect();
+        return {
+          log: { t: lr.top, b: lr.bottom, l: lr.left, r: lr.right },
+          rows,
+          cut,
+          form,
+          text,
+          skip: { l: skip.left, t: skip.top, r: skip.right, b: skip.bottom },
+          top: { l: top.left, t: top.top, r: top.right, b: top.bottom },
+          composeTop: compose.top,
+          typingBottom: typing.bottom,
+          vw: window.innerWidth,
+        };
+      });
+      expect(chat.cut, 'cut-off text in the chat').toEqual([]);
+      expect(chat.text).toBeGreaterThanOrEqual(13.5);
+      expect(chat.rows.length).toBeGreaterThan(1);
+      for (const r of chat.rows) {
+        expect(r.w, 'a message narrower than 80% of the screen').toBeGreaterThanOrEqual(
+          0.8 * (app.r - app.l),
+        );
+        expect(r.l).toBeGreaterThanOrEqual(app.l - 0.5);
+        expect(r.r).toBeLessThanOrEqual(app.r + 0.5);
+        // Never cut at the bottom: older messages may only leave through the top.
+        expect(r.b).toBeLessThanOrEqual(chat.log.b + 0.5);
+      }
+      // The newest message is wholly on screen.
+      expect(chat.rows.at(-1)!.t).toBeGreaterThanOrEqual(chat.log.t);
+      // "Builder, then foreman" (and every form line) on one line.
+      expect(chat.form.length).toBe(3);
+      for (const f of chat.form) expect(f.h, f.text).toBeLessThan(f.lh * 1.5);
+      // The typing line sits above the message bar; Skip sits in the header, over no message.
+      expect(chat.typingBottom).toBeLessThanOrEqual(chat.composeTop + 0.5);
+      expect(chat.skip.b).toBeLessThanOrEqual(chat.top.b + 0.5);
+      expect(meets(chat.skip, chat.log)).toBe(false);
+
+      // ── Skip still works by finger: on to the end card ──────────────────
+      await skip.tap();
+      const join = page.locator('.lr-end-card a.lr-end-join');
+      await expect(join).toBeVisible({ timeout: 20_000 });
+      await expect(page.locator('.lr-end-card')).toHaveAttribute('data-in', '');
+      await page.waitForTimeout(1400);
+      const sels = [
+        '.lr-end-card a.lr-end-join',
+        '.lr-end-card a.lr-end-coffee',
+        '.lr-end-card .tc-link-copy',
+        '.lr-end-card .lr-end-links:last-of-type .tc-link-copy',
+        '.lr-end-card .lr-end-back',
+      ];
+      const boxes: Box[] = [];
+      for (const sel of sels) {
+        const c = await control(page, sel);
+        expect(c.h, `${sel} drawn height`).toBeGreaterThanOrEqual(39.5);
+        expect(c.hit.h, `${sel} hit height`).toBeGreaterThanOrEqual(43.5);
+        expect(c.hit.w, `${sel} hit width`).toBeGreaterThanOrEqual(43.5);
+        expect(c.box.l).toBeGreaterThanOrEqual(app.l);
+        expect(c.box.r).toBeLessThanOrEqual(app.r);
+        expect(c.box.t).toBeGreaterThanOrEqual(app.t);
+        expect(c.box.b).toBeLessThanOrEqual(app.b);
+        boxes.push(c.box);
+      }
+      for (let i = 0; i < boxes.length; i++) {
+        for (let j = i + 1; j < boxes.length; j++) {
+          if (sels[i] === sels[j]) continue;
+          expect(meets(boxes[i]!, boxes[j]!), `${sels[i]} meets ${sels[j]}`).toBe(false);
+        }
+      }
+      // The clipboard stays a prop: clear of every control, with room to spare.
+      const clip = (await boxOf(page, '.lr-clip-note'))!;
+      for (const b of boxes) {
+        const grown = { l: b.l - 12, t: b.t - 4, r: b.r + 12, b: b.b + 4 };
+        expect(meets(grown, clip), 'a control crowds the clipboard').toBe(false);
+      }
+      // Nothing scrolls.
+      const scroll = await page.evaluate(() => ({
+        x: document.scrollingElement!.scrollWidth - window.innerWidth,
+        y: document.scrollingElement!.scrollHeight - window.innerHeight,
+      }));
+      expect(scroll.x).toBeLessThanOrEqual(0);
+      expect(scroll.y).toBeLessThanOrEqual(0);
+    });
+  });
+}

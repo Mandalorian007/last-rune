@@ -1,10 +1,11 @@
 /**
  * Ending DOM styles (design px; the overlay scales). Injected once.
  * The hangout window (hangout-styles.ts), title card, safety record, credits, end card
- * and the post-credits clipboard.
+ * and the post-credits clipboard. Phones add ending-phone-styles.ts.
  */
 import { scaleFontSizes } from '../../ui/text-scale';
 import { HAND_FONT } from '../journal/journal-styles';
+import { ENDING_PHONE_CSS } from './ending-phone-styles';
 import { HANGOUT_CSS } from './hangout-styles';
 
 const CSS = /* css */ `
@@ -121,6 +122,6 @@ export function ensureEndingStyles(doc: Document): void {
   if (doc.getElementById('lr-ending-styles')) return;
   const el = doc.createElement('style');
   el.id = 'lr-ending-styles';
-  el.textContent = scaleFontSizes(HANGOUT_CSS + CSS);
+  el.textContent = scaleFontSizes(HANGOUT_CSS + CSS + ENDING_PHONE_CSS);
   doc.head.append(el);
 }

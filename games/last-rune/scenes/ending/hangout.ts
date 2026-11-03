@@ -72,6 +72,9 @@ export class Hangout {
   private readonly compose: HTMLElement;
   private readonly composeText: HTMLElement;
   private readonly typingEl: HTMLElement;
+  /** Phones (D-040): the conversation header's ‹, with a count of channels holding unread posts. */
+  private readonly backEl: HTMLElement;
+  private readonly badgeEl: HTMLElement;
   private channel: ChannelId = HANGOUT_START;
   private talking = false;
   private portraitClock = 0;
@@ -112,6 +115,8 @@ export class Hangout {
       this.list,
     );
     this.topEl = h('div', { class: 'lr-hg-top' });
+    this.badgeEl = h('span', { class: 'lr-hg-badge-count' });
+    this.backEl = h('span', { class: 'lr-hg-back' }, h('i', null, '‹'), this.badgeEl);
     this.logsEl = h('div', { class: 'lr-hg-logs' });
     this.composeText = h('span', { class: 'lr-hg-draft' });
     this.compose = h(
@@ -204,6 +209,7 @@ export class Hangout {
           break;
         }
       }
+      this.fitStart();
     }
   }
 
@@ -240,22 +246,69 @@ export class Hangout {
     row.setAttribute('data-on', '');
     row.removeAttribute('data-unread');
     const ch = HANGOUT_CHANNELS.find((c) => c.id === id)!;
+    // On phones the header is the whole navigation (D-040): ‹, the channel, then the server.
     this.topEl.replaceChildren(
+      this.backEl,
       h('span', { class: 'lr-hg-hash' }, '#'),
       h('span', { class: 'lr-emo' }, ch.emoji),
-      h('span', null, ch.name),
+      h('span', { class: 'lr-hg-top-name' }, ch.name),
+      h('span', { class: 'lr-hg-top-server' }, HANGOUT_SERVER),
     );
     (this.compose.firstChild as HTMLElement).textContent =
       `${HANGOUT_COPY.messagePrefix}${ch.name}`;
     let log = this.logs.get(id);
     if (!log) {
-      log = h('div', { class: 'lr-hg-log', dataset: { ch: id } });
+      log = h(
+        'div',
+        { class: 'lr-hg-log', dataset: { ch: id } },
+        // The start of the channel (phones show it; it scrolls away as the chat fills).
+        h(
+          'div',
+          { class: 'lr-hg-start' },
+          h('span', { class: 'lr-hg-start-emo' }, h('span', { class: 'lr-emo' }, ch.emoji)),
+          h('b', null, h('span', { class: 'lr-hg-hash' }, '#'), ch.name),
+        ),
+      );
       this.logs.set(id, log);
       this.logsEl.append(log);
       for (const p of HANGOUT_HISTORY[id] ?? []) log.append(this.messageEl(p.who, p.text, true));
     }
     for (const [cid, l] of this.logs) l.hidden = cid !== id;
     this.here.style.top = `${row.offsetTop + row.offsetHeight / 2}px`;
+    this.countUnread(false);
+    this.fitStart();
+  }
+
+  /**
+   * Phones: a channel's start block shows only while the whole conversation fits under it, so
+   * it never peeks out half-cut at the top (it is display:none elsewhere, so this is a no-op).
+   */
+  private fitStart(): void {
+    const log = this.logs.get(this.channel);
+    const start = log?.firstElementChild as HTMLElement | null | undefined;
+    if (!log || !start?.classList.contains('lr-hg-start')) return;
+    start.hidden = false;
+    if (!start.offsetHeight) return;
+    const cs = getComputedStyle(log);
+    let used = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    for (const el of log.children) {
+      const m = getComputedStyle(el);
+      used +=
+        (el as HTMLElement).offsetHeight + parseFloat(m.marginTop) + parseFloat(m.marginBottom);
+    }
+    // The auto margin under the block reads as 0 once there is no room left.
+    start.hidden = used > log.clientHeight + 0.5;
+  }
+
+  /** The ‹'s badge: how many other channels have something new. */
+  private countUnread(ping: boolean): void {
+    let n = 0;
+    for (const r of this.rows.values()) if (r.hasAttribute('data-unread')) n++;
+    this.badgeEl.textContent = n ? String(n) : '';
+    if (!ping) return;
+    this.badgeEl.removeAttribute('data-ping');
+    void this.badgeEl.offsetWidth;
+    this.badgeEl.setAttribute('data-ping', '');
   }
 
   private unread(id: ChannelId): void {
@@ -266,6 +319,7 @@ export class Hangout {
     row.removeAttribute('data-ping');
     void row.offsetWidth;
     row.setAttribute('data-ping', '');
+    this.countUnread(true);
   }
 
   private async fusePost(st: Extract<HangoutStep, { type: 'fuse' }>): Promise<void> {
@@ -308,6 +362,7 @@ export class Hangout {
           ),
           msg.querySelector('.lr-hg-reacts'),
         );
+      this.fitStart();
     }
     host.pop('message');
     await host.wait(T.afterFuse);
@@ -317,6 +372,7 @@ export class Hangout {
     const el = this.messageEl(who, text, false);
     this.logs.get(this.channel)?.append(el);
     if (key) this.msgs.set(key, el);
+    this.fitStart();
     return el;
   }
 
@@ -358,6 +414,7 @@ export class Hangout {
     el.append(h('div', { class: 'lr-hg-reacts' }));
     this.logs.get(this.channel)?.append(el);
     this.msgs.set(key, el);
+    this.fitStart();
   }
 
   /** "FUSE came through the door…" with his name in bold. */
@@ -383,6 +440,7 @@ export class Hangout {
       this.chips.set(id, chip);
     }
     chip.target = Math.max(chip.target, count);
+    this.fitStart();
   }
 
   /** A still copy of FUSE's face for a message avatar (the live one is in the sidebar). */
