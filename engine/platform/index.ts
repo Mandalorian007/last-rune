@@ -1,6 +1,14 @@
 export type { BootOptions, BootResult } from './boot';
 export { boot } from './boot';
-export { prefersReducedMotion, watchReducedMotion, watchVisibility } from './environment';
+export type { DeviceTraits, LifecycleHandlers } from './environment';
+export {
+  deviceTraits,
+  HANDHELD_SHORT_SIDE,
+  prefersReducedMotion,
+  watchLifecycle,
+  watchReducedMotion,
+  watchVisibility,
+} from './environment';
 export type { GpuContext, GpuFailureReason, GpuInitOptions, GpuInitResult } from './gpu';
 export { initGpu } from './gpu';
 export type { BackbufferSize, Letterbox, Rect, Vec2 } from './letterbox';
@@ -14,7 +22,12 @@ export {
   openExternal,
   safeExternalUrl,
 } from './links';
-export type { MessageScreenAction, MessageScreenOptions } from './screens';
-export { showDeviceLostScreen, showMessageScreen, showUnsupportedScreen } from './screens';
+export type { MessageScreenAction, MessageScreenOptions, PlatformFamily } from './screens';
+export {
+  platformFamily,
+  showDeviceLostScreen,
+  showMessageScreen,
+  showUnsupportedScreen,
+} from './screens';
 export type { SurfaceOptions, SurfaceSize } from './surface';
 export { mountSurface, Surface } from './surface';

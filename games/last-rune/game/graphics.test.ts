@@ -9,6 +9,7 @@ function fakeTargets() {
     lights: 0,
     particles: 0,
     timing: -1,
+    cap: null as number | null,
   };
   const targets: GraphicsTargets = {
     setResolution: (o) => {
@@ -26,6 +27,9 @@ function fakeTargets() {
     },
     setTiming: (e) => {
       t.timing = e;
+    },
+    setFrameCap: (fps) => {
+      t.cap = fps;
     },
   };
   return { t, targets };
@@ -117,5 +121,64 @@ describe('GraphicsController', () => {
     feed(g, 60, 0, 30_000);
     expect(t.scale).toBe(1);
     expect(g.tier).toBe('high');
+  });
+
+  it('starts low on a handheld, and an explicit high wins', () => {
+    const { t, targets } = fakeTargets();
+    const g = new GraphicsController(targets, { handheld: true });
+    expect(g.tier).toBe('low');
+    expect(g.autoReason).toBe('handheld');
+    expect(t.maxPixels).toBe(TIERS.low.maxPixels);
+    g.setPreference('high');
+    expect(g.tier).toBe('high');
+  });
+
+  /** Samples and frames 16 ms apart: GPU cost `fullMs` at full scale, frames `intervalMs` apart. */
+  function run(
+    g: GraphicsController,
+    fullMs: number,
+    intervalMs: number,
+    from: number,
+    to: number,
+  ) {
+    for (let now = from; now < to; now += 16) {
+      g.sample(fullMs * g.scale ** 2, now);
+      g.frame(intervalMs, now);
+    }
+  }
+
+  it('settles on a steady 30 when low is saturated and frames miss vsync', () => {
+    const { t, targets } = fakeTargets();
+    const g = new GraphicsController(targets, { handheld: true });
+    run(g, 60, 25, 0, 4000);
+    expect(t.cap).toBeNull();
+    run(g, 60, 25, 4000, 12_000);
+    expect(g.frameCapped).toBe(true);
+    expect(t.cap).toBe(30);
+    // A new preference starts again at the display rate.
+    g.setPreference('low');
+    expect(g.frameCapped).toBe(false);
+    expect(t.cap).toBeNull();
+  });
+
+  it('does not cap when frames hold 60 even if the GPU timer reads over budget', () => {
+    // The queue-latency fallback timer can read high while vsync is met.
+    const { t, targets } = fakeTargets();
+    const g = new GraphicsController(targets, { handheld: true });
+    run(g, 60, 16.7, 0, 12_000);
+    expect(g.frameCapped).toBe(false);
+    expect(t.cap).toBeNull();
+  });
+
+  it('does not cap on high or while dynamic resolution has headroom', () => {
+    const a = fakeTargets();
+    const high = new GraphicsController(a.targets);
+    high.setPreference('high');
+    run(high, 60, 25, 0, 12_000);
+    expect(a.t.cap).toBeNull();
+    const b = fakeTargets();
+    const low = new GraphicsController(b.targets, { handheld: true });
+    run(low, 8, 25, 0, 12_000); // slow frames for another reason (CPU): not the GPU's fault
+    expect(b.t.cap).toBeNull();
   });
 });

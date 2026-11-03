@@ -11,11 +11,12 @@ import { GameLoop, type Scene, SceneStack, type Time } from '@engine/core';
 import { ParticleSystem } from '@engine/fx';
 import { Input } from '@engine/input';
 import {
+  deviceTraits,
   type GpuContext,
   prefersReducedMotion,
   type Surface,
+  watchLifecycle,
   watchReducedMotion,
-  watchVisibility,
 } from '@engine/platform';
 import { PostStack } from '@engine/post';
 import { type Frame, Renderer } from '@engine/render';
@@ -157,8 +158,12 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
       setTiming: (every) => {
         renderer.timingEvery = every;
       },
+      setFrameCap: (fps) => {
+        loop.maxFps = fps;
+      },
     },
-    { fallbackAdapter: isFallbackAdapter(gpu.adapter) },
+    // Phones start on low (D-039; docs/design/mobile.md).
+    { fallbackAdapter: isFallbackAdapter(gpu.adapter), handheld: deviceTraits().handheld },
   );
   renderer.onGpuTime((ms) => graphics.sample(ms, performance.now()));
 
@@ -349,6 +354,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
       stack.update(dt);
     },
     render: (alpha: number, time: Time) => {
+      graphics.frame(time.frameDt * 1000, performance.now());
       const frame = renderer.beginFrame(time.realTime, time.frameDt);
       stack.render(frame, alpha);
       renderer.endFrame();
@@ -363,17 +369,15 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
       }
     },
   });
-  watchVisibility((visible) => {
-    if (visible) loop.start();
-    else {
+  // Hidden, pagehide (iOS app switch) or freeze (Android): stop drawing and persist now; a
+  // phone may kill a background tab without another word. (Audio pauses itself; see attach.)
+  watchLifecycle({
+    onHide: () => {
       loop.stop();
       flow.commitPlayTime();
       save.flush();
-    }
-  });
-  addEventListener('pagehide', () => {
-    flow.commitPlayTime();
-    save.flush();
+    },
+    onShow: () => loop.start(),
   });
 
   Object.assign(ctx, {
