@@ -180,7 +180,8 @@ for (const vp of VIEWPORTS) {
           });
           if (at) {
             await page.touchscreen.tap(at.x, at.y);
-            await page.waitForTimeout(700);
+            // mobile-7-hall: FUSE's word joins the card after his dwell.
+            await page.waitForTimeout(1400);
             await shot('02-hall-tap-locked');
             await page.evaluate(() => (window as G).__game.fuse.hush());
           }
@@ -190,6 +191,12 @@ for (const vp of VIEWPORTS) {
           await page.keyboard.press('Escape');
           await page.waitForTimeout(300);
         }
+        // The settings shot shows the player's default text speed, not the capture's "instant".
+        await page.evaluate(() => {
+          (window as G).__game.save.update((d: G) => {
+            d.settings.captionSpeed = 'normal';
+          });
+        });
         await page.evaluate(() => (window as G).__game.openSettings());
         await page.waitForTimeout(500);
         await shot('03-settings');

@@ -6,9 +6,11 @@
  * - The portrait is a hook: art-props' FUSE portrait swaps in via `setPortrait`.
  *   Until then a CSS placeholder (brass disc, one amber eye) stands in.
  * - `avoid(rects)` keeps the card off parts of the screen a scene needs (design px).
+ * - `pointAt(spot)` gives the card a tail toward FUSE where he stands in the scene (phones draw
+ *   it; mobile-7-hall).
  */
 
-import type { CaptionCard, Rect } from '@engine/ui';
+import type { CaptionCard, Corner, Rect } from '@engine/ui';
 import { h } from '@engine/ui';
 import { cardsOf, type FuseLine } from '../content/lines';
 
@@ -64,7 +66,7 @@ export class Fuse {
    */
   async say(
     line: FuseLine | string,
-    opts: { interrupt?: boolean; hold?: number } = {},
+    opts: { interrupt?: boolean; hold?: number; corner?: Corner } = {},
   ): Promise<void> {
     const text = typeof line === 'string' ? line : line.text;
     if (opts.interrupt) this.caption.clear();
@@ -84,6 +86,7 @@ export class Fuse {
           portrait,
           onChar: this.opts.voice?.(card) ?? blip,
           hold: opts.hold,
+          corner: opts.corner,
         }),
       ),
     );
@@ -105,8 +108,59 @@ export class Fuse {
     this.caption.avoid(regions);
   }
 
+  /**
+   * Point the card's tail at FUSE (design px: his wheels' centre and his height), from the edge
+   * of the card that faces him (`inset`: the nearest the tail comes to a corner, design px); null
+   * takes the tail away. Call it every frame while he can move;
+   * clear it in `exit()`/`pause()`, since the card outlives the scene.
+   */
+  pointAt(spot: { x: number; y: number; h: number } | null, inset = 18): void {
+    const el = this.caption.element;
+    if (!spot || el.hidden || !this.caption.busy) {
+      if (el.hasAttribute('data-tail')) el.removeAttribute('data-tail');
+      return;
+    }
+    const tail = tailToward(
+      { x: el.offsetLeft, y: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight },
+      spot,
+      inset,
+    );
+    if (!tail) {
+      el.removeAttribute('data-tail');
+      return;
+    }
+    if (el.dataset.tail !== tail.side) el.dataset.tail = tail.side;
+    el.style.setProperty('--lr-tail-at', `${Math.round(tail.at)}px`);
+  }
+
   hush(): void {
     this.caption.clear();
     this.lastId = null;
   }
+}
+
+/**
+ * Which edge of a card faces FUSE and where along it (px from that edge's start) the tail
+ * goes. His body is the box from his wheels up to his height; a card over him has no tail.
+ */
+export function tailToward(
+  card: Rect,
+  spot: { x: number; y: number; h: number },
+  inset = 18,
+): { side: 'top' | 'bottom' | 'left' | 'right'; at: number } | null {
+  const mid = { x: spot.x, y: spot.y - spot.h * 0.55 };
+  const right = card.x + card.width;
+  const bottom = card.y + card.height;
+  const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+  // Off one side by more than he is off the top or bottom: the side edge, else top or bottom.
+  const dx = mid.x < card.x ? card.x - mid.x : mid.x > right ? mid.x - right : 0;
+  const top = spot.y - spot.h;
+  const dy = top > bottom ? top - bottom : spot.y < card.y ? card.y - spot.y : 0;
+  if (dx === 0 && dy === 0) return null;
+  if (dy * 1.5 >= dx) {
+    const side = top > bottom ? 'bottom' : 'top';
+    return { side, at: clamp(spot.x - card.x, inset, card.width - inset) };
+  }
+  const side = mid.x < card.x ? 'left' : 'right';
+  return { side, at: clamp(mid.y - card.y, inset * 0.7, card.height - inset * 0.7) };
 }

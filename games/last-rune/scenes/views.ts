@@ -33,6 +33,13 @@ export interface ViewContext {
 /** Sounds a view can ask for, timed to its own pixels. */
 export type ViewCue = 'thunder' | 'thunderNear' | 'doorUnlock';
 
+/** Where FUSE stands in a view's own coordinates: his wheels' centre (x, y) and his height. */
+export interface FuseSpot {
+  readonly x: number;
+  readonly y: number;
+  readonly h: number;
+}
+
 export interface ViewFrame {
   /** Seconds since the scene was entered. */
   readonly time: number;
@@ -67,6 +74,8 @@ export interface HallView {
    * gem settling into its alcove and the doors' sockets lighting.
    */
   onRestored?(machine: MachineId, unlocked: readonly MachineId[]): void;
+  /** Where FUSE is (world px), so his speech card can point at him (mobile-7-hall). Optional. */
+  fuseAt?(): FuseSpot | null;
   dispose(): void;
 }
 
@@ -86,6 +95,8 @@ export interface TitleView {
   render(frame: Frame, s: TitleViewFrame): void;
   /** The title-knock beat: something hits the gem from inside. Optional. */
   knock?(): void;
+  /** Where FUSE is (design px), so his speech card can point at him (mobile-7-hall). Optional. */
+  fuseAt?(): FuseSpot | null;
   dispose(): void;
 }
 

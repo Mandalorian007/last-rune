@@ -13,6 +13,7 @@ import {
   lineForAlcove,
   lockedNote,
   newlyUnlocked,
+  noteNamesGems,
 } from './hall-state';
 
 const solvedAfter = (...ids: MachineId[]) =>
@@ -74,6 +75,13 @@ describe('hall state', () => {
     expect(lockedNote(byId(m, 'the-last-rune'))).toBe('Locked: earn these gems first');
     expect(lockedNote(byId(m, 'intake-desk'))).toBe('Open · try this one next');
     for (const a of m.alcoves) expect(lockedNote(a)).not.toMatch(/·.*·|\(|\+/);
+    // mobile-7-hall: up to three doors are named outright; only the Last Rune lists its gems.
+    expect(noteNamesGems(byId(m, 'the-last-rune'))).toBe(true);
+    for (const a of m.alcoves) {
+      if (a.id === 'the-last-rune') continue;
+      expect(noteNamesGems(a)).toBe(false);
+      if (a.status === 'locked') expect(lockedNote(a)).toMatch(/^Locked: solve .+ first$/);
+    }
   });
 
   it('suggests exactly one open door: the next in story order', () => {

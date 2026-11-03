@@ -32,7 +32,7 @@ import {
   spreadX,
 } from '../../scenes/hall/hall-frame';
 import type { AlcoveModel, AlcoveStatus, HallModel } from '../../scenes/hall/hall-state';
-import type { HallView, HallViewFrame, ViewContext } from '../../scenes/views';
+import type { FuseSpot, HallView, HallViewFrame, ViewContext } from '../../scenes/views';
 import {
   HALL_MACHINE_KINDS,
   HALL_MACHINE_LIFT,
@@ -308,6 +308,11 @@ export class CathedralHallView implements HallView {
   }
 
   // ── HallView ──────────────────────────────────────────────────────────────
+
+  fuseAt(): FuseSpot {
+    const f = this.kit.fuse;
+    return { x: f.x, y: f.y, h: f.scale * 2.2 };
+  }
 
   onRestored(machine: MachineId, unlocked: readonly MachineId[]): void {
     const s = this.slots.get(machine);

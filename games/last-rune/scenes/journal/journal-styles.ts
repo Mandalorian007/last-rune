@@ -37,6 +37,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-journal .lr-j-slip[data-blank] { cursor: default; color: #c9ad82; border: 2px dashed #a8875a66; border-radius: 4px; font-family: var(--tc-font-ui); font-size: 18px; letter-spacing: 2px; text-transform: uppercase; }
 .tc-overlay .lr-j-slip[data-blank] b { font-family: var(--lr-hand); font-size: 26px; letter-spacing: 0; text-transform: none; opacity: 0.9; }
 .tc-overlay .lr-j-slip[data-blank] span { opacity: 0.9; }
+.tc-overlay .lr-j-key i { display: none; }
 .tc-overlay .lr-j-slip .lr-j-new {
   margin-left: auto; font-family: var(--tc-font-ui); font-size: 15px; letter-spacing: 2px; text-transform: uppercase;
   color: #fff3d0; background: radial-gradient(circle at 40% 35%, #b8322a, #6e120e); border-radius: 14px; padding: 4px 10px;

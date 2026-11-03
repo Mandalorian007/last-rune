@@ -325,10 +325,20 @@ export class JournalScene implements GameScene {
       'div',
       { class: 'lr-j-head' },
       h('h1', null, 'Journal'),
+      // The "new" mark beside a page is keyed here: phones draw it as a red dot (mobile-7-hall).
       h(
         'p',
         null,
-        `${m.foundCount} of ${m.total} pages${m.freshCount > 0 ? ` · ${m.freshCount} new` : ''}`,
+        `${m.foundCount} of ${m.total} pages`,
+        m.freshCount > 0
+          ? h(
+              'span',
+              { class: 'lr-j-key' },
+              ' · ',
+              h('i', { 'aria-hidden': 'true' }),
+              `${m.freshCount} new`,
+            )
+          : null,
       ),
     );
 

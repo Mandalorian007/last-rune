@@ -39,3 +39,29 @@ Hall scene, the menu, title, Settings, Journal tabs. Don't touch altar files.
 
 ## Log
 
+- 2026-11-03: all nine items done on the four phones (iphone, se, promax, android).
+  - **Placement.** New pure helpers in `ui/place.ts` (unit-tested). The Next tag (`hud placeTag`) and the tapped door's card (`hud placeCard`) both pick the spot with the least weighted overlap of the plates, the ring, Menu and the tag, inside the visible band.
+  - **First visit.** The tag stands above the ring, or beside it with an arrow, never on a plate. The ring hugs the door's arch and stops above its plate. The plates draw over the ring.
+  - **Locked card.** It is one card beside the door and the door's plate lights up. It reads "Name · Locked: solve A and B first". `lockedNote` names up to three doors; only the Last Rune keeps the "earn these gems" chips. "● Gate" is gone. FUSE's reason joins the card as "FUSE …". Where his reason would push the card over another plate (the long notes on se), it is left off and he says it in his own caption.
+  - **Menu.** The menu has a panel (`.lr-hud[data-open]::before`) over a scrim. The note is 12 px.
+  - **New pages.** One badge, on the Menu button's lower edge; the dot is gone.
+  - **FUSE's captions.** Title and hall captions have a tail toward FUSE (`fuse.pointAt`, `view.fuseAt`). In the hall the caption avoids every door, with playable doors weighted four times, the suggested door's tag zone and FUSE himself.
+  - **SE density.** Open and solved plates are 13 px and brighter. Locked plates are quieter but at least 7:1. Floor door rects are taller, so Splitter Mill and Storm Cell II get room.
+  - **Title.** The coffee and Copy link are quiet text links, still 36 px taps.
+  - **Small fixes.** Settings segments are at least 36 px. The capture script no longer leaves caption speed at Instant; the save default was already `normal`. The Journal head keys the red dot ("· ● 1 new"); desktop hides the dot.
+  - **Tests.** `tests/e2e/mobile-hall.spec.ts`, on four phones, checks:
+    - no two hall labels or pills intersect, on first visit and mid-game;
+    - every label is on band and the tag is clear of the top;
+    - there is one badge on Menu;
+    - each locked door's card covers no label, holds its words, and FUSE's reason is in the card or the caption, exactly one;
+    - the caption has a tail and covers no playable plate;
+    - the menu has its panel and scrim, and the note is ≥11 px;
+    - Settings segments are ≥36 px;
+    - the default speed is `normal`.
+
+    `hall-state.test.ts` covers the locked-note wording.
+  - **Captures.** `docs/design/screens/local/mobile-4-chrome/after/` and `docs/design/screens/local/mobile-2/after/`.
+  - **Open issues.**
+    - FUSE's word inside the card has no voice blip.
+    - On se, long locked notes fall back to the caption.
+    - The Last Rune still shows gem chips such as "Gate". Its words point at them, so that is by design.
