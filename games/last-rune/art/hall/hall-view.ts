@@ -219,6 +219,8 @@ export class CathedralHallView implements HallView {
   private readonly sealY: number;
   private readonly hoverRing = this.ring(GOLD, 1.4);
   private readonly focusRing = this.ring(WHITE, 1.6);
+  /** Soft breathing gold ring on the door to try next, so open doors aren't a coin toss. */
+  private readonly suggestRing = this.ring(GOLD, 0.45);
 
   constructor(private readonly vc: ViewContext) {
     const r = vc.renderer;
@@ -613,6 +615,17 @@ export class CathedralHallView implements HallView {
       tint[1] = rgb[1]! * k;
       tint[2] = rgb[2]! * k;
       frame.sprite(fx, slot.pool);
+    }
+    // Suggested-next ring (soft gold, breathing) unless that door is already hovered/focused.
+    const next = s.model.alcoves.find((a) => a.suggested);
+    const ns = next ? this.slots.get(next.id) : undefined;
+    if (ns && ns.open > 0.5 && next!.id !== s.hover && next!.id !== s.focus) {
+      const k = 0.16 + 0.08 * Math.sin((t / 1.8) * Math.PI * 2); // well under hover's 1.4
+      const tint = this.suggestRing.dp.tint as number[];
+      tint[0] = GOLD[0]! * k;
+      tint[1] = GOLD[1]! * k;
+      tint[2] = GOLD[2]! * k;
+      this.drawRing(frame, this.suggestRing, ns, 0);
     }
     // Hover ring (gold) and focus ring (white, marching) around the alcove.
     const hs = s.hover ? this.slots.get(s.hover) : undefined;

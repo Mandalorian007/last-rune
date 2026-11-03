@@ -271,7 +271,7 @@ const DEFS: Def[] = [
     machine: 'intake-desk',
     tier: 1,
     source: N,
-    text: "Day 14,610. A visitor. There's a form for that. Step one: rune from the tray, onto a lit socket.",
+    text: "Day 14,610. A visitor. There's a form for that. Step one: gem from the tray, onto a lit socket.",
   },
   {
     kind: 'solve',

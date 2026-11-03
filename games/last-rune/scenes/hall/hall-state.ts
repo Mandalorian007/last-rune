@@ -37,6 +37,8 @@ export interface SocketModel {
   readonly label: string;
   /** Storm sockets show `rings` concentric rings (strength); otherwise 1. */
   readonly rings: number;
+  /** Name of the machine that grants it ("Intake Desk"), so a locked door says where to go. */
+  readonly from: string | null;
 }
 
 export interface AlcoveModel {
@@ -53,6 +55,8 @@ export interface AlcoveModel {
   readonly missingMachines: number;
   /** The finale disc in the middle of the floor rather than a wall alcove. */
   readonly floor: boolean;
+  /** The open door a newcomer should try next (first open, unrestored machine in story order). */
+  readonly suggested: boolean;
 }
 
 export interface ConduitModel {
@@ -85,6 +89,9 @@ export function alcoveStatus(
 }
 
 export function deriveHall(state: ProgressState, graph: MachineGraph = MACHINES): HallModel {
+  const grantedBy = (key: CapabilityKey): string | null =>
+    graph.find((g) => g.grants && capabilityKey(g.grants) === key)?.name ?? null;
+  const next = graph.find((m) => alcoveStatus(m, state, graph) === 'unlocked')?.id;
   const alcoves: AlcoveModel[] = graph.map((m) => {
     const status = alcoveStatus(m, state, graph);
     const missing =
@@ -94,6 +101,7 @@ export function deriveHall(state: ProgressState, graph: MachineGraph = MACHINES)
             colour: socketColour(c),
             label: capabilityLabel(c),
             rings: c.type === 'storm' ? c.strength : 1,
+            from: grantedBy(capabilityKey(c)),
           }))
         : [];
     return {
@@ -106,6 +114,7 @@ export function deriveHall(state: ProgressState, graph: MachineGraph = MACHINES)
       missing,
       missingMachines: status === 'locked' ? missingMachinesFor(m, state, graph).length : 0,
       floor: m.id === 'the-last-rune',
+      suggested: m.id === next,
     };
   });
   const byId = new Map(graph.map((m) => [m.id, m]));
@@ -179,8 +188,10 @@ export function lineForAlcove(a: AlcoveModel): FuseLine | undefined {
  */
 export function alcoveNote(a: AlcoveModel): string {
   if (a.status === 'solved') return 'Restored';
-  if (a.status === 'unlocked') return 'Open · click or Enter to restore';
-  const needs = a.missing.map((m) => m.label);
+  if (a.status === 'unlocked') {
+    return a.suggested ? 'Open · try this one next' : 'Open · click or Enter to restore';
+  }
+  const needs = a.missing.map((m) => (m.from ? `${m.label} (from ${m.from})` : m.label));
   if (a.missingMachines > 0) {
     needs.push(`${a.missingMachines} more machine${a.missingMachines === 1 ? '' : 's'}`);
   }
@@ -190,4 +201,9 @@ export function alcoveNote(a: AlcoveModel): string {
 /** Keyboard focus order: front of the hall to the back, then left to right. */
 export function focusOrder(model: HallModel): MachineId[] {
   return [...model.alcoves].sort((a, b) => b.y - a.y || a.x - b.x).map((a) => a.id);
+}
+
+/** The door the first Tab lands on: the suggested one, else the front of the hall. */
+export function firstFocus(model: HallModel): MachineId | undefined {
+  return model.alcoves.find((a) => a.suggested)?.id ?? focusOrder(model)[0];
 }

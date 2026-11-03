@@ -220,9 +220,46 @@ export function failText(m: MachineResult, outcome: 'over' | 'under', pulses: nu
       : outcome === 'under' && lit.length > 1 && lit.every((r) => r === got)
         ? ' each strike'
         : ` on strike ${k + 1}`;
-  return outcome === 'over'
-    ? `Breaker tripped${when}: needs ${m.need}, got ${got}`
-    : `Not enough: needs ${m.need}, got ${got}${when}`;
+  if (outcome === 'over') return `Breaker tripped${when}: needs ${m.need}, got ${got}`;
+  // Nothing at all arrived (another machine on the altar was fed): a broken path, not a small
+  // charge, so don't say "not enough".
+  if (got === 0) return `No charge reached this machine: needs ${m.need}, got 0`;
+  return `Not enough: needs ${m.need}, got ${got}${when}`;
+}
+
+/** Which fizzle to explain first: the root cause before its knock-on effects. */
+const CAUSE_ORDER: readonly FizzleCause[] = [
+  'facing',
+  'empty',
+  'ground',
+  'blocked',
+  'odd-split',
+  'gate-alone',
+  'spent',
+];
+
+const CAUSE_HINT: Record<FizzleCause, string> = {
+  facing: 'Try: turn the gem at the red mark (R or scroll).',
+  empty: 'Try: put a gem in the socket at the red mark.',
+  ground: 'Try: steer the bolt to the machine before it runs off the altar.',
+  blocked: 'Try: route around the carved stone.',
+  'odd-split': 'Try: feed the Split an even charge.',
+  'gate-alone': "Try: bring a second bolt into the Gate's other side.",
+  spent: 'Try: give each bolt its own gems. A gem carries one bolt per strike.',
+};
+
+/**
+ * One short, visible next step under a failed verdict, so a first-timer is never left with
+ * only "needs 4, got 0". Fizzles name a concrete fix; otherwise the outcome does. Too much
+ * charge is about the amount, so it wins over a stray fizzle.
+ */
+export function nextStep(outcome: SimResult['outcome'], causes: readonly FizzleCause[]): string {
+  if (outcome === 'exact') return '';
+  if (outcome === 'over') return 'Try: less charge. Skip an Amplify, or halve it with a Split.';
+  const first = CAUSE_ORDER.find((c) => causes.includes(c));
+  if (first) return CAUSE_HINT[first];
+  if (outcome === 'under') return 'Try: more charge. An Amplify doubles it.';
+  return 'Try: lay gems from the storm to the machine.';
 }
 
 /**

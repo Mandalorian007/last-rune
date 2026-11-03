@@ -1,9 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { isRotational, type Placement } from '../../games/last-rune/rules';
-import { initialState } from '../../games/last-rune/rules/progression';
+import { initialState, solveMachine } from '../../games/last-rune/rules/progression';
 import { GEM_KINDS, type MachineId } from '../../games/last-rune/rules/types';
-import { deriveHall, focusOrder } from '../../games/last-rune/scenes/hall/hall-state';
+import { deriveHall, firstFocus, focusOrder } from '../../games/last-rune/scenes/hall/hall-state';
 import { cursorKeys } from './altar-keys';
 import { PREVIEW_URL, trackProblems, waitForBoot } from './helpers';
 
@@ -46,12 +46,17 @@ async function toHall(page: Page) {
   await page.waitForTimeout(1200);
 }
 
-/** Hall → altar: ArrowRight walks the alcoves in focusOrder; Enter opens the focused one. */
-async function openAltar(page: Page, machine: MachineId) {
-  const order = focusOrder(deriveHall(initialState()));
+/**
+ * Hall → altar: the first ArrowRight lands on the suggested door, later ones walk the alcoves in
+ * focusOrder; Enter opens the focused one.
+ */
+async function openAltar(page: Page, machine: MachineId, solved: readonly MachineId[] = []) {
+  const model = deriveHall(solved.reduce((s, id) => solveMachine(s, id), initialState()));
+  const order = focusOrder(model);
   const i = order.indexOf(machine);
   expect(i).toBeGreaterThanOrEqual(0);
-  await press(page, 'ArrowRight', i + 1);
+  const start = order.indexOf(firstFocus(model)!);
+  await press(page, 'ArrowRight', 1 + ((i - start + order.length) % order.length));
   await press(page, 'Enter');
   await expect(page.locator('.lr-altar')).toBeVisible();
   await page.waitForTimeout(500);
@@ -80,8 +85,8 @@ async function buildSolution(page: Page, machine: MachineId) {
   }
 }
 
-async function solve(page: Page, machine: MachineId) {
-  await openAltar(page, machine);
+async function solve(page: Page, machine: MachineId, solved: readonly MachineId[] = []) {
+  await openAltar(page, machine, solved);
   await buildSolution(page, machine);
   // Placements save on a short debounce.
   await expect
@@ -113,7 +118,7 @@ test.describe('altar (prod build, keyboard only)', () => {
 
     // Reload: the save carries over and the title continues into a fresh hall.
     await toHall(page);
-    await solve(page, 'furnace');
+    await solve(page, 'furnace', ['intake-desk']);
 
     const save = await readSave(page);
     expect(save?.progress.solved).toEqual(expect.arrayContaining(['intake-desk', 'furnace']));

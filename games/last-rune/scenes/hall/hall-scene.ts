@@ -20,6 +20,7 @@ import {
   alcoveAt,
   alcoveNote,
   deriveHall,
+  firstFocus,
   focusOrder,
   type HallModel,
   lineForAlcove,
@@ -112,7 +113,10 @@ export class HallScene implements GameScene {
       const order = focusOrder(this.model);
       const cur = this.focus ?? this.hover;
       const i = cur ? order.indexOf(cur) : -1;
-      const next = order[(i + step + order.length) % order.length]!;
+      const next =
+        i < 0
+          ? (firstFocus(this.model) ?? order[0]!)
+          : order[(i + step + order.length) % order.length]!;
       this.focus = next;
       this.setHover(next);
       this.dwell = DWELL; // speak right away for keyboard users

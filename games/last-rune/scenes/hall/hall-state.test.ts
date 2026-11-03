@@ -7,6 +7,7 @@ import {
   alcoveAt,
   alcoveNote,
   deriveHall,
+  firstFocus,
   focusOrder,
   type HallModel,
   lineForAlcove,
@@ -43,7 +44,7 @@ describe('hall state', () => {
   it('storm sockets carry their ring count; the booth counts missing machines', () => {
     const m = deriveHall(initialState());
     expect(byId(m, 'boiler-room').missing).toEqual([
-      { capability: 'storm:2', colour: 'cyan', label: 'Storm ×2', rings: 2 },
+      { capability: 'storm:2', colour: 'cyan', label: 'Storm ×2', rings: 2, from: 'Storm Cell II' },
     ]);
     expect(byId(m, 'control-booth').missingMachines).toBe(14);
     expect(byId(m, 'the-last-rune').floor).toBe(true);
@@ -51,15 +52,27 @@ describe('hall state', () => {
 
   it('the name plate names what a locked door needs, not just its colour', () => {
     const m = deriveHall(initialState());
-    expect(alcoveNote(byId(m, 'intake-desk'))).toBe('Open · click or Enter to restore');
+    expect(alcoveNote(byId(m, 'intake-desk'))).toBe('Open · try this one next');
     const furnace = byId(m, 'furnace');
     expect(alcoveNote(furnace)).toMatch(/^Locked · needs \S/);
     expect(alcoveNote(furnace)).toContain(furnace.missing[0]!.label);
+    // ...and where to earn it.
+    expect(alcoveNote(furnace)).toBe('Locked · needs Bend (from Intake Desk)');
     expect(alcoveNote(byId(deriveHall(solvedAfter('intake-desk')), 'intake-desk'))).toBe(
       'Restored',
     );
     const booth = m.alcoves.find((a) => a.missingMachines > 0);
     if (booth) expect(alcoveNote(booth)).toMatch(/\d+ more machines?$/);
+  });
+
+  it('suggests exactly one open door: the next in story order', () => {
+    const fresh = deriveHall(initialState());
+    expect(fresh.alcoves.filter((a) => a.suggested).map((a) => a.id)).toEqual(['intake-desk']);
+    const after = deriveHall(solvedAfter('intake-desk'));
+    expect(after.alcoves.filter((a) => a.suggested).map((a) => a.id)).toEqual(['furnace']);
+    expect(alcoveNote(byId(after, 'furnace'))).toBe('Open · try this one next');
+    expect(alcoveNote(byId(after, 'splitter-mill'))).toBe('Open · click or Enter to restore');
+    expect(firstFocus(after)).toBe('furnace');
   });
 
   it('newlyUnlocked lists doors opened by a solve', () => {

@@ -68,6 +68,7 @@ import {
   failText,
   fizzles,
   gemsUsed,
+  nextStep,
   type StrikeTimeline,
   strikeStory,
 } from './strike';
@@ -862,11 +863,13 @@ export class AltarScene implements GameScene {
     });
   }
 
-  private showVerdict(text: string, outcome: BoltOutcome, story = ''): void {
+  private showVerdict(text: string, outcome: BoltOutcome, story = '', hint = ''): void {
     // The verdict sits where the subtitle is; the subtitle steps aside until the next edit.
     this.subtitle.style.display = 'none';
     this.verdict.textContent = text;
     if (story) this.verdict.append(h('small', { class: 'lr-verdict-story' }, story));
+    // One visible next step (the fizzle tags fade; this stays until the next edit).
+    else if (hint) this.verdict.append(h('small', { class: 'lr-verdict-hint' }, hint));
     this.verdict.dataset.outcome = outcome;
     this.verdict.hidden = false;
     this.fitTop();
@@ -1268,10 +1271,13 @@ export class AltarScene implements GameScene {
   }
 
   private infoRule(r: { gem: GemKind; how: InfoHow }): string {
-    if (r.how === 'turns') return 'Yours to place now. Turn it to face the way you need.';
     const rule = this.rules[r.gem] ?? '';
+    // Restate what it does: a newcomer meeting it in the tray may not remember the codex.
+    if (r.how === 'turns') return `${firstSentence(rule)} Yours to place now; turn it to fit.`;
     // A Capacitor's first sentence (it stores) is only half of it: the release is the point.
-    const whole = r.how === 'tray' || r.how === 'turnsTray' || r.gem === 'capacitor';
+    // A Gate's first sentence ("two side inputs, one output") hides that both must arrive.
+    const whole =
+      r.how === 'tray' || r.how === 'turnsTray' || r.gem === 'capacitor' || r.gem === 'gate';
     return whole ? rule : firstSentence(rule);
   }
 
@@ -1940,14 +1946,23 @@ export class AltarScene implements GameScene {
       const over = ms.findIndex((m) => m.outcome === 'over');
       const under = ms.findIndex((m) => m.outcome !== 'exact' && m.outcome !== 'over');
       const story = strikeStory(this.puzzle.pulses, res, this.capBeats);
+      const hint = nextStep(
+        o,
+        this.fizzleList.map((f) => f.cause),
+      );
       if (o === 'over') {
         const m = ms[over]!;
-        this.showVerdict(say(over, failText(m, 'over', this.puzzle.pulses)), 'over', story);
+        this.showVerdict(say(over, failText(m, 'over', this.puzzle.pulses)), 'over', story, hint);
       } else if (o === 'under') {
         const m = ms[under] ?? ms[0]!;
-        this.showVerdict(say(under, failText(m, 'under', this.puzzle.pulses)), 'under', story);
+        this.showVerdict(
+          say(under, failText(m, 'under', this.puzzle.pulses)),
+          'under',
+          story,
+          hint,
+        );
       } else {
-        this.showVerdict('No charge reached the machine', 'dead');
+        this.showVerdict('No charge reached the machine', 'dead', '', hint);
       }
       // Teaching: name where it went wrong (first few fizzles, last strike first).
       const shown = new Set<string>();
@@ -1969,7 +1984,10 @@ export class AltarScene implements GameScene {
         // A tag on the top row can rise into the verdict (big text); hang it below the cell.
         if (this.overlapsVerdict(tag)) {
           tag.dataset.below = '';
-          tag.style.top = `${Math.round(pt.y + L.pitch * 0.38)}px`;
+          // Off the top edge the cell itself sits under the verdict: hang below the verdict.
+          const vBottom =
+            (Number.parseFloat(this.verdict.style.top) || 0) + this.verdict.offsetHeight + 4;
+          tag.style.top = `${Math.round(Math.max(pt.y + L.pitch * 0.38, vBottom))}px`;
         }
         count++;
       }
@@ -1986,8 +2004,10 @@ export class AltarScene implements GameScene {
     this.updateCapLive();
     const head = this.verdict.firstChild?.textContent ?? '';
     const told = this.verdict.querySelector('.lr-verdict-story')?.textContent;
+    const next = this.verdict.querySelector('.lr-verdict-hint')?.textContent;
     this.announce(
       this.resultText(told ? `${head}. ${told}` : head) +
+        (next ? ` ${next}` : '') +
         (o === 'exact' ? '' : ' Change anything to try again.'),
     );
     this.refreshHud();
