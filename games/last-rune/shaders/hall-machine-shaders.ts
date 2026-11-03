@@ -553,7 +553,8 @@ fn m_caps(q: vec2f) {
     if (abs(cq.x) > 18.0) { continue; }
     let body = sdg_box(cq, vec2f(13.0, hh), 5.0);
     let band = step(abs(abs(cq.y) - hh + 6.0), 1.6);
-    lay(body, mix(a_iron(q), C_SLATE * 1.6, 0.35) * (1.0 - 0.35 * band), 13.0, 0.7, vec3f(0.0));
+    // Darker cans with strong bands: the open niche's work lamp would wash pale cans out.
+    lay(body, mix(a_iron(q), C_SLATE * 1.3, 0.2) * 0.62 * (1.0 - 0.55 * band), 13.0, 0.7, vec3f(0.0));
     let win = sdg_box(cq, vec2f(3.6, hh - 11.0), 1.5);
     let lvl = (0.2 + 0.8 * fract(g_t * 0.22 + fi * 0.31)) * g_al + 0.08 * g_op;
     let top = -(hh - 11.0) + 2.0 * (hh - 11.0) * lvl;

@@ -71,7 +71,7 @@ import {
   type StrikeTimeline,
   strikeStory,
 } from './strike';
-import { firstSentence, type NewGems, newGems, nudgeGems } from './teach';
+import { arrivalNudges, firstSentence, type NewGems, newGems } from './teach';
 
 type Mode = 'edit' | 'strike' | 'result';
 
@@ -347,6 +347,7 @@ export class AltarScene implements GameScene {
     this.board.restore(ctx.flow.placementsFor(this.machine) as Placement[]);
     this.view = new AltarView(ctx, this.puzzle);
     this.view.reducedMotion = ctx.settings.reducedMotion;
+    this.view.reduceFlashes = ctx.settings.reduceFlashes;
     this.view.syncBoard(this.board);
     this.cursor = {
       x: 0,
@@ -390,7 +391,7 @@ export class AltarScene implements GameScene {
       const arrive = machineLine(this.machine, 'arrive');
       if (arrive) void ctx.fuse.say(arrive, { interrupt: true });
       // New gems: one line each once FUSE is free, unless the player is already using it.
-      this.pendingNudges = nudgeGems(this.news);
+      this.pendingNudges = arrivalNudges(this.news, !!this.teachCell);
     }
     setHintTarget({
       machine: this.machine,
@@ -2057,6 +2058,7 @@ export class AltarScene implements GameScene {
     const input = ctx.input;
     this.time += dt;
     this.view.reducedMotion = ctx.settings.reducedMotion;
+    this.view.reduceFlashes = ctx.settings.reduceFlashes;
 
     if (this.mode === 'strike') this.updateStrike(dt);
     else this.updateEdit(dt);

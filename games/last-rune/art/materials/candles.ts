@@ -10,7 +10,7 @@
  *   candles.drawBodies(frame, list);     // one batch
  *   candles.drawFlames(frame, list);     // one batch of halos + one of flames
  */
-import { flicker } from '@engine/fx';
+import { valueNoise1 } from '@engine/fx';
 import type { DrawParams, Frame, Material, Renderer, RGBA } from '@engine/render';
 import { CANDLE_WGSL, FLAME_WGSL, GLOW_WGSL } from '../../shaders/candle-wgsl';
 import { LIGHT_HEIGHT, LIGHT_SET_FLOATS, type LightSet } from './lights';
@@ -29,11 +29,48 @@ export interface CandleInstance {
   melt?: number;
   /** Light radius. Default 720. */
   radius?: number;
-  /** Set by `update`: current flicker (≈0.65..1). */
+  /** Set by `update`: current flicker (≈0.7..1, mean ≈0.85; steady ≈0.92..1 in reduced motion). */
   flicker?: number;
 }
 
 const WAX: RGBA = [0.6, 0.52, 0.42, 1];
+
+/**
+ * Candles are mood, never focus (D-027): anything selectable must stay the brightest thing near
+ * it. These scale the light a candle throws on the scene, its halo/bloom and its lit wax, from
+ * the flicker value. Flame cores stay bright and small.
+ */
+export const CANDLE_LIGHT = {
+  /** Point-light intensity per unit flicker (was 1.6). */
+  light: 1.0,
+  /** Light radius multiplier on `CandleInstance.radius` (pools less light on slab and floor). */
+  radius: 0.9,
+  /** Halo colour strength, bloom (emissive), size in px and falloff (were 0.12, 0.6, 220, 4). */
+  halo: 0.085,
+  haloBloom: 0.45,
+  haloSize: 170,
+  haloFalloff: 5,
+  /** Wax lit by its own flame (scales the body shader's flame term). */
+  wax: 0.7,
+  /** Flame bloom (emissive; was 2.2). The core keeps its colour; it just spills less. */
+  flameBloom: 1.7,
+} as const;
+
+/**
+ * Warm, breathing candle light in ≈0.7..1 (mean ≈0.85): a slow swell (a ~6 s breath blended
+ * with slower drift) plus a small, smooth flutter. Continuous noise only: no dips, pops or
+ * strobe. Reduced motion / reduced flashes: a steady level with a very slow, shallow swell.
+ * Pure and allocation-free.
+ */
+export function candleBreath(t: number, seed: number, calm = false): number {
+  if (calm) return 1 - 0.08 * valueNoise1(t * 0.12, seed);
+  const breath = 0.5 + 0.5 * Math.sin(t * 1.05 + seed * 2.3);
+  const drift = valueNoise1(t * 0.3, seed);
+  const swell = 0.55 * breath + 0.45 * drift;
+  const flutter =
+    0.65 * valueNoise1(t * 2.2 + 7.1, seed + 1) + 0.35 * valueNoise1(t * 4.7, seed + 2);
+  return 1 - 0.19 * swell - 0.11 * flutter;
+}
 
 export class CandleRenderer {
   private readonly bodyMat: Material;
@@ -41,7 +78,7 @@ export class CandleRenderer {
   private readonly glowMat: Material;
   private readonly dp: DrawParams = { x: 0, y: 0, params: [0, 0, 0, 0] };
   private readonly tint: RGBA = [1, 1, 1, 1];
-  /** Reduced motion: calmer flicker and sway. */
+  /** Reduced motion (or reduced flashes): steady light with a very slow swell; calmer sway. */
   reducedMotion = false;
 
   constructor(renderer: Renderer) {
@@ -64,10 +101,7 @@ export class CandleRenderer {
   }
 
   update(list: CandleInstance[], time: number): void {
-    const amount = this.reducedMotion ? 0.1 : 0.32;
-    for (const c of list) {
-      c.flicker = flicker(time, { seed: c.seed ?? c.x, amount, speed: 6 });
-    }
+    for (const c of list) c.flicker = candleBreath(time, c.seed ?? c.x, this.reducedMotion);
   }
 
   /** Flame position (wick tip) of a candle. */
@@ -85,9 +119,9 @@ export class CandleRenderer {
       lights.add(
         pt.x,
         pt.y - 10,
-        c.radius ?? 720,
+        (c.radius ?? 720) * CANDLE_LIGHT.radius,
         LINEAR.candle,
-        1.6 * (c.flicker ?? 1),
+        CANDLE_LIGHT.light * (c.flicker ?? 1),
         LIGHT_HEIGHT.candle,
       );
     }
@@ -112,7 +146,7 @@ export class CandleRenderer {
       dp.y = c.y - quadH / 2;
       dp.w = quadW;
       dp.h = quadH;
-      p[0] = c.flicker ?? 1;
+      p[0] = (c.flicker ?? 1) * CANDLE_LIGHT.wax;
       p[1] = c.seed ?? c.x * 0.013;
       p[2] = w / quadW;
       p[3] = c.melt ?? 0.4;
@@ -131,18 +165,18 @@ export class CandleRenderer {
     for (const c of list) {
       const f = c.flicker ?? 1;
       this.flamePos(c, pt);
-      const k = 0.12 * f;
+      const k = CANDLE_LIGHT.halo * f;
       tint[0] = LINEAR.candle[0] * k;
       tint[1] = LINEAR.candle[1] * k;
       tint[2] = LINEAR.candle[2] * k;
       tint[3] = 1;
-      p[0] = 4.0;
+      p[0] = CANDLE_LIGHT.haloFalloff;
       p[1] = 0;
-      dp.emissive = 0.6;
+      dp.emissive = CANDLE_LIGHT.haloBloom;
       dp.x = pt.x;
       dp.y = pt.y - 18;
-      dp.w = 220 * (0.9 + 0.1 * f);
-      dp.h = 220 * (0.9 + 0.1 * f);
+      dp.w = CANDLE_LIGHT.haloSize * (0.9 + 0.1 * f);
+      dp.h = dp.w;
       frame.sprite(this.glowMat, dp);
     }
     for (const c of list) {
@@ -156,7 +190,7 @@ export class CandleRenderer {
       p[0] = 0.75 + 0.35 * f;
       p[1] = c.seed ?? c.x * 0.013;
       p[2] = this.reducedMotion ? 0.3 : 1;
-      dp.emissive = 2.2;
+      dp.emissive = CANDLE_LIGHT.flameBloom;
       dp.x = pt.x;
       dp.y = pt.y - fh / 2 + 6;
       dp.w = fh * 0.55;

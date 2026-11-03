@@ -61,7 +61,11 @@ emboss.draw(frame, label, x, y);
 
 ## `candles.ts`: `CandleRenderer`, `CandleInstance`
 `CandleInstance { x, y (base), height, width?, seed?, melt?, radius?, flicker? }`
-- `update(list, time)` sets `flicker` (from `@engine/fx` `flicker`). `reducedMotion = true` calms it.
+- `update(list, time)` sets `flicker` from `candleBreath` (a slow warm swell plus a small smooth
+  flutter, ≈0.7..1, no pops). `reducedMotion = true` (scenes also set it for Reduce flashes) holds
+  a steady level with a very slow swell.
+- `CANDLE_LIGHT` holds the brightness knobs (light, radius, halo, wax, flame bloom). Candles are
+  mood, never focus: keep them below every selectable highlight (D-027).
 - `addLights`, `light`, `drawBodies`, `drawFlames`, `flamePos(c, out)`.
 
 ## `emboss.ts`: gold embossed text and plates

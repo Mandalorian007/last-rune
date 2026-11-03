@@ -15,7 +15,7 @@ _Last updated: 2026-11-02 by PM_
 | game-shell | ws/game-shell | ✅ merged | GameCtx, save v1, settings, Title → Hall → puzzle stub → solve stub loop, codex shell. e2e 7/7 strict |
 | art-materials | ws/art-materials | ✅ merged | light set, 6 gem cuts × 5 states, baked stone, altar slab, candles, gold emboss, post presets; `?demo=art` 60fps (stress 9 draws). Screens in docs/design/screens/ |
 | audio-design | ws/audio-design | ✅ merged | 59 procedural sounds (0 problems, peak −1.5 dBFS), 13 moods by tier, FUSE voice; ~0.9 s pre-render after first click. PM wired `ctx.sound`, `ctx.setMood`, FUSE voice, codex/UI sounds |
-| difficulty-fun | ws/difficulty-fun | ✅ phase 1 merged · ⏸ phase 2 after alpha | score model + novice bot, curve (D-022), 5 puzzles retuned, finale 72 → 4 solutions; `pnpm puzzle <id>` viewer |
+| difficulty-fun | ws/difficulty-fun | ✅ phase 1 merged · phase 2 = difficulty-2 | score model + novice bot, curve (D-022), 5 puzzles retuned, finale 72 → 4 solutions; `pnpm puzzle <id>` viewer |
 | story-scenes | ws/story-scenes | ✅ merged | journal desk (J), full ending → #this-will-break chat → gold flood → safety record → credits → Discord door end card (click-only, noopener); codex content source; FUSE altar lines (exact by tier, teach + new-gem nudges); Reduce flashes honoured. e2e 10/10 |
 | altar-scene | ws/altar-scene | ✅ merged | all 16 puzzles play at the real altar (stubs gone); first-time clarity pass, keyboard play, intake-desk teaches itself; e2e solves intake-desk + furnace. UX: docs/design/altar-ux.md |
 | art-props | ws/art-props | ✅ merged | FUSE (rig + caption portrait), storm cell (fluid sim), bolt ribbon (trace adapter, exact/over/under), machine gauge + breaker, alcove lock/unlock/restore; `?demo=props` |
@@ -40,8 +40,8 @@ _Last updated: 2026-11-02 by PM_
 | perf-tiers | ws/perf-tiers | ✅ merged | fill-bound (CPU ≤1.2 ms p95 at 4× throttle); scene resolution decoupled from canvas, DynamicResolution with hysteresis, Auto/High/Low in Settings (High = today's image); bloom mip realloc bug fixed; budgets in engineering.md; `scripts/perf/` |
 | a11y | ws/a11y | ✅ merged | audit (docs/design/a11y-audit.md); S1: title menu role, gamepad stuck in panels (engine PadNav); HUD focus restore fixed in engine (blur workaround gone); altar briefing + verdict announced; locked doors say what they need; contrast ≥ 4.5:1; axe e2e |
 | engine-cleanup | ws/engine-cleanup | ✅ merged | particles clear, bolt timing from trace, Fuse.destroy, per-draw uniforms, texture uploads, PingPong, global keys, queued taps, master limiter + reverb, post.blendTo. 60fps, no new churn |
-| candle-light | ws/candle-light | 🟡 running | candles dimmer + warm flicker; selectable highlights always brightest; capacitor-bay washout, puddles, vignette |
-| difficulty-2 | ws/difficulty-2 | 🟡 running | phase 2 on PM judgement: solver scores turn choice, tighten conveyor-a/press-unit-4/capacitor-bay, curve review, intake-desk chattiness |
+| candle-light | ws/candle-light | ✅ merged | candles 25–32% darker with a slow warm breath (0.70–1, no pops; steady under Reduced motion/Reduce flashes); held gem, live sockets, Strike and the hall doorway beat them; puddles read as water, capacitor-bay cans no longer wash out, vignette lifted. 60fps, draws unchanged |
+| difficulty-2 | ws/difficulty-2 | ✅ merged | D-037: turn load in the score; press-unit-4 9→2, capacitor-bay 11→1 (re-laid, single south lane), conveyor-a kept at 4 on purpose; all 16 in band, finale highest; intake-desk first visit 4 FUSE cards → 1; est. 54.5 min |
 | bug-bash | ws/bug-bash | 🟡 running | first-time-player sweep of every screen/res/input; robustness (resize, device lost, bad saves); panel scroll; lint |
 | perf-low | ws/perf-low | 🟡 running | GPU timestamps, Low composite at scene res, ending flood at DPR 2, weak-GPU estimate, first-frame timing |
 
@@ -56,6 +56,6 @@ _Last updated: 2026-11-02 by PM_
 - Audio is only objectively checked (levels, clicks, loops). Needs a human listen; 52 MiB decoded audio may matter on low-memory devices.
 - Photosensitivity: the breaker flash whites out most of the frame for ~0.3 s. hall-art adds a "Reduce flashes" setting (on with reduced motion).
 - Perf measured on Apple M4 only. The game is fill-bound; Auto scales resolution (floor 0.6) and drops to Low if needed. The ending flood at DPR 2 on High is over budget (~17–20 ms GPU); Auto/Low handle it. Still want a real integrated-PC-GPU check.
-- Difficulty curve is calibrated to designer estimates, not players (D-022). Risk: early/mid puzzles may still feel too easy. Phase 2 needs real playtest data; the novice bot can't plan gate merges (flat signal on gate puzzles). conveyor-a / press-unit-4 / capacitor-bay are still loose (8–11 solutions).
+- Difficulty curve is calibrated to designer estimates, not players (D-022). Risk: early/mid puzzles may still feel too easy. Phase 2 (D-037) tuned on PM judgement; real playtest times still wanted. The novice bot can't plan gate merges and never solves capacitor-bay. Watch: roof-array = control-booth (5.4), relay-tower → crane step, conveyor-a meeting amber + magenta together.
 - Puzzle quality: 16 puzzles must be interesting, not just solvable. The solver gives difficulty metrics, and the PM reviews.
 - Procedural art reaching "painterly" quality: art R&D is front-loaded in wave 2.
