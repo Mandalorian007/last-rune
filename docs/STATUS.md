@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 PM-judgement polish round ✅ (candle-light, difficulty-2/D-037, bug-bash, perf-low, finish-1); waiting on user playtest, then wave 6 ship. Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅ (D-032–D-035). Now (PM judgement, user playtests later): candle-light, difficulty-2, bug-bash, perf-low running; Firefox not a target. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
+**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 PM-judgement polish round ✅ (candle-light, difficulty-2/D-037, bug-bash, perf-low, finish-1); waiting on user playtest, then wave 6 ship. Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅ (D-032–D-035). All polish merged (ending-3, tidy-3, lore-1); waiting on user playtest, then wave 6 ship. Firefox not a target. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
@@ -50,7 +50,7 @@ _Last updated: 2026-11-02 by PM_
 | tidy-2 | ws/tidy-2 | ✅ merged | device loss halts loop, audio and timers (tested); clipboard drops from FUSE's clamp under gravity; both flakes root-caused (loaded-machine solver timeout; pad press shorter than a game tick); synth Worker not clean (OfflineAudioContext isn't in Workers), proposal logged |
 | ending-3 | ws/ending-3 | ✅ merged | D-038: ~35 s ThunderClap Gaming hangout in the gold light: 14 real channels with emoji, FUSE's face hops channels, unread pips; New-arrival form (Hobbies: Pending), real emoji reactions, invented members + ThunderSoap; reduced-motion and screen-reader summary; solve→end card ~2:02. Open: colour emoji need a system emoji font; empty space above short channels at 1920 |
 | tidy-3 | ws/tidy-3 | ✅ merged | caption never covers FUSE (FUSE is an avoid region; docked verdict stays left of the caption lane; layout-fit test at 5 sizes); Amplify diamonds stay separate under bloom; open doorways read gold (restored read orange); audio-load long tasks 1→0 (prepare yields, reverb sliced; output identical). Left: ~105 ms cold-browser AudioContext open (Chrome, not ours) |
-| lore-1 | ws/lore-1 | 🟡 running | the FUSE-is-the-Builder twist is too subtle (user missed it): FUSE says it plainly once at the end, page 16's signature reads as his sign-off, clues ramp through tiers 2–3; lore unchanged |
+| lore-1 | ws/lore-1 | ✅ merged | FUSE says it once at control-booth solve: "My handwriting. My drawers. My chair. Oh. I'm the Builder. Regulation 8 does not cover this."; slips ramp (boiler, archive, capacitor, lift); page 16 signature ends in "Monitoring."; hangout form reads "Last post: Builder, then foreman"; Tier 1 unchanged |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
