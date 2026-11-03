@@ -45,6 +45,12 @@ export const DESK_LAYOUT = {
 
 const LONG_TEXT = 170;
 
+/**
+ * Page 16's signature box (design px): the scribble's width, then the sign-off on the
+ * baseline. Fixed size (it is a drawing, labelled for screen readers), not text-scaled.
+ */
+const SIGNATURE = { w: 500, h: 80, scribble: 210, baseline: 56, fontSize: 44 } as const;
+
 interface SlipView {
   readonly slot: JournalSlot;
   readonly el: HTMLButtonElement;
@@ -69,6 +75,7 @@ export class JournalScene implements GameScene {
   private folio!: HTMLElement;
   private sketch!: SVGSVGElement;
   private sign!: SVGSVGElement;
+  private signOff!: SVGTextElement;
   private plate!: HTMLElement;
   private empty!: HTMLElement;
   private prevBtn!: HTMLButtonElement;
@@ -275,7 +282,11 @@ export class JournalScene implements GameScene {
     this.sketch.style.display = long ? 'none' : '';
     if (!long) this.drawSketch(entry.page);
     this.sign.style.display = entry.direction ? '' : 'none';
-    if (entry.direction) this.sign.setAttribute('aria-label', entry.direction);
+    this.signOff.textContent = entry.signOff ?? '';
+    if (entry.direction) {
+      const off = entry.signOff ? ` It ends: “${entry.signOff}”` : '';
+      this.sign.setAttribute('aria-label', `${entry.direction}${off}`);
+    }
     if (entry.rebuttal) {
       this.plate.textContent = entry.rebuttal;
       this.plate.removeAttribute('data-blank');
@@ -404,19 +415,25 @@ export class JournalScene implements GameScene {
       width: '440px',
       height: '300px',
     });
+    // Page 16's signature: the Builder's loops run on into FUSE's sign-off, in the same hand.
+    const sg = SIGNATURE;
     this.sign = doc.createElementNS(SVG_NS, 'svg');
     this.sign.setAttribute('class', 'lr-j-sign');
-    this.sign.setAttribute('viewBox', '0 0 420 70');
+    this.sign.setAttribute('viewBox', `0 0 ${sg.w} ${sg.h}`);
     this.sign.setAttribute('role', 'img');
     Object.assign(this.sign.style, {
-      left: `${rx + 90}px`,
-      top: `${ly + RULE_TOP + RULE_PITCH * 5 - 30}px`,
-      width: '420px',
-      height: '70px',
+      left: `${rx + 46}px`,
+      top: `${ly + RULE_TOP + RULE_PITCH * 5 - sg.baseline}px`,
+      width: `${sg.w}px`,
+      height: `${sg.h}px`,
     });
     const sigPath = doc.createElementNS(SVG_NS, 'path');
-    sigPath.setAttribute('d', trailingSignature());
-    this.sign.append(sigPath);
+    sigPath.setAttribute('d', trailingSignature(sg.scribble, sg.h, sg.baseline));
+    this.signOff = doc.createElementNS(SVG_NS, 'text');
+    this.signOff.setAttribute('x', String(sg.scribble + 2));
+    this.signOff.setAttribute('y', String(sg.baseline));
+    this.signOff.setAttribute('font-size', String(sg.fontSize));
+    this.sign.append(sigPath, this.signOff);
     this.empty = h(
       'div',
       {

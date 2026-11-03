@@ -34,6 +34,11 @@ export interface JournalPage {
   readonly clues?: readonly Clue[];
   /** Stage direction for how the page is drawn, verbatim from the pitch. */
   readonly direction?: string;
+  /**
+   * Where the trailing signature ends up: legible words in FUSE's own sign-off, so the
+   * "same hand as every incident report" reads at a glance (lore-1).
+   */
+  readonly signOff?: string;
 }
 
 export const JOURNAL: readonly JournalPage[] = [
@@ -175,7 +180,8 @@ export const JOURNAL: readonly JournalPage[] = [
     dateline: 'Day 13,877',
     source: 'new',
     text: 'Took the lift up to watch the storm. Hate heights. Went anyway. Up there, the whole thing finally makes sense.',
-    rebuttal: 'Hates heights. Went anyway. I would have… the Builder did. The Builder went anyway.',
+    rebuttal:
+      'Said it before reading it. Hates heights. Went anyway. I would have… the Builder did.',
     clues: [5],
   },
   {
@@ -196,9 +202,10 @@ export const JOURNAL: readonly JournalPage[] = [
     source: 'pitch',
     text: "It can't be finished in a lifetime. Fine. I'll stop having one. The foreman unit has room. If this works, it'll keep the lights on and it won't remember why, which is a mercy. If someone comes: tell it the drawers were mine. Tell it the count can stop.",
     rebuttal: null,
-    clues: [4],
+    clues: [2, 4],
     direction:
       '— signed, and then the signature trails into the same hand as every incident report.',
+    signOff: 'Monitoring.',
   },
 ];
 

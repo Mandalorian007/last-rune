@@ -128,23 +128,29 @@ export function journalSketch(page: number, width = 440, height = 300): Sketch {
 }
 
 /**
- * Page 16's signature: loose loops that tighten, flatten, and run on as the
- * neat even hand of an incident report (stage direction in content/journal.ts).
+ * Page 16's signature: big ragged loops (a name nobody can read any more) that
+ * tighten and flatten as they go, then come down to the baseline where FUSE's
+ * sign-off picks up in the same hand (stage direction and `signOff` in
+ * content/journal.ts). The path ends at (width, baseline - 4) so the words follow on.
  */
-export function trailingSignature(width = 420, height = 70): string {
+export function trailingSignature(width = 210, height = 80, baseline = 56): string {
   const r = rng(1616);
   let d = '';
-  const n = 120;
+  const n = 64;
+  const end = width - 18;
   for (let i = 0; i <= n; i++) {
     const t = i / n;
-    const x = 10 + t * (width - 20);
-    // Big ragged loops at first, settling into small regular ones.
-    const loose = 1 - Math.min(1, t * 1.6);
-    const amp = 6 + loose * 22;
-    const freq = 0.28 + (1 - loose) * 0.22;
+    const x = 8 + t * (end - 8);
+    // Ragged loops at first, settling into small regular ones just above the baseline.
+    const loose = (1 - t) ** 1.2;
+    const amp = 3 + loose * 20;
+    const freq = 0.17 + (1 - loose) * 0.2;
     const wob = loose * (r() - 0.5) * 8;
-    const y = height * 0.55 + Math.sin(i * freq * Math.PI) * amp * (0.6 + 0.4 * loose) + wob;
+    const mid = Math.min(height - 4, baseline - 8 - loose * 6);
+    const y = mid + Math.sin(i * freq * Math.PI) * amp + wob;
     d += `${i === 0 ? 'M' : 'L'}${f(x + Math.cos(i * freq * Math.PI) * loose * 9)} ${f(y)}`;
   }
+  // The pen comes down and runs on into the next word.
+  d += `Q${f(end + 8)} ${f(baseline + 2)} ${f(width)} ${f(baseline - 4)}`;
   return d;
 }
