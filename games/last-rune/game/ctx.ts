@@ -57,13 +57,13 @@ export const DESIGN_H = 1080;
 
 /**
  * Phones: scenes whose art fills the width (D-040), with the design band that must stay on
- * screen. Hall: the top row of doors (from y≈60) to the floor door's sockets (y≈1045), less
- * what a very wide phone has to give up (minVisible 880 keeps the floor door whole; 20:9
- * phones keep slim soft-edged bars). Title: the name down to the candles.
+ * screen. Hall: every doorway whole, arch to sill, from the top row's arches (y≈45) to the
+ * Intake Desk's sill on the floor (y≈1030); the sky and the floor's foreground crop instead,
+ * and the widest phones keep slim soft-edged side bars. Title: the name down to the candles.
  */
 const FILL_BANDS: Record<string, { minVisible: number; focusY: number }> = {
   title: { minVisible: 760, focusY: 520 },
-  hall: { minVisible: 880, focusY: 540 },
+  hall: { minVisible: 985, focusY: 544 },
 };
 
 export type GameScene = Scene<GameCtx, Frame>;

@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { MACHINES } from '../../games/last-rune/content/machines';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-3-chrome: the title, hall and menus at the four realistic phone viewports (D-040):
@@ -17,10 +18,13 @@ const PHONES = [
 ] as const;
 
 /**
- * The hall keeps every doorway whole (FILL_BANDS minVisible 880), so the widest phones (Android
- * 20:9) keep slim, soft-edged side bars: at most this share of the width each side.
+ * The hall keeps every doorway whole, arch to sill (FILL_BANDS minVisible 985), so wide phones
+ * keep soft-edged side bars: at most this share of the width each side (Android 20:9 ≈ 11.5%).
  */
-const HALL_BAR = 0.08;
+const HALL_BAR = 0.12;
+
+/** A wall alcove's drawn arch and sill around its centre, design px (the floor seal is round). */
+const ARCH = { l: -100, r: 100, t: -118, b: 92 } as const;
 
 // biome-ignore lint/suspicious/noExplicitAny: dev handle
 type G = any;
@@ -110,6 +114,46 @@ function bars(page: Page) {
   });
 }
 
+/** Doorways (arch to sill) and the suggestion tag that are not wholly on screen. */
+function doorsOff(page: Page): Promise<string[]> {
+  const doors = MACHINES.map((m) => ({
+    id: m.id,
+    x: m.alcove.x,
+    y: m.alcove.y,
+    floor: m.id === 'the-last-rune',
+  }));
+  return page.evaluate(
+    ({ doors, A }) => {
+      const app = document.getElementById('app')!.getBoundingClientRect();
+      const ov = document.querySelector<HTMLElement>('.tc-overlay')!.getBoundingClientRect();
+      const k = ov.width / 1920;
+      const bad: string[] = [];
+      const check = (name: string, l: number, t: number, r: number, b: number) => {
+        if (l < app.left - 1 || r > app.right + 1 || t < app.top - 1 || b > app.bottom + 1)
+          bad.push(`${name} at ${l.toFixed(0)},${t.toFixed(0)}–${r.toFixed(0)},${b.toFixed(0)}`);
+      };
+      for (const d of doors) {
+        const e = d.floor ? { l: -110, r: 110, t: -110, b: 110 } : A;
+        check(
+          `door ${d.id}`,
+          ov.left + (d.x + e.l) * k,
+          ov.top + (d.y + e.t) * k,
+          ov.left + (d.x + e.r) * k,
+          ov.top + (d.y + e.b) * k,
+        );
+      }
+      for (const sel of ['.lr-hall-next', '.lr-hall-next-tag']) {
+        const el = document.querySelector(sel);
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        check(sel, r.left, r.top, r.right, r.bottom);
+      }
+      return bad;
+    },
+    { doors, A: ARCH },
+  );
+}
+
 function small(
   list: Size[],
   min: { w?: number; h?: number; hitW?: number; hitH?: number; font?: number },
@@ -173,7 +217,40 @@ for (const vp of PHONES) {
       if (tb.l > 4 || tb.r > 4)
         problems.push(`title art bars ${tb.l.toFixed(0)}/${tb.r.toFixed(0)} px`);
 
-      // Hall.
+      // Hall, first entry: a new game, nothing solved. The Intake Desk (the floor doorway) and its
+      // "Start here" tag are whole on screen and FUSE points at it.
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.save.update((d: G) => {
+          d.settings.captionSpeed = 'instant';
+        });
+        g.flow.newGame();
+      });
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'hall');
+      await page.waitForTimeout(800);
+      await waitFrames(page, 6);
+      await expect(page.locator('.lr-hall-next-tag')).toHaveText(/Start here/);
+      problems.push(...(await doorsOff(page)).map((s) => `hall first entry: ${s}`));
+      const start = (await page.locator('.lr-hall-next').boundingBox())!;
+      const desk = MACHINES.find((m) => m.id === 'intake-desk')!.alcove;
+      const ovb = (await page.locator('.tc-overlay').boundingBox())!;
+      const kk = ovb.width / 1920;
+      const cx = ovb.x + desk.x * kk;
+      const cy = ovb.y + desk.y * kk;
+      if (
+        Math.abs(start.x + start.width / 2 - cx) > 2 ||
+        start.y > cy ||
+        start.y + start.height < cy
+      )
+        problems.push('hall first entry: the Start here ring is not on the Intake Desk');
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.fuse.hush();
+        g.flow.toTitle();
+      });
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'title');
+
+      // Hall, mid-game.
       await page.evaluate(() => {
         const g = (window as G).__game;
         g.save.update((d: G) => {
@@ -197,6 +274,7 @@ for (const vp of PHONES) {
       const tag = await page.locator('.lr-hall-next-tag').boundingBox();
       const app = (await page.locator('#app').boundingBox())!;
       if (!tag || tag.y < app.y - 1) problems.push('hall: the Next tag is cut off');
+      problems.push(...(await doorsOff(page)).map((s) => `hall: ${s}`));
 
       // Settings.
       await page.evaluate(() => (window as G).__game.openSettings());

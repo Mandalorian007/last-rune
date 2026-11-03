@@ -88,6 +88,25 @@ for (const vp of VIEWPORTS) {
       await page.waitForTimeout(600);
       await shot('01-title-fuse');
 
+      // The true first entry: a new game from the title (nothing solved, FUSE's hall intro).
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.fuse.hush();
+        g.save.update((d: G) => {
+          d.settings.captionSpeed = 'instant';
+        });
+        g.flow.newGame();
+      });
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'hall');
+      await page.waitForTimeout(2500);
+      await shot('02-hall-first');
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.fuse.hush();
+        g.flow.toTitle();
+      });
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'title');
+
       await page.evaluate(() => {
         const g = (window as G).__game;
         g.save.update((d: G) => {

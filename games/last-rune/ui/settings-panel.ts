@@ -194,41 +194,59 @@ export function openSettings(deps: SettingsPanelDeps): void {
     className: 'lr-panel-x',
     ariaLabel: 'Close settings',
   });
+  // Phones: the body scrolls; "More ▾" says so while anything is still below, and scrolls on.
+  const more = phone
+    ? button('More ▾', () => cols.scrollBy({ top: cols.clientHeight * 0.8, behavior: 'smooth' }), {
+        className: 'lr-settings-more',
+      })
+    : null;
+  const cols = h(
+    'div',
+    { class: 'lr-settings-cols' },
+    h(
+      'div',
+      { class: 'lr-settings-col' },
+      h('section', null, h('h3', null, 'Sound'), ...volumes),
+      h('section', null, h('h3', null, 'Graphics'), graphics),
+    ),
+    h(
+      'div',
+      { class: 'lr-settings-col' },
+      h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed),
+      h(
+        'section',
+        null,
+        h('h3', null, 'Save'),
+        persistent,
+        area,
+        h('div', { class: 'lr-row' }, exportBtn, importBtn, phone ? null : resetBtn),
+        note,
+        // Phones: Reset gets a row of its own, away from Import (D-040).
+        phone ? h('div', { class: 'lr-row lr-settings-danger' }, resetBtn) : null,
+      ),
+    ),
+  );
+  if (more) {
+    const sync = () => {
+      const below = cols.scrollHeight - cols.clientHeight - cols.scrollTop > 4;
+      more.hidden = !below;
+      cols.toggleAttribute('data-more', below);
+    };
+    cols.addEventListener('scroll', sync, { passive: true });
+    requestAnimationFrame(sync);
+    new ResizeObserver(sync).observe(cols);
+  }
   const content = h(
     'div',
     // Phones: the panel itself takes focus, so no focus ring sits on the first slider.
     { class: 'lr-settings', tabindex: phone ? '-1' : null },
     phone ? close : null,
     // Two columns so the whole panel, Done included, fits a 720p screen at 100% text.
-    h(
-      'div',
-      { class: 'lr-settings-cols' },
-      h(
-        'div',
-        { class: 'lr-settings-col' },
-        h('section', null, h('h3', null, 'Sound'), ...volumes),
-        h('section', null, h('h3', null, 'Graphics'), graphics),
-      ),
-      h(
-        'div',
-        { class: 'lr-settings-col' },
-        h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed),
-        h(
-          'section',
-          null,
-          h('h3', null, 'Save'),
-          persistent,
-          area,
-          h('div', { class: 'lr-row' }, exportBtn, importBtn, phone ? null : resetBtn),
-          note,
-          // Phones: Reset gets a row of its own, away from Import (D-040).
-          phone ? h('div', { class: 'lr-row lr-settings-danger' }, resetBtn) : null,
-        ),
-      ),
-    ),
+    cols,
     h(
       'div',
       { class: 'lr-row lr-settings-done' },
+      more,
       button('Done', () => ui.stack.pop('programmatic'), { variant: 'primary' }),
     ),
   );

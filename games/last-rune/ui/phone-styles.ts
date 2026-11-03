@@ -187,8 +187,15 @@ ${P} .lr-settings-cols {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: ${cpx(8)};
   gap: 0 ${cpx(22)}; scrollbar-width: thin; padding-bottom: ${cpx(14)};
   /* A soft bottom edge says "more below" instead of a half-cut row. */
-  mask-image: linear-gradient(#000 calc(100% - ${cpx(22)}), transparent);
 }
+${P} .lr-settings-cols[data-more] { mask-image: linear-gradient(#000 calc(100% - ${cpx(22)}), transparent); }
+.tc-overlay:not([data-phone]) .lr-settings-more { display: none; }
+${P} .lr-settings-more {
+  margin-right: auto; min-height: ${cpx(32)}; padding: 0 ${cpx(12)}; font-size: ${tpx(13)};
+  color: #f2d89a; background: rgb(232 192 106 / 0.12); border: 1px solid rgb(232 192 106 / 0.45);
+  border-radius: ${cpx(16)};
+}
+${P} .lr-settings-more[hidden] { display: none; }
 ${P} .lr-settings-col, ${P} .lr-settings section { gap: 0; }
 ${P} .lr-settings h3 { margin: ${cpx(6)} 0 0; font-size: ${tpx(12)}; line-height: 1.4; }
 ${P} .lr-settings .tc-field, ${P} .lr-choice { min-height: ${cpx(44)}; }

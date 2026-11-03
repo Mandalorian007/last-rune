@@ -176,16 +176,16 @@ export class HallScene implements GameScene {
   private refresh(): void {
     this.progress = progressOf(this.ctx.save.get());
     this.model = deriveHall(this.progress);
-    // Phones mark the suggested door in the HUD (hidden elsewhere); the box matches the
-    // view's ring around an alcove, or the floor disc.
+    // Phones mark the suggested door in the HUD (hidden elsewhere); the box hugs the alcove's
+    // arch and sill (y-125 to y+99), so it stays inside the phone framing, or the floor disc.
     const next = this.model.alcoves.find((a) => a.suggested);
     this.ctx.hud.suggest(
       next
         ? {
             x: next.x,
-            y: next.y - 2,
-            w: next.floor ? ALCOVE_HIT.h * 1.3 : 230,
-            h: next.floor ? ALCOVE_HIT.h * 1.3 : 280,
+            y: next.floor ? next.y : next.y - 13,
+            w: next.floor ? ALCOVE_HIT.h * 1.3 : 226,
+            h: next.floor ? ALCOVE_HIT.h * 1.3 : 224,
             label: this.progress.solved.length === 0 ? 'Start here' : 'Next',
             round: next.floor,
           }

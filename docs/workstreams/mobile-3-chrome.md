@@ -114,3 +114,15 @@ Contact sheets (git-ignored): `docs/design/screens/local/mobile-3-chrome/{before
    - Worth a line in DECISIONS.
 3. **`ViewContext.phone?: () => boolean`** (scenes/views.ts) lets art views adapt to phones (used for the hall gauge). It is cross-cutting, so flagging it.
 4. **Engine `computeFillWidth` / `Surface.setFill`** (letterbox.ts, surface.ts) is generic, with no game nouns.
+
+### 2026-11-03: PM review fixes (first-time hall, Settings scroll cue)
+- **First-entry hall.** New capture shot `02-hall-first` (a new game from the title, nothing solved). Before this fix, the Intake Desk (the floor doorway FUSE calls "the gold doorway") was about half off the bottom on iPhone and Android.
+  - The hall framing is now FILL_BANDS hall `{ minVisible: 985, focusY: 544 }`. Every doorway is whole, from the top row's arches (y≈50) to the Intake Desk's sill (y≈1030), and the sky and floor foreground crop instead.
+  - The phone suggestion ring now hugs arch to sill (226×224), so it fits inside that band.
+- **Cost:** wider soft side bars, about 20 / 42 / 35 / 105 CSS px each side on SE / iPhone / Pro Max / Android, against 73–137 letterboxed before. A phone hall layout (doors in a shorter band) is still the way to a true full fill on 20:9.
+- **e2e:**
+  - `mobile-chrome.spec.ts` now asserts, at first entry and mid-game, that every doorway's arch-to-sill rect plus the suggestion ring and tag are inside the viewport.
+  - It also asserts that "Start here" sits on the Intake Desk at first entry.
+  - Verified that it fails with the old 880 framing.
+- **Settings:** while the body has more below, a "More ▾" pill sits beside Done (tap scrolls on) and the bottom fade shows. Both go at the end.
+- PM decisions: the ✕ / red destructive convention goes to DECISIONS (PM); `ViewContext.phone` is approved; the Android bars are accepted for now.
