@@ -10,6 +10,11 @@
  * The board scrolls inside its viewport: the canvas left of the right-hand column, within the
  * visible band. Panning stops once the board's block (slab and gauges) reaches the viewport's
  * edge, so the board never slides away from view.
+ *
+ * Zoomed, the view keeps its context (mobile-7-zoom, D-040 addendum 5): a gutter `GUTTER_CSS`
+ * wide round the view frames the cells, and holds the edge arrows and the chips of gauges out
+ * of view, so neither ever sits on a cell. A camera at rest (`settleCam`) never half-crops the
+ * source or a gauge: each is wholly in the cell area or wholly out of it (then shown as a chip).
  */
 import type { AltarLayout, PropSpot } from './layout';
 
@@ -17,7 +22,11 @@ import type { AltarLayout, PropSpot } from './layout';
  * px "dense" line, raised to the 44 px touch target so every placement happens at ≥ 44 px. */
 export const ZOOM_BELOW_CSS = 44;
 /** Socket pitch when zoomed in, CSS px (above the 44 px touch target). */
-export const ZOOM_PITCH_CSS = 52;
+export const ZOOM_PITCH_CSS = 48;
+/** The frame round the zoomed cells, CSS px: room for a 32 px edge arrow and a one-line chip. */
+export const GUTTER_CSS = 34;
+/** An edge arrow pans this share of the cell area. */
+export const STEP_SHARE = 0.6;
 /** Zoom in or out, seconds (instant with reduced motion). */
 export const ZOOM_SECS = 0.22;
 /** A press that moves this far, CSS px, is a pan, not a tap. */
@@ -63,6 +72,14 @@ export function viewRect(L: AltarLayout): Rect {
   return { x0: b.padL, y0: b.visT, x1: b.colL, y1: b.visB };
 }
 
+/** Zoomed: the cells show here, inside the gutter (the whole view at the fitted one). */
+export function cellRect(L: AltarLayout): Rect {
+  const v = viewRect(L);
+  if (!L.phone) return v;
+  const g = GUTTER_CSS * L.phone.cssPx;
+  return { x0: v.x0 + g, y0: v.y0 + g, x1: v.x1 - g, y1: v.y1 - g };
+}
+
 function propBox(sp: PropSpot, r: Rect): void {
   const h = sp.size / 2;
   r.x0 = Math.min(r.x0, sp.x - h);
@@ -88,10 +105,10 @@ function clampAxis(o: number, z: number, b0: number, b1: number, v0: number, v1:
   return Math.min(hi, Math.max(lo, o));
 }
 
-/** Keep a zoomed camera's board block covering the view (or centred where it is smaller). */
+/** Keep a zoomed camera's board block covering the cell area (or centred where smaller). */
 export function clampCam(L: AltarLayout, c: Cam): Cam {
   if (c.z <= 1) return { ...FIT };
-  const v = viewRect(L);
+  const v = cellRect(L);
   const b = blockRect(L);
   return {
     z: c.z,
@@ -100,10 +117,117 @@ export function clampCam(L: AltarLayout, c: Cam): Cam {
   };
 }
 
-/** The zoomed camera around a screen point at the fitted view: that point stays put. */
+/**
+ * The zoomed camera around a screen point at the fitted view: that point stays put (give or
+ * take the settle that keeps the source and gauges whole).
+ */
 export function zoomAt(L: AltarLayout, x: number, y: number): Cam {
   const z = zoomLevel(L);
-  return clampCam(L, { z, ox: x - z * x, oy: y - z * y });
+  return settleCam(L, { z, ox: x - z * x, oy: y - z * y });
+}
+
+/** The zoomed camera with the world point (x, y) in the middle of the cell area, settled. */
+export function centreOn(L: AltarLayout, x: number, y: number): Cam {
+  const z = zoomLevel(L);
+  const r = cellRect(L);
+  return settleCam(L, { z, ox: (r.x0 + r.x1) / 2 - z * x, oy: (r.y0 + r.y1) / 2 - z * y });
+}
+
+/** An edge arrow's step: `STEP_SHARE` of the cell area that way (0 n, 1 e, 2 s, 3 w), settled. */
+export function stepCam(L: AltarLayout, c: Cam, side: 0 | 1 | 2 | 3): Cam {
+  const r = cellRect(L);
+  const dx = STEP_SHARE * (r.x1 - r.x0);
+  const dy = STEP_SHARE * (r.y1 - r.y0);
+  const [mx, my] = [
+    [0, dy],
+    [-dx, 0],
+    [0, -dy],
+    [dx, 0],
+  ][side]!;
+  const to = settleCam(L, { z: c.z, ox: c.ox + mx, oy: c.oy + my });
+  // The settle may undo a short step: go on to the next resting spot that way.
+  if (Math.abs(to.ox - c.ox) + Math.abs(to.oy - c.oy) > 1) return to;
+  return settleCam(L, { z: c.z, ox: c.ox + 2 * mx, oy: c.oy + 2 * my });
+}
+
+/** The source's and each gauge's drawn box, world px (what must never show half-cropped). */
+export function propRects(L: AltarLayout): Rect[] {
+  const box = (sp: PropSpot, k: number): Rect => ({
+    x0: sp.x - k * sp.size,
+    x1: sp.x + k * sp.size,
+    y0: sp.y - k * sp.size,
+    y1: sp.y + k * sp.size,
+  });
+  return [box(L.storm, 0.3), ...L.machines.map((m) => box(m, 0.46))];
+}
+
+/** Whether a screen box is wholly inside `r` or wholly outside it (never cut by its edge). */
+export function whole(b: Rect, r: Rect, eps = 0.5): boolean {
+  const inside =
+    b.x0 >= r.x0 - eps && b.x1 <= r.x1 + eps && b.y0 >= r.y0 - eps && b.y1 <= r.y1 + eps;
+  const outside =
+    b.x1 <= r.x0 + eps || b.x0 >= r.x1 - eps || b.y1 <= r.y0 + eps || b.y0 >= r.y1 - eps;
+  return inside || outside;
+}
+
+/** Which props a camera cuts at the cell area's edge (indices into `propRects`). */
+export function croppedProps(L: AltarLayout, c: Cam): number[] {
+  if (c.z <= 1) return [];
+  const r = cellRect(L);
+  const out: number[] = [];
+  propRects(L).forEach((p, i) => {
+    const b = {
+      x0: c.ox + c.z * p.x0,
+      x1: c.ox + c.z * p.x1,
+      y0: c.oy + c.z * p.y0,
+      y1: c.oy + c.z * p.y1,
+    };
+    if (!whole(b, r)) out.push(i);
+  });
+  return out;
+}
+
+/**
+ * A camera at rest: clamped, then moved the least it takes for the source and every gauge to
+ * be wholly in the cell area or wholly out of it. (A finger pan follows the finger exactly; the
+ * view settles once it lets go.)
+ */
+export function settleCam(L: AltarLayout, c0: Cam): Cam {
+  const c = clampCam(L, c0);
+  if (c.z <= 1) return c;
+  const r = cellRect(L);
+  const b = blockRect(L);
+  const props = propRects(L);
+  const z = c.z;
+  const range = (b0: number, b1: number, v0: number, v1: number): [number, number] => {
+    const lo = v1 - z * b1;
+    const hi = v0 - z * b0;
+    return lo >= hi ? [(lo + hi) / 2, (lo + hi) / 2] : [lo, hi];
+  };
+  const [xlo, xhi] = range(b.x0, b.x1, r.x0, r.x1);
+  const [ylo, yhi] = range(b.y0, b.y1, r.y0, r.y1);
+  const xs = new Set([c.ox, xlo, xhi]);
+  const ys = new Set([c.oy, ylo, yhi]);
+  for (const p of props) {
+    for (const v of [r.x0 - z * p.x0, r.x1 - z * p.x1, r.x0 - z * p.x1, r.x1 - z * p.x0])
+      if (v >= xlo - 1e-6 && v <= xhi + 1e-6) xs.add(v);
+    for (const v of [r.y0 - z * p.y0, r.y1 - z * p.y1, r.y0 - z * p.y1, r.y1 - z * p.y0])
+      if (v >= ylo - 1e-6 && v <= yhi + 1e-6) ys.add(v);
+  }
+  let best: Cam | null = null;
+  let cost = Number.POSITIVE_INFINITY;
+  for (const ox of xs)
+    for (const oy of ys) {
+      const d = (ox - c.ox) ** 2 + (oy - c.oy) ** 2;
+      if (d >= cost) continue;
+      const ok = props.every((p) =>
+        whole({ x0: ox + z * p.x0, x1: ox + z * p.x1, y0: oy + z * p.y0, y1: oy + z * p.y1 }, r),
+      );
+      if (!ok) continue;
+      best = { z, ox, oy };
+      cost = d;
+    }
+  return best ?? c;
 }
 
 /** The camera moved by a finger's drag (dx, dy screen px). */
@@ -169,7 +293,7 @@ export function transformLayout(fit: AltarLayout, c: Cam): AltarLayout {
 /** Which way the board runs on past the view: north, east, south, west. */
 export function offEdges(L: AltarLayout, c: Cam): [boolean, boolean, boolean, boolean] {
   if (c.z <= 1) return [false, false, false, false];
-  const v = viewRect(L);
+  const v = cellRect(L);
   const b = blockRect(L);
   const e = 1;
   return [

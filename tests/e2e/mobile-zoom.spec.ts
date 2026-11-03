@@ -2,6 +2,13 @@ import { type CDPSession, expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
+import {
+  type Cam,
+  cellRect,
+  croppedProps,
+  type Rect,
+  ZOOM_BELOW_CSS,
+} from '../../games/last-rune/scenes/altar/zoom';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-6-zoom: on phones, every socket on every altar is placed at ≥44 CSS px. Boards whose
@@ -35,6 +42,17 @@ async function insets(page: Page, px: number) {
 
 const layout = (page: Page) =>
   page.evaluate(() => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout);
+/** The fitted layout (world px) and the camera now. */
+const camera = (page: Page) =>
+  page.evaluate(() => {
+    const v = (window as G).__altarView;
+    return { W: v.world as AltarLayout, c: { ...v.zoom } as Cam };
+  });
+/** CSS px per design px, now (each altar frames the overlay its own way on a phone). */
+const scale = async (page: Page) => {
+  const ob = (await page.locator('.tc-overlay').boundingBox())!;
+  return { ob, k: ob.width / 1920 };
+};
 
 async function open(page: Page, id: MachineId) {
   await page.evaluate(
@@ -105,18 +123,22 @@ for (const vp of PHONES) {
         g.flow.continueGame();
       });
       await expect(page.locator('.tc-overlay')).toHaveAttribute('data-phone', '');
-      const ob = (await page.locator('.tc-overlay').boundingBox())!;
-      const k = ob.width / 1920;
+      let { ob, k } = await scale(page);
       const tap = (x: number, y: number) => page.touchscreen.tap(ob.x + x * k, ob.y + y * k);
       const problems: string[] = [];
       const table: string[] = [];
 
-      // 1. Every altar: the pitch a finger places at (fitted, or zoomed in by a tap).
+      // 1. Every altar: the pitch a finger places at (fitted, or zoomed in by a tap). One rule
+      // on every phone (mobile-7-zoom): Zoom is offered exactly when the fitted sockets are
+      // under 44 CSS px, measured with this altar's own framing.
       for (const id of MACHINE_IDS) {
         await open(page, id);
+        ({ ob, k } = await scale(page));
         const L = await layout(page);
         const fit = L.pitch * k;
         const zoomable = await page.locator('.lr-altar[data-zoomable]').count();
+        if (!!zoomable !== fit < ZOOM_BELOW_CSS)
+          problems.push(`${id}: fit ${fit.toFixed(1)}px but zoom ${zoomable ? 'on' : 'off'}`);
         let placeAt = fit;
         if (zoomable) {
           await expect(page.locator('[data-action="zoom"]')).toBeVisible();
@@ -139,6 +161,7 @@ for (const vp of PHONES) {
       // 2. The Last Rune: a gem from the tray onto the socket farthest from it, by taps.
       const id: MachineId = 'the-last-rune';
       await open(page, id);
+      ({ ob, k } = await scale(page));
       const pz = puzzleFor(id);
       const L = await layout(page);
       const taken = (x: number, y: number) =>
@@ -200,13 +223,16 @@ for (const vp of PHONES) {
       ).toBe(0);
 
       // Pan back so the far socket shows, then tap it (live layout) to place the gem.
+      await waitFrames(page, 20);
       let S = await layout(page);
       let c = center(S, far.x, far.y);
+      // In the cells, not under the gutter round them.
+      const R = cellRect(S);
       const inView = (p: { x: number; y: number }) =>
-        p.x > v.padL + S.pitch / 2 &&
-        p.x < v.colL - S.pitch / 2 &&
-        p.y > v.visT + S.pitch / 2 &&
-        p.y < v.visB - S.pitch / 2;
+        p.x > R.x0 + S.pitch / 2 &&
+        p.x < R.x1 - S.pitch / 2 &&
+        p.y > R.y0 + S.pitch / 2 &&
+        p.y < R.y1 - S.pitch / 2;
       if (!inView(c)) {
         await drag(
           cdp,
@@ -215,7 +241,7 @@ for (const vp of PHONES) {
           ob.x + (mid.x + (mid.x - c.x)) * k,
           ob.y + (mid.y + (mid.y - c.y)) * k,
         );
-        await waitFrames(page, 4);
+        await waitFrames(page, 20);
         S = await layout(page);
         c = center(S, far.x, far.y);
       }
@@ -270,45 +296,75 @@ for (const vp of PHONES) {
       const hint = () => page.locator('.lr-altar-hint').textContent();
       const problems: string[] = [];
       /** Every card (and every word in it) against the open sockets' tap circles, now. */
-      const covered = (id: MachineId, at: string) =>
-        page.evaluate(
-          ({ at, blocked }) => {
-            const S = (window as unknown as { __altarLayout: AltarLayout }).__altarLayout;
-            const ov = document.querySelector<HTMLElement>('.tc-overlay')!.getBoundingClientRect();
-            const k = ov.width / 1920;
-            const r = 0.4 * S.pitch;
-            const out: string[] = [];
-            for (const el of document.querySelectorAll<HTMLElement>('.lr-altar-need')) {
-              if (el.hidden || getComputedStyle(el).display === 'none') continue;
-              const boxes = [el, ...el.querySelectorAll<HTMLElement>('*')]
-                .map((e) => e.getBoundingClientRect())
-                .filter((q) => q.width > 0.5 && q.height > 0.5)
-                .map((q) => ({
+      const covered = async (id: MachineId, at: string) => {
+        const { W, c } = await camera(page);
+        const cut = croppedProps(W, c);
+        const out0 = cut.length ? [`${id} ${at}: props ${cut.join(',')} half-cropped`] : [];
+        const S = await layout(page);
+        return out0.concat(
+          await page.evaluate(
+            ({ at, blocked, R }) => {
+              const S = (window as unknown as { __altarLayout: AltarLayout }).__altarLayout;
+              const ov = document
+                .querySelector<HTMLElement>('.tc-overlay')!
+                .getBoundingClientRect();
+              const k = ov.width / 1920;
+              const r = 0.4 * S.pitch;
+              const out: string[] = [];
+              const box = (e: Element) => {
+                const q = e.getBoundingClientRect();
+                return {
+                  w: q.width,
+                  h: q.height,
                   x0: (q.left - ov.left) / k,
                   x1: (q.right - ov.left) / k,
                   y0: (q.top - ov.top) / k,
                   y1: (q.bottom - ov.top) / k,
-                }));
-              for (let y = 0; y < S.rows; y++)
-                for (let x = 0; x < S.cols; x++) {
-                  if (blocked.some((c) => c.x === x && c.y === y)) continue;
-                  const cx = S.left + S.margin + S.pitch * (x + 0.5);
-                  const cy = S.top + S.margin + S.pitch * (y + 0.5);
-                  const on = boxes.some((b) => {
-                    const dx = cx - Math.max(b.x0, Math.min(cx, b.x1));
-                    const dy = cy - Math.max(b.y0, Math.min(cy, b.y1));
-                    return dx * dx + dy * dy < r * r;
-                  });
-                  if (on)
-                    out.push(
-                      `${at}: "${el.textContent.replace(/\s+/g, ' ')}"${el.dataset.off ? ` (chip ${el.dataset.off})` : ''} on socket ${x},${y}`,
-                    );
-                }
-            }
-            return out;
-          },
-          { at: `${id} ${at}`, blocked: puzzleFor(id).blocked },
+                };
+              };
+              for (const el of document.querySelectorAll<HTMLElement>('.lr-altar-need')) {
+                if (el.hidden || getComputedStyle(el).display === 'none') continue;
+                const boxes = [el, ...el.querySelectorAll<HTMLElement>('*')]
+                  .map(box)
+                  .filter((q) => q.w > 0.5 && q.h > 0.5);
+                // A chip (its gauge out of the cells) stands in the gutter, off the cells.
+                const b0 = boxes[0]!;
+                if (
+                  el.dataset.off &&
+                  b0.x0 < R.x1 - 1 &&
+                  b0.x1 > R.x0 + 1 &&
+                  b0.y0 < R.y1 - 1 &&
+                  b0.y1 > R.y0 + 1
+                )
+                  out.push(`${at}: chip "${el.textContent}" over the cells`);
+                // Off the cells, a chip covers only what the gutter hides.
+                if (el.dataset.off) continue;
+                for (let y = 0; y < S.rows; y++)
+                  for (let x = 0; x < S.cols; x++) {
+                    if (blocked.some((c) => c.x === x && c.y === y)) continue;
+                    const cx = S.left + S.margin + S.pitch * (x + 0.5);
+                    const cy = S.top + S.margin + S.pitch * (y + 0.5);
+                    // Only sockets that show: the gutter hides the rest.
+                    const sx = Math.max(R.x0, Math.min(cx, R.x1)) - cx;
+                    const sy = Math.max(R.y0, Math.min(cy, R.y1)) - cy;
+                    if (sx * sx + sy * sy >= r * r) continue;
+                    const on = boxes.some((b) => {
+                      const dx = cx - Math.max(b.x0, Math.min(cx, b.x1));
+                      const dy = cy - Math.max(b.y0, Math.min(cy, b.y1));
+                      return dx * dx + dy * dy < r * r;
+                    });
+                    if (on)
+                      out.push(
+                        `${at}: "${el.textContent.replace(/\s+/g, ' ')}"${el.dataset.off ? ` (chip ${el.dataset.off})` : ''} on socket ${x},${y}`,
+                      );
+                  }
+              }
+              return out;
+            },
+            { at: `${id} ${at}`, blocked: puzzleFor(id).blocked, R: cellRect(S) as Rect },
+          ),
         );
+      };
       const dense: MachineId[] = [];
       for (const id of MACHINE_IDS) {
         await open(page, id);
@@ -375,6 +431,124 @@ for (const vp of PHONES) {
       await waitFrames(page, 4);
       problems.push(...(await covered(id, 'panned')));
       expect(await hint()).not.toContain('Drag to look around');
+      expect(problems).toEqual([]);
+    });
+
+    // mobile-7-zoom: the zoomed view keeps its context. Edge arrows a thumb can hit, each tap
+    // one step; a minimap while zoomed (hidden at the whole board), a tap on it looks there;
+    // a magnifier on the board at the whole board; the Holding pill never touches Menu.
+    test(`arrows, minimap, badge and the Holding pill (${vp.name})`, async ({ page }) => {
+      await insets(page, vp.inset);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(DEV_URL);
+      await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+        timeout: 30_000,
+      });
+      await page.evaluate(() => {
+        document.dispatchEvent(
+          new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }),
+        );
+        const g = (window as G).__game;
+        g.save.update((d: G) => {
+          d.flags.hallIntro = true;
+          d.settings.captionSpeed = 'instant';
+        });
+        g.flow.continueGame();
+      });
+      await expect(page.locator('.tc-overlay')).toHaveAttribute('data-phone', '');
+      const problems: string[] = [];
+      const cam = async () => (await camera(page)).c;
+      const cut = async () => {
+        const { W, c } = await camera(page);
+        return croppedProps(W, c);
+      };
+
+      // The Holding pill, every gem in hand, on a light board and the densest.
+      for (const id of ['splitter-mill', 'the-last-rune'] as MachineId[]) {
+        await open(page, id);
+        const { ob, k } = await scale(page);
+        const L = await layout(page);
+        for (const slot of L.tray) {
+          await page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);
+          await waitFrames(page, 4);
+          const pill = await page.locator('.lr-altar-holding').boundingBox();
+          const menu = await page.locator('.lr-hud-menu').boundingBox();
+          if (!pill || !menu) problems.push(`${id} ${slot.gem}: no pill or Menu`);
+          else if (pill.y < menu.y + menu.height && pill.y + pill.height > menu.y) {
+            const gap = menu.x - (pill.x + pill.width);
+            if (gap < 8) problems.push(`${id} ${slot.gem}: pill ${gap.toFixed(1)}px from Menu`);
+          }
+          await page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);
+          await waitFrames(page, 2);
+        }
+      }
+
+      // The Last Rune (still open): the badge shows at the whole board; a tap on it zooms.
+      const { ob, k } = await scale(page);
+      const badge = page.locator('.lr-zoom-badge');
+      const map = page.locator('.lr-zoom-map');
+      await expect(badge).toBeVisible();
+      await expect(map).toBeHidden();
+      await badge.tap();
+      await waitFrames(page, 20);
+      expect((await cam()).z, 'the badge zooms in').toBeGreaterThan(1);
+      await expect(badge).toBeHidden();
+      expect(await cut(), 'zoomed in: no prop half-cropped').toEqual([]);
+
+      // The minimap: visible, clear of Strike, and a tap on its far corner looks there.
+      await expect(map).toBeVisible();
+      const mb = (await map.boundingBox())!;
+      const sb = (await page.locator('[data-action="strike"]').boundingBox())!;
+      if (mb.x + mb.width > sb.x - 4) problems.push('minimap runs into Strike');
+      if (mb.y + mb.height > ob.y + ob.height + 1) problems.push('minimap off the screen');
+      for (const [fx, fy] of [
+        [0.97, 0.97],
+        [0.03, 0.03],
+      ]) {
+        const c0 = await cam();
+        await page.touchscreen.tap(mb.x + mb.width * fx!, mb.y + mb.height * fy!);
+        await waitFrames(page, 20);
+        const c1 = await cam();
+        if (Math.hypot(c1.ox - c0.ox, c1.oy - c0.oy) < 1)
+          problems.push(`a tap on the minimap at ${fx},${fy} did not move the view`);
+        const c = await cut();
+        if (c.length) problems.push(`after the minimap tap: props ${c} half-cropped`);
+      }
+
+      // Edge arrows: ≥ 28 CSS px, and each tap pans the way it points, settled.
+      let tapped = 0;
+      for (const side of ['e', 's', 'w', 'n', 'e', 's']) {
+        const a = page.locator(`.lr-zoom-edge[data-side="${side}"]:not([hidden])`);
+        if (!(await a.count())) continue;
+        tapped++;
+        const b = (await a.boundingBox())!;
+        if (b.width < 28 || b.height < 28)
+          problems.push(`arrow ${side} ${b.width.toFixed(0)}×${b.height.toFixed(0)}px`);
+        const c0 = await cam();
+        await a.tap();
+        await waitFrames(page, 20);
+        const c1 = await cam();
+        const dx = c1.ox - c0.ox;
+        const dy = c1.oy - c0.oy;
+        const ok = { n: dy > 1, s: dy < -1, e: dx < -1, w: dx > 1 }[side as 'n' | 's' | 'e' | 'w'];
+        if (!ok) problems.push(`arrow ${side} moved the view by ${dx.toFixed(0)},${dy.toFixed(0)}`);
+        const c = await cut();
+        if (c.length) problems.push(`after arrow ${side}: props ${c} half-cropped`);
+        // Arrows sit in the gutter, off the cells.
+        const { W } = await camera(page);
+        const R = cellRect(W);
+        const ax = (b.x - ob.x) / k;
+        const ay = (b.y - ob.y) / k;
+        if (ax < R.x1 && ax + b.width / k > R.x0 && ay < R.y1 && ay + b.height / k > R.y0)
+          problems.push(`arrow ${side} over the cells`);
+      }
+      expect(tapped, 'some edge arrow shows while zoomed').toBeGreaterThan(1);
+
+      // Back to the whole board: the minimap hides, the badge returns.
+      await page.locator('[data-action="zoom"]').tap();
+      await waitFrames(page, 20);
+      await expect(map).toBeHidden();
+      await expect(badge).toBeVisible();
       expect(problems).toEqual([]);
     });
   });

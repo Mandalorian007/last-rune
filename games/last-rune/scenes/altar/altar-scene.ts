@@ -110,15 +110,17 @@ import { arrivalNudges, firstSentence, type NewGems, newGems } from './teach';
 import {
   blockRect,
   type Cam,
+  cellRect,
   FIT,
   needsZoom,
   PAN_CSS,
   panBy,
+  settleCam,
   viewRect,
   ZoomCamera,
   zoomAt,
 } from './zoom';
-import { ZoomUi } from './zoom-ui';
+import { keepClearOfMenu, ZoomUi } from './zoom-ui';
 
 type Mode = 'edit' | 'strike' | 'result';
 
@@ -1085,6 +1087,14 @@ export class AltarScene implements GameScene {
       this.holdingEl.hidden = false;
     } else this.holdingEl.hidden = true;
     this.titleEl.toggleAttribute('data-holding', !!inHand && !!L.phone);
+    // mobile-7-zoom: a long gem name must not run the pill into Menu.
+    if (L.phone && this.dom.isConnected)
+      keepClearOfMenu(
+        this.holdingEl,
+        this.ctx.ui.root.querySelector('.lr-hud-menu'),
+        this.ctx.ui.scale,
+      );
+    this.zoomMapGems();
     this.puzzle.machines.forEach((m, i) => {
       const el = this.needs[i]!;
       if (this.mode === 'edit' || !this.result) {
@@ -2901,9 +2911,44 @@ export class AltarScene implements GameScene {
     const on = this.zoomable;
     this.dom.toggleAttribute('data-zoomable', on);
     if (!on) return;
-    this.zoomUi = new ZoomUi(this.dom, this.actionsEl, () => this.zoomToggle());
-    this.zoomUi.setSockets((x, y) => !this.board.isBlocked({ x, y }));
+    this.zoomUi = new ZoomUi(this.dom, this.actionsEl, {
+      onTap: () => this.zoomToggle(),
+      // An arrow or the minimap: eased (and remembered), or at once while a finger drags the map.
+      go: (c, ease) => {
+        if (this.mode !== 'edit') return;
+        if (ease) return this.zoomTo(c);
+        this.zoomCam.set(c);
+        this.zoomLast = c;
+        this.zoomApply();
+      },
+      measure: (el) => {
+        const css = this.view.layout.phone?.cssPx ?? 1;
+        const o = this.ctx.ui.root.getBoundingClientRect();
+        const r = el.getBoundingClientRect();
+        return {
+          x0: (r.left - o.left) * css,
+          y0: (r.top - o.top) * css,
+          x1: (r.right - o.left) * css,
+          y1: (r.bottom - o.top) * css,
+        };
+      },
+      strike: this.strikeBtn,
+    });
+    this.zoomUi.setSockets(this.view.world, (x, y) => !this.board.isBlocked({ x, y }));
+    this.zoomMapGems();
     this.zoomApply();
+  }
+
+  /** The minimap's gems: the puzzle's fixed ones and every one placed. */
+  private zoomMapGems(): void {
+    const ui = this.zoomUi;
+    if (!ui) return;
+    const gems = [...this.puzzle.fixed, ...this.board.placements].map((p) => ({
+      x: p.cell.x,
+      y: p.cell.y,
+      gem: p.gem,
+    }));
+    ui.mapGems(this.view.world, gems, gems.map((g) => `${g.x},${g.y},${g.gem}`).join(';'));
   }
 
   private zoomReset(): void {
@@ -2951,7 +2996,7 @@ export class AltarScene implements GameScene {
     this.view.setZoom(c);
     const W = this.view.world;
     this.zoomUi?.placeLabels(W, c);
-    this.zoomUi?.placeEdges(W, c);
+    this.zoomUi?.place(W, c);
   }
 
   private zoomTick(dt: number): void {
@@ -3017,7 +3062,8 @@ export class AltarScene implements GameScene {
       }
       this.zoomPress = null;
       if (zp.pan) {
-        this.zoomLast = { ...this.zoomCam.cur };
+        // Let go: the view settles where the source and gauges show whole (zoom.ts).
+        this.zoomTo(settleCam(W, this.zoomCam.cur));
         return true;
       }
       if (zp.own && !zp.fit) this.zoomTap(zp.x, zp.y);
@@ -3055,7 +3101,12 @@ export class AltarScene implements GameScene {
     // Zoomed: the editing rules keep the presses that wait for the lift (aiming a held gem,
     // or a placed gem with an empty hand); the rest wait here for a still tap.
     const hand = this.hand;
-    const cell = hand && !hand.from ? snapCell(S, p.x, p.y, this.aimable) : cellAt(S, p.x, p.y);
+    // The gutter round the cells (arrows, chips) is not the board: a press there only pans.
+    const cell = !at(cellRect(W), p.x, p.y)
+      ? null
+      : hand && !hand.from
+        ? snapCell(S, p.x, p.y, this.aimable)
+        : cellAt(S, p.x, p.y);
     const scene = !!cell && ((!!hand && !hand.from) || (!hand && !!this.board.at(cell)));
     this.zoomPress = { x: p.x, y: p.y, cam, own: !scene, pan: false, fit: false };
     if (!scene) this.keyboard = false;
@@ -3079,10 +3130,17 @@ export class AltarScene implements GameScene {
       } else if (!holding && !zoomTaught.panned) line = ZOOM_PAN_LINE;
     }
     this.setHintLine('zoom', line);
+    // The magnifier on the board's corner says where to tap (and pulses with the line).
+    const fit = this.zoomable && this.mode === 'edit' && !this.zoomCam.zoomed;
+    this.zoomUi?.setBadge(fit, fit && line === ZOOM_IN_LINE);
+    const shown = this.hint.dataset.mode === 'slot' && this.hint.textContent === ZOOM_IN_LINE;
+    this.hint.toggleAttribute('data-zoomhint', shown);
   }
 
   /** A still tap on the zoomed board that no press was waiting for. */
   private zoomTap(x: number, y: number): void {
+    const r = cellRect(this.view.world);
+    if (x < r.x0 || x > r.x1 || y < r.y0 || y > r.y1) return;
     const cell = cellAt(this.view.layout, x, y);
     if (!cell) return;
     if (this.hand) this.placeHand(cell);
@@ -3815,7 +3873,12 @@ export class AltarScene implements GameScene {
     // 2. FUSE's bubble: over his head, its bottom at least 10 px above Strike, and never left
     // of the lane (so it clears the labels too).
     const f = this.view.fuse;
-    const strikeTop = (this.strikeBtn.getBoundingClientRect().top - this.overlayTop()) * css;
+    // Zoomed, the minimap stands in the column's foot: the bubble keeps above it too.
+    const mapTop = this.zoomUi?.mapTop ?? Number.POSITIVE_INFINITY;
+    const strikeTop = Math.min(
+      (this.strikeBtn.getBoundingClientRect().top - this.overlayTop()) * css,
+      mapTop,
+    );
     const bubB = Math.min(f.y - 2.3 * f.scale - 6 * css, band.bubbleB, strikeTop - 10 * css);
     const capL = Math.max(band.bubbleL, band.colL + shift);
     const capKey = `${Math.round(bubB)},${capL}`;
@@ -3889,6 +3952,16 @@ export class AltarScene implements GameScene {
       yieldStrike = v.bottom > b.top && v.right > b.left && v.left < b.right && v.height > 0;
     }
     this.strikeBtn.toggleAttribute('data-yield', yieldStrike);
+    // A card too long for the room (the first asker shows whole) would run onto the minimap:
+    // the map steps aside until it is gone.
+    if (this.zoomUi && Number.isFinite(mapTop)) {
+      let low = 0;
+      for (const el of els.values()) {
+        if (el.hidden || el.dataset.arb === 'wait') continue;
+        low = Math.max(low, el.getBoundingClientRect().bottom);
+      }
+      this.zoomUi.setMapCrowded((low - this.overlayTop()) * css > mapTop - 4 * css);
+    }
   }
 
   /** The overlay's top edge in CSS px (design y 0). */
