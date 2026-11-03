@@ -34,7 +34,7 @@ import {
   phoneFrameFor,
 } from './layout';
 import type { StrikeTimeline } from './strike';
-import { type Cam, FIT, rendererCam, sameCam, transformLayout, viewRect } from './zoom';
+import { type Cam, cellRect, FIT, rendererCam, sameCam, transformLayout, viewRect } from './zoom';
 
 const W = DESIGN_W;
 const GOLD: RGBA = [LINEAR.gold[0] * 1.4, LINEAR.gold[1] * 1.4, LINEAR.gold[2] * 1.4, 1];
@@ -598,27 +598,54 @@ export class AltarView {
    * Zoomed: the wall again over the right-hand column and the left rail (the strips of screen
    * outside the board's view), so the zoomed board slides under them, with a thin rule where
    * it is cut. Drawn at screen positions through the inverse of the zoom.
+   *
+   * mobile-7-zoom: the gutter round the cells (arrows, chips of gauges out of view) dims the
+   * board under it, so it reads as "more board this way" and never as cells to tap, with a
+   * faint gold rule where the cells end.
    */
   private drawMasks(frame: Frame, z: Cam): void {
     const v = viewRect(this.world);
+    const R = cellRect(this.world);
     const wall = this.assets.wall;
     const dp = this.maskDp;
     const uv = this.maskUv;
     const H = DESIGN_H;
-    const strip = (x0: number, x1: number) => {
-      if (x1 - x0 < 0.5) return;
+    // A piece of the wall over the screen rect (x0, y0)–(x1, y1), optionally darkened.
+    const rect = (x0: number, y0: number, x1: number, y1: number, tint?: RGBA) => {
+      if (x1 - x0 < 0.5 || y1 - y0 < 0.5) return;
       uv[0] = x0 / W;
-      uv[1] = 0;
+      uv[1] = y0 / H;
       uv[2] = x1 / W;
-      uv[3] = 1;
+      uv[3] = y1 / H;
       dp.x = ((x0 + x1) / 2 - z.ox) / z.z;
-      dp.y = (H / 2 - z.oy) / z.z;
+      dp.y = ((y0 + y1) / 2 - z.oy) / z.z;
       dp.w = (x1 - x0) / z.z;
-      dp.h = H / z.z;
+      dp.h = (y1 - y0) / z.z;
       dp.uv = uv;
-      dp.tint = undefined;
+      dp.tint = tint;
       frame.sprite(wall.material, dp);
     };
+    const strip = (x0: number, x1: number) => rect(x0, 0, x1, H);
+    // The gutter: darker wall, so it reads as a frame and never as cells to tap.
+    const dark: RGBA = [0.5, 0.48, 0.55, 1];
+    rect(v.x0, 0, v.x1, R.y0, dark);
+    rect(v.x0, R.y1, v.x1, H, dark);
+    rect(v.x0, R.y0, R.x0, R.y1, dark);
+    rect(R.x1, R.y0, v.x1, R.y1, dark);
+    const g = 1.5 * (this.world.phone?.cssPx ?? 1);
+    const gold: RGBA = [0.91, 0.75, 0.42, 0.6];
+    const line = (x0: number, y0: number, x1: number, y1: number) =>
+      frame.sprite(null, {
+        x: ((x0 + x1) / 2 - z.ox) / z.z,
+        y: ((y0 + y1) / 2 - z.oy) / z.z,
+        w: (x1 - x0) / z.z,
+        h: (y1 - y0) / z.z,
+        tint: gold,
+      });
+    line(R.x0 - g, R.y0 - g, R.x1 + g, R.y0);
+    line(R.x0 - g, R.y1, R.x1 + g, R.y1 + g);
+    line(R.x0 - g, R.y0, R.x0, R.y1);
+    line(R.x1, R.y0, R.x1 + g, R.y1);
     strip(0, v.x0);
     strip(v.x1, W);
     // The cut edge: a dark rule so the board reads as running on under the column.

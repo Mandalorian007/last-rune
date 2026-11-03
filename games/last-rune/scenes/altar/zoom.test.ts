@@ -3,12 +3,20 @@ import { puzzleFor } from '../../content/puzzles';
 import { type AltarLayout, cellAt, cellCenter, computeLayout, snapCell } from './layout';
 import {
   blockRect,
+  type Cam,
+  cellRect,
+  centreOn,
   clampCam,
+  croppedProps,
   FIT,
+  GUTTER_CSS,
   needsZoom,
   offEdges,
   panBy,
+  propRects,
   rendererCam,
+  settleCam,
+  stepCam,
   toScreen,
   toWorld,
   transformLayout,
@@ -46,15 +54,21 @@ describe('needsZoom', () => {
 });
 
 describe('the camera', () => {
-  it('keeps the tapped point under the finger (unless it must clamp)', () => {
+  it('keeps the tapped point near the finger and in the cells (the settle nudges it)', () => {
     const v = viewRect(dense);
+    const r = cellRect(dense);
     const x = (v.x0 + v.x1) / 2;
     const y = (v.y0 + v.y1) / 2;
     const c = zoomAt(dense, x, y);
     const s = { x: 0, y: 0 };
     toScreen(c, x, y, s);
-    expect(s.x).toBeCloseTo(x, 5);
-    expect(s.y).toBeCloseTo(y, 5);
+    expect(s.x).toBeGreaterThan(r.x0);
+    expect(s.x).toBeLessThan(r.x1);
+    expect(s.y).toBeGreaterThan(r.y0);
+    expect(s.y).toBeLessThan(r.y1);
+    // No more than the biggest prop's zoomed span away.
+    const span = Math.max(...propRects(dense).map((p) => p.x1 - p.x0)) * c.z;
+    expect(Math.hypot(s.x - x, s.y - y)).toBeLessThanOrEqual(span * Math.SQRT2);
   });
   it('maps world to screen and back', () => {
     const c = { z: 2, ox: -300, oy: -120 };
@@ -65,8 +79,8 @@ describe('the camera', () => {
     toWorld(c, s.x, s.y, w);
     expect(w).toEqual({ x: 400, y: 500 });
   });
-  it('never pans the board away: the block keeps covering the view', () => {
-    const v = viewRect(dense);
+  it('never pans the board away: the block keeps covering the cells', () => {
+    const v = cellRect(dense);
     const b = blockRect(dense);
     let c = zoomAt(dense, v.x0, v.y0);
     c = panBy(dense, c, 5000, 5000);
@@ -74,6 +88,47 @@ describe('the camera', () => {
     c = panBy(dense, c, -9000, -9000);
     expect(c.ox + c.z * b.x1).toBeGreaterThanOrEqual(v.x1 - 1e-6);
     expect(c.oy + c.z * b.y1).toBeGreaterThanOrEqual(v.y1 - 1e-6);
+  });
+  it('frames the cells with a gutter while zoomed', () => {
+    const v = viewRect(dense);
+    const r = cellRect(dense);
+    expect(r.x0 - v.x0).toBeCloseTo(GUTTER_CSS * PHONE.cssPx, 6);
+    expect(v.y1 - r.y1).toBeCloseTo(GUTTER_CSS * PHONE.cssPx, 6);
+  });
+  it('a camera at rest never half-crops the source or a gauge', () => {
+    const v = viewRect(dense);
+    const z = zoomLevel(dense);
+    for (let i = 0; i <= 12; i++)
+      for (let j = 0; j <= 8; j++) {
+        const c: Cam = settleCam(dense, {
+          z,
+          ox: v.x0 - z * (v.x0 + ((v.x1 - v.x0) * i) / 12) + (v.x1 - v.x0) / 2,
+          oy: v.y0 - z * (v.y0 + ((v.y1 - v.y0) * j) / 8) + (v.y1 - v.y0) / 2,
+        });
+        expect(croppedProps(dense, c)).toEqual([]);
+        expect(clampCam(dense, c)).toEqual(c);
+      }
+  });
+  it('an edge arrow pans one step that way, settled', () => {
+    const b = propRects(dense)[0]!;
+    let c = centreOn(dense, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2);
+    const seen = new Set<string>();
+    for (const side of [1, 2, 3, 0] as const) {
+      const [n, e, s, w] = offEdges(dense, c);
+      const open = [n, e, s, w][side];
+      const next = stepCam(dense, c, side);
+      expect(croppedProps(dense, next)).toEqual([]);
+      if (open) {
+        // It moved the board the way the arrow points (the view looks that way).
+        if (side === 1) expect(next.ox).toBeLessThan(c.ox);
+        if (side === 3) expect(next.ox).toBeGreaterThan(c.ox);
+        if (side === 2) expect(next.oy).toBeLessThan(c.oy);
+        if (side === 0) expect(next.oy).toBeGreaterThan(c.oy);
+      }
+      seen.add(`${next.ox},${next.oy}`);
+      c = next;
+    }
+    expect(seen.size).toBeGreaterThan(1);
   });
   it('clamps a fit camera to FIT', () => {
     expect(clampCam(dense, { z: 1, ox: 40, oy: 9 })).toEqual(FIT);
