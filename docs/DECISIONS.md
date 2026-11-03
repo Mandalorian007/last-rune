@@ -92,3 +92,9 @@ Format: `D-NNN · date · decision · why · who`.
     - title and hall art fill the width up to the safe areas;
     - the ending chat on phones is a single conversation view with a channel header, not a sidebar.
   - Desktop and iPad stay unchanged. · PM
+  - *Addendum (mobile-3 review):*
+    - Every phone overlay closes with a ✕ top-right (36 px drawn / 44 px hit), plus Esc/Back.
+    - Destructive actions (Reset progress) are red and sit on their own row.
+    - `ViewContext.phone?: () => boolean` is accepted.
+    - The engine's `computeFillWidth` and `Surface.setFill` are generic, accepted engine API.
+    - The hangout on phones has no dead controls: an info badge, not a chevron, unless it actually navigates.
