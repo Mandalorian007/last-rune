@@ -45,10 +45,11 @@ export const CANDLE_LIGHT = {
   light: 1.0,
   /** Light radius multiplier on `CandleInstance.radius` (pools less light on slab and floor). */
   radius: 0.9,
-  /** Halo colour strength, bloom (emissive) and size in px (were 0.12, 0.6, 220). */
+  /** Halo colour strength, bloom (emissive), size in px and falloff (were 0.12, 0.6, 220, 4). */
   halo: 0.085,
   haloBloom: 0.45,
-  haloSize: 190,
+  haloSize: 170,
+  haloFalloff: 5,
   /** Wax lit by its own flame (scales the body shader's flame term). */
   wax: 0.7,
   /** Flame bloom (emissive; was 2.2). The core keeps its colour; it just spills less. */
@@ -168,7 +169,7 @@ export class CandleRenderer {
       tint[1] = LINEAR.candle[1] * k;
       tint[2] = LINEAR.candle[2] * k;
       tint[3] = 1;
-      p[0] = 4.0;
+      p[0] = CANDLE_LIGHT.haloFalloff;
       p[1] = 0;
       dp.emissive = CANDLE_LIGHT.haloBloom;
       dp.x = pt.x;
