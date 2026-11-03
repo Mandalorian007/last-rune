@@ -26,3 +26,30 @@ User (2026-11-03): "You can probably fully remove zoom features." PM call: remov
 - Commit to `ws/zoom-removal` and never merge. Log here.
 
 ## Log
+- 2026-11-03: zoom removed.
+  - **Deleted:** `scenes/altar/zoom.ts` (474), `zoom-ui.ts` (720), `zoom.test.ts` (218), `tests/e2e/mobile-zoom.spec.ts` (558), `scripts/playtest/mobile-6-zoom.spec.ts` (159) and `mobile-7-zoom.spec.ts` (209). That is about 2,340 lines.
+  - **Altar code:** about 560 more lines came out of `altar-scene.ts` and `altar-view.ts`.
+    - `altar-view.ts` has one layout again (`view.layout`; `world`, `setZoom` and `zoom` are gone), with no masks, gutter or inverse-zoom draws.
+    - `altar-scene.ts` loses the camera, the button/badge/minimap/arrows/chips (ZoomUi), tap-to-zoom, pan, drag-from-tray zoom-in, settle, Strike-zooms-out-first, map crowding in the column arbiter, the hint lines and their `zoomKey` cache busting.
+    - Finger aim and the loupe now work at the whole board on dense boards (the loupe was suppressed while zoom owned the taps).
+  - **Moved, not removed:** `keepClearOfMenu` (the Holding pill never touches Menu) moved into `altar-scene.ts`. It belongs to the pill, not the zoom.
+  - **moments.ts:** `HINT_SLOTS` is `['holding', 'howto']`.
+  - **Tests:**
+    - `mobile.spec.ts` gets back its pre-zoom loupe test ("a finger drag from the tray shows the loupe and lands on the meant socket", 667×375).
+    - `mobile-budget` drops the zoom-in/out steps.
+    - `mobile-moments` swaps the zoomed block for a whole-board "holding" check: Holding pill shown, hint not contradicting it, pill gone when the gem goes back.
+    - `mobile-2` capture shoots `10-the-last-rune-holding` in place of `-zoomed`.
+    - `mobile-chrome`/`mobile-hall`/`mobile-4-chrome` only had the hall camera's `f.zoom` (kept).
+  - **Kept zoom-named code:**
+    - in the altar: `LOUPE_MAG` passed as the engine Loupe's `zoom` option (the loupe stays);
+    - `cam.zoom = 1` resets of the renderer camera in `altar-view.ts` (the hall leaves its camera zoomed out on phones);
+    - the hall camera (`hall-frame.ts`), the FUSE portrait's `zoom` option, the engine camera/loupe, and the browser-zoom guards.
+  - **1.1 item (Phase 2 layout):** dense boards on phones place below 44 CSS px pitch at the whole board. No test asserts ≥44 px sockets any more; the loupe plus snap carries aiming. See captures for pitches.
+  - **Captures:** `scripts/playtest/zoom-removal.spec.ts` → `docs/design/screens/local/zoom-removal/<phone>/` (the-last-rune, capacitor-bay, lift-shaft: arrival, rest, holding, tap-placed, half-built; `pitch.json`).
+  - **Socket pitch at the whole board (CSS px), the-last-rune / capacitor-bay / lift-shaft:** se 26.4 / 35.1 / 35.1; iphone 28.9 / 37.9 / 37.9; promax 33.5 / 44.1 / 44.1; android 31.4 / 41 / 41.
+  - **Capture review (first-time player):**
+    - The left rail reads Back / Undo / Clear / Turn with no gap where Zoom was.
+    - The Holding pill sits left of Menu without touching it, and the tray tip sits under the tray.
+    - All three boards fit whole with every gauge and label visible. A tap at the whole board places the held gem on all 4 phones (the capture checks the save).
+    - Concern: on SE, the-last-rune's 26 px pitch is small for a finger. It works with the loupe and snap but is tight. This is the main 1.1 dense-board item.
+  - **Tests:** `pnpm check` (766 unit tests) and `pnpm build` are green. `pnpm test:e2e`: 114 passed, 2 skipped, 0 flaky.

@@ -26,9 +26,8 @@ describe('phone how-to line', () => {
 
   it("lets other workstreams' lines stand in the slot, held gem first", () => {
     expect(pickHint({ howto: 'Tap a gem, then a socket' })).toBe('howto');
-    expect(pickHint({ howto: 'x', zoom: 'Tap the board to zoom' })).toBe('zoom');
-    expect(pickHint({ howto: 'x', zoom: 'y', holding: 'Holding: Bend' })).toBe('holding');
-    expect(pickHint({ holding: null, zoom: '', howto: '' })).toBeNull();
+    expect(pickHint({ howto: 'x', holding: 'Holding: Bend' })).toBe('holding');
+    expect(pickHint({ holding: null, howto: '' })).toBeNull();
   });
 });
 

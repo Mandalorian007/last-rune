@@ -546,26 +546,10 @@ for (const vp of PHONES) {
               const cy = L.top + L.margin + L.pitch * (y + 0.5);
               await page.touchscreen.tap(ob.x + cx * k, ob.y + cy * k);
               await waitFrames(page, 4);
-              // mobile-6-zoom: a dense board zooms in on that tap; tap the socket where it now is.
-              const zoomed = () => page.evaluate(() => (window as G).__altarView.zoom.z > 1);
-              if (await zoomed()) {
-                const Z = await page.evaluate(
-                  () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
-                );
-                const zx = Z.left + Z.margin + Z.pitch * (x + 0.5);
-                const zy = Z.top + Z.margin + Z.pitch * (y + 0.5);
-                await page.touchscreen.tap(ob.x + zx * k, ob.y + zy * k);
-                await waitFrames(page, 4);
-              }
               placed = await page.evaluate(() => !(window as G).__altarView.held);
               if (!placed) {
                 await page.touchscreen.tap(ob.x + turner.x * k, ob.y + turner.y * k);
                 await waitFrames(page, 3);
-              }
-              // The budgets are for the whole board: back to it.
-              if (await zoomed()) {
-                await page.locator('[data-action="zoom"]').tap();
-                await waitFrames(page, 4);
               }
             }
           await waitFrames(page, 6);
