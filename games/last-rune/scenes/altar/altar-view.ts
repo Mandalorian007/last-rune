@@ -656,7 +656,7 @@ export class AltarView {
     const list = this.drawList;
     list.length = 0;
     for (const b of this.board) if (!b.hidden) list.push(b.g);
-    for (const t of this.tray) list.push(t);
+    for (const t of this.tray) if (t.size !== 0) list.push(t);
     a.gems.drawUnder(frame, list);
     a.gems.drawGems(frame, list);
 

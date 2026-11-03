@@ -485,7 +485,7 @@ export const LIT_SURFACE_WGSL = /* wgsl */ `${LIGHTS_WGSL}
 /**
  * Socket state overlay, drawn over a baked socket (quad = 2.6 × socket radius).
  * params.x = state (1 blocked, 2 highlighted, 3 wanted: dotted ring in the needed colour, 4 rim,
- * 5 plate, 6 collar: the iron ring and rivets of a fixed gem),
+ * 5 plate, 6 collar: the iron ring and rivets of a fixed gem, 7 legal: the held gem may go here),
  * params.y = seed, params.z = intensity/pulse (0..1+). tint = highlight colour (linear).
  */
 export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
@@ -638,6 +638,18 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
   }
 
   let tint = in.color.rgb;
+  if (state == 7) {
+    // Legal (mobile-6-board): a steady, crisp ring of light just outside the bowl, with a dark
+    // keyline either side so it reads on pale stone and on dark alike. No shimmer and no pulse:
+    // every socket the held gem may go in wears exactly the same ring.
+    let band = smoothstep(0.95, 1.0, r) * (1.0 - smoothstep(1.13, 1.18, r));
+    let key = smoothstep(0.84, 0.93, r) * (1.0 - smoothstep(1.2, 1.29, r));
+    let a = max(band, key * 0.7) * min(k, 1.0);
+    let c = mix(vec3f(0.015, 0.012, 0.01), tint, band / max(max(band, key * 0.7), 0.001));
+    o.color = vec4f(c, a);
+    o.emissive = vec4f(tint * band * in.emissive * 0.3 * k, a);
+    return o;
+  }
   if (state == 2) {
     // Highlighted: the rim glows, light pools in the bowl.
     let ring = exp(-pow((r - 1.0) * 16.0, 2.0)) * 0.8;

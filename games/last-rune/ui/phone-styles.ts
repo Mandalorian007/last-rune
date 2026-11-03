@@ -833,6 +833,43 @@ ${A} .lr-altar-hint, ${A} .lr-altar-lane > .lr-altar-hint { font-size: ${tpx(13)
 ${A} .lr-altar-lane .lr-altar-cap, ${A} .lr-cap-head { font-size: ${tpx(13)}; }
 /* mobile-5-board end */
 
+/* mobile-6-board ─ The board at a glance (D-040 gate review 3) ───────────────────────────
+   The gem in hand lifts in a gold ring and the title gives way to "Holding Bend". A used-up
+   gem leaves a ✓ in its slot and reads "placed". Disabled rail buttons keep a clear outline
+   with a dimmed label, so they read as "not now", not as missing. */
+${A} .lr-altar-slot[data-held] {
+  display: block;
+  box-shadow: 0 0 0 ${cpx(2.5)} #ffd77a, 0 0 0 ${cpx(4)} rgba(20,12,4,0.85), 0 ${cpx(4)} ${cpx(10)} ${cpx(2)} rgba(0,0,0,0.75),
+    0 0 ${cpx(14)} ${cpx(3)} rgba(255,205,110,0.5);
+  transform: translate(-50%, -50%) scale(1.22); background: radial-gradient(circle, rgba(255,215,122,0.16) 0 60%, transparent 72%);
+}
+${A} .lr-altar-count[data-held] { color: #fff6dd; border-color: #ffd77a; box-shadow: 0 0 0 1px #ffd77a; }
+${A} .lr-altar-title[data-holding] > :not(.lr-altar-holding) { visibility: hidden; }
+${A} .lr-altar-holding {
+  position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: ${cpx(5)}; white-space: nowrap;
+  padding: ${cpx(1)} ${cpx(8)} ${cpx(1)} ${cpx(5)}; border-radius: ${cpx(9)}; border: 1px solid #ffd77a;
+  background: rgba(36,26,10,0.92); color: #f4e6c4; font: 400 ${tpx(13)}/1.3 var(--tc-font-ui); letter-spacing: 0;
+  box-shadow: 0 ${cpx(1)} ${cpx(5)} rgba(0,0,0,0.7);
+}
+${A} .lr-altar-holding[hidden] { display: none; }
+${A} .lr-altar-holding b { color: #fff6dd; font-weight: 700; }
+${A} .lr-altar-holding i { width: ${cpx(9)}; height: ${cpx(9)}; border-radius: 50%; background: currentColor; box-shadow: 0 0 ${cpx(4)} currentColor; }
+/* All of a kind placed: a quiet ✓ where the gem sat (the ring the empty socket wears). */
+${A} .lr-altar-slot[data-empty] {
+  display: flex; align-items: center; justify-content: center; background: rgba(10,8,6,0.55);
+  box-shadow: inset 0 0 0 ${cpx(1.5)} rgba(214,196,164,0.55);
+  color: #d9c79e; font: 700 ${tpx(18)}/1 var(--tc-font-ui);
+}
+${A} .lr-altar-slot[data-empty]::after { content: '✓'; }
+${A} .lr-altar-count[data-empty] { opacity: 1; color: #bfae8a; border-color: rgba(191,174,138,0.45); text-decoration: none; }
+/* Disabled rail buttons: a 3:1 outline on the dark bar, the label dimmed (not faded away). */
+${P} .lr-altar-actions button:disabled, ${A} .lr-altar-turnbtn:disabled {
+  opacity: 1; filter: none; cursor: default; background: rgba(22,20,18,0.92);
+  border: 1px solid #8f826b; color: #8f826b; box-shadow: none;
+}
+${P} .lr-altar-actions button:disabled .lr-ph-ico, ${A} .lr-altar-turnbtn:disabled b { color: #8f826b; }
+/* mobile-6-board end */
+
 /* ── Title ──────────────────────────────────────────────────────────────── */
 ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cpx(2)} ${cpx(8)}; }
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }

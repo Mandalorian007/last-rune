@@ -42,6 +42,7 @@ import {
 import { getMachine } from '../../rules/progression';
 import type { Cell, GemKind, MachineId } from '../../rules/types';
 import { codexPages } from '../../ui/codex-data';
+import { CSS_PALETTE } from '../../ui/styles';
 import { scalePxCss } from '../../ui/text-scale';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, DANGER, GOLD } from './altar-view';
@@ -77,7 +78,7 @@ import {
   trayTipX,
 } from './layout';
 import { hintRetired, introPage, introSecs, phoneHint } from './moments';
-import { socketLooks } from './socket-looks';
+import { legalSockets, socketLooks } from './socket-looks';
 import {
   type Arrival,
   buildTimeline,
@@ -111,6 +112,8 @@ interface Press {
   dragging: boolean;
   /** Scene time at the press (a long touch shows the info card instead of picking up). */
   t: number;
+  /** A tap on the tray gem already in hand: lifting the finger puts it back (mobile-6-board). */
+  again?: boolean;
 }
 
 /** A touch held this long on a placed gem shows its card and selects it for ↻ (no pick-up). */
@@ -216,6 +219,8 @@ const CYAN: RGBA = [0.25, 1.3, 1.8, 1];
 /** Fixed gems wear cold iron, not gold: gold marks where the player acts. */
 const WHITE_HOT: RGBA = [2, 2, 2, 1];
 const OPEN_END: RGBA = [1.5, 1.05, 0.5, 1];
+/** The ring round every socket the held gem may go in: pale gold, bright on navy or stone. */
+const LEGAL_RING: RGBA = [1.7, 1.38, 0.78, 1];
 /** Conduit colours by outcome (match the need label's CSS colours). */
 const OUT_GLOW: Record<'exact' | 'under' | 'over' | 'flow', RGBA> = {
   exact: [0.35, 1.6, 2.2, 1],
@@ -327,6 +332,8 @@ export class AltarScene implements GameScene {
   // DOM
   private dom!: HTMLElement;
   private subtitle!: HTMLElement;
+  /** Phones (mobile-6-board): "Holding Bend" over the tray, in the title's place, while held. */
+  private holdingEl!: HTMLElement;
   private verdict!: HTMLElement;
   /** Screen-reader announcements (sr-only, always in the DOM so changes are read). */
   private announcer!: HTMLElement;
@@ -755,6 +762,7 @@ export class AltarScene implements GameScene {
     this.strikeBtn = btn('Strike', 'F', () => this.strike(), true, 'strike');
     const back = btn('Back', 'Esc', () => this.back(), false, 'back', '\u2190');
     this.subtitle = h('small');
+    this.holdingEl = h('span', { class: 'lr-altar-holding', 'aria-hidden': 'true', hidden: true });
     // The visible verdict is not a live region: it is unhidden and filled in the same frame,
     // which screen readers miss. `announcer` speaks it (and the needs) instead.
     this.verdict = h('div', {
@@ -862,6 +870,7 @@ export class AltarScene implements GameScene {
       { class: 'lr-altar-title', style: { left: `${L.titleX}px` } },
       h('h2', null, getMachine(this.machine).name),
       this.subtitle,
+      this.holdingEl,
     );
     this.actionsEl = h(
       'div',
@@ -954,13 +963,26 @@ export class AltarScene implements GameScene {
       // A keycap for the hotkey, then the count apart from it: "1 ×6" must never read "16".
       el.replaceChildren(
         h('kbd', { class: 'lr-k' }, String(i + 1)),
-        h('span', { class: 'lr-n' }, `×${n}`),
+        // Phones: a used-up gem leaves its slot to a ✓ and reads "placed", never locked.
+        h('span', { class: 'lr-n' }, n === 0 && L.phone ? 'placed' : `×${n}`),
       );
       el.toggleAttribute('data-empty', n === 0);
       this.slotEls[i]?.toggleAttribute('data-empty', n === 0);
-      el.toggleAttribute('data-held', this.hand?.kind === s.gem && !this.hand.from);
+      const held = this.hand?.kind === s.gem && !this.hand.from;
+      el.toggleAttribute('data-held', held);
+      this.slotEls[i]?.toggleAttribute('data-held', held);
       el.title = GEM_NAME[s.gem];
     });
+    const inHand = this.hand && !this.hand.from ? this.hand.kind : null;
+    if (inHand && L.phone) {
+      this.holdingEl.replaceChildren(
+        h('i', { style: { color: CSS_PALETTE[GEM_COLOUR[inHand]] } }),
+        'Holding ',
+        h('b', null, GEM_NAME[inHand]),
+      );
+      this.holdingEl.hidden = false;
+    } else this.holdingEl.hidden = true;
+    this.titleEl.toggleAttribute('data-holding', !!inHand && !!L.phone);
     this.puzzle.machines.forEach((m, i) => {
       const el = this.needs[i]!;
       if (this.mode === 'edit' || !this.result) {
@@ -1693,10 +1715,6 @@ export class AltarScene implements GameScene {
     this.previewSim = sim;
     this.updatePreviewChips();
     this.renderCaps(capacitorBeats(this.puzzle, placements, sim), sim, false);
-  }
-
-  private isLive(c: Cell): boolean {
-    return this.liveMask[c.y * this.view.layout.cols + c.x] === 1;
   }
 
   /** Chips for this strike's charge changes (and every hop into a machine). */
@@ -2884,6 +2902,7 @@ export class AltarScene implements GameScene {
             y: p.y,
             dragging: false,
             t: this.time,
+            again: true,
           };
         } else {
           this.takeFromTray(kind);
@@ -2968,6 +2987,9 @@ export class AltarScene implements GameScene {
         }
       } else if (press.origin === 'board' && press.cell) {
         if (!(finger && this.time - press.t >= HOLD_SECS)) this.actOnGem(press.cell);
+      } else if (press.origin === 'tray' && press.again && this.time - press.t < HOLD_SECS) {
+        // A second tap on the gem in hand puts it back (a long one shows its card instead).
+        this.dropHand();
       }
     }
     if (input.pressed('alt')) {
@@ -3137,16 +3159,7 @@ export class AltarScene implements GameScene {
     if (this.validRev === this.board.revision && this.validKind === kind) return this.validCells;
     this.validRev = this.board.revision;
     this.validKind = kind;
-    this.validCells.length = 0;
-    const L = this.view.layout;
-    for (let y = 0; y < L.rows; y++) {
-      for (let x = 0; x < L.cols; x++) {
-        const c = { x, y };
-        if (this.board.at(c) || this.board.fixedAt(c) || this.board.isBlocked(c)) continue;
-        if (this.board.check(c, kind).ok) this.validCells.push(c);
-      }
-    }
-    return this.validCells;
+    return legalSockets(this.puzzle, this.board.placements, kind, this.validCells);
   }
 
   /**
@@ -3525,6 +3538,8 @@ export class AltarScene implements GameScene {
       const n = this.board.remaining(s.gem);
       const held = this.hand && !this.hand.from && this.hand.kind === s.gem;
       t.state = n === 0 ? 'dim' : held || i === this.hoverSlot ? 'hover' : 'idle';
+      // Phones: all of a kind on the board, its tray gem goes (the slot shows a ✓).
+      t.size = n === 0 && L.phone ? 0 : s.size;
       const lift = this.view.trayLift[i]!;
       const fresh = (i === 0 && this.teaching) || this.teachTray.has(s.gem);
       const bob =
@@ -3572,9 +3587,10 @@ export class AltarScene implements GameScene {
         const i = L.tray.findIndex((s) => s.gem === hand.kind);
         const s = L.tray[Math.max(0, i)]!;
         pt.x = s.x;
-        // Phones: it rests lifted in its own slot, under the title (mobile-4-board).
+        // Phones: it rests lifted in its own slot, under the title (mobile-4-board), a size up
+        // inside its gold ring, so the gem in hand is unmistakable (mobile-6-board).
         pt.y = L.phone ? s.y : s.y - 70;
-        if (L.phone) size = s.size;
+        if (L.phone) size = Math.round(s.size * 1.16);
       }
     }
     this.showRefusal(refused ? cell : null, refused);
@@ -3643,11 +3659,9 @@ export class AltarScene implements GameScene {
       }
     }
     if (this.mode === 'edit' && this.hand && !this.hand.from) {
-      // Every socket the held gem would go in hums quietly, so legal moves read at a glance.
-      // Sockets near the circuit hum clearly; the rest only whisper (they still take the gem).
-      const kind = this.hand.kind;
-      for (const c of this.validFor(kind))
-        v.mark(c.x, c.y, 'highlighted', HUM[kind], this.isLive(c) ? 0.45 : 0.1, 0);
+      // Every socket the held gem may go in wears the same steady ring (mobile-6-board): the
+      // ringed set is exactly the legal set, so legal moves read at a glance.
+      for (const c of this.validFor(this.hand.kind)) v.mark(c.x, c.y, 'legal', LEGAL_RING, 1, 0);
     }
     if (this.mode === 'edit' && PREVIEW_PATH && !this.teaching) {
       // Where the wire goes next: the socket the bolt would reach and fizzle in.
