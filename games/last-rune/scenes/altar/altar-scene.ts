@@ -92,6 +92,18 @@ import {
   strikeStory,
 } from './strike';
 import { arrivalNudges, firstSentence, type NewGems, newGems } from './teach';
+import {
+  blockRect,
+  type Cam,
+  FIT,
+  needsZoom,
+  PAN_CSS,
+  panBy,
+  viewRect,
+  ZoomCamera,
+  zoomAt,
+} from './zoom';
+import { ZoomUi } from './zoom-ui';
 
 type Mode = 'edit' | 'strike' | 'result';
 
@@ -242,6 +254,22 @@ export class AltarScene implements GameScene {
   private mode: Mode = 'edit';
   private hand: Hand | null = null;
   private press: Press | null = null;
+  // ── mobile-6-zoom: phones, dense boards (zoom.ts, zoom-ui.ts; see the zoom block below) ──
+  private zoomCam = new ZoomCamera();
+  private zoomUi: ZoomUi | null = null;
+  /** The last zoomed view (the Zoom button goes back to it). */
+  private zoomLast: Cam | null = null;
+  /** A finger on the board while zoomable: a tap, or a pan once it moves. */
+  private zoomPress: {
+    x: number;
+    y: number;
+    cam: Cam;
+    own: boolean;
+    pan: boolean;
+    fit: boolean;
+  } | null = null;
+  /** Strike waits for the view to reach the whole board. */
+  private zoomStrike = false;
   private cursor: Cell = { x: 0, y: 0 };
   /** Socket just filled with Enter; the next gem taken by key moves the cursor on from it. */
   private keyPlaced: Cell | null = null;
@@ -531,6 +559,7 @@ export class AltarScene implements GameScene {
 
   /** The board's view and every DOM label on it (exit, and a phone relayout). */
   private teardownView(): void {
+    this.zoomReset();
     this.view.dispose();
     this.loupe?.destroy();
     this.loupe = null;
@@ -918,8 +947,16 @@ export class AltarScene implements GameScene {
     }
     this.phoneCaption(true);
     this.ctx.ui.layers.hud.append(this.dom);
-    // Dev/e2e handle: the layout in use (tests tap cells and slots by it on phones).
-    if (import.meta.env.DEV) Object.assign(window, { __altarLayout: L, __altarView: this.view });
+    this.zoomSetup();
+    // Dev/e2e handle: the layout in use (tests tap cells and slots by it on phones), live: it
+    // is the zoomed view's screen layout while zoomed.
+    if (import.meta.env.DEV) {
+      Object.defineProperty(window, '__altarLayout', {
+        configurable: true,
+        get: () => this.view.layout,
+      });
+      Object.assign(window, { __altarView: this.view });
+    }
   }
 
   /**
@@ -1059,7 +1096,8 @@ export class AltarScene implements GameScene {
    * gauges and cards.
    */
   private placePhoneLabels(band: PhoneBand): void {
-    const L = this.view.layout;
+    // Laid out at the fitted view; zoomed, they follow their gauges (zoomLabels).
+    const L = this.view.world;
     const k = this.ctx.ui.scale;
     const ox = this.ctx.ui.root.getBoundingClientRect();
     const box = (el: HTMLElement) => {
@@ -1148,6 +1186,7 @@ export class AltarScene implements GameScene {
       el.toggleAttribute('data-left', x < sp.x);
       el.style.left = `${x}px`;
     });
+    this.zoomLabels(items, box);
   }
 
   /**
@@ -2290,6 +2329,8 @@ export class AltarScene implements GameScene {
 
   private strike(): void {
     if (this.mode === 'strike') return;
+    // Zoomed: back to the whole board first, so the strike and verdict are seen whole.
+    if (this.zoomOutFirst()) return;
     this.dropHand();
     if (this.mode === 'result') this.backToEdit();
     const placements = this.board.serialise();
@@ -2684,6 +2725,197 @@ export class AltarScene implements GameScene {
     }
   }
 
+  // ── mobile-6-zoom ──────────────────────────────────────────────────────────
+  // Phones whose fitted sockets are under 44 CSS px (zoom.ts): a tap on the board zooms in
+  // around it, a drag pans, the rail's button shows the whole board, Strike goes back to it.
+  // One camera (`view.setZoom`) moves the drawing, the screen layout (taps, labels) and this.
+
+  /** This board gets the zoomed view. */
+  private get zoomable(): boolean {
+    return needsZoom(this.view.world);
+  }
+
+  /** Zoomable and at the whole board (taps on the board zoom; nothing is aimed). */
+  private get zoomFit(): boolean {
+    return this.zoomable && !this.zoomCam.zoomed;
+  }
+
+  /** Changes with the view, for DOM read-outs placed on the board. */
+  private get zoomKey(): string {
+    const c = this.view.zoom;
+    return c.z === 1 ? '' : `@${c.z.toFixed(3)},${c.ox.toFixed(1)},${c.oy.toFixed(1)}`;
+  }
+
+  private zoomSetup(): void {
+    this.zoomUi?.dispose();
+    this.zoomUi = null;
+    const on = this.zoomable;
+    this.dom.toggleAttribute('data-zoomable', on);
+    if (!on) return;
+    this.zoomUi = new ZoomUi(this.dom, this.actionsEl, () => this.zoomToggle());
+    this.zoomApply();
+  }
+
+  private zoomReset(): void {
+    this.zoomUi?.dispose();
+    this.zoomUi = null;
+    this.zoomCam = new ZoomCamera();
+    this.zoomPress = null;
+    this.zoomStrike = false;
+  }
+
+  private zoomTo(c: Cam): void {
+    this.zoomCam.go(c, this.ctx.settings.reducedMotion);
+    if (c.z > 1) this.zoomLast = c;
+    this.zoomUi?.setZoomed(c.z > 1);
+    this.zoomApply();
+  }
+
+  /** The rail button: the whole board, or back in (where the player last was, else the storm). */
+  private zoomToggle(): void {
+    if (this.mode === 'strike') return;
+    if (this.zoomCam.zoomed) {
+      this.zoomTo(FIT);
+      return;
+    }
+    const W = this.view.world;
+    const at = { x: 0, y: 0 };
+    cellCenter(W, W.storm.inner, at);
+    this.zoomTo(this.zoomLast ?? zoomAt(W, at.x, at.y));
+  }
+
+  /** Strike while zoomed: zoom out, and strike once the whole board shows. */
+  private zoomOutFirst(): boolean {
+    if (!this.zoomable || (!this.zoomCam.zoomed && !this.zoomCam.moving)) return false;
+    this.zoomStrike = true;
+    this.dropHand();
+    this.zoomTo(FIT);
+    return true;
+  }
+
+  private zoomApply(): void {
+    const c = this.zoomCam.cur;
+    this.view.setZoom(c);
+    const W = this.view.world;
+    this.zoomUi?.placeLabels(W, c);
+    this.zoomUi?.placeEdges(W, c);
+  }
+
+  private zoomTick(dt: number): void {
+    if (!this.zoomable) return;
+    if (this.zoomCam.update(dt)) this.zoomApply();
+    if (this.zoomStrike && !this.zoomCam.moving) {
+      this.zoomStrike = false;
+      this.strike();
+    }
+  }
+
+  /** placePhoneLabels just laid the cards out at the fitted view. */
+  private zoomLabels(
+    items: [HTMLElement, PropSpot][],
+    box: (el: HTMLElement) => { l: number; r: number; t: number; b: number },
+  ): void {
+    if (!this.zoomUi) return;
+    this.zoomUi.record(items, (el) => {
+      const b = box(el);
+      return { x0: b.l, y0: b.t, x1: b.r, y1: b.b };
+    });
+    this.zoomUi.placeLabels(this.view.world, this.zoomCam.cur);
+  }
+
+  /**
+   * A finger on a zoomable board, before the editing rules see it. True when it took the
+   * pointer this frame (the edit pass is skipped).
+   * - At the whole board, a tap on the board zooms in around it; so does a gem dragged from
+   *   the tray and let go over the board (it stays in hand). Nothing is placed at that size.
+   * - Zoomed, a press that moves `PAN_CSS` is a pan: any press it began (aiming a held gem,
+   *   on a placed gem) is let go, so nothing is placed or picked up. A still tap acts as ever.
+   */
+  private zoomGate(): boolean {
+    const input = this.ctx.input;
+    const p = input.pointer;
+    if (!this.zoomable || this.mode !== 'edit' || p.type === 'mouse') {
+      this.zoomPress = null;
+      return false;
+    }
+    const W = this.view.world;
+    const zp = this.zoomPress;
+    if (zp) {
+      if (input.held('select')) {
+        const dx = p.x - zp.x;
+        const dy = p.y - zp.y;
+        if (!zp.pan && !zp.fit && Math.hypot(dx, dy) > PAN_CSS * this.ctx.device.cssPx) {
+          zp.pan = true;
+          // The scene's own press (aim, or a placed gem) lets go: a pan places nothing.
+          if (!zp.own) this.press = null;
+        }
+        if (zp.pan) {
+          this.zoomCam.set(panBy(W, zp.cam, dx, dy));
+          this.zoomApply();
+          return true;
+        }
+        // Still a tap: the scene's press stays put (it would start a drag at 10 design px).
+        if (!zp.own && this.press) {
+          this.press.x = p.x;
+          this.press.y = p.y;
+        }
+        return zp.own;
+      }
+      this.zoomPress = null;
+      if (zp.pan) {
+        this.zoomLast = { ...this.zoomCam.cur };
+        return true;
+      }
+      if (zp.own && !zp.fit) this.zoomTap(zp.x, zp.y);
+      return zp.own;
+    }
+    const v = viewRect(W);
+    const b = blockRect(W);
+    const at = (r: { x0: number; y0: number; x1: number; y1: number }, x: number, y: number) =>
+      x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+    const S = this.view.layout;
+    // A gem dragged from the tray, let go over the board at the whole-board view: zoom there.
+    const press = this.press;
+    if (
+      input.released('select') &&
+      press?.origin === 'tray' &&
+      press.dragging &&
+      !this.zoomCam.zoomed &&
+      at(v, p.x, p.y) &&
+      at(b, p.x, p.y)
+    ) {
+      this.press = null;
+      this.zoomTo(zoomAt(W, p.x, p.y));
+      return true;
+    }
+    if (!input.pressed('select') || !p.inside || this.infoPin) return false;
+    if (!at(v, p.x, p.y) || traySlotAt(S, p.x, p.y) >= 0) return false;
+    const cam = { ...this.zoomCam.cur };
+    if (!this.zoomCam.zoomed) {
+      if (!at(b, p.x, p.y)) return false;
+      this.keyboard = false;
+      this.zoomTo(zoomAt(W, p.x, p.y));
+      this.zoomPress = { x: p.x, y: p.y, cam, own: true, pan: false, fit: true };
+      return true;
+    }
+    // Zoomed: the editing rules keep the presses that wait for the lift (aiming a held gem,
+    // or a placed gem with an empty hand); the rest wait here for a still tap.
+    const hand = this.hand;
+    const cell = hand && !hand.from ? snapCell(S, p.x, p.y, this.aimable) : cellAt(S, p.x, p.y);
+    const scene = !!cell && ((!!hand && !hand.from) || (!hand && !!this.board.at(cell)));
+    this.zoomPress = { x: p.x, y: p.y, cam, own: !scene, pan: false, fit: false };
+    if (!scene) this.keyboard = false;
+    return !scene;
+  }
+
+  /** A still tap on the zoomed board that no press was waiting for. */
+  private zoomTap(x: number, y: number): void {
+    const cell = cellAt(this.view.layout, x, y);
+    if (!cell) return;
+    if (this.hand) this.placeHand(cell);
+    else this.actOnGem(cell);
+  }
+
   // ── Frame ───────────────────────────────────────────────────────────────
 
   update(dt: number): void {
@@ -2697,8 +2929,9 @@ export class AltarScene implements GameScene {
     this.view.reduceFlashes = ctx.settings.reduceFlashes;
     if (this.relayoutPending && this.mode === 'edit' && !this.press) this.relayout();
 
+    this.zoomTick(dt);
     if (this.mode === 'strike') this.updateStrike(dt);
-    else this.updateEdit(dt);
+    else if (!this.zoomGate()) this.updateEdit(dt);
 
     if (this.mode === 'result') {
       this.resultAge += dt;
@@ -2787,6 +3020,7 @@ export class AltarScene implements GameScene {
       input.held('select') &&
       (press.dragging || press.origin === 'aim') &&
       L.pitch / dev.cssPx < LOUPE_PITCH_CSS &&
+      !this.zoomFit &&
       (!!this.hoverCell || !!cellAt(L, p.x, p.y - lift));
     if (!want) {
       if (this.loupe?.visible) {
@@ -2846,7 +3080,8 @@ export class AltarScene implements GameScene {
     // A finger holding a gem snaps to the nearest socket it could go in (layout snapCell).
     const aimAt = (x: number, y: number) =>
       finger && this.hand ? snapCell(L, x, y, this.aimable) : cellAt(L, x, y);
-    this.hoverCell = live ? aimAt(p.x, p.y - lift) : null;
+    // Zoomable at the fitted view, a finger aims at nothing: a tap there zooms (zoomGate).
+    this.hoverCell = live && !(finger && this.zoomFit) ? aimAt(p.x, p.y - lift) : null;
     this.hoverSlot = live && !lift ? traySlotAt(L, p.x, p.y) : -1;
 
     // ── Pointer ──
@@ -3431,9 +3666,9 @@ export class AltarScene implements GameScene {
         if (touches(seg.from) || touches(seg.to)) chips.push(seg);
       }
     }
-    const key = chips
-      .map((c) => `${c.from.x},${c.from.y}>${c.to.x},${c.to.y}=${c.charge}`)
-      .join(';');
+    const key =
+      chips.map((c) => `${c.from.x},${c.from.y}>${c.to.x},${c.to.y}=${c.charge}`).join(';') +
+      this.zoomKey;
     if (key === this.previewChipKey) return;
     this.previewChipKey = key;
     for (const el of this.previewChipEls) el.remove();
@@ -3478,7 +3713,8 @@ export class AltarScene implements GameScene {
         if (one[0]?.cause === 'facing') hops.push(seg);
       }
     }
-    const key = hops.map((c) => `${c.from.x},${c.from.y}>${c.to.x},${c.to.y}`).join(';');
+    const key =
+      hops.map((c) => `${c.from.x},${c.from.y}>${c.to.x},${c.to.y}`).join(';') + this.zoomKey;
     if (key === this.noGoKey) return;
     this.noGoKey = key;
     for (const el of this.noGoEls) el.remove();
