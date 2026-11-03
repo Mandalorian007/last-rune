@@ -49,6 +49,24 @@ describe('GraphicsController', () => {
     expect(t.timing).toBeGreaterThan(0);
   });
 
+  it('caps the scene pixel budget under the tier and keeps the dynamic scale', () => {
+    const { t, targets } = fakeTargets();
+    const g = new GraphicsController(targets);
+    g.setPreference('high');
+    g.capPixels(1920 * 1080);
+    expect(t.maxPixels).toBe(1920 * 1080);
+    g.capPixels(4000 * 3000); // above the tier: the tier wins
+    expect(t.maxPixels).toBe(TIERS.high.maxPixels);
+    g.capPixels(1920 * 1080);
+    g.setPreference('low'); // the tier's budget is already under the cap
+    expect(t.maxPixels).toBe(1280 * 720);
+    g.setPreference('high'); // the cap survives a tier change
+    expect(t.maxPixels).toBe(1920 * 1080);
+    t.scale = 0.8;
+    g.capPixels(null);
+    expect(t).toMatchObject({ maxPixels: TIERS.high.maxPixels, scale: 0.8 });
+  });
+
   it('auto stays high on a fast GPU', () => {
     const { t, targets } = fakeTargets();
     const g = new GraphicsController(targets);

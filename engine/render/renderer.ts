@@ -2,6 +2,7 @@ import type { BindingSet } from './bindings';
 import { installGpuErrorLogging } from './diagnostics';
 import { type Drawable, type DrawParams, Frame, type FrameSink } from './frame';
 import { FullscreenPass, type FullscreenPassDesc } from './fullscreen';
+import { type GpuPassTimes, GpuTimer, supportsTimestamps } from './gpu-timer';
 import {
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
@@ -80,14 +81,22 @@ export interface ResolutionOptions {
 /**
  * Frame timing, filled in when `Renderer.timingEvery > 0`.
  *
- * `gpuMs` is the time from submit to `queue.onSubmittedWorkDone()`. With vsync the queue is
- * normally idle at submit, so this approximates the GPU cost of the frame; when the GPU falls
- * behind it also includes queueing, which still reads as "over budget". It needs no
- * `timestamp-query` feature.
+ * With `timestamp-query` (`source: 'timestamp'`), `gpuMs` is the GPU time from the frame's
+ * first pass to its last, and `passes` splits it by pass label (`pre`, `scene`, plus whatever
+ * the post processor labels, e.g. `bloom`, `rays`, `composite`).
+ *
+ * Without it (`source: 'queue'`), `gpuMs` is the time from submit to
+ * `queue.onSubmittedWorkDone()`. With vsync the queue is normally idle at submit, so this
+ * approximates the GPU cost of the frame; when the GPU falls behind it also includes
+ * queueing, which still reads as "over budget". `passes` stays empty.
  */
 export interface FrameTiming {
   /** Last GPU sample (ms). */
   gpuMs: number;
+  /** Where `gpuMs` comes from. */
+  source: 'timestamp' | 'queue';
+  /** Per-pass GPU ms of the last timestamp sample (empty on `queue`). */
+  passes: GpuPassTimes;
   /** CPU time of the last frame, `beginFrame` → `endFrame` returning (ms). */
   cpuMs: number;
   /** GPU samples taken so far. */
@@ -161,7 +170,13 @@ export class Renderer implements FrameSink {
   readonly defaultSprite: Material;
   readonly stats: RenderStats = { drawCalls: 0, instances: 0, drawables: 0 };
   /** See `FrameTiming`. Only updated while `timingEvery > 0`. */
-  readonly timing: FrameTiming = { gpuMs: 0, cpuMs: 0, samples: 0 };
+  readonly timing: FrameTiming = { gpuMs: 0, source: 'queue', passes: {}, cpuMs: 0, samples: 0 };
+  /**
+   * Pass timer when the device has `timestamp-query`, else null. Passes encoded during
+   * `endFrame` (the post processor's included) label themselves with `gpuTimer.pass(label)`;
+   * it returns undefined except on sampled frames.
+   */
+  readonly gpuTimer: GpuTimer | null;
   /**
    * Sample GPU time every N frames (0 = off). One sample is in flight at a time; each costs one
    * `onSubmittedWorkDone` promise.
@@ -213,10 +228,12 @@ export class Renderer implements FrameSink {
   private readonly onTimingDone = (): void => {
     this.timingPending = false;
     if (this.destroyed) return;
-    const ms = performance.now() - this.timingSubmit;
-    this.timing.gpuMs = ms;
-    this.timing.samples++;
-    for (const fn of this.timingListeners) fn(ms);
+    this.emitGpuTime(performance.now() - this.timingSubmit);
+  };
+  private readonly onTimerResult = (): void => {
+    if (this.destroyed || !this.gpuTimer) return;
+    const r = this.gpuTimer.result;
+    if (r.totalMs > 0) this.emitGpuTime(r.totalMs);
   };
 
   constructor(gpu: RendererGpu, opts: RendererOptions = {}) {
@@ -227,6 +244,12 @@ export class Renderer implements FrameSink {
     this.logicalHeight = opts.logicalHeight ?? 1080;
     const device = this.device;
     installGpuErrorLogging(device);
+    this.gpuTimer = supportsTimestamps(device) ? new GpuTimer(device) : null;
+    if (this.gpuTimer) {
+      this.timing.source = 'timestamp';
+      this.timing.passes = this.gpuTimer.result.passes;
+      this.gpuTimer.onResult(this.onTimerResult);
+    }
 
     this.samplers = createSamplers(device);
     this.globalsLayout = device.createBindGroupLayout({
@@ -592,6 +615,9 @@ export class Renderer implements FrameSink {
     this.drawUniformSets.length = 0;
 
     const enc = device.createCommandEncoder({ label: 'frame' });
+    const timer = this.gpuTimer;
+    const sampled = this.timingEvery > 0 && this.wantSample();
+    if (timer && sampled && timer.begin()) timer.mark(enc);
     for (const fn of this.prePasses) fn(enc);
     for (let i = 0; i < this.cmdCount; i++) {
       const d = this.cmds[i]!.drawable;
@@ -601,6 +627,7 @@ export class Renderer implements FrameSink {
       }
     }
 
+    this.scenePassDesc.timestampWrites = timer?.pass('scene');
     const pass = enc.beginRenderPass(this.scenePassDesc);
     pass.setBindGroup(0, this.globalsBindGroup);
     let curPipeline: GPURenderPipeline | null = null;
@@ -673,22 +700,37 @@ export class Renderer implements FrameSink {
         clear: { r: 0, g: 0, b: 0, a: 1 },
       });
     }
+    timer?.resolve(enc);
     device.queue.submit([enc.finish()]);
-    if (this.timingEvery > 0) this.sampleTiming();
+    if (this.timingEvery > 0) {
+      const now = performance.now();
+      this.timing.cpuMs = now - this.frameStart;
+      if (timer) timer.afterSubmit();
+      else if (sampled) {
+        this.timingPending = true;
+        this.timingSubmit = now;
+        this.device.queue.onSubmittedWorkDone().then(this.onTimingDone, this.onTimingDone);
+      }
+    }
   }
 
-  private sampleTiming(): void {
-    const now = performance.now();
-    this.timing.cpuMs = now - this.frameStart;
-    if (this.timingPending || ++this.timingFrame < this.timingEvery) return;
+  /** Every `timingEvery` frames, when no sample is in flight. */
+  private wantSample(): boolean {
+    if (this.gpuTimer ? this.gpuTimer.busy : this.timingPending) return false;
+    if (++this.timingFrame < this.timingEvery) return false;
     this.timingFrame = 0;
-    this.timingPending = true;
-    this.timingSubmit = now;
-    this.device.queue.onSubmittedWorkDone().then(this.onTimingDone, this.onTimingDone);
+    return true;
+  }
+
+  private emitGpuTime(ms: number): void {
+    this.timing.gpuMs = ms;
+    this.timing.samples++;
+    for (const fn of this.timingListeners) fn(ms);
   }
 
   destroy(): void {
     this.destroyed = true;
+    this.gpuTimer?.destroy();
     this.sceneColor?.destroy();
     this.sceneEmissive?.destroy();
     this.instanceBuffer.destroy();

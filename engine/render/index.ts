@@ -13,6 +13,8 @@ export type { Drawable, DrawParams } from './frame';
 export { Frame } from './frame';
 export type { FullscreenEncodeOptions, FullscreenPassDesc } from './fullscreen';
 export { FullscreenPass } from './fullscreen';
+export type { GpuPassTimes, GpuTimerResult } from './gpu-timer';
+export { GpuTimer, supportsTimestamps } from './gpu-timer';
 export type { MaterialDesc } from './material';
 export {
   INSTANCE_BUFFER_LAYOUT,

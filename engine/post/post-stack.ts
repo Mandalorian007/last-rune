@@ -14,6 +14,7 @@ import {
 import { COMPOSITE_WGSL, DOWN_WGSL, PREFILTER_WGSL, RAYS_WGSL, UP_WGSL } from './shaders';
 
 const HDR: GPUTextureFormat = 'rgba16float';
+const COMPOSITE_CLEAR: GPUColorDict = { r: 0, g: 0, b: 0, a: 1 };
 
 /**
  * The painterly post stack: bloom (mip chain), floor mist, god rays, ACES tonemap, colour
@@ -38,6 +39,8 @@ export class PostStack implements PostProcessor {
   private readonly up: FullscreenPass;
   private readonly rays: FullscreenPass;
   private readonly composite: FullscreenPass;
+  /** Bilinear upscale of the scene-resolution composite (`quality.compositeAtScene`). */
+  private readonly upscale: FullscreenPass;
 
   private bloomTex: GPUTexture | null = null;
   private mipViews: GPUTextureView[] = [];
@@ -56,6 +59,10 @@ export class PostStack implements PostProcessor {
   private upGroups: GPUBindGroup[] = [];
   private raysGroup: GPUBindGroup | null = null;
   private compositeGroup: GPUBindGroup | null = null;
+  /** Scene-size composite target (display-encoded, swapchain format) and its upscale group. */
+  private ldrTex: GPUTexture | null = null;
+  private ldrView: GPUTextureView | null = null;
+  private upscaleGroup: GPUBindGroup | null = null;
   private readonly blendConstant: GPUColorDict = { r: 1, g: 1, b: 1, a: 1 };
   private readonly noClear = null;
   private readonly blender = new PostBlender();
@@ -101,6 +108,17 @@ export class PostStack implements PostProcessor {
       targets: [renderer.format],
       uniformBytes: bytes,
       textures: 4,
+    });
+    this.upscale = renderer.createFullscreenPass({
+      label: 'post-upscale',
+      targets: [renderer.format],
+      textures: 1,
+      wgsl: /* wgsl */ `
+@group(0) @binding(1) var samp: sampler;
+@group(0) @binding(2) var src: texture_2d<f32>;
+@fragment fn fs_main(in: FullscreenIn) -> @location(0) vec4f {
+  return vec4f(textureSampleLevel(src, samp, in.uv, 0.0).rgb, 1.0);
+}`,
     });
     this.resize(renderer.width, renderer.height);
   }
@@ -196,6 +214,7 @@ export class PostStack implements PostProcessor {
       this.upGroups[i] = this.up.createBindGroup([this.mipViews[i + 1]!]);
     }
     this.raysGroup = this.rays.createBindGroup([this.mipViews[0]!]);
+    this.freeLdr();
     this.boundColor = null;
     this.boundEmissive = null;
   }
@@ -221,12 +240,20 @@ export class PostStack implements PostProcessor {
     );
     const needBloomChain = s.bloom.enabled || (s.godRays.enabled && s.godRays.bloomSource > 0);
     this.composite.setUniforms(this.uniforms);
+    // GPU timing labels (undefined unless this frame is sampled; see Renderer.gpuTimer).
+    const timer = r.gpuTimer;
 
     if (needBloomChain) {
       this.prefilter.setUniforms(this.uniforms);
-      this.prefilter.encode(encoder, this.mipViews[0]!, { bindGroup: this.prefilterGroup! });
+      this.prefilter.encode(encoder, this.mipViews[0]!, {
+        bindGroup: this.prefilterGroup!,
+        timestampWrites: timer?.pass('bloom'),
+      });
       for (let i = 1; i < this.levels; i++) {
-        this.down.encode(encoder, this.mipViews[i]!, { bindGroup: this.downGroups[i]! });
+        this.down.encode(encoder, this.mipViews[i]!, {
+          bindGroup: this.downGroups[i]!,
+          timestampWrites: timer?.pass('bloom'),
+        });
       }
       const k = Math.min(Math.max(s.bloom.scatter, 0), 1);
       this.blendConstant.r = k;
@@ -237,6 +264,7 @@ export class PostStack implements PostProcessor {
           bindGroup: this.upGroups[i]!,
           clear: this.noClear,
           blendConstant: this.blendConstant,
+          timestampWrites: timer?.pass('bloom'),
         });
       }
     }
@@ -244,13 +272,53 @@ export class PostStack implements PostProcessor {
 
     if (s.godRays.enabled) {
       this.rays.setUniforms(this.uniforms);
-      this.rays.encode(encoder, this.raysView!, { bindGroup: this.raysGroup! });
+      this.rays.encode(encoder, this.raysView!, {
+        bindGroup: this.raysGroup!,
+        timestampWrites: timer?.pass('rays'),
+      });
     }
 
+    if (
+      this.quality.compositeAtScene &&
+      (this.width < r.outputWidth || this.height < r.outputHeight)
+    ) {
+      if (!this.ldrView) this.allocLdr();
+      this.composite.encode(encoder, this.ldrView!, {
+        bindGroup: this.compositeGroup!,
+        clear: COMPOSITE_CLEAR,
+        timestampWrites: timer?.pass('composite'),
+      });
+      this.upscale.encode(encoder, output, {
+        bindGroup: this.upscaleGroup!,
+        clear: COMPOSITE_CLEAR,
+        timestampWrites: timer?.pass('upscale'),
+      });
+      return;
+    }
     this.composite.encode(encoder, output, {
       bindGroup: this.compositeGroup!,
-      clear: { r: 0, g: 0, b: 0, a: 1 },
+      clear: COMPOSITE_CLEAR,
+      timestampWrites: timer?.pass('composite'),
     });
+  }
+
+  /** Scene-size composite target, made on first use (a resize or tier change frees it). */
+  private allocLdr(): void {
+    this.ldrTex = this.renderer.device.createTexture({
+      label: 'post-composite-scene',
+      size: [this.width, this.height],
+      format: this.renderer.format,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    this.ldrView = this.ldrTex.createView();
+    this.upscaleGroup = this.upscale.createBindGroup([this.ldrView]);
+  }
+
+  private freeLdr(): void {
+    this.ldrTex?.destroy();
+    this.ldrTex = null;
+    this.ldrView = null;
+    this.upscaleGroup = null;
   }
 
   private bindInputs(color: GPUTextureView, emissive: GPUTextureView): void {
@@ -272,5 +340,7 @@ export class PostStack implements PostProcessor {
     this.prefilter.destroy();
     this.rays.destroy();
     this.composite.destroy();
+    this.freeLdr();
+    this.upscale.destroy();
   }
 }

@@ -165,10 +165,17 @@ export interface PostQuality {
   raySamples: number;
   /** Floor-mist fbm octaves for the main layer (2..5); the second layer uses one fewer. */
   fogOctaves: number;
+  /**
+   * Run the composite (mist, tonemap, grade, dither) at the scene's resolution and upscale
+   * the result with one bilinear fetch, instead of compositing every output pixel. Only acts
+   * when the scene is smaller than the output (reduced resolution). Softer mist and dither;
+   * saves most of the composite's fill at high DPR.
+   */
+  compositeAtScene: boolean;
 }
 
 export function defaultPostQuality(): PostQuality {
-  return { maxBloomLevels: 8, raySamples: 64, fogOctaves: 5 };
+  return { maxBloomLevels: 8, raySamples: 64, fogOctaves: 5, compositeAtScene: false };
 }
 
 /** Uniform layout shared by all post shaders: 18 × vec4f. */

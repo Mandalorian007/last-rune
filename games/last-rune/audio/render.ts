@@ -35,15 +35,64 @@ export function postProcess(
   return chans;
 }
 
+/**
+ * Post-processing (reverb especially) is main-thread work, up to ~40 ms a sound. The offline
+ * renders of a group finish together, so run back to back their post steps make one long task
+ * that stalls the title for 100+ ms. Instead they queue, and a pump runs them in slices of
+ * about `SLICE_MS`, yielding to the event loop (a frame, an input) between slices.
+ */
+const SLICE_MS = 8;
+const postQueue: (() => void)[] = [];
+let pumping = false;
+
+function yieldTask(fn: () => void): void {
+  if (typeof MessageChannel === 'undefined') {
+    setTimeout(fn, 0);
+    return;
+  }
+  const ch = new MessageChannel();
+  ch.port1.onmessage = () => {
+    ch.port1.close();
+    fn();
+  };
+  ch.port2.postMessage(0);
+}
+
+function pump(): void {
+  const t0 = performance.now();
+  while (postQueue.length > 0) {
+    postQueue.shift()!();
+    if (performance.now() - t0 >= SLICE_MS) break;
+  }
+  if (postQueue.length > 0) yieldTask(pump);
+  else pumping = false;
+}
+
+function postInTurn(def: SoundDef, dry: AudioBuffer): Promise<Float32Array[]> {
+  return new Promise((resolve, reject) => {
+    postQueue.push(() => {
+      try {
+        const chans: Float32Array[] = [];
+        for (let c = 0; c < dry.numberOfChannels; c++) chans.push(dry.getChannelData(c));
+        resolve(postProcess(def, chans, dry.sampleRate));
+      } catch (e) {
+        reject(e);
+      }
+    });
+    if (!pumping) {
+      pumping = true;
+      yieldTask(pump);
+    }
+  });
+}
+
 /** Render a bank entry. Needs `OfflineAudioContext` (any browser); no user gesture. */
 export async function renderDef(
   def: SoundDef,
   createOffline?: OfflineContextFactory,
 ): Promise<AudioBuffer> {
   const dry = await renderSound({ ...def.spec, normalize: undefined }, createOffline);
-  const chans: Float32Array[] = [];
-  for (let c = 0; c < dry.numberOfChannels; c++) chans.push(dry.getChannelData(c));
-  const out = postProcess(def, chans, dry.sampleRate);
+  const out = await postInTurn(def, dry);
   const buf = new AudioBuffer({
     length: out[0]!.length,
     numberOfChannels: out.length,

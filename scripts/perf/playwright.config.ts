@@ -2,10 +2,12 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
 import base from '../../playwright.config';
-import { DEV_URL } from '../../tests/e2e/ports';
+import { DEV_URL, PREVIEW_PORT } from '../../tests/e2e/ports';
 
-// Frame-time harness (not part of `pnpm test:e2e`). Dev server only: the scenes are reached
-// through the DEV-only `window.__game` handle. See scripts/perf/README.md.
+// Frame-time harness (not part of `pnpm test:e2e`). Dev server: the scenes are reached through
+// the DEV-only `window.__game` handle. PERF_LOAD=1 runs the load harness instead, against
+// `vite preview` of an existing dist/ (run `pnpm build` first). See scripts/perf/README.md.
+const load = !!process.env.PERF_LOAD;
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const servers = Array.isArray(base.webServer)
   ? base.webServer
@@ -22,7 +24,7 @@ const uncapped = process.env.PERF_UNCAPPED
 export default defineConfig({
   ...base,
   testDir: '.',
-  testMatch: /.*\.spec\.ts/,
+  testMatch: load ? /load\.spec\.ts/ : /perf\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   timeout: 900_000,
@@ -41,5 +43,15 @@ export default defineConfig({
       },
     },
   ],
-  webServer: servers.filter((s) => s.url === DEV_URL).map((s) => ({ ...s, cwd: root })),
+  webServer: load
+    ? [
+        {
+          command: `pnpm exec vite preview --port ${PREVIEW_PORT} --strictPort`,
+          url: `http://localhost:${PREVIEW_PORT}`,
+          reuseExistingServer: false,
+          timeout: 60_000,
+          cwd: root,
+        },
+      ]
+    : servers.filter((s) => s.url === DEV_URL).map((s) => ({ ...s, cwd: root })),
 });
