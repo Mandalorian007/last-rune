@@ -227,7 +227,7 @@ Format: `D-NNN · date · decision · why · who`.
   - **Gate review 5 is cancelled.** The D-040 phone gate moves to Gate 2 and judges the new layout model, not more patches on the scaled overlay.
   - v1.0 is for desktop and iPad. The current phone build stays reachable as it is and is not advertised.
   - v1.0 is released per shipping-itch.md: GitHub Release, tags `v1.0.0` and `engine-v0.1` on the same commit, and Pages.
-  - **The itch upload stays manual, with the user (D-012).** It does not block Phase 1. Phase 1 starts once the tags and baselines are on main.
+  - **The itch upload stays manual, with the user (D-012).** It does not block Phase 1. ws/workspace may start on its branch early, but nothing from Phase 1 merges until the tags and baselines are on main.
   - **Committed baselines:** the regression baselines in `docs/design/screens/v1.0/` are an exception to "don't commit images". They cover every scene at 1280×720, 1920×1080 and iPad, with e2e timings and perf numbers. They are kept small, and nothing else in screens/ is committed.
 - **Defaults for the plan's open questions** (the user can override any of them):
   - package scope `@thunderclap/engine`;
