@@ -31,6 +31,8 @@ PERF_LABEL=high PERF_TIER=high PERF_DPR=2 pnpm exec playwright test -c scripts/p
 | `PERF_BASELINE` | Undo the perf-low changes in the page (no ending pixel cap, Low composites at output resolution) for back-to-back A/B runs. |
 | `PERF_LOAD` | Run `load.spec.ts` against a production preview instead (see below). |
 | `PERF_RUNS` | Load runs to average (default 3). |
+| `PERF_MOBILE` | Phone emulation: 852×393 CSS px at DPR 3, touch, coarse pointer (an iPhone 15-class landscape screen). Emulation changes pixels, DPR, input and media queries; it does **not** make the GPU slower. |
+| `PERF_MEM` | Run `mem.spec.ts` instead: decoded audio per sound, live GPU textures and buffers, JS heap, and ten landscape↔portrait flips (fails on a texture leak). Dev server. |
 
 Each scene line reads `frame | gpu | ts | cpu [passes] | scene WxH tier@scale budget MP`.
 

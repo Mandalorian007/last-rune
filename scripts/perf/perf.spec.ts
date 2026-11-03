@@ -11,6 +11,7 @@ import { DEV_URL, waitFrames } from '../../tests/e2e/helpers';
 //   PERF_LABEL=before PERF_DPR=2 pnpm exec playwright test -c scripts/perf/playwright.config.ts
 // Env:
 //   PERF_DPR=1|2          device pixel ratio (viewport is 1920x1080 CSS px; PERF_W/PERF_H)
+//   PERF_MOBILE=1         landscape phone emulation (852x393 at DPR 3, touch; see the config)
 //   PERF_CPU=4            Chromium CPU throttle rate
 //   PERF_TIER=auto|high|low   graphics setting seeded into the save (ignored by old builds)
 //   PERF_BREAKDOWN=1      also time each scene with fog / rays / bloom off and at half res
@@ -19,7 +20,8 @@ import { DEV_URL, waitFrames } from '../../tests/e2e/helpers';
 
 const OUT = resolve(process.env.PERF_OUT ?? 'test-results/perf');
 const LABEL = process.env.PERF_LABEL ?? 'run';
-const DPR = Number(process.env.PERF_DPR ?? 1);
+const MOBILE = !!process.env.PERF_MOBILE;
+const DPR = Number(process.env.PERF_DPR ?? (MOBILE ? 3 : 1));
 const CPU = Number(process.env.PERF_CPU ?? 1);
 const TIER = process.env.PERF_TIER ?? '';
 const BREAKDOWN = !!process.env.PERF_BREAKDOWN;
@@ -422,10 +424,17 @@ test('frame times per scene', async ({ page }) => {
   await stepEnding(page, 'flood', 120);
   await record(page, 'ending-flood', results, 30);
 
-  const file = join(OUT, `${LABEL}-dpr${DPR}-cpu${CPU}${TIER ? `-${TIER}` : ''}.json`);
+  const file = join(
+    OUT,
+    `${LABEL}${MOBILE ? '-mobile' : ''}-dpr${DPR}-cpu${CPU}${TIER ? `-${TIER}` : ''}.json`,
+  );
   writeFileSync(
     file,
-    JSON.stringify({ label: LABEL, dpr: DPR, cpu: CPU, tier: TIER, results }, null, 2),
+    JSON.stringify(
+      { label: LABEL, mobile: MOBILE, dpr: DPR, cpu: CPU, tier: TIER, results },
+      null,
+      2,
+    ),
   );
   console.log(`wrote ${file}`);
 });
