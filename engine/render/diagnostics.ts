@@ -28,8 +28,13 @@ export function onGpuError(fn: (message: string) => void): () => void {
   return () => listeners.delete(fn);
 }
 
+const logged = new WeakSet<GPUDevice>();
+
 /** Route uncaptured device errors (validation, OOM, internal) to `reportGpuError`. */
 export function installGpuErrorLogging(device: GPUDevice): void {
+  // Several renderers may share a device (e.g. a SnapshotRenderer); log each error once.
+  if (logged.has(device)) return;
+  logged.add(device);
   device.addEventListener('uncapturederror', (ev) => {
     const e = (ev as GPUUncapturedErrorEvent).error;
     const kind =

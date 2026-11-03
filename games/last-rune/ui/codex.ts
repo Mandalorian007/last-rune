@@ -1,16 +1,27 @@
 /**
- * The codex: a leather tome (CSS only) laid over whatever scene is running.
- * One page per gem, two pages per spread. Earned gems sit lit in a stone niche
- * with their rule, the maths, and FUSE's margin note. Unearned gems are a
- * chained niche naming the machine that teaches them.
+ * The codex: a leather tome (CSS) laid over whatever scene is running. One page per gem, two
+ * pages per spread. A page opens the first time the player sees its gem at an altar (fixed on
+ * the board or in the tray), marked "Seen" until the gem is earned, then "Yours". Open pages
+ * show the gem as it looks on the altar (rendered by the real gem material, see
+ * `art/gem-portraits.ts`) with the bolt drawn going in and out, the rule, the maths and FUSE's
+ * margin note. Gems not met yet are a chained niche.
  *
  * Keys inside the book: ←/→ turn the spread, Esc closes (engine/ui panel stack).
  */
 import { button, h, type PanelHandle, type PanelStack } from '@engine/ui';
 import type { GameSave } from '../game/save';
-import { markCodexSeen, progressOf } from '../game/save';
+import { markCodexSeen, metGems, progressOf } from '../game/save';
 import type { GemKind } from '../rules/types';
 import { type CodexPage, codexPages } from './codex-data';
+import { chipAt, diagramSvg, fizzleAt, GEM_DIAGRAMS } from './codex-diagram';
+
+/** Source of gem pictures (`art/gem-portraits.ts`); a CSS gem stands in without one. */
+export interface GemPictures {
+  canvas(gem: GemKind, cssPx: number): HTMLCanvasElement | null;
+}
+
+/** Design-px size of the gem plate (the overlay scales it with the window). */
+const PLATE_PX = 280;
 
 export interface CodexOptions {
   readonly panels: PanelStack;
@@ -20,6 +31,8 @@ export interface CodexOptions {
   /** Book open / close sound hooks. */
   readonly onOpen?: () => void;
   readonly onClose?: () => void;
+  /** Real gem pictures. Without it (tests, no GPU) the page shows a CSS stand-in. */
+  readonly pictures?: GemPictures;
 }
 
 export class Codex {
@@ -78,7 +91,7 @@ export class Codex {
 
   private pages(): CodexPage[] {
     const d = this.opts.save.get();
-    return codexPages(progressOf(d), d.codex.seen);
+    return codexPages(progressOf(d), d.codex.seen, metGems(d));
   }
 
   private turn(delta: number, book: HTMLElement): void {
@@ -110,7 +123,8 @@ export class Codex {
           {
             type: 'button',
             'aria-current': String(Math.floor(i / 2) === this.spread),
-            'aria-label': `${p.name}${p.unlocked ? '' : ' (locked)'}`,
+            'aria-label': navLabel(p, i),
+            dataset: { status: p.status },
             on: {
               click: () => {
                 this.spread = Math.floor(i / 2);
@@ -119,11 +133,8 @@ export class Codex {
               },
             },
           },
-          h('span', {
-            class: 'lr-dot',
-            style: { background: p.unlocked ? p.colour : '#6c7488' },
-          }),
-          p.name,
+          h('span', { class: 'lr-dot', style: { '--gem': p.colour } }),
+          p.unlocked ? p.name : '?',
         ),
       ),
     );
@@ -147,31 +158,32 @@ export class Codex {
   }
 
   private page(p: CodexPage, folio: number, isNew: boolean): HTMLElement {
+    const badge =
+      p.status === 'yours'
+        ? h('span', { class: 'lr-status', dataset: { status: 'yours' } }, 'Yours')
+        : p.status === 'seen'
+          ? h('span', { class: 'lr-status', dataset: { status: 'seen' } }, 'Seen')
+          : h('span', { class: 'lr-status', dataset: { status: 'unknown' } }, 'Not met yet');
+    const sub =
+      p.status === 'yours'
+        ? p.gem === 'channel'
+          ? 'In your tray from the start.'
+          : `In your tray. Earned at the ${p.taughtBy?.name ?? '?'}.`
+        : p.status === 'seen'
+          ? `Seen at an altar. Restore the ${p.taughtBy?.name ?? '?'} to earn it.`
+          : 'Opens when you first see this gem at an altar.';
     const title = h(
       'h3',
       null,
       p.unlocked ? p.name : '— — —',
-      h('small', null, p.unlocked ? 'Rune gem' : `Taught by the ${p.taughtBy?.name ?? '?'}`),
+      badge,
       isNew ? h('span', { class: 'lr-new' }, 'NEW') : null,
     );
-    const niche = h(
-      'div',
-      {
-        class: `lr-niche${p.unlocked ? '' : ' lr-niche--locked'}`,
-        style: { '--gem': p.colour },
-        'aria-hidden': 'true',
-      },
-      p.unlocked ? h('div', { class: 'lr-gem' }) : h('div', { class: 'lr-padlock' }),
-    );
+    const status = h('p', { class: 'lr-codex-status', dataset: { status: p.status } }, sub);
+    const art = p.unlocked ? this.figure(p) : this.chained();
     const body = p.unlocked
       ? [h('p', { class: 'lr-codex-rule' }, p.rule), h('div', { class: 'lr-codex-maths' }, p.maths)]
-      : [
-          h(
-            'p',
-            { class: 'lr-codex-locked' },
-            `An empty niche, chained shut. Restore the ${p.taughtBy?.name ?? 'right machine'} to earn this gem.`,
-          ),
-        ];
+      : [];
     const margin =
       p.unlocked && p.note
         ? h(
@@ -183,12 +195,74 @@ export class Codex {
         : h('aside', { class: 'lr-margin' });
     return h(
       'section',
-      { class: 'lr-codex-page', dataset: { gem: p.gem, locked: String(!p.unlocked) } },
+      {
+        class: 'lr-codex-page',
+        dataset: { gem: p.gem, locked: String(!p.unlocked), status: p.status },
+      },
       title,
-      niche,
+      status,
+      art,
       ...body,
       margin,
       h('div', { class: 'lr-codex-folio' }, `— ${folio} —`),
     );
   }
+
+  /** The gem as it sits on the altar, with the bolt going in and out of it. */
+  private figure(p: CodexPage): HTMLElement {
+    const d = GEM_DIAGRAMS[p.gem];
+    const pic = this.opts.pictures?.canvas(p.gem, PLATE_PX) ?? null;
+    if (pic) pic.className = 'lr-plate-gem';
+    const gem = pic ?? h('div', { class: 'lr-plate-gem lr-plate-gem--css' });
+    const bolt = h('div', { class: 'lr-plate-bolt' });
+    bolt.innerHTML = diagramSvg(d);
+    const chip = (side: Parameters<typeof chipAt>[0], charge: string, kind: 'in' | 'out') => {
+      const at = chipAt(side);
+      return h(
+        'span',
+        {
+          class: 'lr-plate-chip',
+          dataset: { kind },
+          style: { left: `${at.left}%`, top: `${at.top}%` },
+        },
+        charge,
+      );
+    };
+    return h(
+      'div',
+      {
+        class: 'lr-plate',
+        role: 'img',
+        'aria-label': `${p.name}. ${d.alt}`,
+        style: { '--gem': p.colour },
+        dataset: { real: String(pic !== null) },
+      },
+      gem,
+      bolt,
+      ...d.ins.map((a) => chip(a.side, a.charge, 'in')),
+      ...d.outs.map((a) => chip(a.side, a.charge, 'out')),
+      ...d.fizzle.map((side) => {
+        const at = fizzleAt(side);
+        return h('span', {
+          class: 'lr-plate-nogo',
+          style: { left: `${at.left}%`, top: `${at.top}%` },
+        });
+      }),
+    );
+  }
+
+  /** A gem not met yet: an empty niche, chained shut. */
+  private chained(): HTMLElement {
+    return h(
+      'div',
+      { class: 'lr-niche lr-niche--locked', 'aria-hidden': 'true' },
+      h('div', { class: 'lr-padlock' }),
+    );
+  }
+}
+
+function navLabel(p: CodexPage, i: number): string {
+  if (p.status === 'yours') return `${p.name}, yours`;
+  if (p.status === 'seen') return `${p.name}, seen, not yours yet`;
+  return `Page ${i + 1}, not met yet`;
 }

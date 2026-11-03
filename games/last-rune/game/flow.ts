@@ -18,7 +18,16 @@ import { type JournalPage, pagesUnlockedBy } from '../content/journal';
 import { getMachine, isComplete, isSolved, isUnlocked, solveMachine } from '../rules/progression';
 import type { Capability, MachineId } from '../rules/types';
 import { newlyUnlocked } from '../scenes/hall/hall-state';
-import { type GameSave, newGameData, progressOf, type SaveData, type SavedPlacement } from './save';
+import {
+  type GameSave,
+  gemsAt,
+  markGemsMet,
+  metGems,
+  newGameData,
+  progressOf,
+  type SaveData,
+  type SavedPlacement,
+} from './save';
 
 export type FlowState = 'boot' | 'title' | 'hall' | 'puzzle' | 'solve' | 'journal' | 'ending';
 
@@ -148,6 +157,14 @@ export class GameFlow<S> {
    */
   openPuzzle(machine: MachineId): boolean {
     if (this._state !== 'hall' || !this.canOpen(machine)) return false;
+    // Seeing a gem at the altar (fixed on the board or in the tray) opens its Codex page.
+    const met = metGems(this.save.get());
+    const seen = gemsAt(machine);
+    if (seen.some((g) => !met.includes(g))) {
+      this.save.update((d) => {
+        markGemsMet(d, seen);
+      });
+    }
     this.stack.push(this.scenes.puzzle(machine));
     this.set('puzzle', machine);
     return true;

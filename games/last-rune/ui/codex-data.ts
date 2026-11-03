@@ -8,13 +8,23 @@ import { granterOf, hasCapability, type ProgressState, socketColour } from '../r
 import { GEM_KINDS, type GemKind, type MachineId } from '../rules/types';
 import { CSS_PALETTE } from './styles';
 
+/**
+ * Where the player stands with a gem:
+ * - `unknown`: never met; the page is chained shut.
+ * - `seen`: met at an altar (fixed on a board or in a tray) but not earned yet. Page open.
+ * - `yours`: earned (Channel always is). Page open.
+ */
+export type CodexStatus = 'unknown' | 'seen' | 'yours';
+
 export interface CodexPage {
   readonly gem: GemKind;
   readonly name: string;
   /** CSS colour of the gem's glow. */
   readonly colour: string;
+  readonly status: CodexStatus;
+  /** The page is readable: the gem has been seen or is yours. */
   readonly unlocked: boolean;
-  /** Not yet opened since it was earned. */
+  /** Readable but not opened yet. */
   readonly fresh: boolean;
   readonly rule: string;
   readonly maths: string;
@@ -27,10 +37,20 @@ export function gemName(g: GemKind): string {
   return CODEX[g].name;
 }
 
-export function codexPages(state: ProgressState, seen: readonly GemKind[]): CodexPage[] {
+/**
+ * One page per gem. `opened` = pages already viewed (clears "new"); `met` = gems met at an
+ * altar (opens their page before they are earned).
+ */
+export function codexPages(
+  state: ProgressState,
+  opened: readonly GemKind[],
+  met: readonly GemKind[] = [],
+): CodexPage[] {
   return GEM_KINDS.map((gem) => {
     const cap = gem === 'channel' ? null : ({ type: 'gem', gem } as const);
-    const unlocked = cap === null || hasCapability(state, cap);
+    const owned = cap === null || hasCapability(state, cap);
+    const status: CodexStatus = owned ? 'yours' : met.includes(gem) ? 'seen' : 'unknown';
+    const unlocked = status !== 'unknown';
     const teacher = cap ? granterOf(cap) : undefined;
     const colour = cap
       ? CSS_PALETTE[socketColour(cap) as keyof typeof CSS_PALETTE]
@@ -39,8 +59,9 @@ export function codexPages(state: ProgressState, seen: readonly GemKind[]): Code
       gem,
       name: gemName(gem),
       colour,
+      status,
       unlocked,
-      fresh: unlocked && gem !== 'channel' && !seen.includes(gem),
+      fresh: unlocked && gem !== 'channel' && !opened.includes(gem),
       rule: CODEX[gem].rule,
       maths: CODEX[gem].maths,
       taughtBy: teacher ? { id: teacher.id, name: teacher.name } : null,

@@ -3,14 +3,54 @@ import { describe, expect, it } from 'vitest';
 import {
   createGameSave,
   defaultSave,
+  gemsAt,
   hasProgress,
   MIGRATIONS,
+  markGemsMet,
+  metGems,
   newGameData,
   progressOf,
   SAVE_GAME_ID,
   SAVE_VERSION,
   SaveV1,
 } from './save';
+
+describe('codex.met (gems seen at an altar)', () => {
+  it('lists fixed and tray gems at an altar', () => {
+    expect(gemsAt('furnace')).toContain('amplify');
+    expect(gemsAt('intake-desk')).toContain('bend');
+  });
+
+  it('adds each gem once and reports what was new', () => {
+    const d = defaultSave();
+    expect(markGemsMet(d, ['bend', 'channel'])).toEqual(['bend', 'channel']);
+    expect(markGemsMet(d, ['bend', 'amplify'])).toEqual(['amplify']);
+    expect(metGems(d)).toEqual(['bend', 'channel', 'amplify']);
+  });
+
+  it('backfills older saves without the field from altars already visited', () => {
+    const st = new MemoryStorage();
+    const a = createGameSave(opts(st));
+    a.update((d) => {
+      d.progress.solved = ['intake-desk'];
+      d.puzzles.furnace = { placements: [], attempts: 1 };
+      delete d.codex.met;
+    });
+    expect(SaveV1.validate(a.get())).toBeNull();
+    a.flush();
+    const b = createGameSave(opts(st));
+    const met = metGems(b.get());
+    expect(met).toContain('bend');
+    expect(met).toContain('amplify');
+    expect(met).not.toContain('gate');
+  });
+
+  it('starts empty on a new game', () => {
+    const d = defaultSave();
+    markGemsMet(d, ['gate']);
+    expect(metGems(newGameData(d, 5))).toEqual([]);
+  });
+});
 
 const opts = (storage: MemoryStorage) => ({
   storage,

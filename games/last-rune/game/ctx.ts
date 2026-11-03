@@ -20,6 +20,7 @@ import {
 import { PostStack } from '@engine/post';
 import { type Frame, Renderer } from '@engine/render';
 import { createOverlay, type Overlay, PadNav } from '@engine/ui';
+import { createGemPortraits } from '../art/gem-portraits';
 import { cathedralHallView } from '../art/hall/hall-view';
 import { stormTitleView } from '../art/hall/title-view';
 import { lightBudget } from '../art/materials/lights';
@@ -251,6 +252,8 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     onTurn: () => sfx('ui.page'),
     onOpen: () => sound.sfx.play('codexOpen'),
     onClose: () => sound.sfx.play('codexClose'),
+    // Baked on first open with the real gem material (one offscreen frame), then reused.
+    pictures: createGemPortraits(renderer),
   });
 
   // The stack hands scenes this object on enter; it is filled in below, before the first scene.
