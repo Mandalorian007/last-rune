@@ -1,9 +1,11 @@
 /**
  * Ending DOM styles (design px; the overlay scales). Injected once.
- * Title card, safety record, credits, end card and the post-credits clipboard.
+ * The hangout window (hangout-styles.ts), title card, safety record, credits, end card
+ * and the post-credits clipboard.
  */
 import { scaleFontSizes } from '../../ui/text-scale';
 import { HAND_FONT } from '../journal/journal-styles';
+import { HANGOUT_CSS } from './hangout-styles';
 
 const CSS = /* css */ `
 .tc-overlay { --lr-hand: ${HAND_FONT}; }
@@ -119,6 +121,6 @@ export function ensureEndingStyles(doc: Document): void {
   if (doc.getElementById('lr-ending-styles')) return;
   const el = doc.createElement('style');
   el.id = 'lr-ending-styles';
-  el.textContent = scaleFontSizes(CSS);
+  el.textContent = scaleFontSizes(HANGOUT_CSS + CSS);
   doc.head.append(el);
 }
