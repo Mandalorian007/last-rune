@@ -6,8 +6,8 @@
  * room-sized gold disc at the hall centre; the storm funnelling into it; the
  * door of light it always was; FUSE; the clipboard he drops; full-screen
  * washes (white-out, the warm light beyond the door, the gold flood).
- * DOM: title card, safety record, credits, end card, and the post-credits
- * clipboard page. FUSE's lines beyond the door are ordinary captions (D-032).
+ * DOM: the community hangout beyond the door (D-038, `hangout.ts`), title card,
+ * safety record, credits, end card, and the post-credits clipboard page.
  *
  * Directed by an async script over scene-time waits. A generation token makes
  * skip / exit cancel it cleanly. Skippable only after the first viewing.
@@ -18,7 +18,10 @@ import type { DrawParams, Frame, Material, RGBA } from '@engine/render';
 import { externalLink, h } from '@engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import { Fuse as FuseProp } from '../../art/props/fuse';
+import { createFusePortrait, type FusePortrait } from '../../art/props/fuse-portrait';
 import { PropLightRig } from '../../art/props/lighting';
+import { fuseModeForTier } from '../../audio';
+import { HANGOUT_SUMMARY, type HangoutStep } from '../../content/ending';
 import type { FuseLine } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
@@ -42,6 +45,7 @@ import {
 } from './ending-model';
 import { ensureEndingStyles } from './ending-styles';
 import { ENDING_MODE, ENDING_WGSL, RUNE_CENTRE } from './ending-wgsl';
+import { Hangout } from './hangout';
 
 /** Layout (design px). */
 export const ENDING_LAYOUT = {
@@ -238,8 +242,13 @@ export class EndingScene implements GameScene {
   private cardEl!: HTMLElement;
   private noteEl!: HTMLElement;
   private skipBtn: HTMLButtonElement | null = null;
-  /** The crowd far off in the light, while FUSE speaks from beyond the door. */
+  /** The crowd in the light, under the hangout. */
   private crowd: Voice | null = null;
+  /** The community hangout beyond the door (D-038), and FUSE's face for it. */
+  private hangout: Hangout | null = null;
+  private portrait: FusePortrait | null = null;
+  /** Screen readers hear the hangout as a short summary here. */
+  private srEl!: HTMLElement;
 
   // Post-credits idle.
   private idleFrom = -1;
@@ -320,6 +329,7 @@ export class EndingScene implements GameScene {
     this.abort.abort();
     this.ctx.fuse.hush();
     this.stopCrowd(0.4);
+    this.dropHangout();
     this.root?.remove();
     this.root = null;
     this.view.dispose();
@@ -386,12 +396,14 @@ export class EndingScene implements GameScene {
             this.storm.set(0.8, 2.5, t());
             this.aperture.set(0.1, 3, t());
           }
-          // Beyond the door, a longer breath between lines.
-          await this.wait(this._phase === 'beyond' ? 1.2 : 0.7);
+          await this.wait(0.7);
           break;
         }
         case 'direction':
           await this.cue(beat.cue, g);
+          break;
+        case 'hangout':
+          await this.playHangout(beat.steps, g);
           break;
         case 'title-card':
           await this.endScreen(g);
@@ -460,12 +472,16 @@ export class EndingScene implements GameScene {
         // The white warms to amber (slower with Reduce flashes); fog and rays ease away.
         this.screenWarm.set(1, this.calm ? 3.2 : 2.2, t);
         this.ctx.post.blendTo(BEYOND_POST, 2.2);
-        // Somewhere in the light, a lively crowd. Quiet: FUSE stays in front.
+        // In the light, a lively crowd, and the window it is coming from.
         this.crowd = this.ctx.sound.sfx.crowd(0.55, 3);
-        await this.wait(2.4);
+        await this.wait(1.2);
+        if (g !== this.gen) return;
+        this.openHangout();
         break;
       case 'flood':
         this._phase = 'flood';
+        // The window folds back into the light.
+        this.hangout?.close();
         this.stopCrowd(3.5);
         // The warmth eases in with the gold (slower with Reduce flashes).
         this.ctx.post.set(FLOOD_FROM);
@@ -485,10 +501,48 @@ export class EndingScene implements GameScene {
     this.crowd = null;
   }
 
+  // ── The hangout (D-038) ──────────────────────────────────────────────────
+
+  private openHangout(): void {
+    if (this.hangout) return;
+    const ctx = this.ctx;
+    this.portrait = createFusePortrait(ctx.renderer, { size: 64, zoom: 0.4 });
+    const live = this.gen;
+    this.hangout = new Hangout({
+      wait: (s) => this.wait(s),
+      now: () => this.time,
+      live: () => live === this.gen,
+      reducedMotion: ctx.settings.reducedMotion,
+      captionCps: ctx.settings.effective.captionCps,
+      voice: (text) => ctx.sound.fuse.onChar(fuseModeForTier('ending'), text),
+      pop: (kind) => ctx.sfx('ui.blip', kind === 'react' ? 0.55 : 0.8),
+      portrait: this.portrait,
+    });
+    this.root?.prepend(this.hangout.el);
+    this.hangout.open();
+    this.srEl.textContent = HANGOUT_SUMMARY.open;
+  }
+
+  private async playHangout(steps: readonly HangoutStep[], g: number): Promise<void> {
+    if (g !== this.gen) return;
+    this.openHangout();
+    await this.hangout?.play(steps);
+    if (g !== this.gen) return;
+    this.srEl.textContent = HANGOUT_SUMMARY.end;
+  }
+
+  private dropHangout(): void {
+    this.hangout?.destroy();
+    this.hangout = null;
+    this.portrait?.destroy();
+    this.portrait = null;
+  }
+
   /** Title card, safety record, credits, then the end card. */
   private async endScreen(g: number): Promise<void> {
     if (g !== this.gen) return;
     this._phase = 'credits';
+    this.dropHangout();
     this.titleEl.setAttribute('data-in', '');
     this.showForm();
     await this.wait(2.6);
@@ -563,6 +617,7 @@ export class EndingScene implements GameScene {
     this.flushWaits();
     this.ctx.fuse.hush();
     this.stopCrowd(1);
+    this.dropHangout();
     this.ctx.post.finishBlend();
     this.ctx.post.set(this.calm ? FLOOD_LOOK_CALM : FLOOD_LOOK);
     // The world as the ending leaves it: rune lit, door shut, FUSE gone, clipboard on the floor.
@@ -611,6 +666,7 @@ export class EndingScene implements GameScene {
       menuNav(this.ctx.input, this.cardEl);
 
     for (const tw of this.tweenList) tw.tick(now);
+    this.hangout?.update(dt);
 
     // FUSE through the door: he recedes toward the door's foot.
     const f = this.fuse;
@@ -923,7 +979,9 @@ export class EndingScene implements GameScene {
     );
     this.noteEl.hidden = true;
 
+    this.srEl = h('p', { class: 'tc-sr-only', 'aria-live': 'polite' });
     const parts: HTMLElement[] = [
+      this.srEl,
       this.titleEl,
       this.safetyEl,
       this.creditsEl,

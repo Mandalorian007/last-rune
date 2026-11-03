@@ -33,3 +33,11 @@ User (2026-11-03), after playing alpha-1's old mock-chat ending: "Our discord is
 - `pnpm check`, `pnpm build` and `pnpm test:e2e` pass.
 
 ## Log
+
+- **2026-11-02, hangout built (branch `ws/ending-3`).**
+  - Content: `HANGOUT_*` in `content/ending.ts` (channels, members, history, script, summary, UI copy); `ENDING_SEQUENCE` now has a `hangout` step between the `beyond` and `flood` directions. script.md updated; a test checks every chat text is there.
+  - Scene: `scenes/ending/hangout.ts` (DOM, script player, reaction counters, FUSE's live portrait chip plus still copies for avatars) and `hangout-styles.ts`; wired into `ending-scene.ts` (opens 1.2 s into the beyond light, folds away on the flood, dropped at the title card, on skip and on exit).
+  - Beats: #welcome join notice → #introductions (FUSE's hello with a "New arrival" form, Hobbies: Pending; ThunderSoap "Welcome home, FUSE 💜") → #the-hangout (arguing) → #jammin-out (too loud) → #gearhead (incident report) → #watch-me-grow ("Day 1.", reaction burst, ThunderSoap pins it). Unread pips light up between.
+  - Tests: D-032's no-chat test replaced with D-038's (real channel list in order, only ThunderSoap real, no BOT/member counts, reactions are single emoji, length 20–36 s). e2e `ending.spec.ts` now checks the window, channel list, FUSE's posts, the pin, aria-hidden plus summary, and that the window is gone before the credits.
+  - Captures: `scripts/playtest/ending-3.spec.ts` (1920; 1280 at 150% text; 1920 reduced motion) into `docs/design/screens/local/ending-3/`. Fixed the 150% layout after the first pass (server name wrap, emoji overlap, ellipsised names).
+  - Timing: solve to end card ≈ 2:02 (was ≈ 2:20); hangout ≈ 35 s.

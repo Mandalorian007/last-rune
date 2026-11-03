@@ -577,18 +577,55 @@ FUSE's plate: *(blank)*. He has already said it at the booth; the page ends in h
 
 *He drops the clipboard. It lands on the floor. He goes through. The screen goes white.*
 
-*The white warms to gold. Somewhere in the light, a great many people are talking at once, and laughing. FUSE, from the other side:* (D-032)
+*The white warms to gold. In the light, a window opens on a community hangout in full swing: ThunderClap Gaming. FUSE rolls in and wanders the channels:* (D-038)
+
+The window is a chat drawn in the game's own style. Its sidebar is the server's real channel
+list, in order: 👋 welcome, 🧑 introductions, 💬 the-hangout, 👀 supporter-sneak-peeks,
+💬 supporter-chat, 🏆 events-and-contests, 🐈 furry-friends, 🍔 omg-food, 🎶 jammin-out,
+🍜 otaku-oasis, 📚 book-worms, 🌱 watch-me-grow, ⚽ sports-ball, 🚗 gearhead. Unread pips light
+up as the server notices him; his face sits beside the channel he is in. FUSE types his posts
+into the message bar, then sends them. Reactions are real emoji with counts ticking up. Every
+member but ThunderSoap is invented. **[NEW]** throughout, except FUSE's three closing lines.
+
+**Already in the channels.**
+
+- #welcome. ThunderSoap: Welcome in! Grab a seat and say hi in 🧑 introductions 💜
+- #introductions. kettle.knight: hi all! I'm Kettle. I like tea and losing at chess ☕
+- #the-hangout. grumbleberry: the water level is the best level and I will die on this hill /
+  pixel_pudding: you WILL die on that hill. you'll drown on it / grumbleberry: TAKE THAT BACK
+- #jammin-out. ohm_sweet_ohm: 🔊🔊🔊 TURN IT UP 🔊🔊🔊
+- #gearhead. torque.taco: rewired my own headlights last night 🔧 only one small fire
+- #watch-me-grow. mossy.lamp: Day 212 of my sourdough starter. His name is Kevin 🌱
+
+**#welcome.** A join notice: FUSE came through the door. Say hi! (👋 9)
+
+**#introductions.** FUSE posts, with a paper form clipped on (*New arrival.* Name: FUSE. Last
+post: Foreman, 40 years. Hobbies: Pending.):
 
 > Hello. This unit has arrived somewhere with a great many people in it. **[NEW]**  
 > <sub>`beat.beyond-arrived` · 13w</sub>
 
+(👋 12) mossy.lamp: he brought a FORM 😭 (📋 5) ThunderSoap: Welcome home, FUSE 💜 (🥰 8)
+
+**#the-hangout.**
+
 > You appear to be arguing about a game. **[NEW]**  
 > <sub>`beat.beyond-arguing` · 8w</sub>
+
+(😂 14) grumbleberry: we are DISCUSSING (💯 6)
+
+**#jammin-out.** FUSE: Volume exceeds regulation. Leaving. (😂 4)
+
+**#gearhead.** FUSE: Incident report filed on your behalf. Wear gloves. (⚡ 7, 🔧 3)
+
+**#watch-me-grow.**
 
 > Day 1.  
 > <sub>`beat.beyond-day-1` · 2w</sub>
 
-*The light settles back over the hall. Gold floods it. Title card:*
+(🌱 21, 💜 27, 🥰 12, 🙏 9, 🍕 1) ThunderSoap pinned a message.
+
+*The window folds back into the light. It settles over the hall, and gold floods it. Title card:*
 
 **Title card.** FUSE went to ThunderClap Gaming. / He made friends. Loud ones. / He still has questions about your safety record. Buttons: Join ThunderClap Gaming · Leave a tip.
 

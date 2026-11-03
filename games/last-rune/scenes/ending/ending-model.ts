@@ -14,6 +14,8 @@ import {
   type EndingButton,
   type EndingStep,
   endingButtons,
+  HANGOUT_SCRIPT,
+  type HangoutStep,
   KOFI_URL,
   type PlayStats,
   safetyRecordLine,
@@ -24,6 +26,7 @@ import { type FuseLine, lineById } from '../../content/lines';
 export type EndingBeat =
   | { readonly kind: 'line'; readonly line: FuseLine }
   | { readonly kind: 'direction'; readonly cue: DirectionCue; readonly text: string }
+  | { readonly kind: 'hangout'; readonly steps: readonly HangoutStep[] }
   | { readonly kind: 'title-card' }
   | { readonly kind: 'idle'; readonly seconds: number; readonly line: FuseLine };
 
@@ -31,8 +34,8 @@ export type DirectionCue =
   | 'door' // the rune catches the storm; it was always a door; the player walks toward it
   | 'edge' // FUSE rolls to the edge of the gold light
   | 'through' // he drops the clipboard, goes through, the screen goes white
-  | 'beyond' // the white warms to gold light; a happy crowd somewhere in it
-  | 'flood'; // the light settles back over the hall; gold floods it
+  | 'beyond' // the white warms to gold; the community hangout window opens in it (D-038)
+  | 'flood'; // the window folds away; the light settles over the hall; gold floods it
 
 const CUES: readonly [RegExp, DirectionCue][] = [
   [/gold floods/i, 'flood'],
@@ -61,6 +64,9 @@ export function endingBeats(seq: readonly EndingStep[] = ENDING_SEQUENCE): Endin
         if (cue) out.push({ kind: 'direction', cue, text: s.text });
         break;
       }
+      case 'hangout':
+        out.push({ kind: 'hangout', steps: HANGOUT_SCRIPT });
+        break;
       case 'title-card':
         out.push({ kind: 'title-card' });
         break;
@@ -70,6 +76,90 @@ export function endingBeats(seq: readonly EndingStep[] = ENDING_SEQUENCE): Endin
       case 'silence':
         break;
     }
+  }
+  return out;
+}
+
+// ── The hangout (D-038) ────────────────────────────────────────────────────
+
+/** Pacing of the hangout (seconds); the scene and `hangoutSeconds` share them. */
+export const HANGOUT_TIMING = {
+  /** "Someone is typing…" before a member's post lands. */
+  memberTyping: 0.95,
+  /** After a member's post, before the next step. */
+  afterPost: 0.35,
+  /** FUSE's text sits in the message bar this long once typed, then sends. */
+  beforeSend: 0.35,
+  /** After FUSE's post lands. */
+  afterFuse: 0.6,
+  /** Between one reaction appearing and the next step. */
+  afterReact: 0.28,
+  /** The window opening, and the channel switch. */
+  open: 1.0,
+  go: 0.25,
+  /** FUSE types at this share of the caption speed (0 = instant). */
+  typeShare: 0.75,
+} as const;
+
+/** FUSE's typing speed in the message bar, chars/s, from the caption speed (0 = instant). */
+export function hangoutCps(captionCps: number): number {
+  return captionCps > 0 ? captionCps * HANGOUT_TIMING.typeShare : 0;
+}
+
+/** The text FUSE posts for a step: its content line, or its chat-only text. */
+export function fusePostText(step: Extract<HangoutStep, { type: 'fuse' }>): string {
+  return step.line ? lineById(step.line).text : (step.text ?? '');
+}
+
+/** How long the hangout plays, in seconds, at a caption speed (chars/s; 0 = instant). */
+export function hangoutSeconds(captionCps: number, steps: readonly HangoutStep[] = HANGOUT_SCRIPT) {
+  const T = HANGOUT_TIMING;
+  const cps = hangoutCps(captionCps);
+  let s = T.open;
+  for (const st of steps) {
+    switch (st.type) {
+      case 'wait':
+        s += st.seconds;
+        break;
+      case 'go':
+        s += T.go;
+        break;
+      case 'fuse': {
+        const n = [...fusePostText(st)].length;
+        s += (cps > 0 ? n / cps : 0) + T.beforeSend + T.afterFuse;
+        break;
+      }
+      case 'post':
+        s += T.memberTyping + T.afterPost;
+        break;
+      case 'react':
+        s += T.afterReact;
+        break;
+      case 'join':
+      case 'pin':
+        s += T.afterPost;
+        break;
+      case 'unread':
+        break;
+    }
+  }
+  return s;
+}
+
+/** One run of text: plain, or an emoji (drawn with the colour-emoji font stack). */
+export interface TextRun {
+  readonly text: string;
+  readonly emoji: boolean;
+}
+
+const EMOJI_RE = /(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}️?)*)/u;
+
+/** Splits text into plain and emoji runs, so each emoji can wear the emoji font stack. */
+export function emojiRuns(text: string): TextRun[] {
+  const out: TextRun[] = [];
+  for (const part of text.split(EMOJI_RE)) {
+    if (!part) continue;
+    out.push({ text: part, emoji: part.match(EMOJI_RE)?.[0] === part });
   }
   return out;
 }
