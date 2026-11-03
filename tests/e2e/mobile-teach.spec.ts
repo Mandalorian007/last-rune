@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
-import { GEM_KINDS, MACHINE_IDS } from '../../games/last-rune/rules/types';
+import { MACHINE_IDS } from '../../games/last-rune/rules/types';
 import { trayRemaining } from '../../games/last-rune/rules/validate';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, waitFrames } from './helpers';
@@ -340,13 +340,14 @@ for (const vp of PHONES) {
           // a gem the player places; and says which it is.
           if (g.how === 'fixed') {
             if (!g.leader) problems.push(`${tag}: no line from the card to the fixed gem`);
-            if (!g.rule.startsWith('Fixed: part of the machine'))
+            if (!g.rule.startsWith('Fixed.'))
               problems.push(`${tag}: a fixed gem's page says "${g.rule}"`);
           } else if (g.how === 'tray' || g.how === 'turns') {
             if (g.how === 'tray' && !g.lit) problems.push(`${tag}: its tray tile is not lit`);
             if (g.leader) problems.push(`${tag}: a line points at the board for a tray gem`);
           }
-          if (g.how === 'tray' && !g.rule.startsWith('Yours to place'))
+          // The first lesson: "Bend is fixed; Channels are yours to place".
+          if (id === 'intake-desk' && g.how === 'tray' && !g.rule.startsWith('Yours to place'))
             problems.push(`${tag}: a tray gem's page says "${g.rule}"`);
           // A finger, not the mouse (a click would switch the hints to mouse wording).
           await page.touchscreen.tap((n.l + n.r) / 2, (n.t + n.b) / 2);
@@ -404,7 +405,6 @@ for (const vp of PHONES) {
             await page.screenshot({ path: `${SHOTS}/teach-fixed-${vp.name}-${id}.png` });
           if (!g.tip.includes('Fixed: part of the machine'))
             problems.push(`${tag}: the card says "${g.tip}"`);
-          if (!g.eg) problems.push(`${tag}: no worked example on the card`);
           if (g.settle > 0.01) problems.push(`${tag}: the gem bounces (settle ${g.settle})`);
           if (g.lift > 0.01) problems.push(`${tag}: the gem lifts (${g.lift})`);
           if (g.held) problems.push(`${tag}: the tap picked up ${g.held}`);
@@ -414,53 +414,6 @@ for (const vp of PHONES) {
         await waitFrames(page, 4);
       }
       expect(checked).toBeGreaterThan(0);
-      expect(problems).toEqual([]);
-    });
-
-    test(`every gem card carries its worked example (${vp.name})`, async ({ page }) => {
-      await boot(page, vp.inset);
-      const problems: string[] = [];
-      const seen = new Set<string>();
-      for (const id of MACHINE_IDS) {
-        if (seen.size === GEM_KINDS.length) break;
-        await openFresh(page, id);
-        await dismissCard(page);
-        const L = await page.evaluate(
-          () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
-        );
-        const ob = (await page.locator('.tc-overlay').boundingBox())!;
-        const k = ob.width / 1920;
-        const pz = puzzleFor(id);
-        const half = pz.design.intended.slice(0, Math.floor(pz.design.intended.length / 2));
-        for (const slot of L.tray) {
-          if (seen.has(slot.gem) || trayRemaining(pz, half, slot.gem) <= 0) continue;
-          const tap = () => page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);
-          await tap();
-          await waitFrames(page, 6);
-          const eg = await page.evaluate(() => {
-            const e = document.querySelector<HTMLElement>(
-              '.lr-altar-tip:not([hidden]) .lr-info-eg',
-            );
-            if (!e) return null;
-            const r = e.getBoundingClientRect();
-            return {
-              text: e.textContent ?? '',
-              h: r.height,
-              shown: getComputedStyle(e).display !== 'none',
-            };
-          });
-          if (!eg?.shown || eg.h <= 0) problems.push(`${id} ${slot.gem}: no worked example`);
-          else if (!eg.text.includes('→')) problems.push(`${id} ${slot.gem}: "${eg.text}"`);
-          else seen.add(slot.gem);
-          if (SHOTS && eg)
-            await page.screenshot({ path: `${SHOTS}/teach-eg-${vp.name}-${slot.gem}.png` });
-          await tap();
-          await waitFrames(page, 4);
-        }
-        await page.evaluate(() => (window as G).__game.flow.closePuzzle());
-        await waitFrames(page, 4);
-      }
-      expect([...seen].sort()).toEqual([...GEM_KINDS].sort());
       expect(problems).toEqual([]);
     });
   });

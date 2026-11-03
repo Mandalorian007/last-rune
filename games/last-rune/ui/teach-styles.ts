@@ -38,7 +38,8 @@ ${A} .lr-altar-title[data-holding] .lr-altar-holding {
 ${A} .lr-altar-slot[data-empty] { display: none; }
 ${A} .lr-altar-count[data-empty] {
   opacity: 1; color: #a89a80; border: 0; background: none; box-shadow: none; text-decoration: none;
-  padding: 0; white-space: nowrap; font: 400 ${tpx(10)}/1.2 var(--tc-font-ui); letter-spacing: -0.2px;
+  padding: 0; white-space: normal; width: min-content; text-align: center;
+  font: 400 ${tpx(13)}/1.05 var(--tc-font-ui); letter-spacing: -0.2px;
 }
 ${A} .lr-altar-count[data-empty] .lr-k { display: none; }
 ${A} .lr-altar-count[data-empty] .lr-n { font: inherit; letter-spacing: inherit; }

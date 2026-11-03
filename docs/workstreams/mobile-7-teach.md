@@ -40,13 +40,20 @@ Gate review 4 failed at 6.4 (D-040 addendum 5). Evidence is in `docs/design/scre
    - A tap on a fixed gem no longer bounces or flashes red. Instead its card shows in the tip slot for 2.5 s: "Fixed: part of the machine." Covered by e2e: the card text is right, there is no settle or lift, and nothing gets picked up.
 4. **Worked examples.**
    - Every gem's codex `maths` line is now a worked example with real numbers, e.g. "In 4 → out 2 and 2. Odd charge is lost." The Codex shows it on every platform.
-   - Phone tips and teach cards show it under the rule.
-   - Covered by a content test and by e2e (every gem kind's tray tip shows its example).
+   - On phones it shows only on a long-press card. Chips and the teach card stay within their line budgets: with it, an SE teach card covered FUSE and the Strike button (mobile-moments), and chips ran to 5 to 8 lines (mobile-budget).
+   - Covered by a content test.
 5. **No ✓ circles.** A used-up gem stays as a dimmed, smaller silhouette with one quiet "all placed" line under it. Covered by e2e.
 6. **One panel while teaching.** While the teach card is up, the arbiter holds back the how-to line and FUSE's bubble. "Next ›" stays inside the card because the page label wraps. Covered by e2e over every altar and every page, which also checks the pointing.
 7. **The puzzle name stays while holding.** The title shrinks and the "Holding X" pill sits under it. Covered by e2e for overlap and clipping.
 
-Captures (git-ignored): `docs/design/screens/local/teach7-before/`, `teach7-before6/` (before) and `teach7-after/` (after, from `TEACH_SHOTS=… pnpm exec playwright test tests/e2e/mobile-teach.spec.ts`).
+Wrap-up (D-041: the phone round ends here):
+- On the teach card, a fixed gem's page opens with "Fixed." (the gold line shows which gem). A tap on the gem still says "Fixed: part of the machine."
+- "Yours to place." shows only on a card that also teaches a fixed gem (Intake Desk).
+- The Capacitor's phone chip is now "Holds its first charge; next strike, lets out both." That keeps the SE teach card at 4 lines, clear of FUSE and Strike.
+- The "all placed" label is 13 px (the label floor) and wraps.
+- Desktop and iPad: the tray lift and size and the tip's worked example are unchanged (all phone-gated). Only the Codex `maths` lines changed, as content.
+
+Captures (git-ignored): `docs/design/screens/local/teach7-before/`, `teach7-before6/` (before) and `teach7-after/` and `teach7-final/` (after; `teach7-final` is the SE teach cards at wrap-up, from `TEACH_SHOTS=… pnpm exec playwright test tests/e2e/mobile-teach.spec.ts`).
 
 Open:
 - Mini inline diagrams for the worked examples were not done.

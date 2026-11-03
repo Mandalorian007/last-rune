@@ -79,7 +79,7 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
     gem: 'capacitor',
     name: 'Capacitor',
     rule: 'Keeps the first charge it gets; nothing comes out. Next strike, the new charge pushes both out together, straight on.',
-    chip: 'Keeps its first charge. Next strike, lets out both together.',
+    chip: 'Holds its first charge; next strike, lets out both.',
     maths: 'Strike 1: keeps 4. Strike 2: 4 + 4 → 8.',
   },
 };

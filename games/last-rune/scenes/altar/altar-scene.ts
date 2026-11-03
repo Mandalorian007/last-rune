@@ -2006,8 +2006,12 @@ export class AltarScene implements GameScene {
   private chipRule(r: { gem: GemKind; how: InfoHow }, intro = false): string {
     const line = codexEntry(r.gem).chip;
     if (r.how === 'turns') return `${line} Turn it to fit.`;
-    if (r.how === 'fixed') return `${FIXED_LINE} ${line}`;
-    if (intro && r.how === 'tray') return `${YOURS_LINE} ${line}`;
+    // The arrival card's gold line already shows which gem; it says just "Fixed." so the card
+    // fits an SE. A tap on the gem says the whole line.
+    if (r.how === 'fixed') return `${intro ? 'Fixed.' : FIXED_LINE} ${line}`;
+    // Only where the same card also teaches a fixed gem (the contrast is the lesson); elsewhere
+    // the lit tray tile says it, and an SE has no room for the extra line.
+    if (intro && r.how === 'tray' && this.news.fixed.length > 0) return `${YOURS_LINE} ${line}`;
     return line;
   }
 
@@ -3706,8 +3710,9 @@ export class AltarScene implements GameScene {
           ' ',
           h('span', { class: 'lr-info-rule' }, chip ? this.chipRule(r, intro) : this.infoRule(r)),
           // The worked example, with real numbers (the codex's line; mobile-7-teach).
-          // Phones only: desktop and iPad tips keep their v1.0 look (D-041).
-          L.phone ? h('span', { class: 'lr-info-eg' }, codexEntry(r.gem).maths) : null,
+          // Phones, on a long-press card only: chips and the teach card stay within their line
+          // budgets (an SE has no room). Desktop and iPad tips keep their v1.0 look (D-041).
+          L.phone && !chip ? h('span', { class: 'lr-info-eg' }, codexEntry(r.gem).maths) : null,
         );
       }),
       ...(intro && this.teachCell
