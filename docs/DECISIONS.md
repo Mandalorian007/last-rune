@@ -34,3 +34,14 @@ Format: `D-NNN · date · decision · why · who`.
 - **D-030** · 2026-11-02 · Amends D-029 (turn-2, from user playtest): R/scroll turns the gem you see under the pointer. A placed gem turns in place and is saved at once, even with a gem in hand. The held gem is drawn only in empty sockets. A click never turns anything. The hand stays full after placing; clicking a different-kind placed gem still swaps. · PM
 - **D-031** · 2026-11-02 · **Split turns and has one input (User).** "Not intuitive. I would rather it be one input and rotate like everything else." A Split becomes rotational like Bend and Gate. Its `rot` names its one input side, and the halves leave by the two perpendicular sides. A bolt entering any other side fizzles, as at a Bend. Suggested convention, mirroring the Gate: rot 0 takes input from S and outputs W and E. Fixed Splits in puzzles get a set rotation; tray Splits are turned by the player. Supersedes the "whichever way the bolt enters" Split row in rules.md §4. · User
 - **D-032** · 2026-11-02 · **The ending: FUSE went to ThunderClap Gaming (User).** "Don't give details about the discord, just note that he found friends there… he isn't a bot on the server. Just a game character." Amends D-005. The ending shows no Discord details: no mock chat window, server or channel names, or member handles. FUSE goes through the door, and his three closing lines play as ordinary captions over the light, with a warm hint of a lively crowd. The title card says he went to ThunderClap Gaming and found friends. Credits name the author: **ThunderSoap**, owner of ThunderClap Gaming. The end-card invite link stays (D-013), labelled "Join ThunderClap Gaming". · User
+
+## D-033: Capacitor shows charge in the preview; viewport stays zoomable (2026-11-02, PM)
+- Capacitors are the one exception to "preview shows direction only": a dashed plan label states what each strike does (from the sim trace), on every altar with a Capacitor.
+- Multi-strike altars: Needs cards say "in one strike"; storm pips on the Gives card and Strike button; 1.4 s between strikes; Capacitor card shows its full rule. rules.md storm pips = these.
+- index.html drops `maximum-scale=1.0, user-scalable=no` (axe meta-viewport, WCAG 1.4.4). Accidental zoom is still blocked by `touch-action` and the gesture/ctrl-wheel handlers.
+
+## D-034: Ko-fi support link on the title menu and end card (2026-11-02, user)
+- User: "put a fun donate/buy me a coffee thing on main menu and end screen with my kofi: https://ko-fi.com/thundersoap".
+- Plain link only, same rules as the Discord door (D-013): opens on click in a new tab, `rel="noopener noreferrer"`, never automatic. No Ko-fi widget, script, iframe, image or other runtime network call. The icon is procedural (CSS/SVG).
+- Secondary to Play on the title and to "Join ThunderClap Gaming" on the end card. Keyboard and screen-reader reachable.
+- URL lives in one constant in content (next to DISCORD_INVITE_URL).

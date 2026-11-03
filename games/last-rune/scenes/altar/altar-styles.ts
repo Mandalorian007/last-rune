@@ -126,6 +126,40 @@ const CSS = /* css */ `
   background: rgba(10,18,26,0.78); border-style: dashed; border-color: rgba(120,200,255,0.6); box-shadow: none;
 }
 
+/* Multi-strike: one pip per strike at the storm and on Strike; lit as each strike fires. */
+.tc-overlay .lr-altar-storm .lr-storm-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px; font-family: var(--tc-font-body, serif); font-size: 20px; color: #cfeeff;
+}
+.tc-overlay .lr-strike-pips { display: inline-flex; gap: 5px; align-items: center; }
+.tc-overlay .lr-strike-pips i {
+  width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(150,215,255,0.85); background: rgba(10,18,26,0.6);
+  transition: background 150ms, box-shadow 150ms;
+}
+.tc-overlay .lr-strike-pips i[data-lit] { background: #bfefff; box-shadow: 0 0 10px rgba(120,210,255,0.9); }
+.tc-overlay .lr-altar-actions .lr-gold-button .lr-strike-pips { margin-left: 12px; vertical-align: 4px; }
+.tc-overlay .lr-altar-actions .lr-gold-button .lr-strike-pips i { border-color: rgba(60,36,8,0.85); background: rgba(60,36,8,0.15); }
+.tc-overlay .lr-altar-actions .lr-gold-button .lr-strike-pips i[data-lit] { background: #3a2406; box-shadow: none; }
+.tc-overlay .lr-altar-need .lr-need-note { font-family: var(--tc-font-body, serif); font-size: 17px; opacity: 0.8; margin-top: 2px; }
+
+/* Capacitor read-out: what it keeps on one strike and lets out on the next. Dashed = the plan
+   for the board as built; solid lines appear as the strike plays. */
+.tc-overlay .lr-altar-cap {
+  position: absolute; display: flex; flex-direction: column; gap: 2px; padding: 4px 10px; border-radius: 10px;
+  white-space: nowrap; pointer-events: none; font-family: var(--tc-font-body, serif); font-size: 19px; line-height: 1.25;
+  color: #eef6ff; background: rgba(12,16,22,0.9); border: 2px solid rgba(214,232,255,0.75);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6); animation: lr-chip-in 180ms var(--tc-easing) both;
+}
+.tc-overlay .lr-altar-cap[data-side="above"] { transform: translate(-50%, -100%); }
+.tc-overlay .lr-altar-cap[data-side="below"] { transform: translate(-50%, 0); }
+.tc-overlay .lr-altar-cap[data-side="left"] { transform: translate(-100%, -50%); }
+.tc-overlay .lr-altar-cap[data-side="right"] { transform: translate(0, -50%); }
+.tc-overlay .lr-altar-cap[data-plan] { border-style: dashed; border-color: rgba(214,232,255,0.6); background: rgba(12,16,22,0.8); }
+.tc-overlay .lr-altar-cap:not(:has(.lr-cap-line:not([hidden]))) { display: none; }
+.tc-overlay .lr-cap-line[hidden] { display: none; }
+.tc-overlay .lr-cap-line[data-kind="keep"] { color: #d8ecff; }
+.tc-overlay .lr-cap-line[data-kind="release"] { color: #fff6dd; }
+.tc-overlay .lr-cap-line[data-now] { color: #ffffff; text-shadow: 0 0 8px rgba(160,220,255,0.9); font-weight: 600; }
+
 /* Preview: a wrong-facing gem turns the bolt away here (a small ✕ on its rim). */
 .tc-overlay .lr-altar-nogo {
   position: absolute; width: 28px; height: 28px; transform: translate(-50%, -50%); border-radius: 50%;
@@ -180,6 +214,10 @@ const CSS = /* css */ `
   animation: lr-altar-pop 260ms var(--tc-easing) both;
 }
 .tc-overlay .lr-altar-verdict[hidden] { display: none; }
+.tc-overlay .lr-altar-verdict .lr-verdict-story {
+  display: block; max-width: 640px; margin: 4px auto 0; white-space: normal; font-family: var(--tc-font-body, serif);
+  font-size: 20px; line-height: 1.3; letter-spacing: 0; color: #e8dcc0;
+}
 .tc-overlay .lr-altar-verdict[data-narrow] { font-size: 24px; letter-spacing: 0; padding: 8px 18px; }
 .tc-overlay .lr-altar-verdict[data-outcome="over"] { border-color: #ff5a3c; }
 .tc-overlay .lr-altar-verdict[data-outcome="under"] { border-color: #ffb03f; }
@@ -215,6 +253,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-hint b { color: #e8c06a; font-weight: 600; }
 [data-reduced-motion] .tc-overlay .lr-altar-verdict,
 [data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-turn-arrow,
+[data-reduced-motion] .tc-overlay .lr-altar-cap,
 [data-reduced-motion] .tc-overlay .lr-altar-tag { animation: none; }
 /* Reduced motion: no pop or fade, but fizzle tags still step aside after a few seconds. */
 [data-reduced-motion] .tc-overlay .lr-altar-tag:not([data-tone]) { animation: lr-altar-tag-fade 1ms linear 3.6s forwards; }
