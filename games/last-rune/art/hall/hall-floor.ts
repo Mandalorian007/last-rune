@@ -85,6 +85,9 @@ const BACK: Prop[] = [
   [1196, 820, 116, 72, K.cart],
 ];
 
+/** Index in BACK of the far-right riser (its gauge is dropped on phones). */
+const RIGHT_RISER = 5;
+
 // Floor layer, drawn after the machines (in front of the wall, behind candles and FUSE).
 const FRONT: Prop[] = [
   [360, 980, 260, 44, K.puddle, 0.3],
@@ -126,6 +129,15 @@ export class HallFloor {
     u[PROP_LIGHT_FLOATS + 2] = warmth;
     u[PROP_LIGHT_FLOATS + 3] = lamp;
     this.mat.setUniforms(u);
+  }
+
+  /**
+   * Phones: the gauge on the far-right riser shrinks to a lone dot at the screen's edge (D-040
+   * review), so it goes; the riser stays. Desktop keeps it.
+   */
+  set edgeGauge(on: boolean) {
+    const d = this.back[RIGHT_RISER];
+    if (d?.params) (d.params as number[])[3] = on ? 4 : 0;
   }
 
   /** Wall layer: pipes, cables, lamps, junction boxes, rails, cart (one draw call). */

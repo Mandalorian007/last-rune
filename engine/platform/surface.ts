@@ -2,7 +2,9 @@ import {
   type BackbufferSize,
   clientToLogical,
   computeBackbuffer,
+  computeFillWidth,
   computeLetterbox,
+  type FillWidthOptions,
   type Letterbox,
   logicalToClient,
   type Vec2,
@@ -41,8 +43,11 @@ export class Surface {
   readonly logicalHeight: number;
   /** Letterboxed rect, CSS px, relative to `root`. Updated in place on resize. */
   rect: Letterbox = { x: 0, y: 0, width: 0, height: 0, scale: 0 };
+  /** The plain contain fit for the current container (what `rect` is unless a fill is set). */
+  fitRect: Letterbox = { x: 0, y: 0, width: 0, height: 0, scale: 0 };
   backbuffer: BackbufferSize = { width: 1, height: 1, pixelRatio: 1 };
 
+  private fill: FillWidthOptions | null = null;
   private readonly maxDpr: number;
   private readonly maxPixels: number;
   private readonly listeners = new Set<(size: SurfaceSize) => void>();
@@ -119,11 +124,26 @@ export class Surface {
     return p.x >= 0 && p.y >= 0 && p.x <= this.logicalWidth && p.y <= this.logicalHeight;
   }
 
+  /**
+   * Fill the width and crop top and bottom (`computeFillWidth`), or `null` for the plain
+   * letterbox. Lays out again at once if the result changes.
+   */
+  setFill(fill: FillWidthOptions | null): void {
+    const f = this.fill;
+    if (f === fill || (f && fill && f.minVisible === fill.minVisible && f.focusY === fill.focusY))
+      return;
+    this.fill = fill ? { ...fill } : null;
+    this.layout();
+  }
+
   /** Force a re-layout (e.g. after fullscreen toggles). */
   layout(): void {
     const w = this.root.clientWidth;
     const h = this.root.clientHeight;
-    const rect = computeLetterbox(w, h, this.logicalWidth, this.logicalHeight);
+    this.fitRect = computeLetterbox(w, h, this.logicalWidth, this.logicalHeight);
+    const rect = this.fill
+      ? computeFillWidth(w, h, this.logicalWidth, this.logicalHeight, this.fill)
+      : this.fitRect;
     const bb = computeBackbuffer(
       rect.width,
       rect.height,

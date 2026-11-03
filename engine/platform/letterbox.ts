@@ -46,6 +46,49 @@ export function computeLetterbox(
   return { x, y, width, height, scale: width / logicalW };
 }
 
+/** How `computeFillWidth` trades bars for crop. */
+export interface FillWidthOptions {
+  /**
+   * The least logical height that must stay on screen. The canvas grows to fill the width only
+   * as far as this allows; past it the bars come back (narrower than the contain fit's).
+   */
+  minVisible: number;
+  /** Logical y the visible band is centred on (clamped inside the design). Default: the middle. */
+  focusY?: number;
+}
+
+/**
+ * Like `computeLetterbox`, but on a container wider than the design's aspect the canvas grows
+ * to fill the width and the top and bottom are cropped instead (the rect's `y` goes negative
+ * and its height overflows the container). Never smaller than the contain fit.
+ */
+export function computeFillWidth(
+  containerW: number,
+  containerH: number,
+  logicalW: number,
+  logicalH: number,
+  opts: FillWidthOptions,
+): Letterbox {
+  const fit = computeLetterbox(containerW, containerH, logicalW, logicalH);
+  if (fit.scale === 0) return fit;
+  const band = Math.min(logicalH, Math.max(1, opts.minVisible));
+  const want = Math.min(containerW / logicalW, containerH / band);
+  if (want <= fit.scale) return fit;
+  const width = Math.min(containerW, Math.round(logicalW * want));
+  const scale = width / logicalW;
+  const height = Math.round(logicalH * scale);
+  const visible = containerH / scale;
+  const focus = opts.focusY ?? logicalH / 2;
+  const top = Math.min(Math.max(0, focus - visible / 2), Math.max(0, logicalH - visible));
+  return {
+    x: Math.floor((containerW - width) / 2),
+    y: -Math.round(top * scale) || 0,
+    width,
+    height,
+    scale,
+  };
+}
+
 /** Map a client point (CSS px relative to the container) into logical space. */
 export function clientToLogical(
   box: Rect,

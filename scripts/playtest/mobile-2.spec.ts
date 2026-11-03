@@ -13,10 +13,10 @@ import { DEV_URL, waitFrames } from '../../tests/e2e/helpers';
 //   M2_TAG=after pnpm exec playwright test -c scripts/playtest/playwright.config.ts mobile-2
 // Writes docs/design/screens/local/mobile-2/<tag>/<viewport>/*.png and
 // docs/design/screens/local/mobile-2/<tag>-<viewport>.png (the sheet).
-// M2_ONLY=iphone,se (viewport names, optional).
+// M2_ONLY=iphone,se (viewport names, optional). M2_OUT=<dir> writes somewhere else.
 
 const TAG = process.env.M2_TAG ?? 'after';
-const OUT = resolve('docs/design/screens/local/mobile-2');
+const OUT = resolve(process.env.M2_OUT ?? 'docs/design/screens/local/mobile-2');
 export const PHONES = [
   { name: 'iphone', width: 844, height: 340, inset: 47 },
   { name: 'se', width: 667, height: 320, inset: 0 },

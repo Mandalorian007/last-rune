@@ -59,3 +59,70 @@ These are PM decisions. Phone only: the desktop and iPad output must be unchange
 - Commit to your branch. The PM merges, then runs the blind review (D-040).
 
 ## Log
+
+### 2026-11-03: done, ready for PM review
+Contact sheets (git-ignored): `docs/design/screens/local/mobile-3-chrome/{before,after}-{se,iphone,promax,android,desktop,ipad,ipad-mini}.png`. Capture: `M3_TAG=after pnpm exec playwright test -c scripts/playtest/playwright.config.ts mobile-3-chrome`. The full mobile-2 phone flow after this change: `docs/design/screens/local/mobile-3-chrome/flow/after-<phone>.png`.
+
+**Before → after (phones):**
+- **Title.**
+  - Before: art letterboxed with wide side bars; small Play; tiny links.
+  - After:
+    - The art fills the width to the safe areas, cropping top and bottom (`computeFillWidth`, FILL_BANDS title 760/520).
+    - Play is ≥140×48 and gold; Settings is under it at ≥44.
+    - Full screen, Ko-fi and Copy link are ≥36 drawn with a 44 hit.
+    - Captions use `text-wrap: balance`.
+- **Hall.**
+  - Art fills the width on SE, iPhone and Pro Max. 20:9 Android keeps about 65 CSS soft-edged bars (canvas edge mask) so the floor door stays whole (FILL_BANDS hall 880/540).
+  - The suggested door gets a pulsing gold ring plus a "Start here ▾" / "Next ▾" tag. The tag is clamped below the crop and the pulse stops under reduced motion. The candles are untouched.
+  - The stray right-edge dot was the right riser's gauge flag. It is turned off on phones (`HallFloor.edgeGauge`); desktop is unchanged.
+  - The ☰ menu's Journal row says "New journal page" / "N new journal pages", explaining the dot.
+- **Settings.**
+  - Options with ≤4 choices are segmented toggles; selects remain off-phone.
+  - Rows are ≥44; slider thumbs are 22.
+  - The body scrolls with a soft bottom fade, so nothing is clipped on SE.
+  - The panel body takes the initial focus, so there is no focus ring on open.
+  - Reset progress is red and on its own row below the note, away from Import.
+  - ✕ top-right.
+- **Journal.**
+  - Found pages are paper rows (≥36, text ≥13) with the current page marked. They are followed by one dashed "12 more pages to find" row.
+  - Solid 44 prev/next arrows.
+  - ✕ sits in the right bar.
+  - "Back to the hall" now sits inside the screen on SE; it was clipped before.
+- **Codex.**
+  - Tabs are 36; the header is brighter and larger.
+  - Body text is larger and uses the page; the page scrolls if needed, and a tighter variant applies at ≤330 tall.
+  - The FUSE aside is in dark ink.
+  - The × is 36 drawn with a 44 hit.
+  - ☰ and the hall marker hide while any modal is open.
+
+**Desktop and iPad (1920, 1180, 1024):** visually identical before/after (sheets compared side by side).
+
+**Tests:**
+- New file `tests/e2e/mobile-chrome.spec.ts` covers 4 phones. It checks:
+  - D-040 sizes for Play, Settings, links, ✕, Codex tabs, settings rows/segments/sliders, journal rows/arrows;
+  - no control off-screen in Settings (after scrolling), Codex and Journal;
+  - no focus ring on Settings open;
+  - Reset is red and alone;
+  - the title art has ≤4 px bars and the hall ≤8% of the width;
+  - the Next tag is not cut.
+
+**Proposals for PM:**
+1. **Phone hall layout (D-040 follow-up).** A full fill on 20:9 Android needs the hall's doors packed into a shorter band, e.g. the floor door moved up beside the centre. Until then, the slim soft bars are the trade-off for keeping every doorway whole and tappable.
+2. **Close convention (D-040).**
+   - ✕ top-right (`.lr-panel-x`, 36 drawn / 44 hit) on every phone overlay.
+   - Destructive actions are red and sit on their own row.
+   - Worth a line in DECISIONS.
+3. **`ViewContext.phone?: () => boolean`** (scenes/views.ts) lets art views adapt to phones (used for the hall gauge). It is cross-cutting, so flagging it.
+4. **Engine `computeFillWidth` / `Surface.setFill`** (letterbox.ts, surface.ts) is generic, with no game nouns.
+
+### 2026-11-03: PM review fixes (first-time hall, Settings scroll cue)
+- **First-entry hall.** New capture shot `02-hall-first` (a new game from the title, nothing solved). Before this fix, the Intake Desk (the floor doorway FUSE calls "the gold doorway") was about half off the bottom on iPhone and Android.
+  - The hall framing is now FILL_BANDS hall `{ minVisible: 985, focusY: 544 }`. Every doorway is whole, from the top row's arches (y≈50) to the Intake Desk's sill (y≈1030), and the sky and floor foreground crop instead.
+  - The phone suggestion ring now hugs arch to sill (226×224), so it fits inside that band.
+- **Cost:** wider soft side bars, about 20 / 42 / 35 / 105 CSS px each side on SE / iPhone / Pro Max / Android, against 73–137 letterboxed before. A phone hall layout (doors in a shorter band) is still the way to a true full fill on 20:9.
+- **e2e:**
+  - `mobile-chrome.spec.ts` now asserts, at first entry and mid-game, that every doorway's arch-to-sill rect plus the suggestion ring and tag are inside the viewport.
+  - It also asserts that "Start here" sits on the Intake Desk at first entry.
+  - Verified that it fails with the old 880 framing.
+- **Settings:** while the body has more below, a "More ▾" pill sits beside Done (tap scrolls on) and the bottom fade shows. Both go at the end.
+- PM decisions: the ✕ / red destructive convention goes to DECISIONS (PM); `ViewContext.phone` is approved; the Android bars are accepted for now.
