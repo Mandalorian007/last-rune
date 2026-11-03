@@ -83,12 +83,15 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
   } else if (kind == 3) {
     // Amplify: a Channel with its diamond node doubled (a diamond inside a diamond), so it reads
     // "a Channel, twice". Symmetric end to end: it can't turn and points neither way (D-031).
-    d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.46));
-    d = min(d, g_seg(p, vec2f(0.0, -0.46), vec2f(0.0, -0.72)));
-    d = min(d, abs(abs(p.x) + abs(p.y) - 0.46));
-    d = min(d, abs(abs(p.x) + abs(p.y) - 0.22));
+    // The two diamonds sit well apart and the stroke is a touch thinner than the others, so
+    // the dark gap between them survives the glow and bloom even small (Codex, tray).
+    d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.54));
+    d = min(d, g_seg(p, vec2f(0.0, -0.54), vec2f(0.0, -0.72)));
+    d = min(d, abs(abs(p.x) + abs(p.y) - 0.54));
+    d = min(d, abs(abs(p.x) + abs(p.y) - 0.2));
     d = min(d, g_seg(p, vec2f(-0.16, 0.72), vec2f(0.16, 0.72)));
     d = min(d, g_seg(p, vec2f(-0.16, -0.72), vec2f(0.16, -0.72)));
+    d += 0.022;
   } else if (kind == 4) {
     // Gate: inputs from west and east meet in a ring; one output leaves north (rules rot 0).
     d = g_seg(p, vec2f(-0.66, 0.0), vec2f(-0.17, 0.0));
