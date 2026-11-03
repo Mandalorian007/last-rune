@@ -45,3 +45,9 @@ Format: `D-NNN · date · decision · why · who`.
 - Plain link only, same rules as the Discord door (D-013): opens on click in a new tab, `rel="noopener noreferrer"`, never automatic. No Ko-fi widget, script, iframe, image or other runtime network call. The icon is procedural (CSS/SVG).
 - Secondary to Play on the title and to "Join ThunderClap Gaming" on the end card. Keyboard and screen-reader reachable.
 - URL lives in one constant in content (next to DISCORD_INVITE_URL).
+
+## D-035: Codex unlocks on sight; engine SnapshotRenderer (2026-11-02, PM)
+- Save gains optional `codex.met?: GemKind[]` (gems seen at any altar). SAVE_VERSION stays 1: `repairSave` backfills it from solved/started altars; a new game resets it. `codex.seen` still means "page opened" (NEW ribbon).
+- Pages: Not met yet (name hidden, "?" tab) / Seen (full rule, "Restore the X to earn it") / Yours.
+- Diagrams count charge in sparks like the altar chips (bolt of 4).
+- `engine/render/snapshot.ts` SnapshotRenderer (offscreen one-frame render to ImageBitmap, same device) is accepted engine API; `installGpuErrorLogging` is idempotent per device.

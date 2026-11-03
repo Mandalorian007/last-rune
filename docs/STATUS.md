@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; capacitor-clarity ✅; codex-2 + ending-2 in review. Next: user playtest of alpha-1 feeds difficulty-fun phase 2 + polish backlog. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
+**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; capacitor-clarity ✅, codex-2 ✅; ending-2 (+ Ko-fi, D-034) running. Next: user playtest of alpha-1 feeds difficulty-fun phase 2 + polish backlog. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
@@ -27,7 +27,7 @@ _Last updated: 2026-11-02 by PM_
 | altar-polish | ws/altar-polish | ✅ merged | caption lane; blocked sockets sealed with an X cap; lit boards before the first strike; labels notched to machines; Enter always picks up; fizzle tags fade; splitter-mill overlap fixed; Channel line; cursor jumps to the route's open end |
 | engine-adoption | ws/engine-adoption | ✅ merged | ending eases with post.blendTo; Builder's mark readable through the door; credits backed over the gold; storm on PingPong; linear emboss mask; global C/O/J; ending Fuse leak fixed. 60fps, draws unchanged |
 | title-fuse | ws/title-fuse | ✅ merged | FUSE strolls between 3 spots left of the menu (still under reduced motion), 22 Tier-1 title lines every 12–20 s, no repeats, caption avoids the menu, silenced on Play |
-| codex-2 | ws/codex-2 | 🟡 running | Codex shows real gem images (+ in/out diagrams for Bend/Gate/Split); entries unlock on first sight, marked Seen vs Yours |
+| codex-2 | ws/codex-2 | ✅ merged | real gem portraits baked once with the altar material (engine SnapshotRenderer); bolt in/out diagrams with altar charge chips + ✕ on fizzle sides (unit-checked vs acceptMask); pages unlock on first sight: Not met / Seen / Yours; fits 1280 at 150%. D-035 |
 | ending-2 | ws/ending-2 | 🟡 running | D-032: no Discord details; FUSE "went to ThunderClap Gaming" and made friends; chat mock removed; credits name ThunderSoap |
 | capacitor-clarity | ws/capacitor-clarity | ✅ merged | strike pips + "Strike 1 of 2" on Gives card and Strike button; "in one strike" on Needs; Capacitor plan label ("Strike 1: keeps 8 / Strike 2: 8 + 8 → 16") from the sim trace; 1.4 s between strikes; verdict names the strike + plain story; full Capacitor rule on its card. D-033 |
 | onboarding-2 | ws/onboarding-2 | ✅ merged | gem info card lives over the tray band (hover/focus/held; arrival card fades), fixed gems get iron brackets + "Fixed in place", first turnable Bend/Gate shows a turn badge and the preview swings as it turns; Gives N + strike-ready on all 16; new-gem lines before use; tray matches board; charge chips on new gems; `altar-labels.spec` e2e |
