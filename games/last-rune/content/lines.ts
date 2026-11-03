@@ -265,12 +265,21 @@ const DEFS: Def[] = [
   },
 
   // ── Tier 1 ───────────────────────────────────────────────────────────────
-  ...machineLines(
-    'intake-desk',
-    1,
-    "Day 14,610. A visitor. There's a form for that. Take a rune from the tray, set it on a lit socket. You can't break anything. Others have tried.",
-    "Regulation 1: the hallway rune. Regulation 2: this unit does not do a victory noise. Bzzt. That wasn't one.",
-  ),
+  // The pitch's arrive line ran to two cards; the first altar gets one card of how-to (D-027).
+  {
+    kind: 'arrive',
+    machine: 'intake-desk',
+    tier: 1,
+    source: N,
+    text: "Day 14,610. A visitor. There's a form for that. Step one: rune from the tray, onto a lit socket.",
+  },
+  {
+    kind: 'solve',
+    machine: 'intake-desk',
+    tier: 1,
+    source: P,
+    text: "Regulation 1: the hallway rune. Regulation 2: this unit does not do a victory noise. Bzzt. That wasn't one.",
+  },
   ...machineLines(
     'furnace',
     1,

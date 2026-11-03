@@ -143,6 +143,29 @@ export function analyseSolution(p: PuzzleDef, placements: readonly Placement[]):
 }
 
 // ---------------------------------------------------------------------------
+// Turn choice (D-031)
+
+/**
+ * How much choosing a turn costs, per tray gem that has one. Since D-031 a Bend, Split or Gate
+ * from the tray must be turned to the side its route needs, and that choice is part of the
+ * answer. The solver and bot only try turns that take the incoming bolt, so they never pay for
+ * it; this term does.
+ *
+ * - Bend 0.5: its glyph shows its two joined sides, and the route preview swings as it turns.
+ * - Split 1: one input, halves out of the two other sides; the convention a player has to
+ *   learn (D-031 came from a playtest where it was not intuitive).
+ * - Gate 1: two inputs and an output, turned before the second bolt arrives.
+ *
+ * Fixed gems are pre-turned and cost nothing.
+ */
+export const TURN_WEIGHT: Partial<Record<GemKind, number>> = { bend: 0.5, split: 1, gate: 1 };
+
+/** Turn load of one solution: Σ TURN_WEIGHT over its player-placed gems. */
+export function turnLoadOf(placements: readonly Placement[]): number {
+  return placements.reduce((a, pl) => a + (TURN_WEIGHT[pl.gem] ?? 0), 0);
+}
+
+// ---------------------------------------------------------------------------
 // Novice bot
 
 export interface BotOptions {
@@ -501,6 +524,8 @@ export interface DifficultyMetrics {
   bot: BotResult;
   /** Weighted sum of required markers (+ machines/pulses). */
   concepts: number;
+  /** Turn choices in the lightest-turning solution (`turnLoadOf`), D-031. */
+  turnLoad: number;
   score: number;
   /** Estimated minutes for a first-time player. */
   minutes: number;
@@ -518,11 +543,12 @@ export interface MeasureOptions {
  * (1 = the tutorial, 10 = the finale). Weights were fitted (ridge least squares, then rounded)
  * to a by-hand minutes estimate of the 16 pre-Phase-1 puzzles; see difficulty-curve.md §2.
  *
- *   score = 0.4
+ *   score = 0.2
  *         + 0.15 · log2(bot attempts to solve)   (how often sensible-but-naive tries work)
  *         + 0.10 · searchBits                    (how rare solutions are in the search tree)
  *         + 0.35 · concepts                      (ideas every solution needs, weighted)
  *         + 0.04 · minGems                       (sheer construction: sockets to fill)
+ *         + 0.08 · turnLoad                      (turns to choose, D-031; see TURN_WEIGHT)
  *         − 0.10 · log2(solutions)               (a loose space forgives)
  *
  * `concepts` = Σ MARKER_WEIGHT over required markers + 0.5 per machine beyond the first
@@ -535,13 +561,16 @@ export function scoreOf(m: {
   concepts: number;
   minGems: number;
   solutions: number;
+  /** Missing = 0 (scores from before D-031). */
+  turnLoad?: number;
 }): number {
   const s =
-    0.4 +
+    0.2 +
     0.15 * Math.log2(Math.max(1, m.bot.expected)) +
     0.1 * m.searchBits +
     0.35 * m.concepts +
-    0.04 * Math.max(0, m.minGems) -
+    0.04 * Math.max(0, m.minGems) +
+    0.08 * (m.turnLoad ?? 0) -
     0.1 * Math.log2(Math.max(1, m.solutions));
   return Math.max(0, Math.round(s * 10) / 10);
 }
@@ -565,6 +594,7 @@ export function measure(p: PuzzleDef, opts: MeasureOptions = {}): DifficultyMetr
     ? MARKERS.filter((m) => flows.every((f) => f.markers.includes(m)))
     : [];
   const intended = analyseSolution(p, p.design.intended);
+  const turnLoad = s.solutions.length ? Math.min(...s.solutions.map(turnLoadOf)) : 0;
   const concepts =
     required.reduce((a, m) => a + MARKER_WEIGHT[m], 0) +
     0.5 * (p.machines.length - 1) +
@@ -591,6 +621,7 @@ export function measure(p: PuzzleDef, opts: MeasureOptions = {}): DifficultyMetr
     pathCells: intended.pathCells,
     bot,
     concepts,
+    turnLoad,
   };
   const score = scoreOf(base);
   return { ...base, score, minutes: minutesFor(score) };
