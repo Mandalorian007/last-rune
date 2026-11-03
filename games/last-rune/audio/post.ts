@@ -77,27 +77,45 @@ class Allpass {
   }
 }
 
-/** Tail of one reverb channel (wet only) for a mono send. */
-function tailChannel(
+/** Samples of reverb tail computed between yields in the sliced (`*Steps`) versions. */
+export const REVERB_CHUNK = 8192;
+
+/**
+ * Tail of one reverb channel (wet only) for a mono send. A generator so a long tail can be
+ * computed in slices: it yields after every `REVERB_CHUNK` samples and returns the tail.
+ */
+function* tailChannel(
   send: Float32Array,
   sr: number,
   o: Required<ReverbOptions>,
   spread: number,
-): Float32Array {
+): Generator<void, Float32Array> {
   const scale = sr / 44100;
   const fb = roomFeedback(o.room);
   const damp = Math.min(1, Math.max(0, o.damp)) * 0.4;
   const combs = COMBS.map((n) => new Comb(Math.round((n + spread) * scale), fb, damp));
   const aps = ALLPASSES.map((n) => new Allpass(Math.round((n + spread) * scale)));
   const out = new Float32Array(send.length);
-  for (let i = 0; i < send.length; i++) {
-    const x = send[i]! * FIXED_GAIN;
-    let acc = 0;
-    for (const c of combs) acc += c.tick(x);
-    for (const a of aps) acc = a.tick(acc);
-    out[i] = acc;
+  for (let start = 0; start < send.length; start += REVERB_CHUNK) {
+    const end = Math.min(send.length, start + REVERB_CHUNK);
+    for (let i = start; i < end; i++) {
+      const x = send[i]! * FIXED_GAIN;
+      let acc = 0;
+      for (const c of combs) acc += c.tick(x);
+      for (const a of aps) acc = a.tick(acc);
+      out[i] = acc;
+    }
+    if (end < send.length) yield;
   }
   return out;
+}
+
+/** Run a sliced step generator to the end in one go. */
+export function drain<T>(steps: Generator<void, T>): T {
+  for (;;) {
+    const r = steps.next();
+    if (r.done) return r.value;
+  }
 }
 
 /**
@@ -112,6 +130,19 @@ export function applyReverb(
   opts: ReverbOptions = {},
   loop = false,
 ): [Float32Array, Float32Array] {
+  return drain(applyReverbSteps(input, sampleRate, opts, loop));
+}
+
+/**
+ * `applyReverb` in slices: yields between passes and every `REVERB_CHUNK` tail samples, so a
+ * long loop's reverb (40+ ms in all) never has to run as one main-thread task.
+ */
+export function* applyReverbSteps(
+  input: readonly Float32Array[],
+  sampleRate: number,
+  opts: ReverbOptions = {},
+  loop = false,
+): Generator<void, [Float32Array, Float32Array]> {
   const o: Required<ReverbOptions> = {
     room: opts.room ?? 0.6,
     damp: opts.damp ?? 0.4,
@@ -142,8 +173,11 @@ export function applyReverb(
       send[j] = x - lpState;
     }
   }
-  const tl = tailChannel(send, sampleRate, o, 0);
-  const tr = tailChannel(send, sampleRate, o, SPREAD);
+  yield;
+  const tl = yield* tailChannel(send, sampleRate, o, 0);
+  yield;
+  const tr = yield* tailChannel(send, sampleRate, o, SPREAD);
+  yield;
   const w1 = o.wet * (o.width / 2 + 0.5);
   const w2 = o.wet * ((1 - o.width) / 2);
   const outL = new Float32Array(n);

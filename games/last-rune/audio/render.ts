@@ -5,7 +5,15 @@
  */
 import { normalize, type OfflineContextFactory, renderSound } from '@engine/audio';
 import type { SoundDef } from './bank';
-import { applyReverb, audibleLength, edgeFade, padSeconds, reverbRt60, saturate } from './post';
+import {
+  applyReverbSteps,
+  audibleLength,
+  drain,
+  edgeFade,
+  padSeconds,
+  reverbRt60,
+  saturate,
+} from './post';
 
 /** Channel data after game post-processing (pure part of the pipeline, testable with a fake dry render). */
 export function postProcess(
@@ -13,18 +21,28 @@ export function postProcess(
   dry: readonly Float32Array[],
   sampleRate: number,
 ): Float32Array[] {
+  return drain(postProcessSteps(def, dry, sampleRate));
+}
+
+/** `postProcess` in slices: yields between passes and inside the reverb (see `pump`). */
+function* postProcessSteps(
+  def: SoundDef,
+  dry: readonly Float32Array[],
+  sampleRate: number,
+): Generator<void, Float32Array[]> {
   const loop = def.spec.loop !== undefined;
   let chans: Float32Array[] = dry.map((c) => new Float32Array(c));
   if (def.saturate) {
     normalize(chans, 0.9);
     saturate(chans, def.saturate);
+    yield;
   }
   if (def.reverb) {
     if (!loop) {
       const tail = reverbRt60(def.reverb, sampleRate);
       chans = chans.map((c) => padSeconds(c, sampleRate, tail));
     }
-    chans = applyReverb(chans, sampleRate, def.reverb, loop);
+    chans = yield* applyReverbSteps(chans, sampleRate, def.reverb, loop);
   }
   normalize(chans, def.level);
   if (!loop) {
@@ -36,13 +54,14 @@ export function postProcess(
 }
 
 /**
- * Post-processing (reverb especially) is main-thread work, up to ~40 ms a sound. The offline
- * renders of a group finish together, so run back to back their post steps make one long task
- * that stalls the title for 100+ ms. Instead they queue, and a pump runs them in slices of
- * about `SLICE_MS`, yielding to the event loop (a frame, an input) between slices.
+ * Post-processing (reverb especially) is main-thread work, 40+ ms for a long loop. The offline
+ * renders of a group finish together, so run back to back their post steps would make one long
+ * task that stalls the title for 100+ ms. Instead each sound's steps queue, and a pump runs
+ * them in slices of about `SLICE_MS`, yielding to the event loop (a frame, an input) between
+ * slices. A single step (one reverb chunk or one linear pass) is a few ms at most.
  */
 const SLICE_MS = 8;
-const postQueue: (() => void)[] = [];
+const postQueue: Generator<void, void>[] = [];
 let pumping = false;
 
 function yieldTask(fn: () => void): void {
@@ -61,24 +80,30 @@ function yieldTask(fn: () => void): void {
 function pump(): void {
   const t0 = performance.now();
   while (postQueue.length > 0) {
-    postQueue.shift()!();
+    if (postQueue[0]!.next().done) postQueue.shift();
     if (performance.now() - t0 >= SLICE_MS) break;
   }
   if (postQueue.length > 0) yieldTask(pump);
   else pumping = false;
 }
 
+function* settle<T>(
+  steps: Generator<void, T>,
+  resolve: (v: T) => void,
+  reject: (e: unknown) => void,
+): Generator<void, void> {
+  try {
+    resolve(yield* steps);
+  } catch (e) {
+    reject(e);
+  }
+}
+
 function postInTurn(def: SoundDef, dry: AudioBuffer): Promise<Float32Array[]> {
   return new Promise((resolve, reject) => {
-    postQueue.push(() => {
-      try {
-        const chans: Float32Array[] = [];
-        for (let c = 0; c < dry.numberOfChannels; c++) chans.push(dry.getChannelData(c));
-        resolve(postProcess(def, chans, dry.sampleRate));
-      } catch (e) {
-        reject(e);
-      }
-    });
+    const chans: Float32Array[] = [];
+    for (let c = 0; c < dry.numberOfChannels; c++) chans.push(dry.getChannelData(c));
+    postQueue.push(settle(postProcessSteps(def, chans, dry.sampleRate), resolve, reject));
     if (!pumping) {
       pumping = true;
       yieldTask(pump);
