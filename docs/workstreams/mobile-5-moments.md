@@ -66,3 +66,7 @@ Gate review 2 (2026-11-03) scored 6 / 6 / 6.5 / 6.5, a fail. These points were c
     - The phone styles still fight older blocks with `!important`.
     - The FUSE lift lives in altar-view, not in layout.ts (mobile-5-board's file).
     - The portrait sheet is baked once per solve.
+- 2026-11-03 (PM review fixes):
+  - **Arrival card hit Strike** (se/14: Split/Gate/Bend over Strike and FUSE). Phones now page the arrival card: one new piece at a time (plus the gold-ring line on the first altar), 4 s a page, looping, with a "New here · 1 of 3" marker. Non-first altars keep it up long enough to show every page once (`moments.ts introPage/introSecs`, unit-tested). The card now stays well above Strike and FUSE on all four phones.
+  - **e2e:** `mobile-moments.spec.ts` walks every page of the arrival card on intake-desk (fresh), relay-tower (after intake-desk) and capacitor-bay (first meeting). Each page must stand ≥8 CSS px clear of Strike and off FUSE.
+  - **11-intake-desk-fuse** now captures a fresh save (nothing restored): FUSE's own arrival line, the paged arrival card and the how-to line, as a new player sees them. With the card one page tall, FUSE's arrival line is no longer crowd-hidden, so it no longer needs deferring.

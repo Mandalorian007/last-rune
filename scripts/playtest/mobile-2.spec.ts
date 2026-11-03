@@ -138,7 +138,17 @@ for (const vp of PHONES) {
         await page.evaluate(() => (window as G).__game.fuse.hush());
         await waitFrames(page, 4);
         await shot(`10-${id}`);
-        if (id === 'intake-desk' || id === 'the-last-rune') {
+        if (id === 'intake-desk') {
+          // What a new player meets: a fresh save, nothing restored. FUSE's arrival line, the
+          // arrival card and the how-to line, as they come (mobile-5-moments).
+          await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+          await seed([]);
+          await page.evaluate(() => (window as G).__game.flow.openPuzzle('intake-desk'));
+          await expect(page.locator('.lr-altar')).toBeVisible();
+          await page.waitForTimeout(1500);
+          await shot('11-intake-desk-fuse');
+        }
+        if (id === 'the-last-rune') {
           await page.evaluate(
             (t) => {
               void (window as G).__game.fuse.say(t, { hold: 0 });

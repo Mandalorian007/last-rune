@@ -634,6 +634,10 @@ ${P}:has(.lr-altar[data-phone]) .tc-caption::after {
   width: ${cpx(8)}; height: ${cpx(8)}; background: inherit; border: 1px solid var(--tc-color-border);
   border-width: 0 1px 1px 0; transform: rotate(45deg); pointer-events: none;
 }
+/* The arrival card, paged: one new piece at a time, with its place in the run. */
+${A} .lr-altar-tip .lr-info-page {
+  margin-top: ${cpx(1)}; font-family: var(--tc-font-ui); font-size: ${tpx(10.5)}; letter-spacing: 0.5px; color: #b9a98a;
+}
 /* The verdict: its line, then the next step on a line of its own (no run-on "·"). */
 ${A} .lr-altar-verdict .lr-verdict-story, ${A} .lr-altar-verdict .lr-verdict-hint {
   display: block; margin-top: ${cpx(2)}; font-family: var(--tc-font-body, serif); font-size: ${tpx(12)}; line-height: 1.3;

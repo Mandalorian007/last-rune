@@ -76,7 +76,7 @@ import {
   traySlotAt,
   trayTipX,
 } from './layout';
-import { hintRetired, phoneHint } from './moments';
+import { hintRetired, introPage, introSecs, phoneHint } from './moments';
 import { socketLooks } from './socket-looks';
 import {
   type Arrival,
@@ -367,6 +367,8 @@ export class AltarScene implements GameScene {
   private pendingNudges: GemKind[] = [];
   /** Seconds left on the arrival card for this altar's new gems (0 = gone). */
   private introLeft = 0;
+  /** Seconds the arrival card has shown (phones page it, one new piece at a time). */
+  private introT = 0;
   /** Phones: the how-to line has retired (moments.ts), and FUSE's fail quip waits its turn. */
   private hintRetired = false;
   private pendingQuip: ReturnType<typeof reactionLine> | null = null;
@@ -465,7 +467,14 @@ export class AltarScene implements GameScene {
     });
     // On the first altar the card (with the gold-ring line) stays until the first placement.
     this.introLeft =
-      this.introRows().length === 0 ? 0 : this.teachCell ? Number.POSITIVE_INFINITY : INTRO_SECS;
+      this.introRows().length === 0
+        ? 0
+        : this.teachCell
+          ? Number.POSITIVE_INFINITY
+          : this.view.layout.phone
+            ? introSecs(this.introPages(), INTRO_SECS)
+            : INTRO_SECS;
+    this.introT = 0;
     this.announce(this.briefing());
 
     this.updateHint(); // also keeps the caption off the tray and the hint
@@ -1798,6 +1807,11 @@ export class AltarScene implements GameScene {
     return this.board.serialise().some((q) => q.gem === gem);
   }
 
+  /** The arrival card's pages on a phone: each new piece, and the gold ring on the first altar. */
+  private introPages(): number {
+    return this.introRows().length + (this.teachCell ? 1 : 0);
+  }
+
   /** What this altar introduces, for the arrival card and the briefing. */
   private introRows(): { gem: GemKind; how: InfoHow }[] {
     return [
@@ -2712,8 +2726,10 @@ export class AltarScene implements GameScene {
     this.updateFuse();
     this.updateHint();
     this.updateTray();
-    if (this.introLeft > 0 && this.mode === 'edit')
+    if (this.introLeft > 0 && this.mode === 'edit') {
       this.introLeft = Math.max(0, this.introLeft - dt);
+      this.introT += dt;
+    }
     this.updateInfo();
     this.updateTurnBadge();
     this.updateTurnButton();
@@ -3161,6 +3177,9 @@ export class AltarScene implements GameScene {
     } else if (this.introLeft > 0 && !strike) {
       rows = this.introRows();
       key = 'intro';
+      // Phones: one new piece at a time, so the card stays a short chip above Strike.
+      if (L.phone && this.introPages() > 1)
+        key = `intro${introPage(this.introPages(), this.introT)}`;
     }
     // Keyboard focus on a board gem: say what it is (once per gem).
     const fk = this.keyboard && key.startsWith('b') ? key : '';
@@ -3169,7 +3188,7 @@ export class AltarScene implements GameScene {
       if (fk && rows[0]) this.announce(this.infoText(rows[0]));
     }
     const fade =
-      key === 'intro' && !this.ctx.settings.reducedMotion
+      key.startsWith('intro') && !this.ctx.settings.reducedMotion
         ? Math.min(1, this.introLeft / INTRO_FADE)
         : 1;
     this.tip.style.opacity = fade < 1 ? fade.toFixed(3) : '';
@@ -3183,11 +3202,12 @@ export class AltarScene implements GameScene {
       this.tip.hidden = true;
       return;
     }
-    this.tip.dataset.source = key === 'intro' ? 'intro' : key[0] === 't' ? 'tray' : 'board';
+    const intro = key.startsWith('intro');
+    this.tip.dataset.source = intro ? 'intro' : key[0] === 't' ? 'tray' : 'board';
     // Phones: a chip, each row its gem's name and first whole sentence (never cut mid-rule);
     // a long-press pins the full card.
     const chip = !!L.phone && !key.startsWith('p');
-    this.tip.replaceChildren(
+    const items = [
       ...rows.map((r) => {
         const tag = this.tagOf(r.how);
         return h(
@@ -3199,7 +3219,7 @@ export class AltarScene implements GameScene {
           h('span', { class: 'lr-info-rule' }, chip ? this.chipRule(r) : this.infoRule(r)),
         );
       }),
-      ...(key === 'intro' && this.teachCell
+      ...(intro && this.teachCell
         ? [
             h(
               'div',
@@ -3210,7 +3230,16 @@ export class AltarScene implements GameScene {
             ),
           ]
         : []),
-    );
+    ];
+    const paged = key.length > 5 && intro;
+    if (paged) {
+      const n = items.length;
+      const i = Number(key.slice(5));
+      this.tip.replaceChildren(
+        items[i]!,
+        h('div', { class: 'lr-info-page', 'aria-hidden': 'true' }, `New here · ${i + 1} of ${n}`),
+      );
+    } else this.tip.replaceChildren(...items);
     this.tip.toggleAttribute('data-full', key.startsWith('p'));
     if (L.phone) {
       // Phones: a chip in the info lane, bottom-aligned (CSS), never over the board.

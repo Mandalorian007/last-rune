@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
+import { MACHINE_IDS } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, waitFrames } from './helpers';
 
@@ -11,6 +12,8 @@ import { DEV_URL, waitFrames } from './helpers';
 //  3. The solve card stands ≥12 CSS px inside the play area; Continue is ≥44 px tall and spans
 //     the card; FUSE's line is fully on screen and off the card.
 //  4. FUSE's figure is fully inside the viewport (his treads are not cut by the bottom edge).
+//  5. An altar's arrival card (its new pieces), every page of it, stands ≥8 CSS px clear of
+//     Strike and off FUSE: intake-desk fresh, relay-tower and capacitor-bay at first meeting.
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0 },
@@ -54,6 +57,33 @@ async function shownBox(page: Page, sel: string): Promise<Box | null> {
 }
 
 const hit = (a: Box, b: Box) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+const grow = (a: Box, d: number): Box => ({ l: a.l - d, t: a.t - d, r: a.r + d, b: a.b + d });
+/** The arrival card's clearance from Strike, CSS px. */
+const STRIKE_CLEAR = 8;
+
+/** Every page of the arrival card now up: clear of Strike and FUSE. Pages turn every 4 s. */
+async function arrivalProblems(page: Page, label: string): Promise<string[]> {
+  const out: string[] = [];
+  const first = await shownBox(page, '.lr-altar-tip[data-source="intro"]');
+  if (!first) return [`${label}: no arrival card`];
+  const marker = await page.evaluate(
+    () => document.querySelector('.lr-altar-tip .lr-info-page')?.textContent ?? '',
+  );
+  const pages = Number(/of (\d+)/.exec(marker)?.[1] ?? 1);
+  for (let i = 0; i < pages; i++) {
+    if (i > 0) await page.waitForTimeout(4000);
+    const tip = await shownBox(page, '.lr-altar-tip[data-source="intro"]');
+    const strike = await shownBox(page, '[data-action="strike"]');
+    if (!tip) {
+      out.push(`${label}: arrival card gone at page ${i + 1} of ${pages}`);
+      break;
+    }
+    if (strike && hit(grow(tip, STRIKE_CLEAR), strike))
+      out.push(`${label} page ${i + 1}: arrival card within ${STRIKE_CLEAR}px of Strike`);
+    if (hit(tip, await fuseBox(page))) out.push(`${label} page ${i + 1}: arrival card over FUSE`);
+  }
+  return out;
+}
 
 /** The play area: the app box (inside the emulated notch insets), client px. */
 async function playArea(page: Page): Promise<Box> {
@@ -123,6 +153,8 @@ for (const vp of PHONES) {
       // 1. The how-to line, while FUSE talks: its own slot.
       await page.evaluate(() => (window as G).__game.flow.openPuzzle('intake-desk'));
       await expect(page.locator('.lr-altar')).toBeVisible();
+      await waitFrames(page, 6);
+      problems.push(...(await arrivalProblems(page, 'intake-desk')));
       await page.evaluate(() => {
         const g = (window as G).__game;
         g.fuse.hush();
@@ -154,10 +186,34 @@ for (const vp of PHONES) {
       await page.evaluate(() => (window as G).__game.flow.closePuzzle());
       await waitFrames(page, 4);
 
-      // 2. A fail: the verdict card, and FUSE's bubble only once it is gone.
+      // 5. Capacitor Bay at first meeting (everything before it restored).
+      await seed(
+        page,
+        MACHINE_IDS.filter(
+          (m) =>
+            ![
+              'capacitor-bay',
+              'lift-shaft',
+              'roof-array',
+              'control-booth',
+              'the-last-rune',
+            ].includes(m),
+        ),
+      );
+      await page.evaluate(() => (window as G).__game.flow.openPuzzle('capacitor-bay'));
+      await expect(page.locator('.lr-altar')).toBeVisible();
+      await waitFrames(page, 6);
+      problems.push(...(await arrivalProblems(page, 'capacitor-bay')));
+      await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+      await waitFrames(page, 4);
+
+      // 2. A fail: the verdict card, and FUSE's bubble only once it is gone. (Relay Tower right
+      // after the Intake Desk: its arrival card first.)
       await seed(page, ['intake-desk']);
       await page.evaluate(() => (window as G).__game.flow.openPuzzle('relay-tower'));
       await expect(page.locator('.lr-altar')).toBeVisible();
+      await waitFrames(page, 6);
+      problems.push(...(await arrivalProblems(page, 'relay-tower')));
       await page.evaluate(() => (window as G).__game.fuse.hush());
       await page.locator('[data-action="strike"]').tap();
       await waitFrames(page, 4);
