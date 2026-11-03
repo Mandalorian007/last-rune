@@ -30,6 +30,7 @@ _Last updated: 2026-11-02 by PM_
 | codex-2 | ws/codex-2 | ✅ merged | real gem portraits baked once with the altar material (engine SnapshotRenderer); bolt in/out diagrams with altar charge chips + ✕ on fizzle sides (unit-checked vs acceptMask); pages unlock on first sight: Not met / Seen / Yours; fits 1280 at 150%. D-035 |
 | ending-2 | ws/ending-2 | ✅ merged | D-032: chat mock gone; FUSE's 3 captions over gold light + procedural crowd murmur; "FUSE went to ThunderClap Gaming." title card; credits name ThunderSoap; "Join ThunderClap Gaming". D-034: Ko-fi pill on title (bottom-right) and end card, click-only; arrow/pad nav on title + end card |
 | capacitor-clarity | ws/capacitor-clarity | ✅ merged | strike pips + "Strike 1 of 2" on Gives card and Strike button; "in one strike" on Needs; Capacitor plan label ("Strike 1: keeps 8 / Strike 2: 8 + 8 → 16") from the sim trace; 1.4 s between strikes; verdict names the strike + plain story; full Capacitor rule on its card. D-033 |
+| link-copy | ws/link-copy | 🟡 running | Copy link beside Join + Ko-fi links; fallback field if clipboard or popup blocked |
 | onboarding-2 | ws/onboarding-2 | ✅ merged | gem info card lives over the tray band (hover/focus/held; arrival card fades), fixed gems get iron brackets + "Fixed in place", first turnable Bend/Gate shows a turn badge and the preview swings as it turns; Gives N + strike-ready on all 16; new-gem lines before use; tray matches board; charge chips on new gems; `altar-labels.spec` e2e |
 | split-rotate | ws/split-rotate | ✅ merged | D-031: Split has one input (stem) and turns; octagon cut + bold T glyph with outward arrows; red ✕ where the preview stops at a wrong-facing Bend/Gate/Split; 14 Split puzzles keep their routes (conveyor-a 8→4 solutions); solver ignores turn choice in scoring (follow-up) |
 | turn-2 | ws/turn-2 | ✅ merged | R/Q/scroll over a placed gem turns it in place and saves at once, even with a gem in hand; held-gem ghost only over empty sockets; drag-turn kept on drop; plainer hint/tag/card text; 2 new e2e |
@@ -46,7 +47,7 @@ _Last updated: 2026-11-02 by PM_
 
 ## Risks
 - Flaky e2e: `turn-clarity.spec.ts:189` (R/Q over a placed Bend; cursor ends at x=3 not 4) failed once under full-suite load in 3 separate branches, passes alone. Bug bash item.
-- Gamepad A on the Ko-fi/Join links may be popup-blocked (a pad press may not count as a user gesture). Accepted for now; mouse/keyboard fine.
+- Gamepad A on the Ko-fi/Join links may be popup-blocked; link-copy adds a copy option and blocked-popup fallback.
 - e2e flake (fixed twice over): repeat taps now queue in Input, and each worktree runs e2e on its own ports (tests/e2e/ports.ts).
 - The master limiter is now on by default (above −1 dBFS only). Needs a human listen along with the rest of the audio.
 - Audio is only objectively checked (levels, clicks, loops). Needs a human listen; 52 MiB decoded audio may matter on low-memory devices.
