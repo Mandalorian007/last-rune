@@ -74,3 +74,21 @@ Format: `D-NNN · date · decision · why · who`.
 - Revisit with playtest times: roof-array and control-booth score the same (5.4); relay-tower → crane is the biggest step on the curve; conveyor-a introduces amber and magenta together.
 - **D-038** · 2026-11-03 · **The ending returns to a Discord-style community hangout (User; amends D-032).** After playing alpha-1 the user said: "Our discord is actually more of a community hangout… you can do something a bit more fun. Also for emoji reactions don't just use colored circles should have actual emojis… The side bar in particular is the most interesting." Chose: bring the chat scene back, made fun, using the **real channel names** from the ThunderClap Gaming server (Community category: 👋 welcome, 🧑 introductions, 💬 the-hangout, 👀 supporter-sneak-peeks, 💬 supporter-chat, 🏆 events-and-contests, 🐈 furry-friends, 🍔 omg-food, 🎶 jammin-out, 🍜 otaku-oasis, 📚 book-worms, 🌱 watch-me-grow, ⚽ sports-ball, 🚗 gearhead). Constraints kept from D-032/D-005: FUSE is a game character, not a bot (no BOT tag); no real members' names or avatars apart from ThunderSoap (the author); other posters are clearly invented; no member counts; no network calls. Reactions are real emoji, drawn as system emoji text; that counts as text, not a third-party asset file. The invite link stays (D-013). · User
 - **D-039** · 2026-11-03 · **Phones are supported (User).** "do some due diligence to support the mobile phone as well it's fine if it's horizontal only, but both would be cool." Landscape phones are a release target: the whole game is playable by touch from title to end card on a ~667×375 to 932×430 CSS-px landscape screen, with no keyboard. Portrait is a stretch goal. If a scene can't be made clear in portrait, it shows a friendly "turn your phone sideways" card rather than a squeezed layout. D-027 still rules: a phone player must get the goal, the target and each piece as clearly as on desktop. Touch targets are at least 44 CSS px. Key-cap hints become touch hints on touch devices. Safe areas (notch, home bar) are respected. Phones default to a phone-friendly perf tier. Same storage and network rules (localStorage only, no network calls). Real-device checks are with the user; agents use Playwright mobile emulation. · User
+- **D-040** · 2026-11-03 · **Phone polish bar and mobile-3 calls (PM).** The user said "make the judgements and get the eval and work done and scheduled as the PM". The PM screenshot review of mobile-2 scored it 6/10 from four independent reviewers.
+  - **Acceptance gate.** A phone build ships only after a fresh blind screenshot review scores ≥8/10 with no blocker or major issue. That means 4 reviewers, every scene, all 16 altars in play, at 4 realistic viewports, asked "is this a highly polished, intuitive, mobile-supported interface?". Passing rule checks is not enough.
+  - **Socket pitch on the iPhone 844×340 viewport (47 px insets):**
+    - 6×4 boards: ≥44 CSS px;
+    - 8×6 boards: ≥38;
+    - 10×8 boards: ≥30, with the existing loupe and snap for touch.
+    - On SE (667×320), at least 90% of these.
+  - On phones the altar camera frames the board plus its gauges and drops the decorative surround. Labels go beside gauges, not above or below them.
+  - **Kept as designed (not phone bugs):**
+    - fixed gems keep their dashed corner brackets;
+    - the held gem stays held after placing, for repeat placement;
+    - only legal sockets light while a gem is held, provided that matches the rules.
+  - **Phone chrome:**
+    - one close convention for overlays: a ✕ top-right, plus the existing Esc/Back;
+    - controls ≥44 px tall or with ≥44 px hit areas, drawn ≥36 px;
+    - title and hall art fill the width up to the safe areas;
+    - the ending chat on phones is a single conversation view with a channel header, not a sidebar.
+  - Desktop and iPad stay unchanged. · PM
