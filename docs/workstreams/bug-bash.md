@@ -82,6 +82,8 @@ All of these are covered in `tests/e2e/robustness.spec.ts` (12 tests, including 
 | 15 | S4 | Altar tags below a cell | The pop-in animation starts from the above-cell offset, so there is a small jump. | Deferred (cosmetic) | — |
 | 16 | S4 | Device lost | The game loop keeps ticking under the fatal dialog. No errors, but wasted work. | Deferred (perf-low / engine) | `robustness.spec.ts` |
 | 17 | S4 | Settings in the hall | The modal covers the HUD buttons. | Deferred: acceptable for a modal | after/settings-* |
+| 18 | S2 | Multi-strike altars (capacitor-bay), mid-strike 2 | The machine label's "got N" is the live reading of the strike in progress, but the chip list only showed finished strikes. A machine could show "got 4" beside only "Strike 1: 2", which reads as strike 1 getting 4. It is a display mismatch, not lag; the sim values are right. | **Fixed**: the strike in progress shows as a dashed "live" chip ("Strike 2: 4"), so "got" always equals the newest chip. When the strike settles, the chip takes its exact/under/over colour. | `capacitor.spec.ts`: a per-frame check that "got N" matches the newest chip (would have caught "got 16 \| Strike 1: 0") |
+| 19 | — | `robustness.spec.ts` spam test | Flaky: O-spam toggle parity isn't deterministic when presses land during the panel transition. | **Fixed** (test): Esc spam, then deliberate Esc until it is closed, still asserting ≤1 panel throughout | — |
 
 **Shared files touched:**
 - `games/last-rune/ui/styles.ts`: Settings layout, Codex text-scale sizing, `.tc-panel` scrollbar colour (game CSS only; engine untouched).
