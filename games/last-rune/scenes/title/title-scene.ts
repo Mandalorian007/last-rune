@@ -15,7 +15,7 @@ import { coffeeLink } from '../../content/ending';
 import { beatLine, type FuseLine, titleLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { hasProgress } from '../../game/save';
-import { coffeeAnchor } from '../../ui/coffee';
+import { coffeeLinkWidget } from '../../ui/coffee';
 import { menuNav } from '../../ui/menu-nav';
 import type { TitleView, TitleViewFrame } from '../views';
 import { ChatterClock, ShuffleBag } from './chatter';
@@ -123,7 +123,7 @@ export class TitleScene implements GameScene {
     const o = ui.root.getBoundingClientRect();
     const out: Rect[] = [];
     for (const el of this.dom.querySelectorAll<HTMLElement>(
-      '.lr-title-menu, .lr-release, .lr-title-coffee',
+      '.lr-title-menu, .lr-release, .lr-title-links',
     )) {
       const r = el.getBoundingClientRect();
       if (r.width === 0) continue;
@@ -148,6 +148,15 @@ export class TitleScene implements GameScene {
   private buildDom(): HTMLElement {
     const ctx = this.ctx;
     const coffee = coffeeLink();
+    const coffeeEl = coffee
+      ? coffeeLinkWidget(coffee, {
+          cls: 'lr-title-coffee',
+          wrap: 'lr-title-links',
+          action: 'title-coffee',
+          place: 'above',
+          align: 'end',
+        })?.element
+      : null;
     const gold = (label: string, fn: () => void, id: string) =>
       h(
         'button',
@@ -198,8 +207,9 @@ export class TitleScene implements GameScene {
       ),
       menu,
       ...(releaseLabel() ? [h('p', { class: 'lr-release' }, releaseLabel())] : []),
-      // Ko-fi (D-034): small, in the corner, never competing with Play. Click-only.
-      ...(coffee ? [coffeeAnchor(coffee, 'lr-title-coffee', 'title-coffee')] : []),
+      // Ko-fi (D-034): small, in the corner, never competing with Play. Click-only, with a
+      // Copy link beside it in case the browser blocks the new tab.
+      ...(coffeeEl ? [coffeeEl] : []),
     );
   }
 

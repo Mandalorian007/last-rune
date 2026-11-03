@@ -1,4 +1,5 @@
 import { focusableWithin } from './dom';
+import { activateLink } from './link';
 import type { PanelStack } from './stack';
 
 /** The slice of the Gamepad API this reads (standard mapping). */
@@ -63,7 +64,8 @@ export class PadNav {
     const active = panel.ownerDocument.activeElement as HTMLElement | null;
     const inside = active !== null && active !== panel && panel.contains(active);
     if (fresh('activate')) {
-      if (inside) active.click();
+      // External links open via window.open with block detection (a pad press is no gesture).
+      if (inside) activateLink(active, 'gamepad');
       return;
     }
     for (const dir of ['up', 'down', 'left', 'right'] as const) {

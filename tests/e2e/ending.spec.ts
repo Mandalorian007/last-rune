@@ -108,10 +108,12 @@ test('the ending plays to the end card; the ThunderClap Gaming link opens only o
   const [jb, cb] = [await join.boundingBox(), await coffee.boundingBox()];
   expect(cb!.y).toBeGreaterThan(jb!.y + jb!.height);
   expect(cb!.height).toBeLessThan(jb!.height);
-  // Arrow keys walk the card: Back has focus, Down wraps to Join, then Ko-fi.
+  // Arrow keys walk the card: Back has focus, Down wraps to Join, its Copy link, then Ko-fi.
   await expect(page.locator('.lr-end-back')).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(join).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('[data-action="ending-join-copy"]')).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await expect(coffee).toBeFocused();
   await expect(page.locator('.lr-end-back')).toBeVisible();

@@ -113,6 +113,61 @@ await ui.caption.say('Something old is listening.', {
 - `focusableWithin(el)` lists the focusable descendants of an element, skipping `inert` and `hidden`
   subtrees.
 
+## External links: `externalLink`
+
+A real new-tab link plus a **Copy link** button, with "Copied" feedback and a fallback popover
+(the URL in a selected read-only field) for when the browser blocks the copy or the new tab. Logic
+lives in `engine/platform/links.ts`; the widget only builds DOM and wires it. Labels come from the
+caller; the look comes from theme tokens (override `.tc-link`, `.tc-link-row`, `.tc-link-copy`,
+`.tc-link-fallback`, `.tc-link-message`, `.tc-link-field`, `.tc-link-close`).
+
+```ts
+import { activateLink, externalLink } from '@engine/ui';
+
+const link = externalLink({
+  url: SHOP_URL, // not https, or blank → returns null: render nothing
+  content: 'Visit the shop',
+  labels: {
+    copy: 'Copy link',
+    copied: 'Copied!',
+    copiedAnnounce: 'Link copied.', // aria-live, polite
+    copyAriaLabel: 'Copy link to the shop',
+    copyBlocked: 'Your browser blocked copying. Copy the link:',
+    popupBlocked: 'Your browser blocked the new tab. Copy the link:',
+    close: 'Close',
+  },
+  linkClass: 'my-link', // on the <a>
+  className: 'my-links', // on the wrapper
+  action: 'shop', // data-action: shop, shop-copy, shop-fallback, shop-close
+  place: 'below', // fallback popover above or below the row
+  align: 'center', // start | center | end
+});
+if (link) menu.append(link.element);
+
+// A gamepad press is not a user gesture: route it through activateLink. On a widget anchor it
+// uses window.open and shows the fallback if that was blocked; anything else is clicked.
+activateLink(focusedElement, 'gamepad');
+```
+
+- Mouse and Enter use the `<a>` natively (`target=_blank`, `rel="noopener noreferrer"`).
+- Copy order: `navigator.clipboard.writeText` (skipped when the frame's permissions policy forbids
+  `clipboard-write`), then a hidden textarea + `execCommand('copy')`, then the fallback field.
+  Never silent.
+- Escape or Close hides the fallback and returns focus to Copy link. `PadNav` already routes A
+  through `activateLink`.
+- Nothing opens or copies until the player acts. No network calls.
+
+Platform API (`@engine/platform`), usable without the widget:
+
+- `safeExternalUrl(url)`: the trimmed URL if it is plain `https` (no credentials, no spaces), else
+  null.
+- `embedContext(win?)`: `'top' | 'same-origin-frame' | 'cross-origin-frame'`, detected.
+- `openExternal(url, { activation }, win?)`: `'opened' | 'blocked' | 'invalid'`. `pointer` and
+  `keyboard` click a temporary `<a>`; `gamepad` and `script` call `window.open` and report `null`
+  as `blocked` (the opened tab's `opener` is cleared).
+- `copyText(text, win?)`: `Promise<'copied' | 'manual'>`; `execCopy(text, doc?)`;
+  `clipboardWriteAllowed(doc?)`.
+
 ## Theme
 
 `defaultTheme` holds the tokens, which become CSS custom properties: `colorAccent` turns into

@@ -181,6 +181,9 @@ export class Input<A extends string> {
   private boundMouse = new Set<number>();
   private boundWheel = false;
   private pads: readonly (GamepadLike | null)[] = [];
+  /** Keys and mouse buttons that were down or tapped on the last tick. */
+  private readonly prevKeys = new Set<string>();
+  private readonly prevButtons = new Set<number>();
   private detachFn: (() => void) | null = null;
 
   constructor(bindings: Bindings<A>, opts: InputOptions = {}) {
@@ -304,6 +307,8 @@ export class Input<A extends string> {
       consumeRepeats(this.keyRepeats, this.keysTapped);
       consumeRepeats(this.buttonRepeats, this.buttonsTapped);
     }
+    rememberActive(this.prevKeys, this.keysDown, this.keysTapped);
+    rememberActive(this.prevButtons, this.buttonsDown, this.buttonsTapped);
     this.keysTapped.clear();
     this.buttonsTapped.clear();
     this.pointer.wheelX = this.wheelAccX;
@@ -329,12 +334,13 @@ export class Input<A extends string> {
         const tapped = this.keysTapped.has(b.key);
         // A queued repeat counts once the tick holding its first tap has passed.
         const queued = !tapped && (this.keyRepeats.get(b.key) ?? 0) > 0;
-        if (queued) out.fresh = true;
+        // Released and pressed again since last tick: a new press, not a hold.
+        if (queued || (tapped && this.prevKeys.has(b.key))) out.fresh = true;
         v = this.keysDown.has(b.key) || tapped || queued ? 1 : 0;
       } else if ('mouse' in b) {
         const tapped = this.buttonsTapped.has(b.mouse);
         const queued = !tapped && (this.buttonRepeats.get(b.mouse) ?? 0) > 0;
-        if (queued) out.fresh = true;
+        if (queued || (tapped && this.prevButtons.has(b.mouse))) out.fresh = true;
         v = this.buttonsDown.has(b.mouse) || tapped || queued ? 1 : 0;
       } else if ('wheel' in b) {
         v = Math.sign(this.wheelAccY) === b.wheel ? 1 : 0;
@@ -564,6 +570,12 @@ function queueRepeat<K>(repeats: Map<K, number>, k: K): void {
 }
 
 /** One queued repeat per key is used up each tick, except on the tick of its first tap. */
+function rememberActive<K>(prev: Set<K>, down: Set<K>, tapped: Set<K>): void {
+  prev.clear();
+  for (const k of down) prev.add(k);
+  for (const k of tapped) prev.add(k);
+}
+
 function consumeRepeats<K>(repeats: Map<K, number>, tappedNow: Set<K>): void {
   for (const [k, n] of repeats) {
     if (tappedNow.has(k)) continue;

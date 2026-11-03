@@ -6,6 +6,7 @@
  * chat, server or member details. The only network touches are the player clicking
  * the invite (D-013) or the Ko-fi link (D-034): plain links, new tab, no widgets.
  */
+import { safeExternalUrl } from '../../../engine/platform/links';
 import { wordCount } from './lines';
 
 /** The ThunderClap Gaming invite. If empty, the ending hides the Join button. */
@@ -29,20 +30,25 @@ export const ENDING_COPY = {
   footer: 'This was the whole game. Thank you for finishing it.',
 } as const;
 
+/** Labels for the engine's external-link widget (D-036): Copy link, Copied, and the fallback. */
+export const LINK_COPY_TEXT = {
+  copy: 'Copy link',
+  copied: 'Copied!',
+  copiedAnnounce: 'Link copied.',
+  close: 'Close',
+  copyBlocked: 'Your browser blocked copying. Copy the link:',
+  popupBlocked: 'Your browser blocked the new tab. Copy the link:',
+} as const;
+
 export interface EndingButton {
   readonly id: 'join' | 'coffee';
   readonly label: string;
   readonly href: string;
 }
 
-const httpsOnly = (u: string): string | null => {
-  const t = u.trim();
-  return /^https:\/\/\S+$/.test(t) ? t : null;
-};
-
 /** The Ko-fi link (title and end card), or null when the URL is blank or not https. */
 export function coffeeLink(url: string = KOFI_URL): EndingButton | null {
-  const href = httpsOnly(url);
+  const href = safeExternalUrl(url);
   return href ? { id: 'coffee', label: ENDING_COPY.coffeeLabel, href } : null;
 }
 
@@ -55,7 +61,7 @@ export function endingButtons(
   coffeeUrl: string = KOFI_URL,
 ): EndingButton[] {
   const out: EndingButton[] = [];
-  const join = httpsOnly(inviteUrl);
+  const join = safeExternalUrl(inviteUrl);
   if (join) out.push({ id: 'join', label: ENDING_COPY.joinLabel, href: join });
   const coffee = coffeeLink(coffeeUrl);
   if (coffee) out.push(coffee);

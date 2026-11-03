@@ -5,6 +5,15 @@ export type { GpuContext, GpuFailureReason, GpuInitOptions, GpuInitResult } from
 export { initGpu } from './gpu';
 export type { BackbufferSize, Letterbox, Rect, Vec2 } from './letterbox';
 export { clientToLogical, computeBackbuffer, computeLetterbox, logicalToClient } from './letterbox';
+export type { CopyResult, EmbedContext, LinkActivation, OpenResult } from './links';
+export {
+  clipboardWriteAllowed,
+  copyText,
+  embedContext,
+  execCopy,
+  openExternal,
+  safeExternalUrl,
+} from './links';
 export type { MessageScreenAction, MessageScreenOptions } from './screens';
 export { showDeviceLostScreen, showMessageScreen, showUnsupportedScreen } from './screens';
 export type { SurfaceOptions, SurfaceSize } from './surface';

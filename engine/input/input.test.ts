@@ -147,6 +147,20 @@ describe('Input action map', () => {
     expect(input.held('confirm')).toBe(true);
   });
 
+  it('a key tapped on two ticks in a row presses twice', () => {
+    const input = new Input(bindings, { getGamepads: () => [] });
+    input.keyDown('Enter');
+    input.keyUp('Enter');
+    input.update();
+    expect(input.pressed('confirm')).toBe(true);
+    input.keyDown('Enter');
+    input.keyUp('Enter');
+    input.update();
+    expect(input.pressed('confirm')).toBe(true);
+    input.update();
+    expect(input.pressed('confirm')).toBe(false);
+  });
+
   it('reads gamepad buttons and axes with thresholds', () => {
     let pads: (GamepadLike | null)[] = [null, pad([0], [-0.3, 0])];
     const input = new Input(bindings, { getGamepads: () => pads });

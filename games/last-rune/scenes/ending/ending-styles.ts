@@ -73,6 +73,14 @@ const CSS = /* css */ `
 .tc-overlay .lr-end-card a.lr-end-coffee:hover { background: #3c220bd8; border-color: #ffe3a0aa; }
 .tc-overlay .lr-end-card a.lr-end-coffee:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 .tc-overlay .lr-coffee-icon { width: 1.25em; height: 1.25em; flex: none; }
+/* Each link with its Copy link (engine widget, D-036): the button hangs off the link's right side so the link stays centred. */
+.tc-overlay .lr-end-links .tc-link-row { position: relative; }
+.tc-overlay .lr-end-links .tc-link-copy {
+  position: absolute; left: 100%; margin-left: 18px; color: #fff1cc; background: #2a1606c0; border: 2px solid #ffe3a055;
+}
+.tc-overlay .lr-end-links .tc-link-copy:hover { background: #3c220bd8; border-color: #ffe3a0aa; }
+.tc-overlay .lr-end-links .tc-link-copy:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+.tc-overlay .lr-end-links .tc-link-copy[data-copied] { color: #d8ffd8; border-color: #a8e8a8cc; }
 .tc-overlay .lr-end-footer {
   margin: 0; padding: 16px 90px; font-family: var(--tc-font-ui); font-size: 24px; color: #fff4dc;
   text-shadow: 0 1px 3px #2a1400, 0 2px 12px #2a1400aa;
