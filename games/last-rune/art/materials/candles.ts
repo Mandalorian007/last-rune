@@ -67,7 +67,8 @@ export function candleBreath(t: number, seed: number, calm = false): number {
   const breath = 0.5 + 0.5 * Math.sin(t * 1.05 + seed * 2.3);
   const drift = valueNoise1(t * 0.3, seed);
   const swell = 0.55 * breath + 0.45 * drift;
-  const flutter = 0.65 * valueNoise1(t * 2.2 + 7.1, seed + 1) + 0.35 * valueNoise1(t * 4.7, seed + 2);
+  const flutter =
+    0.65 * valueNoise1(t * 2.2 + 7.1, seed + 1) + 0.35 * valueNoise1(t * 4.7, seed + 2);
   return 1 - 0.19 * swell - 0.11 * flutter;
 }
 
