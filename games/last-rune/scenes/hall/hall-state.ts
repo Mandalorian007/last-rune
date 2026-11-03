@@ -9,7 +9,13 @@
  * what you've woken.
  */
 
-import { type FuseLine, lockedLineFor, machineLine, socketLine } from '../../content/lines';
+import {
+  doorLine,
+  type FuseLine,
+  lockedLineFor,
+  machineLine,
+  socketLine,
+} from '../../content/lines';
 import { MACHINES } from '../../content/machines';
 import {
   type CapabilityKey,
@@ -163,14 +169,15 @@ export function newlyUnlocked(
 
 /**
  * What FUSE says when an alcove is hovered or clicked:
- * - unlocked: the arrive line;
+ * - unlocked: the door's hall line if it has one (the intake's arrive line is an altar
+ *   instruction), else the arrive line;
  * - solved: the solve line (a reminder of what he said);
  * - locked: the door's own locked line if its condition holds, else the socket
  *   line for the first empty socket. The Last Rune's empty-socket fallback is
  *   silence until it is open (pitch: "No line on arrival").
  */
 export function lineForAlcove(a: AlcoveModel): FuseLine | undefined {
-  if (a.status === 'unlocked') return machineLine(a.id, 'arrive');
+  if (a.status === 'unlocked') return doorLine(a.id) ?? machineLine(a.id, 'arrive');
   if (a.status === 'solved') return machineLine(a.id, 'solve');
   const own = lockedLineFor(
     a.id,

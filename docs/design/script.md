@@ -189,6 +189,11 @@ ending. They stop the moment the player starts.
 
 ### Intake Desk `intake-desk`
 
+*Hall, hovering the open door* (its arrive line is an altar instruction, so the hall gets its own)
+
+> The intake desk. All visitors start here. The form is inside. It has been waiting a while. **[NEW]**  
+> <sub>`intake-desk.door` · 16w</sub>
+
 *Arrive*
 
 > Day 14,610. A visitor. There's a form for that. Step one: gem from the tray, onto a lit socket. **[NEW]**  

@@ -90,7 +90,12 @@ describe('hall state', () => {
   it('picks the right FUSE line per state', () => {
     const m = deriveHall(initialState());
     for (const a of m.alcoves) expect(lineForAlcove(a), a.id).toBeDefined();
-    expect(lineForAlcove(byId(m, 'intake-desk'))!.kind).toBe('arrive');
+    // The intake's arrive line is an altar instruction ("Step one: gem from the tray"), so
+    // the hall says its own line; other open doors say their arrive line.
+    const intake = lineForAlcove(byId(m, 'intake-desk'))!;
+    expect(intake.kind).toBe('door');
+    expect(intake.text).not.toMatch(/tray|socket|Step one/);
+    expect(lineForAlcove(byId(deriveHall(solvedAfter('intake-desk')), 'furnace'))!.kind).toBe('arrive');
     expect(lineForAlcove(byId(m, 'press-unit-4'))!.kind).toBe('locked');
     expect(lineForAlcove(byId(m, 'furnace'))!.kind).toBe('socket');
     const solved = deriveHall(solvedAfter('intake-desk'));

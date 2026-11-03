@@ -83,6 +83,11 @@ export type FuseLine =
       /** With `cause`: only when the root fizzle sits on this gem. */
       readonly atGem?: GemKind;
     })
+  /**
+   * Said in the hall when an open, unrestored door is hovered, in place of its arrive line,
+   * when that line only makes sense at the altar (the intake's "Step one: gem from the tray").
+   */
+  | (LineBase & { readonly kind: 'door'; readonly machine: MachineId })
   | (LineBase & { readonly kind: 'hall'; readonly beat: 'first-entry' | 'ambient' | 'echo' })
   /** Idle chatter on the title screen, said in random order while nobody presses Play. */
   | (LineBase & { readonly kind: 'title' })
@@ -297,6 +302,13 @@ const DEFS: Def[] = [
     tier: 1,
     source: N,
     text: "Day 14,610. A visitor. There's a form for that. Step one: gem from the tray, onto a lit socket.",
+  },
+  {
+    kind: 'door',
+    machine: 'intake-desk',
+    tier: 1,
+    source: N,
+    text: 'The intake desk. All visitors start here. The form is inside. It has been waiting a while.',
   },
   {
     kind: 'solve',
@@ -833,6 +845,8 @@ function idFor(d: Def): string {
       return `${d.machine}.${d.kind}`;
     case 'locked':
       return `${d.machine}.locked`;
+    case 'door':
+      return `${d.machine}.door`;
     case 'socket':
       return `socket.${d.capability}`;
     case 'codex':
@@ -877,6 +891,11 @@ export function machineLine(machine: MachineId, kind: 'arrive' | 'solve'): FuseL
   return LINES.find(
     (l) => (l.kind === 'arrive' || l.kind === 'solve') && l.kind === kind && l.machine === machine,
   );
+}
+
+/** The hall's line for an open door, if its arrive line belongs at the altar only. */
+export function doorLine(machine: MachineId): FuseLine | undefined {
+  return LINES.find((l) => l.kind === 'door' && l.machine === machine);
 }
 
 /**
