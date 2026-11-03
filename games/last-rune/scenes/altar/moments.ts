@@ -16,6 +16,8 @@
  *   line if it can, else waits (FUSE's caption is frozen, not dropped), so nothing ever overlaps.
  */
 
+import type { GemKind } from '../../rules/types';
+
 /** Machines restored before the phone how-to line retires. */
 export const HINT_RETIRE = 3;
 
@@ -95,4 +97,47 @@ export function arbitrate(
     } else out.set(a.id, 'wait');
   }
   return out;
+}
+
+/**
+ * What the gem info card (the tip slot) shows, first match wins (mobile-7-teach, D-040
+ * addendum 5). The rule that matters: with a gem in hand, the card describes that gem or no gem
+ * at all. It never names another one beside "Holding X".
+ *
+ * - `pin`: the player long-pressed a gem for its full card (they asked for that one).
+ * - `teach`: the arrival card. On a phone it outranks a gem's tip. While a gem is in hand it
+ *   shows only if every gem on it is the held one (a page about the gold ring names no gem).
+ * - `tray`: a tray gem's tip, hovered or just picked. With a gem in hand, only the held gem's.
+ * - `board`: the board gem under the pointer or cursor.
+ * - `none`: nothing.
+ */
+export type InfoSource = 'pin' | 'teach' | 'tray' | 'board' | 'none';
+
+export interface InfoAsk {
+  readonly pin: boolean;
+  readonly phone: boolean;
+  /** The arrival card is up. */
+  readonly teachUp: boolean;
+  /** The gems the arrival card names right now (a phone shows one page; [] for the ring). */
+  readonly teachGems: readonly GemKind[];
+  /** The gem in hand, if any. */
+  readonly held: GemKind | null;
+  /** The tray slot asking for its tip (hovered, or the held gem's for a moment after a pick). */
+  readonly slot: GemKind | null;
+  /**
+   * The board gem under the pointer or cursor that may speak. With a gem in hand on a desktop,
+   * that is the placed gem the hand is over (its card says R turns it); a phone, whose column
+   * shows "Holding X", lets only the held kind speak.
+   */
+  readonly board: GemKind | null;
+}
+
+export function pickInfo(a: InfoAsk): InfoSource {
+  if (a.pin) return 'pin';
+  const teachOk = a.teachUp && (!a.held || a.teachGems.every((g) => g === a.held));
+  if (a.phone && teachOk) return 'teach';
+  if (a.slot && (!a.held || a.slot === a.held)) return 'tray';
+  if (a.board && (!a.held || !a.phone || a.board === a.held)) return 'board';
+  if (teachOk) return 'teach';
+  return 'none';
 }

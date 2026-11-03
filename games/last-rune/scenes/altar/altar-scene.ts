@@ -85,6 +85,7 @@ import {
   introButton,
   phoneHint,
   pickHint,
+  pickInfo,
   type VoiceAsk,
 } from './moments';
 import { legalSockets, socketLooks } from './socket-looks';
@@ -3515,25 +3516,35 @@ export class AltarScene implements GameScene {
     const fixedHere = focus ? this.board.fixedAt(focus) : undefined;
     const onBoard = focus ? (this.board.at(focus) ?? fixedHere) : undefined;
     // Phones: the arrival card outranks a gem's tip (moments.ts); only a long-press pin wins.
+    // With a gem in hand the card names that gem or none (`pickInfo`, D-040 addendum 5).
     const teachUp = this.introLeft > 0 && !strike;
-    if (pin) {
+    const introAt = Math.min(this.introPageIdx, this.introPages() - 1);
+    const news = this.introRows();
+    const source = pickInfo({
+      pin: !!pin,
+      phone: !!L.phone,
+      teachUp,
+      teachGems: L.phone ? (news[introAt] ? [news[introAt].gem] : []) : news.map((r) => r.gem),
+      held: this.hand?.kind ?? null,
+      slot: s?.gem ?? null,
+      board: focus && onBoard ? onBoard.gem : null,
+    });
+    if (source === 'pin' && pin) {
       rows = [pin];
       key = `p${pin.gem}${pin.how}`;
-    } else if (L.phone && teachUp) {
-      rows = this.introRows();
-      key = `intro${Math.min(this.introPageIdx, this.introPages() - 1)}`;
-    } else if (s) {
+    } else if (source === 'teach') {
+      rows = news;
+      key = L.phone ? `intro${introAt}` : 'intro';
+    } else if (source === 'tray' && s) {
       rows = [{ gem: s.gem, how: this.turnTeach.has(s.gem) ? 'turnsTray' : 'tray' }];
       slotX = s.x;
-      key = `t${slot}`;
-    } else if (focus && onBoard) {
+      // Keyed by the gem too: a slot's tip must never outlive the gem it describes.
+      key = `t${slot}${s.gem}`;
+    } else if (source === 'board' && focus && onBoard) {
       const fixed = !!fixedHere;
       const how: InfoHow = fixed ? 'fixed' : isRotational(onBoard.gem) ? 'boardTurns' : 'board';
       rows = [{ gem: onBoard.gem, how }];
       key = `b${focus.x},${focus.y}${fixed ? 'f' : ''}${this.keyboard ? 'k' : ''}${this.hand ? 'h' : ''}`;
-    } else if (teachUp) {
-      rows = this.introRows();
-      key = 'intro';
     }
     // Keyboard focus on a board gem: say what it is (once per gem).
     const fk = this.keyboard && key.startsWith('b') ? key : '';

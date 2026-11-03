@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { GEM_KINDS, type GemKind } from '../../rules/types';
 import {
   arbitrate,
   HINT_RETIRE,
   hintRetired,
+  type InfoAsk,
   introButton,
   phoneHint,
   pickHint,
+  pickInfo,
   type VoiceAsk,
 } from './moments';
 
@@ -115,5 +118,88 @@ describe('column arbiter: one owner at a time', () => {
     const g = arbitrate([v('a', 'tip', 50), v('b', 'tip', 50)], 60, 8);
     expect(g.get('a')).toBe('full');
     expect(g.get('b')).toBe('wait');
+  });
+});
+
+describe('the gem card matches the gem in hand (D-040 addendum 5 blocker)', () => {
+  /** The gems a card from `src` names, given the ask. */
+  const named = (src: string, a: InfoAsk): GemKind[] =>
+    src === 'teach'
+      ? [...a.teachGems]
+      : src === 'tray'
+        ? [a.slot!]
+        : src === 'board'
+          ? [a.board!]
+          : [];
+  const opts = [null, ...GEM_KINDS] as const;
+
+  it('never names another gem beside "Holding X", for every gem kind and every moment', () => {
+    let checked = 0;
+    for (const phone of [true, false])
+      for (const held of GEM_KINDS)
+        for (const teachUp of [true, false])
+          for (const teach of opts)
+            for (const slot of opts)
+              for (const board of opts) {
+                const a: InfoAsk = {
+                  pin: false,
+                  phone,
+                  teachUp,
+                  teachGems: teach ? [teach] : [],
+                  held,
+                  slot,
+                  board,
+                };
+                const src = pickInfo(a);
+                // A desktop's card for the placed gem under the hand (R turns it) is allowed.
+                if (src === 'board' && !phone) continue;
+                for (const g of named(src, a))
+                  expect(g, `${JSON.stringify(a)} -> ${src}`).toBe(held);
+                checked++;
+              }
+    expect(checked).toBeGreaterThan(1000);
+  });
+
+  it('se/16: holding Channel while the arrival card teaches Capacitor shows Channel or nothing', () => {
+    const a: InfoAsk = {
+      pin: false,
+      phone: true,
+      teachUp: true,
+      teachGems: ['capacitor'],
+      held: 'channel',
+      slot: 'channel',
+      board: null,
+    };
+    expect(pickInfo(a)).toBe('tray');
+    expect(pickInfo({ ...a, slot: null })).toBe('none');
+  });
+
+  it('the arrival card returns once the hand is empty, and stays for its own gem', () => {
+    const a: InfoAsk = {
+      pin: false,
+      phone: true,
+      teachUp: true,
+      teachGems: ['bend'],
+      held: null,
+      slot: null,
+      board: null,
+    };
+    expect(pickInfo(a)).toBe('teach');
+    expect(pickInfo({ ...a, held: 'bend', slot: 'bend' })).toBe('teach');
+    // The gold-ring page names no gem: it is about where the held gem goes.
+    expect(pickInfo({ ...a, teachGems: [], held: 'channel' })).toBe('teach');
+  });
+
+  it('a long-press pin wins: the player asked for that gem', () => {
+    const a: InfoAsk = {
+      pin: true,
+      phone: true,
+      teachUp: true,
+      teachGems: ['bend'],
+      held: 'channel',
+      slot: null,
+      board: null,
+    };
+    expect(pickInfo(a)).toBe('pin');
   });
 });
