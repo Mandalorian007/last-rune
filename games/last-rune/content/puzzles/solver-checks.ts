@@ -9,24 +9,41 @@ import { PUZZLES } from './index';
 const FULL = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env
   .FULL;
 
+// The finale's searches take 1-2 s on an idle machine, but a loaded one (parallel e2e, other
+// worktrees) has stretched one past 10 s, over vitest's 5 s default: the rare `pnpm check`
+// flake. Every search here gets the same generous budget; a real hang still fails.
+const SEARCH_TIMEOUT = 60_000;
+
 export function solverChecks(id: MachineId) {
   const p = PUZZLES[id];
 
-  it('is solvable', () => {
-    expect(isSolvable(p)).toBe(true);
-  });
+  it(
+    'is solvable',
+    () => {
+      expect(isSolvable(p)).toBe(true);
+    },
+    SEARCH_TIMEOUT,
+  );
 
   for (const g of p.design.essential) {
-    it(`cannot be solved without ${g}`, () => {
-      expect(isSolvable(p, { ...p.tray, [g]: 0 })).toBe(false);
-    });
+    it(
+      `cannot be solved without ${g}`,
+      () => {
+        expect(isSolvable(p, { ...p.tray, [g]: 0 })).toBe(false);
+      },
+      SEARCH_TIMEOUT,
+    );
   }
 
   for (const g of FIXED_ESSENTIAL[id] ?? []) {
-    it(`cannot be solved without its pre-set ${g}`, () => {
-      expect(p.fixed.some((f) => f.gem === g)).toBe(true);
-      expect(fixedEssential(p, g)).toBe(true);
-    });
+    it(
+      `cannot be solved without its pre-set ${g}`,
+      () => {
+        expect(p.fixed.some((f) => f.gem === g)).toBe(true);
+        expect(fixedEssential(p, g)).toBe(true);
+      },
+      SEARCH_TIMEOUT,
+    );
   }
 
   it.skipIf(SLOW.includes(id) && !FULL)(
@@ -40,6 +57,6 @@ export function solverChecks(id: MachineId) {
       expect(r.count).toBeLessThanOrEqual(100);
       expect(r.minGems).toBeLessThanOrEqual(p.design.intended.length);
     },
-    60_000,
+    SEARCH_TIMEOUT,
   );
 }

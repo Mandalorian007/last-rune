@@ -23,5 +23,8 @@ export default defineConfig({
       'tests/unit/**/*.test.ts',
       'scripts/**/*.test.ts',
     ],
+    // The solver searches run 0.4-2 s idle but over 10 s on a loaded machine (parallel e2e,
+    // other worktrees); the 5 s default made them a rare `pnpm check` flake.
+    testTimeout: 30_000,
   },
 });
