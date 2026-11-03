@@ -27,3 +27,30 @@ Verdict layout, Strike button, gauge chips and lamps, and the solve card. Keep `
 
 ## Log
 
+
+### 2026-11-03: all six items, phones only (desktop and iPad untouched)
+1. **Multi-strike verdict.** On phones a gauge card is always "Needs N · got M" (one line N/S, two lines in an E/W gutter). The per-strike chips and the "Strike 1: 2:" lead are gone. The verdict is a plain headline ("Breaker tripped", "Not enough charge"), then a line from `strikesLine` in `strike.ts`: "Strike 1: 0 · Strike 2: 16. Needs 8 in one strike.", then the Try line. On phones the Capacitor story is dropped from the verdict because the lane's Capacitor read-out already tells it. Under a verdict, that read-out now waits for room.
+2. **Strike** is one line from `strikeLabel`. Before the strike it reads "Strike (2 left)", "Strike (1 left)" mid-run, "Strike again" on the last strike and "Try again" after a fail. A single-strike altar reads "Strike". It is 58 CSS px tall and 12 CSS px inside the right edge. The "×2 / 1 of 2" sub-label is hidden. A stronger glow (`data-ready`) shows when every lamp is lit. Wider Strike plus a tall verdict meant they collided on the SE, so when the verdict reaches Strike, Strike now steps out (`data-yield`) until the verdict clears with any tap.
+3. **Reach lamps.** `scenes/altar/reach.ts` has `gaugeReach` (preview hops or any strike's trace reaching the gauge) and `allReached`. `updateCircuit` and Strike's ready glow use them. Before Strike each phone gauge card leads with a lamp: dark and hollow, or lit cyan. `reach.test.ts` checks that lamp state equals the rules' reachability for every prefix of every intended solution, and that a preview hop onto a gauge always lights its lamp.
+4. **Red mark.** A new socket state `fault` (id 8, `stone.ts` and `stone-wgsl.ts`). It is a solid red band from 0.9 to 1.24 radii with dark keylines either side and a halo that breathes over about 3 s. On phones the root socket the Try line names gets it; other fizzles keep the thin ring.
+5. **Solve card.** Measured: it covers no gauge and no gem on furnace, capacitor-bay or the-last-rune, on all four phones. FUSE's line now steps out unless it is ≥12 px below the card (was 4 px, `solve-scene.ts` `updateCrowd`).
+6. **Empty socket.** The phone cause headline comes from `causeHeadline`: "The charge hit an empty socket", "…carved stone", "…ran off the altar", and so on, with the Try line right under it.
+
+Files: `scenes/altar/{reach.ts, reach.test.ts, strike.ts, strike-styles.ts (new phone sheet, appended to the altar sheet), altar-scene.ts, altar-styles.ts, solve-scene.ts}`, `art/materials/stone.ts`, `shaders/stone-wgsl.ts`, `tests/e2e/mobile-strike.spec.ts`, `scripts/playtest/mobile-7-strike.spec.ts`.
+
+E2E: `tests/e2e/mobile-strike.spec.ts` runs on all four phones. It checks:
+- Strike's label, one line, ≥56 px tall and ≥12 px from the edge;
+- lamps against `machineLinked`, with no digits in them;
+- the glow only when every lamp is reached;
+- compact cards after a two-strike fail, the strikes line in the verdict, and "Try again";
+- the empty-socket headline;
+- the solve card clear of gauges and gems, and FUSE ≥12 px clear of it.
+
+Captures (git-ignored):
+- `docs/design/screens/local/mobile-7-strike/after/<phone>/` covers lamps off / one / all with the glow, mid-strike, the two-strike verdict, the Last Rune verdict, the empty socket with the red mark, and three solve cards.
+- `docs/design/screens/local/mobile-2/strike7/<phone>/` is the standard suite.
+
+Open:
+- On the SE the two-strike verdict covers FUSE's figure. Strike yields to it until a tap.
+- The unlit lamp is a small hollow ring. It reads fine next to the lit one, but on a board where every gauge is unlit it is quiet.
+- On the SE, FUSE's solve line usually steps out now, because there is under 12 px below the card.
