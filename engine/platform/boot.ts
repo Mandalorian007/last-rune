@@ -12,7 +12,16 @@ export interface BootOptions extends SurfaceOptions {
 }
 
 export type BootResult =
-  | { ok: true; surface: Surface; gpu: GpuContext }
+  | {
+      ok: true;
+      surface: Surface;
+      gpu: GpuContext;
+      /**
+       * Run `fn` after the device-lost screen is shown, to halt whatever was built after boot
+       * (loop, audio, timers). Returns unsubscribe.
+       */
+      onDeviceLost(fn: (info: GPUDeviceLostInfo) => void): () => void;
+    }
   | { ok: false; reason: GpuFailureReason | 'forced' };
 
 /**
@@ -25,10 +34,18 @@ export async function boot(root: HTMLElement, opts: BootOptions = {}): Promise<B
     return { ok: false, reason: 'forced' };
   }
   const surface = mountSurface(root, opts);
+  const lostListeners = new Set<(info: GPUDeviceLostInfo) => void>();
   const res = await initGpu(surface.canvas, {
     onLost: (info) => {
       showDeviceLostScreen(root, { title: opts.title, detail: info.message || undefined });
       opts.onDeviceLost?.(info);
+      for (const fn of [...lostListeners]) {
+        try {
+          fn(info);
+        } catch (err) {
+          console.error('[boot] device-lost handler failed', err);
+        }
+      }
     },
   });
   if (!res.ok) {
@@ -36,5 +53,13 @@ export async function boot(root: HTMLElement, opts: BootOptions = {}): Promise<B
     showUnsupportedScreen(root, { title: opts.title, detail: res.detail ?? res.reason });
     return { ok: false, reason: res.reason };
   }
-  return { ok: true, surface, gpu: res.gpu };
+  return {
+    ok: true,
+    surface,
+    gpu: res.gpu,
+    onDeviceLost(fn) {
+      lostListeners.add(fn);
+      return () => lostListeners.delete(fn);
+    },
+  };
 }

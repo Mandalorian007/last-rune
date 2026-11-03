@@ -112,3 +112,46 @@ export const CREDITS: readonly (readonly [string, string])[] = [
   ['Every sound', 'Synthesised as you play'],
   ['FUSE', 'As himself'],
 ];
+
+/** Where a falling board is drawn: centre, scale (1 = resting size) and angle. */
+export interface DropPose {
+  readonly x: number;
+  readonly y: number;
+  readonly scale: number;
+  readonly rot: number;
+}
+
+/** Seconds from release to landing for the dropped clipboard. */
+export const CLIP_FALL_SECONDS = 0.62;
+
+/**
+ * FUSE's clipboard falling from his clamp to where it rests in the foreground, `t` seconds
+ * after release. It reads as a drop, not a toss: it leaves the clamp with no speed, and its
+ * bottom edge (the part that meets the floor) falls with gravity the whole way. It grows and
+ * drifts out toward the rest spot more slowly at first, so the first moments are a plain
+ * fall; it tips over as it goes, with a slight flutter, and settles with a small bounce.
+ * `rest.h` is the board's resting height, used to find its bottom edge.
+ */
+export function clipDropPose(
+  t: number,
+  from: { x: number; y: number; scale: number; rot: number },
+  rest: { x: number; y: number; h: number; rot: number },
+): DropPose {
+  const T = CLIP_FALL_SECONDS;
+  const k = Math.min(1, Math.max(0, t / T));
+  const fall = k * k; // gravity: the bottom edge's drop
+  const out = k * k * (1.6 - 0.6 * k); // ease-in drift and growth, slower than the fall at first
+  const scale = from.scale + (1 - from.scale) * out;
+  const bottomFrom = from.y + (rest.h * from.scale) / 2;
+  const bottomTo = rest.y + rest.h / 2;
+  let bottom = bottomFrom + (bottomTo - bottomFrom) * fall;
+  const after = t - T;
+  if (after > 0 && after < 0.3) bottom -= Math.sin((after / 0.3) * Math.PI) * 6;
+  const flutter = Math.sin(k * Math.PI * 2) * 0.07 * (1 - k);
+  return {
+    x: from.x + (rest.x - from.x) * out,
+    y: bottom - (rest.h * scale) / 2,
+    scale,
+    rot: from.rot + (rest.rot - from.rot) * out + flutter,
+  };
+}

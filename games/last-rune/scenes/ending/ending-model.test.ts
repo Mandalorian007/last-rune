@@ -1,6 +1,49 @@
 import { describe, expect, it } from 'vitest';
 import { DISCORD_INVITE_URL, ENDING_COPY, ENDING_SEQUENCE } from '../../content/ending';
-import { CREDITS, endCard, endingBeats, endingSkippable } from './ending-model';
+import {
+  CLIP_FALL_SECONDS,
+  CREDITS,
+  clipDropPose,
+  endCard,
+  endingBeats,
+  endingSkippable,
+} from './ending-model';
+
+describe('clipDropPose', () => {
+  // As staged: his clamp at the door's edge, the rest spot bottom right (ENDING_LAYOUT.clip).
+  const from = { x: 1354, y: 872, scale: 0.3, rot: 0.14 };
+  const rest = { x: 1640, y: 905, h: 264, rot: -0.22 };
+  const at = (t: number) => clipDropPose(t, from, rest);
+  const bottom = (p: { y: number; scale: number }) => p.y + (rest.h * p.scale) / 2;
+
+  it('starts in his clamp and ends exactly at the resting pose', () => {
+    expect(at(0)).toMatchObject({ x: from.x, scale: from.scale, rot: from.rot });
+    expect(at(0).y).toBeCloseTo(from.y);
+    const end = at(CLIP_FALL_SECONDS + 1);
+    expect(end.x).toBeCloseTo(rest.x);
+    expect(end.y).toBeCloseTo(rest.y);
+    expect(end.scale).toBeCloseTo(1);
+    expect(end.rot).toBeCloseTo(rest.rot);
+  });
+
+  it('is a drop, not a toss: it leaves the clamp slowly and drifts out late', () => {
+    // A toss leaves the hand at speed; a drop starts from rest. Over the first 30% of the
+    // fall it covers well under a sixth of the way across (a linear path would cover 30%).
+    const p = at(CLIP_FALL_SECONDS * 0.3);
+    expect(bottom(p)).toBeGreaterThan(bottom(at(0)));
+    expect((p.x - from.x) / (rest.x - from.x)).toBeLessThan(1 / 6);
+    expect(at(0.01).x - from.x).toBeLessThan(0.5);
+  });
+
+  it('its bottom edge only ever falls until it lands', () => {
+    let prev = bottom(at(0));
+    for (let i = 1; i <= 60; i++) {
+      const b = bottom(at((CLIP_FALL_SECONDS * i) / 60));
+      expect(b).toBeGreaterThanOrEqual(prev - 1e-9);
+      prev = b;
+    }
+  });
+});
 
 describe('endingBeats', () => {
   const beats = endingBeats();

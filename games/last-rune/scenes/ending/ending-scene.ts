@@ -30,7 +30,9 @@ import { DeskArt } from '../journal/desk-art';
 import { PAPER, PROP } from '../journal/desk-wgsl';
 import type { HallView, HallViewFrame } from '../views';
 import {
+  CLIP_FALL_SECONDS,
   CREDITS,
+  clipDropPose,
   type DirectionCue,
   type EndCard,
   type EndingBeat,
@@ -433,7 +435,7 @@ export class EndingScene implements GameScene {
         this.clipFromY = f.y - 0.64 * f.scale;
         f.clipboard = false;
         this.clipT = 0;
-        await this.wait(0.42);
+        await this.wait(CLIP_FALL_SECONDS);
         this.ctx.sound.sfx.play('clipboardDrop');
         await this.wait(1.5);
         if (g !== this.gen) return;
@@ -765,17 +767,15 @@ export class EndingScene implements GameScene {
 
   private drawClipboard(frame: Frame): void {
     const C = ENDING_LAYOUT.clip;
-    const T = 0.42; // fall time
-    const k = Math.min(1, this.clipT / T);
-    // Falls (gravity), turns, then a small settle bounce.
-    const fall = k * k;
-    const x = this.clipFromX + (C.x - this.clipFromX) * k;
-    let y = this.clipFromY + (C.y - this.clipFromY) * fall;
-    const after = this.clipT - T;
-    if (after > 0 && after < 0.3) y -= Math.sin((after / 0.3) * Math.PI) * 10;
-    const k0 = ENDING_LAYOUT.clipInHand / C.w;
-    const scaleK = k0 + (1 - k0) * k; // from his clamp size to lying in the foreground
-    const rot = 0.14 + (C.rot - 0.14) * Math.min(1, k * 1.1);
+    // Drops from his clamp, growing as it falls toward us, to lie in the foreground.
+    const k = Math.min(1, this.clipT / CLIP_FALL_SECONDS);
+    const pose = clipDropPose(
+      this.clipT,
+      { x: this.clipFromX, y: this.clipFromY, scale: ENDING_LAYOUT.clipInHand / C.w, rot: 0.14 },
+      C,
+    );
+    const { x, y, rot } = pose;
+    const scaleK = pose.scale;
     const ign = this.ign.v;
     this.desk.extraLight.x = RUNE_CENTRE.x;
     this.desk.extraLight.y = RUNE_CENTRE.y;

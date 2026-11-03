@@ -75,7 +75,12 @@ async function prepare(context: BrowserContext, page: Page, setup: Setup): Promi
   }, setup);
 }
 
-/** Presses and releases a pad button across a few frames. */
+/**
+ * Presses and releases a pad button, each held until the game has polled it on a few fixed
+ * ticks. Input polls the pad once per tick, so a press held for a fixed wall-clock time is
+ * missed when the page draws no frame in that window (the first title frames, a loaded
+ * machine). That was the "gamepad A on Ko-fi with the new tab blocked" flake.
+ */
 async function padPress(page: Page, button: number): Promise<void> {
   const set = (on: boolean) =>
     page.evaluate(
@@ -87,10 +92,22 @@ async function padPress(page: Page, button: number): Promise<void> {
       },
       [button, on] as const,
     );
+  const ticks = (n: number) =>
+    page.evaluate(
+      (n) =>
+        new Promise<void>((done) => {
+          const time = (window as unknown as { __game: { loop: { time: { tick: number } } } })
+            .__game.loop.time;
+          const until = time.tick + n;
+          const wait = () => (time.tick >= until ? done() : requestAnimationFrame(wait));
+          wait();
+        }),
+      n,
+    );
   await set(true);
-  await page.waitForTimeout(150);
+  await ticks(3);
   await set(false);
-  await page.waitForTimeout(150);
+  await ticks(3);
 }
 
 async function gotoTitle(page: Page): Promise<void> {
@@ -285,9 +302,9 @@ test.describe('Copy link', () => {
     const link = page.locator('a.lr-title-coffee');
     await link.focus();
     await padPress(page, 0);
-    expect(
-      await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened),
-    ).toEqual([KOFI_URL]);
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened))
+      .toEqual([KOFI_URL]);
     await expectFallback(
       page.locator('[data-action="title-coffee-fallback"]'),
       LINK_COPY_TEXT.popupBlocked,
@@ -371,9 +388,9 @@ test.describe('Copy link', () => {
 
     await page.locator('a.lr-end-join').focus();
     await padPress(page, 0);
-    expect(
-      await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened),
-    ).toEqual([DISCORD_INVITE_URL]);
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened))
+      .toEqual([DISCORD_INVITE_URL]);
     await expectFallback(
       page.locator('[data-action="ending-join-fallback"]'),
       LINK_COPY_TEXT.popupBlocked,
