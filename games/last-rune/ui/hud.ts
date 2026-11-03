@@ -11,6 +11,45 @@
  */
 import { h, NO_RESTORE_FOCUS_ATTR } from '@engine/ui';
 
+/** A door's plate on a phone (mobile-5-chrome): screen design px, centre x and plate top. */
+export interface DoorPlate {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  /** Widest the plate may grow, design px (about the gap to the next door). */
+  readonly maxWidth: number;
+  readonly name: string;
+  readonly status: 'solved' | 'unlocked' | 'locked';
+  /** Locked: the missing sockets' colours (CSS colours), in order. */
+  readonly needs: readonly string[];
+  /** Locked: machines still to restore (shown as "+N"). */
+  readonly more: number;
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** A small padlock (stroke follows `currentColor`). */
+function lockIcon(doc: Document): SVGSVGElement {
+  const svg = doc.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 12 14');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('lr-door-lock');
+  const shackle = doc.createElementNS(SVG_NS, 'path');
+  shackle.setAttribute('d', 'M3.2 6.2V4.3a2.8 2.8 0 0 1 5.6 0v1.9');
+  shackle.setAttribute('fill', 'none');
+  shackle.setAttribute('stroke', 'currentColor');
+  shackle.setAttribute('stroke-width', '1.6');
+  const body = doc.createElementNS(SVG_NS, 'rect');
+  body.setAttribute('x', '1.2');
+  body.setAttribute('y', '6');
+  body.setAttribute('width', '9.6');
+  body.setAttribute('height', '7.2');
+  body.setAttribute('rx', '1.4');
+  body.setAttribute('fill', 'currentColor');
+  svg.append(shackle, body);
+  return svg;
+}
+
 export interface HudActions {
   codex(): void;
   settings(): void;
@@ -25,9 +64,12 @@ export class Hud {
   private readonly plateNote: HTMLElement;
   private readonly journalBtn: HTMLElement | null;
   private readonly menuBtn: HTMLElement;
+  private readonly menuNew: HTMLElement;
   private readonly journalNote: HTMLElement;
   private readonly nextRing: HTMLElement;
   private readonly nextTag: HTMLElement;
+  private readonly doorLayer: HTMLElement;
+  private doorKey = '';
   private offOutside: (() => void) | null = null;
 
   constructor(layer: HTMLElement, actions: HudActions) {
@@ -66,7 +108,11 @@ export class Hud {
         on: { click: () => this.menu(!this.root.hasAttribute('data-open')) },
       },
       h('span', { 'aria-hidden': 'true' }, '\u2630'),
+      // Phones (mobile-5-chrome): the ☰ says what it is, and its dot says what is new.
+      h('small', { class: 'lr-hud-menu-label', 'aria-hidden': 'true' }, 'Menu'),
     );
+    this.menuNew = h('small', { class: 'lr-hud-menu-new', 'aria-hidden': 'true', hidden: true });
+    this.menuBtn.append(this.menuNew);
     this.root = h(
       'div',
       { class: 'lr-hud', hidden: true, [NO_RESTORE_FOCUS_ATTR]: '' },
@@ -87,7 +133,9 @@ export class Hud {
     // (mobile-3-chrome, D-040); the canvas's own soft ring is too faint at phone size.
     this.nextRing = h('div', { class: 'lr-hall-next', 'aria-hidden': 'true', hidden: true });
     this.nextTag = h('div', { class: 'lr-hall-next-tag', 'aria-hidden': 'true', hidden: true });
-    layer.append(this.nextRing, this.nextTag, this.nameplate, this.root);
+    // Phones: every door's own plate (mobile-5-chrome); hidden elsewhere (CSS).
+    this.doorLayer = h('div', { class: 'lr-doors', 'aria-hidden': 'true', hidden: true });
+    layer.append(this.doorLayer, this.nextRing, this.nextTag, this.nameplate, this.root);
   }
 
   /**
@@ -110,6 +158,41 @@ export class Hud {
     this.nextTag.style.left = `${at.x}px`;
     this.nextTag.style.setProperty('--lr-next-top', `${top}px`);
     this.nextTag.textContent = at.label;
+  }
+
+  /**
+   * Phones: a plate on every door, saying what it is without a tap: an open door's name in
+   * gold, a restored one's with a ✓, a locked one's padlock and the colours it still needs.
+   * Null hides them. Rebuilt only when the doors change.
+   */
+  doors(list: readonly DoorPlate[] | null): void {
+    this.doorLayer.hidden = !list;
+    if (!list) return;
+    const key = JSON.stringify(list);
+    if (key === this.doorKey) return;
+    this.doorKey = key;
+    const doc = this.doorLayer.ownerDocument;
+    this.doorLayer.replaceChildren(
+      ...list.map((d) => {
+        const el = h('div', { class: 'lr-door', dataset: { status: d.status, door: d.id } });
+        el.style.left = `${Math.round(d.x)}px`;
+        el.style.top = `${Math.round(d.y)}px`;
+        el.style.setProperty('--lr-door-max', `${Math.round(d.maxWidth)}px`);
+        if (d.status === 'locked') {
+          el.append(lockIcon(doc));
+          for (const c of d.needs) {
+            const dot = h('i', { class: 'lr-door-gem' });
+            dot.style.setProperty('--gem', c);
+            el.append(dot);
+          }
+          if (d.more > 0) el.append(h('b', {}, `+${d.more}`));
+        } else {
+          if (d.status === 'solved') el.append(h('span', { class: 'lr-door-tick' }, '\u2713'));
+          el.append(h('span', { class: 'lr-door-name' }, d.name));
+        }
+        return el;
+      }),
+    );
   }
 
   set visible(v: boolean) {
@@ -139,6 +222,12 @@ export class Hud {
     b.hidden = !shown;
     b.toggleAttribute('data-unread', unread > 0);
     this.menuBtn.toggleAttribute('data-unread', shown && unread > 0);
+    this.menuNew.hidden = !(shown && unread > 0);
+    this.menuNew.textContent = unread > 1 ? 'New pages' : 'New page';
+    this.menuBtn.setAttribute(
+      'aria-label',
+      shown && unread > 0 ? 'Menu, new journal pages' : 'Menu',
+    );
     b.setAttribute('aria-label', unread > 0 ? `Journal, ${unread} new` : 'Journal');
     this.journalNote.hidden = unread <= 0;
     this.journalNote.textContent =

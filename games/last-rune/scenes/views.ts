@@ -11,6 +11,7 @@
 import type { ParticleSystem } from '@engine/fx';
 import type { Frame, Renderer } from '@engine/render';
 import type { MachineId } from '../rules/types';
+import type { HallFrame } from './hall/hall-frame';
 import type { HallModel } from './hall/hall-state';
 
 export interface ViewContext {
@@ -50,6 +51,12 @@ export interface HallViewFrame extends ViewFrame {
   readonly hover: MachineId | null;
   /** Alcove with keyboard/pad focus (draw a focus ring). */
   readonly focus: MachineId | null;
+  /**
+   * Phones (mobile-5-chrome): the hall zoomed out with its wings widened (`hall-frame.ts`). The
+   * model's doors are already spread; the view spreads its props and widens its wall to match.
+   * Absent: the design as laid out.
+   */
+  readonly layout?: HallFrame;
 }
 
 export interface HallView {
