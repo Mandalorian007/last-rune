@@ -142,3 +142,7 @@ Format: `D-NNN · date · decision · why · who`.
       - chrome text ≥12 px on phones.
     - **Kept:** the end card's Join/Ko-fi order (user decision D-034).
     - **Gate unchanged:** ≥8/10 average with no blocker or major issue.
+    - **mobile-5 results (PM accepted):**
+      - on phones, a placed gem leaves the hand (desktop keeps it);
+      - the pitch floors are reset to the reached values, trading a little pitch on 8×6 and 10×8 boards for the 13/15 px label floors (The Last Rune: 26.4 px on SE, 28.9 px on iPhone);
+      - the height-share floor is met on Android only; west/east 6×4 boards are limited by width.
