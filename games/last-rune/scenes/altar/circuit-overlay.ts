@@ -41,9 +41,11 @@ const OVERLAY_WGSL = /* wgsl */ `
   let body = smoothstep(1.0, 0.55, across) * endFade;
   // Groove: a dark channel cut in the stone with a brass wire laid in it, catching the light
   // along its upper edge.
-  let wire = smoothstep(0.42, 0.28, across);
+  // Bright (phones, mobile-6-board): a wider, lit brass wire that reads at a glance.
+  let bright = step(1.1, in.params.x);
+  let wire = smoothstep(mix(0.42, 0.6, bright), mix(0.28, 0.46, bright), across);
   let shine = smoothstep(0.3, 0.0, abs(in.local.y - 0.4) * 2.0);
-  let brass = vec3f(0.16, 0.1, 0.045) * (0.7 + 0.6 * shine);
+  let brass = vec3f(0.16, 0.1, 0.045) * (0.7 + 0.6 * shine) * mix(1.0, 3.2, bright);
   let shade = mix(vec3f(0.006, 0.007, 0.01), brass, wire);
   let a = body * amt * mix(0.8, 1.0, wire);
   var rgb = shade * a;
@@ -62,6 +64,8 @@ const OVERLAY_WGSL = /* wgsl */ `
 const VEIL: readonly number[] = [0.024, 0.027, 0.046, 1];
 
 export class CircuitOverlay {
+  /** Lay a wider, lit brass wire in the grooves (phones: the wires to the storm and gauges). */
+  bright = false;
   private readonly material: Material;
   private readonly dp: DrawParams = { x: 0, y: 0, params: [0, 0, 0, 0], tint: [1, 1, 1, 1] };
 
@@ -123,7 +127,7 @@ export class CircuitOverlay {
     dp.rotation = Math.atan2(dy, dx);
     dp.emissive = 1.4;
     const p = dp.params as number[];
-    p[0] = 1;
+    p[0] = this.bright ? 1.25 : 1;
     p[1] = amount;
     p[2] = glow;
     p[3] = (ax * 0.11 + by * 0.05) % 13;

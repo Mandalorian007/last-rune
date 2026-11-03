@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { solidMask } from '../../art/materials/stone';
 import { PUZZLES } from '../../content/puzzles';
 import { altarDims } from '../../rules/model';
+import { GEM_KINDS } from '../../rules/types';
+import { trayRemaining } from '../../rules/validate';
 import { computeLayout, phoneFrameFor } from './layout';
-import { huggedSlabDistance, socketLooks } from './socket-looks';
+import { huggedSlabDistance, legalSockets, recessCells, socketLooks } from './socket-looks';
 
 describe('socket looks (mobile-4-board)', () => {
   it('phones draw no disc, plate or ring on a blocked cell; only open sockets get a rim', () => {
@@ -120,5 +122,64 @@ describe('hugged slab (mobile-5-board)', () => {
           expect(end, `${p.id} wire ${prop.side}`).toBeLessThan(0);
         }
       }
+  });
+});
+
+describe('legal rings (mobile-6-board)', () => {
+  // Gate review 3 saw a scattered subset of sockets ringed with a Bend in hand. The ringed set
+  // must be the legal set: every empty open socket while the tray has one, none when it is out.
+  it('rings every empty open socket for every gem kind, on bare and half-built boards', () => {
+    for (const p of Object.values(PUZZLES)) {
+      const { w, h } = altarDims(p.altar);
+      const half = p.design.intended.slice(0, Math.floor(p.design.intended.length / 2));
+      for (const placements of [[], half]) {
+        const taken = [
+          ...p.blocked,
+          ...p.fixed.map((f) => f.cell),
+          ...placements.map((q) => q.cell),
+        ];
+        const open: string[] = [];
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++)
+            if (!taken.some((c) => c.x === x && c.y === y)) open.push(`${x},${y}`);
+        for (const kind of GEM_KINDS) {
+          const ringed = legalSockets(p, placements, kind).map((c) => `${c.x},${c.y}`);
+          const want = trayRemaining(p, placements, kind) > 0 ? open : [];
+          expect(ringed, `${p.id} ${kind} (${placements.length} placed)`).toEqual(want);
+        }
+      }
+    }
+  });
+
+  it('reuses the out array (no per-frame allocation)', () => {
+    const p = Object.values(PUZZLES)[0]!;
+    const out = [{ x: 9, y: 9 }];
+    const kind = GEM_KINDS.find((k) => (p.tray[k] ?? 0) > 0)!;
+    expect(legalSockets(p, [], kind, out)).toBe(out);
+    expect(out.some((c) => c.x === 9 && c.y === 9)).toBe(false);
+  });
+});
+
+describe('sunk stone inside the slab (mobile-6-board)', () => {
+  it('fills a blocked cell between open ones, never one at the edge', () => {
+    // . # .     (1,0) sits between open cells: sunk stone.
+    // # # #     the middle row has no open cell beside it, and (1,1) none above it.
+    // # . #     the corners have open on one side only: left to the wall.
+    const blocked = [
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 0, y: 2 },
+      { x: 2, y: 2 },
+    ];
+    expect(recessCells(3, 3, blocked)).toEqual([{ x: 1, y: 0 }]);
+  });
+  it('leaves every open cell alone on every altar', () => {
+    for (const p of Object.values(PUZZLES)) {
+      const { w, h } = altarDims(p.altar);
+      for (const c of recessCells(w, h, p.blocked))
+        expect(p.blocked.some((b) => b.x === c.x && b.y === c.y)).toBe(true);
+    }
   });
 });

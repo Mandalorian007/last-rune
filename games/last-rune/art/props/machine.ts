@@ -30,6 +30,8 @@ export interface MachineOptions {
   /** Width of the drawn quad in logical px. Default 360. */
   size?: number;
   awake?: boolean;
+  /** Phones (mobile-6-board): the big-dial meter look, legible at 40 CSS px. */
+  meter?: boolean;
 }
 
 interface Shared {
@@ -61,6 +63,7 @@ export class Machine {
   private pinned = false;
   private time = Math.random() * 10;
   private readonly seed = Math.random() * 20;
+  private readonly meter: boolean;
   private readonly sh: Shared;
   private readonly dp: DrawParams = {
     x: 0,
@@ -77,6 +80,7 @@ export class Machine {
     this.y = opts.y;
     this.size = opts.size ?? 360;
     this.awake = opts.awake ?? false;
+    this.meter = opts.meter ?? false;
     this.awakeK = this.awake ? 1 : 0;
     let s = shared.get(renderer);
     if (!s) {
@@ -177,7 +181,8 @@ export class Machine {
     this.params[0] = this.needle + tremble;
     this.params[1] = this.awakeK;
     this.params[2] = this.breakerK;
-    this.params[3] = this.seed;
+    // A negative seed asks the shader for the meter.
+    this.params[3] = this.meter ? -(this.seed + 1) : this.seed;
     this.tint[3] = this.opacity;
     const dp = this.dp;
     dp.x = this.x;

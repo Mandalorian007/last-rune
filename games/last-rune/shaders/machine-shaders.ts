@@ -2,7 +2,10 @@
  * Machine: riveted iron box with a real gauge (0..125 %, red zone above 100 %), a brass input
  * terminal on the left where the bolt lands, a status lamp, vents that blaze cyan when awake.
  *
- * Per instance params = (needle fraction 0..1.25, awake 0..1, breaker 0..1, seed).
+ * Per instance params = (needle fraction 0..1.25, awake 0..1, breaker 0..1, seed). A negative
+ * seed draws the phone meter (mobile-6-board): the gauge fills most of the box, the charge so
+ * far fills an arc up to the needle, and a gold notch marks the need, so it reads as a meter at
+ * 40 CSS px, not a clock.
  * Quad covers [-1, 1]² machine units, y up.
  */
 import { PROP_COMMON_WGSL, PROP_LIGHT_FLOATS } from '../art/props/lighting';
@@ -16,8 +19,8 @@ ${PROP_COMMON_WGSL}
 struct MachineU { L: PropLights, a: vec4f }; // a: time
 @group(1) @binding(0) var<uniform> U: MachineU;
 
-const G_C = vec2f(0.0, 0.16);
-const G_R = 0.34;
+const G_C0 = vec2f(0.0, 0.16);
+const G_R0 = 0.34;
 
 fn gauge_angle(f: f32) -> f32 {
   return radians(225.0 - 270.0 * f / ${MACHINE_GAUGE_MAX});
@@ -28,7 +31,10 @@ fn gauge_angle(f: f32) -> f32 {
   let needleF = in.params.x;
   let awake = in.params.y;
   let breaker = in.params.z;
-  let seed = in.params.w;
+  let meter = in.params.w < 0.0;
+  let seed = abs(in.params.w);
+  let G_C = select(G_C0, vec2f(0.0, 0.06), meter);
+  let G_R = select(G_R0, 0.6, meter);
   let p = vec2f(in.local.x - 0.5, 0.5 - in.local.y) * 2.0;
   let aa = max(fwidth(p.x), fwidth(p.y));
   let world = in.world;
@@ -140,22 +146,39 @@ fn gauge_angle(f: f32) -> f32 {
     let major = abs(fract(f / 0.25 + 0.5) - 0.5) * 0.25 * (gr * 0.0175 * 270.0 / ${MACHINE_GAUGE_MAX});
     let tickMinor = step(minor, 0.006) * step(abs(gr - G_R * 0.86), G_R * 0.06);
     let tickMajor = step(major, 0.011) * step(abs(gr - G_R * 0.8), G_R * 0.12);
-    let tk = max(tickMinor, tickMajor) * inSweep * step(gr, G_R * 0.95);
+    let tk = select(max(tickMinor, tickMajor), 0.0, meter) * inSweep * step(gr, G_R * 0.95);
     acc.col = vec4f(mix(acc.col.rgb, C_INK * 0.9, tk), acc.col.a);
     // The 100 % mark: a fat ink wedge.
     let full = abs(f - 1.0) * gr * 0.0175 * 270.0 / ${MACHINE_GAUGE_MAX};
     let fullK = step(full, 0.016) * step(abs(gr - G_R * 0.72), G_R * 0.2) * step(gr, G_R * 0.95);
     acc.col = vec4f(mix(acc.col.rgb, C_INK, fullK), acc.col.a);
+    if (meter) {
+      // The charge so far: an arc filled from zero to the needle, amber short, cyan exact,
+      // red over; then the need: a gold notch across the band, overhanging the bezel.
+      let fillF = clamp(needleF, 0.0, ${MACHINE_GAUGE_MAX});
+      let inBand = smoothstep(G_R * 0.2, G_R * 0.17, abs(gr - G_R * 0.72));
+      let filled = inBand * step(0.0, f) * step(f, fillF) * inSweep;
+      let exact = 1.0 - smoothstep(0.02, 0.05, abs(fillF - 1.0));
+      let fc = mix(mix(C_AMBER * 1.2, C_DANGER * 1.1, step(1.04, fillF)), cy * 0.9, exact);
+      acc.col = vec4f(mix(acc.col.rgb, fc, filled * 0.9), acc.col.a);
+      acc.emi += fc * filled * 0.25;
+      let track = inBand * inSweep * (1.0 - filled);
+      acc.col = vec4f(mix(acc.col.rgb, C_INK * 0.35, track * 0.55), acc.col.a);
+      let notchK = step(full, 0.05) * step(G_R * 0.45, gr) * step(gr, G_R + 0.06);
+      acc.col = vec4f(mix(acc.col.rgb, C_BRASS * 1.6 + vec3f(0.15, 0.12, 0.05), notchK), acc.col.a);
+    }
   }
   // Needle.
   let na = gauge_angle(needleF);
   let nd = vec2f(cos(na), sin(na));
-  let needle = sdg_segment(gq, -nd * 0.07, nd * G_R * 0.86, 0.013);
-  put_shadow(&acc, sdg_segment(gq - vec2f(0.015, -0.02), -nd * 0.07, nd * G_R * 0.86, 0.013).x, 0.02, 0.35);
+  let nw = select(0.013, 0.04, meter);
+  let needle = sdg_segment(gq, -nd * 0.07, nd * G_R * 0.86, nw);
+  put_shadow(&acc, sdg_segment(gq - vec2f(0.015, -0.02), -nd * 0.07, nd * G_R * 0.86, nw).x, 0.02, 0.35);
   let needleC = mix(vec3f(0.55, 0.06, 0.03), vec3f(0.8, 0.1, 0.05), 0.5);
   put(&acc, needle.x, aa, prop_light(world, vec3f(0.0, 0.0, 1.0), needleC, 0.2, 0.5), vec3f(0.0), 0.4);
-  let hub = sdg_circle(gq, 0.04);
-  put(&acc, hub.x, aa, prop_light(world, to_world_n(dome(hub, 0.04), 1.0, 0.0), C_BRASS * 1.2, 0.95, 0.85),
+  let hr = select(0.04, 0.08, meter);
+  let hub = sdg_circle(gq, hr);
+  put(&acc, hub.x, aa, prop_light(world, to_world_n(dome(hub, hr), 1.0, 0.0), C_BRASS * 1.2, 0.95, 0.85),
       vec3f(0.0), 0.6);
   // Glass: a soft sheen and a crisp highlight.
   let sheen = smoothstep(0.02, 0.0, abs(gr - G_R * 0.78)) * smoothstep(0.2, 0.9, -gq.x * 0.7 + gq.y * 0.7) * step(gr, G_R);
@@ -163,15 +186,15 @@ fn gauge_angle(f: f32) -> f32 {
   let hl = smoothstep(0.05, 0.0, length((gq - vec2f(-0.13, 0.17)) * vec2f(1.0, 1.8)));
   add_glow(&acc, vec3f(0.9) * hl * 0.5, 0.0);
 
-  // Nameplate under the gauge with engraved lines.
-  let plate = sdg_box(p - vec2f(0.0, -0.3), vec2f(0.24, 0.05), 0.012);
+  // Nameplate under the gauge with engraved lines (the meter covers it).
+  let plate = sdg_box(p - vec2f(0.0, select(-0.3, -0.9, meter)), vec2f(0.24, 0.05), 0.012) + select(0.0, 9.0, meter);
   put(&acc, plate.x, aa, prop_light(world, to_world_n(pillow(plate, 0.02), 1.0, 0.0),
       brass_albedo(p * 4.0, 1.0, seed + 8.0), 0.85, 0.7), vec3f(0.0), 0.8);
-  let engr = step(abs(p.y + 0.3), 0.008) * step(abs(p.x), 0.18) * step(0.35, engine_noise(vec2f(p.x * 40.0, seed)));
+  let engr = select(1.0, 0.0, meter) * step(abs(p.y + 0.3), 0.008) * step(abs(p.x), 0.18) * step(0.35, engine_noise(vec2f(p.x * 40.0, seed)));
   acc.col = vec4f(mix(acc.col.rgb, C_BRASS_DARK * 0.4, engr), acc.col.a);
 
   // Status lamp (top left): cyan when awake, red blinking on breaker.
-  let lampP = p - vec2f(-0.56, 0.36);
+  let lampP = p - select(vec2f(-0.56, 0.36), vec2f(-0.64, -0.6), meter);
   let lampB = sdg_circle(lampP, 0.085);
   put(&acc, lampB.x, aa, prop_light(world, to_world_n(pillow(lampB, 0.03), 1.0, 0.0), C_BRASS, 0.9, 0.7),
       vec3f(0.0), 0.8);
@@ -181,7 +204,7 @@ fn gauge_angle(f: f32) -> f32 {
   put(&acc, lamp.x, aa, lampOff + lampLit, lampLit * 1.5, 0.6);
   add_glow(&acc, lampC * 0.35 * exp(-length(lampP) * 18.0), 1.4);
   // Second lamp (right): amber "ready" pilot.
-  let lp2 = p - vec2f(0.56, 0.36);
+  let lp2 = p - select(vec2f(0.56, 0.36), vec2f(0.64, -0.6), meter);
   let lb2 = sdg_circle(lp2, 0.06);
   put(&acc, lb2.x, aa, prop_light(world, to_world_n(pillow(lb2, 0.025), 1.0, 0.0), C_BRASS, 0.9, 0.7),
       vec3f(0.0), 0.8);

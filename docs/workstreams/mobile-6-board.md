@@ -43,3 +43,53 @@ Gate review 3 failed (6 / 6 / 6 / 6.5; D-040 addendum 4). The board-look issues 
 - Your log lists the changes and before/after file names.
 
 ## Log
+
+### 2026-11-03: mobile-6-board done (agent)
+
+**Ring subset cause.** `buildMarks` drew valid sockets as `'highlighted'` in the held gem's own HUM colour (purple for Bend). The intensity was 0.45 only when `isLive` (storm entry, machine exits, next to a placed gem or an open end), and 0.1 otherwise, which is invisible. They also shimmered (pulse). The result was low-contrast purple, and only near the circuit, so the ringed set looked like a random subset of the legal set.
+
+**Changes**
+1. **Legal = ringed, exactly (all platforms).**
+   - New socket state `legal` (stone.ts id 7; stone-wgsl state 7) draws a steady pale-gold band with a dark key ring inside and out. It doesn't pulse, and its bloom is low (emissive 0.1).
+   - `buildMarks` rings every cell in `legalSockets()` (socket-looks.ts, which wraps `validatePlacement`).
+   - Unit tests (socket-looks.test.ts) check ringed == legal on every puzzle. mobile-budget item 15 now asserts that the first held measure rings every open socket.
+2. **Held is unmistakable (phones).**
+   - The held tray tile gets `data-held`: scale 1.22, a 2.5 px gold ring over a dark ring, a drop shadow and glow. The held gem is drawn at 1.16× size.
+   - A "● Holding Channel" pill replaces the altar title while you hold a tray gem. It sits in the title slot, so moments.ts is untouched.
+   - **Release:** tap the held tile again (new `press.again` path). Tapping off the board was already supported. pm-review asserts the second tap releases.
+3. **×0 tray gems** show a dark disc with a pale ring and ✓, and the count reads "placed" (13 px, the budget minimum). The 3D gem is hidden (size 0) so it doesn't read as locked.
+4. **Disabled rail buttons** (Undo / Clear / Turn): opacity 1, a 1 px #8f826b outline and label on the dark slab (about 4:1). The label is dimmed but legible.
+5. **Empty-socket rim** (stone state 4): a pale lip at r 0.86–1.08, (0.74, 0.7, 0.62) × light, alpha 0.92. On the navy slab it measures well above 3:1 by eye (light grey on about #1a2030). There's no numeric probe; see the weaknesses.
+6. **Walls inside the slab (phones).**
+   - A solid cell with open cells on both sides in its row or column (`alt_inner`, mirrored by `recessCells()` and unit-tested) is now drawn as sunk slab stone: the same slate albedo, an fbm-wobbled soft edge, ao 0.9, and no front face.
+   - It used to be a black rectangle. Outer blocked cells still let the slab hug the open cells, as in mobile-5.
+7. **Gauges (phones).**
+   - The machine dial switches to meter mode (negative seed): a larger face (R 0.6), no clock ticks, and a fill arc from 0 to the needle (amber under, cyan exact, red over).
+   - A gold notch marks 100%, the needle is thicker, and the nameplate is dropped. It is about 24 CSS px on SE.
+   - The conduit wire is the bright mode (≥2 px, brass ×3.2).
+   - **Needs/Gives card:** the side is still picked by the cost search. The card top is clamped to ≥8 px below the visible top. A max-content width for below/above cards (to stop "in one strike" wrapping) was tried and reverted: it pushed the card within 8 px of the slab and broke the mobile-budget clearance check.
+
+**Before/after (local, git-ignored)**
+- **Phones before:** `docs/design/screens/local/mobile-2/pm-review-altars/{se,iphone}/NN-<id>.png` and `docs/design/screens/local/mobile-2/gate3/`.
+- **Phones after:**
+  - `docs/design/screens/local/m6board/pmr-6/{se,iphone}/NN-<id>.png` and `NN-<id>-held.png` (every altar, idle and holding);
+  - `docs/design/screens/local/mobile-2/m6board/{se,iphone,promax,android}/`.
+- **Desktop 1920 (rings only, the one desktop change):**
+  - `docs/design/screens/local/m6board/desktop-before/relay-tower-held.png`: faint purple rings on about 8 of the 18 legal sockets, the rest bare.
+  - `docs/design/screens/local/m6board/desktop-after/relay-tower-held.png`: a gold ring on all 18.
+  - This is a clear win: desktop players couldn't tell where a gem may go either.
+  - Desktop also gets the rim lip and the tap-again release (click the held tray gem to put it back). Gauges, walls, the held pill and ×0 are phone-only.
+
+**Proposal to PM (moments.ts, not edited):** while a tray gem is held on phones, the hint slot could read "Tap a ringed socket · tap the gem again to put it back". For now the cue lives in the title-slot pill.
+
+**Remaining weaknesses**
+- **Sunk interior walls** still read somewhat as rounded boxes, not carved stone. The solve-scene furnace view shows the same.
+- **The meter is only seen at empty fill** in the captures; partial, exact and over fill are not screenshotted.
+- **The 'below' Needs card** can touch the bottom of the meter bezel on SE.
+- **Rim contrast (≥3:1)** is judged by eye, not measured numerically.
+- **The rings are bright gold on every legal socket.** On a nearly empty 6×4 board that's a lot of rings, which is intended but busy.
+
+**Verification:**
+- `pnpm check` passes (742 tests), and so does `pnpm build`.
+- `pnpm test:e2e`: everything passes, including mobile-budget on all 4 phones.
+- In one full run, `full-run.spec` machines 5–8 timed out waiting for `.lr-altar-verdict` after Relay Tower had already shown "restored". That's a timing flake: the spec passed 6/6 on rerun.

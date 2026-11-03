@@ -132,7 +132,8 @@ export function createStoneFloor(renderer: Renderer, opts: StoneOptions = {}): S
 /**
  * `rim` and `plate` are the phone looks (mobile-3-board): a faint pale lip on an open socket,
  * and a blocked socket as a plain recessed plate (no carved X). `collar` is a fixed gem's
- * bolted iron ring (mobile-4-board).
+ * bolted iron ring (mobile-4-board). `legal` is the steady ring round every socket the held gem
+ * may go in (mobile-6-board): the same on every such socket, so the ringed set is the legal set.
  */
 export type SocketState =
   | 'empty'
@@ -141,7 +142,8 @@ export type SocketState =
   | 'wanted'
   | 'rim'
   | 'plate'
-  | 'collar';
+  | 'collar'
+  | 'legal';
 
 const SOCKET_STATE_ID: Record<SocketState, number> = {
   empty: 0,
@@ -151,6 +153,7 @@ const SOCKET_STATE_ID: Record<SocketState, number> = {
   rim: 4,
   plate: 5,
   collar: 6,
+  legal: 7,
 };
 
 /**

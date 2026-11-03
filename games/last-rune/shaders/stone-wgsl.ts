@@ -254,6 +254,48 @@ fn alt_open(cell: vec2f) -> bool {
   return !alt_solid(cell);
 }
 
+// A solid cell inside the slab (mobile-6-board; mirrored by recessCells in socket-looks.ts):
+// open sockets on both sides of it along its row, or above and below it in its column.
+fn alt_inner(cell: vec2f) -> bool {
+  if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= G.altar.x || cell.y >= G.altar.y) {
+    return false;
+  }
+  if (!alt_solid(cell)) { return false; }
+  var l = false;
+  var r = false;
+  var u = false;
+  var d = false;
+  for (var i = 0.0; i < G.altar.x; i += 1.0) {
+    if (i == cell.x || alt_solid(vec2f(i, cell.y))) { continue; }
+    if (i < cell.x) { l = true; } else { r = true; }
+  }
+  for (var j = 0.0; j < G.altar.y; j += 1.0) {
+    if (j == cell.y || alt_solid(vec2f(cell.x, j))) { continue; }
+    if (j < cell.y) { u = true; } else { d = true; }
+  }
+  return (l && r) || (u && d);
+}
+
+// Signed distance to the recessed stone: one block per inner solid cell, the same size as the
+// hugged top face's blocks, so recess and top face meet without a seam of wall between them.
+fn alt_recess(px: vec2f) -> f32 {
+  let pitch = G.altar.z;
+  let m = G.altar.w;
+  let base = round((px - m - pitch * 0.5) / pitch);
+  let half = vec2f(pitch * 0.5 + m - 3.0);
+  let rc = min(m * 0.9, 22.0);
+  var d = 1e5;
+  for (var dy = -1; dy <= 1; dy++) {
+    for (var dx = -1; dx <= 1; dx++) {
+      let cell = base + vec2f(f32(dx), f32(dy));
+      if (!alt_inner(cell)) { continue; }
+      let sc = m + pitch * 0.5 + cell * pitch;
+      d = min(d, st_rbox(px - sc, half, rc));
+    }
+  }
+  return d;
+}
+
 // How deep inside the hugged top face a point is (px, negative outside). The union's own
 // distance (alt_hug) is only good near its edge: between two open cells it reads a margin
 // deep, which would draw chipped seams across the stone. So deeper in, measure to the
@@ -415,8 +457,18 @@ fn altar_surf(px: vec2f) -> Surf {
     // A soft contact shadow on the wall round the hugged stone, so it stands off the wall.
     // The stone a shade paler than the wall too: on a phone the wall shows between islands.
     let sh = 0.75 * (1.0 - smoothstep(0.0, 18.0, -e));
+    // A blocked cell inside the slab (mobile-6-board): the same stone, sunk a step, its floor
+    // shaded where the raised stone overhangs it. Never the black wall in a clipped box.
+    let rd = alt_recess(px) - (engine_fbm(px * 0.04 + 3.0, 3) - 0.4) * 6.0;
+    let rk = (1.0 - smoothstep(-1.5, 1.5, rd)) * (1.0 - s.alpha);
+    let sunk = st_slate_albedo(px * 0.9, hb, 1.4) * 1.3 * (0.62 + 0.3 * smoothstep(2.0, 22.0, -e));
     s.albedo = mix(SLATE_DARK * 0.15, s.albedo * 1.3, s.alpha);
-    s.alpha = max(s.alpha, sh);
+    s.albedo = mix(s.albedo, sunk, rk);
+    s.h = mix(s.h, 0.0, rk);
+    // A floor faces up like the top face: no front-face tilt, open to the light.
+    s.ao = mix(s.ao, 0.9, rk);
+    s.front = select(s.front, 0.0, rk > 0.5);
+    s.alpha = max(max(s.alpha, rk), sh);
   }
   return s;
 }
@@ -485,7 +537,7 @@ export const LIT_SURFACE_WGSL = /* wgsl */ `${LIGHTS_WGSL}
 /**
  * Socket state overlay, drawn over a baked socket (quad = 2.6 × socket radius).
  * params.x = state (1 blocked, 2 highlighted, 3 wanted: dotted ring in the needed colour, 4 rim,
- * 5 plate, 6 collar: the iron ring and rivets of a fixed gem),
+ * 5 plate, 6 collar: the iron ring and rivets of a fixed gem, 7 legal: the held gem may go here),
  * params.y = seed, params.z = intensity/pulse (0..1+). tint = highlight colour (linear).
  */
 export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
@@ -556,11 +608,13 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
   if (state == 4) {
     // Rim (phones): a faint pale lip round an open socket, so every empty socket reads as a
     // place for a gem from edge to edge of the board. Painted stone, not light.
-    let lip = exp(-pow((r - 0.97) * 13.0, 2.0));
+    // mobile-6-board: a pale worn-stone band, lit from the top, at least 3:1 on the slab.
+    let lip = smoothstep(0.86, 0.91, r) * (1.0 - smoothstep(1.02, 1.08, r));
     let lit = lights_shade(in.world, 4.0, vec3f(0.0, 0.0, 1.0), 6.0);
-    let c = vec3f(0.5, 0.48, 0.44) * (0.55 + 0.45 * lit.diffuse);
-    let g = lip * 0.42 * k;
-    o.color = vec4f(c * g, g);
+    let top = 0.86 - 0.14 * (p.y / max(r, 0.001)); // y-down: the upper lip catches the light
+    let c = vec3f(0.74, 0.7, 0.62) * top * (0.75 + 0.25 * lit.diffuse);
+    let g = lip * 0.92 * k;
+    o.color = vec4f(c, g);
     o.emissive = vec4f(0.0, 0.0, 0.0, g);
     return o;
   }
@@ -638,6 +692,18 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
   }
 
   let tint = in.color.rgb;
+  if (state == 7) {
+    // Legal (mobile-6-board): a steady, crisp ring of light just outside the bowl, with a dark
+    // keyline either side so it reads on pale stone and on dark alike. No shimmer and no pulse:
+    // every socket the held gem may go in wears exactly the same ring.
+    let band = smoothstep(0.95, 1.0, r) * (1.0 - smoothstep(1.13, 1.18, r));
+    let key = smoothstep(0.84, 0.93, r) * (1.0 - smoothstep(1.2, 1.29, r));
+    let a = max(band, key * 0.7) * min(k, 1.0);
+    let c = mix(vec3f(0.015, 0.012, 0.01), tint, band / max(max(band, key * 0.7), 0.001));
+    o.color = vec4f(c, a);
+    o.emissive = vec4f(tint * band * in.emissive * 0.1 * k, a);
+    return o;
+  }
   if (state == 2) {
     // Highlighted: the rim glows, light pools in the bowl.
     let ring = exp(-pow((r - 1.0) * 16.0, 2.0)) * 0.8;

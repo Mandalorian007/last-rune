@@ -523,7 +523,8 @@ for (const vp of PHONES) {
           const pz = puzzleFor(id);
           const taken = (x: number, y: number) =>
             [...pz.blocked, ...pz.fixed.map((f) => f.cell)].some((c) => c.x === x && c.y === y);
-          const hum = (x: M) => x.marks.filter((k) => k.state === 'highlighted').length;
+          // The legal ring (mobile-6-board): one steady look on every socket the gem may go in.
+          const hum = (x: M) => x.marks.filter((k) => k.state === 'legal').length;
           // Nothing in hand to start (Esc drops a gem the chip taps left held).
           if (await page.evaluate(() => !!(window as G).__altarView.held)) {
             await page.keyboard.press('Escape');
@@ -531,13 +532,16 @@ for (const vp of PHONES) {
           }
           const before = hum(await measure(page));
           let heldHum = 0;
+          let firstHum = -1;
           let placed = false;
           for (let y = 0; y < L.rows && !placed; y++)
             for (let x = 0; x < L.cols && !placed; x++) {
               if (taken(x, y)) continue;
               await page.touchscreen.tap(ob.x + turner.x * k, ob.y + turner.y * k);
               await waitFrames(page, 3);
-              heldHum = Math.max(heldHum, hum(await measure(page)));
+              const nowHum = hum(await measure(page));
+              if (firstHum < 0) firstHum = nowHum;
+              heldHum = Math.max(heldHum, nowHum);
               const cx = L.left + L.margin + L.pitch * (x + 0.5);
               const cy = L.top + L.margin + L.pitch * (y + 0.5);
               await page.touchscreen.tap(ob.x + cx * k, ob.y + cy * k);
@@ -571,6 +575,11 @@ for (const vp of PHONES) {
           // The rings: shown while held, gone once the gem is down (a mark or two for the
           // tapped gem and the wire's next socket may stay).
           if (heldHum <= before) problems.push(`${id}: no valid-socket rings while held`);
+          // On the bare board every open socket is legal, and each wears the ring.
+          let open = 0;
+          for (let y = 0; y < L.rows; y++)
+            for (let x = 0; x < L.cols; x++) if (!taken(x, y)) open++;
+          if (firstHum !== open) problems.push(`${id}: ${firstHum} rings for ${open} open sockets`);
           if (hum(mp) > before + 2)
             problems.push(`${id}: ${hum(mp) - before} rings left after placing`);
           await page.locator('[data-action="clear"]').tap();
