@@ -28,6 +28,21 @@ const BAR_IN = `calc(-1 * var(--lr-bar, 0px) + ${cpx(3)})`;
 /** An edge-column button: 44 CSS px square. */
 const COL = cpx(44);
 
+/* mobile-3-chrome */
+/** The visible band's top and bottom edges when the art fills the width (D-040; 0 otherwise). */
+const CT = 'var(--lr-crop-t, 0px)';
+const CB = 'var(--lr-crop-b, 0px)';
+const CHROME_CSS = /* css */ `
+/* ── mobile-3-chrome: title, hall and menus (D-040) ─────────────────────────
+   Title and hall fill the width (game/ctx.ts FILL_BANDS); the canvas overflows top and bottom by
+   --lr-crop-t/-b design px, so chrome anchored to the design's edges moves in by the crop. */
+${P} .lr-hud { top: calc(${CT} + ${cpx(4)}); }
+${P} .tc-caption[data-corner^="bottom"] { bottom: calc(${CB} + var(--tc-caption-margin)); }
+${P} .tc-caption[data-corner^="top"] { top: calc(${CT} + var(--tc-caption-margin)); }
+${P} .tc-layer[data-layer="panels"], ${P} .tc-layer[data-layer="toasts"] { top: ${CT}; bottom: ${CB}; }
+`;
+/* end mobile-3-chrome */
+
 export const PHONE_CSS = /* css */ `
 /* The edge columns live in the letterbox bars, outside the 16:9 box (#app still clips). */
 ${P} { overflow: visible; }
@@ -235,4 +250,4 @@ ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cp
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }
 ${P} .lr-title-coffee { min-height: ${cpx(24)}; padding: 0 ${cpx(8)}; font-size: ${tpx(11)}; }
 ${P} .lr-release { font-size: ${tpx(11)}; }
-`;
+${CHROME_CSS}`;
