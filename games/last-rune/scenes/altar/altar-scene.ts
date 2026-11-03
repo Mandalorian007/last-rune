@@ -935,21 +935,54 @@ export class AltarScene implements GameScene {
     return el;
   }
 
-  /** Whether a tag (drawn above its anchor, arrow down) would cover any of the verdict. */
+  /**
+   * Whether a tag covers any of the verdict box (headline, Try line or story), measured on the
+   * laid-out boxes (not mid-animation rects), for tags above or below their anchor, any text size.
+   */
   private overlapsVerdict(tag: HTMLElement): boolean {
-    const v = this.verdict;
-    if (v.hidden || !this.dom.isConnected) return false;
-    const vx = Number.parseFloat(v.style.left) || 0;
-    const vy = Number.parseFloat(v.style.top) || 0;
-    const tx = Number.parseFloat(tag.style.left) || 0;
-    const ty = Number.parseFloat(tag.style.top) || 0;
-    const pad = 8;
-    const tw = tag.offsetWidth / 2;
-    const vw = v.offsetWidth / 2;
-    const xHit = tx - tw < vx + vw + pad && tx + tw > vx - vw - pad;
-    // The tag spans [ty - height - arrow, ty]; the verdict [vy, vy + height].
-    const yHit = ty - tag.offsetHeight - 7 < vy + v.offsetHeight + pad && ty > vy - pad;
-    return xHit && yHit;
+    if (this.verdict.hidden || !this.dom.isConnected) return false;
+    return boxesTouch(tag, this.verdict, 6);
+  }
+
+  /**
+   * Settle a fizzle tag where it covers neither the verdict box nor an earlier tag: above its
+   * anchor, else hung below it, else one tag-height further out, else just under the verdict if
+   * that is still near its cell. A tag that would land far from its cell is dropped (false): the
+   * red mark and the Try line still say it, and a stray tag would point at the wrong socket.
+   */
+  private placeClear(
+    tag: HTMLElement,
+    above: number,
+    below: number,
+    others: HTMLElement[],
+  ): boolean {
+    const at = (y: number, low: boolean) => {
+      tag.toggleAttribute('data-below', low);
+      tag.style.top = `${Math.round(y)}px`;
+    };
+    // Never up into the title band above the verdict either.
+    const clear = () =>
+      designBox(tag).t >= 90 &&
+      !this.overlapsVerdict(tag) &&
+      !others.some((o) => boxesTouch(tag, o, 2));
+    if (clear()) return true;
+    const step = tag.offsetHeight + 6;
+    const tries: [number, boolean][] = [
+      [below, true],
+      [below + step, true],
+      [above - step, false],
+    ];
+    // Off the top edge the cell sits under the verdict: hang just below the whole box.
+    const vBottom =
+      (Number.parseFloat(this.verdict.style.top) || 0) + this.verdict.offsetHeight + 8;
+    if (vBottom - below <= this.view.layout.pitch) tries.push([vBottom, true]);
+    for (const [y, low] of tries) {
+      at(y, low);
+      if (clear()) return true;
+    }
+    tag.remove();
+    this.tags.splice(this.tags.indexOf(tag), 1);
+    return false;
   }
 
   private clearTags(): void {
@@ -1964,9 +1997,13 @@ export class AltarScene implements GameScene {
       } else {
         this.showVerdict('No charge reached the machine', 'dead', '', hint);
       }
+      // Idle hints ("Bend already here") give way to the verdict and its fizzle tags.
+      this.clearTags();
+      this.tagTimer = 0;
+      this.refusedKey = '';
       // Teaching: name where it went wrong (first few fizzles, last strike first).
       const shown = new Set<string>();
-      const placedTags: { x: number; y: number }[] = [];
+      const placed: HTMLElement[] = [];
       let count = 0;
       const pt = { x: 0, y: 0 };
       for (let i = this.fizzleList.length - 1; i >= 0 && count < 3; i--) {
@@ -1975,20 +2012,9 @@ export class AltarScene implements GameScene {
         if (shown.has(k)) continue;
         shown.add(k);
         anchorOf(L, f.cell, pt);
-        let ty = pt.y - L.pitch * 0.38;
-        // Keep tags from stacking on each other (big boards fizzle in clusters).
-        for (const q of placedTags)
-          if (Math.abs(q.x - pt.x) < 230 && Math.abs(q.y - ty) < 40) ty = q.y - 40;
-        placedTags.push({ x: pt.x, y: ty });
-        const tag = this.addTag(pt.x, ty, causeText(f.cause));
-        // A tag on the top row can rise into the verdict (big text); hang it below the cell.
-        if (this.overlapsVerdict(tag)) {
-          tag.dataset.below = '';
-          // Off the top edge the cell itself sits under the verdict: hang below the verdict.
-          const vBottom =
-            (Number.parseFloat(this.verdict.style.top) || 0) + this.verdict.offsetHeight + 4;
-          tag.style.top = `${Math.round(Math.max(pt.y + L.pitch * 0.38, vBottom))}px`;
-        }
+        const tag = this.addTag(pt.x, pt.y - L.pitch * 0.38, causeText(f.cause));
+        if (!this.placeClear(tag, pt.y - L.pitch * 0.38, pt.y + L.pitch * 0.38, placed)) continue;
+        placed.push(tag);
         count++;
       }
       const line = reactionLine(
@@ -2739,7 +2765,8 @@ export class AltarScene implements GameScene {
     // A deny tag still showing (a click just refused) keeps its place.
     if (this.refusedKey && this.tagTimer <= 0) this.clearTags();
     this.refusedKey = key;
-    if (!cell || !reason || this.tagTimer > 0) return;
+    // No idle hints over a verdict: the fizzle tags and the Try line have the floor.
+    if (!cell || !reason || this.tagTimer > 0 || !this.verdict.hidden) return;
     const pt = { x: 0, y: 0 };
     cellCenter(this.view.layout, cell, pt);
     this.addTag(pt.x, pt.y - this.view.layout.pitch * 0.42, DENY_REASON[reason] ?? reason, 'info');
@@ -2864,4 +2891,26 @@ function hintLine(mode: HintMode): (Node | string)[] {
     case 'strike':
       return ['Hold ', b('F'), ' to speed up · ', b('Click'), ' or ', b('Enter'), ' to skip'];
   }
+}
+
+/**
+ * An element's box in design pixels from its inline left/top and its size, so the answer holds
+ * while the pop-in animations are still moving it. Verdicts hang from their top centre; tags sit
+ * above their anchor (arrow down, 7px) or, with data-below, under it (arrow up).
+ */
+function designBox(el: HTMLElement): { l: number; r: number; t: number; b: number } {
+  const x = Number.parseFloat(el.style.left) || 0;
+  const y = Number.parseFloat(el.style.top) || 0;
+  const w = el.offsetWidth;
+  const h = el.offsetHeight;
+  const tag = el.classList.contains('lr-altar-tag');
+  const t = !tag ? y : el.hasAttribute('data-below') ? y : y - h - 7;
+  return { l: x - w / 2, r: x + w / 2, t, b: t + h + (tag ? 7 : 0) };
+}
+
+/** Whether two boxes overlap, with `pad` design pixels of breathing room. */
+function boxesTouch(a: HTMLElement, b: HTMLElement, pad: number): boolean {
+  const r = designBox(a);
+  const q = designBox(b);
+  return r.l < q.r + pad && r.r > q.l - pad && r.t < q.b + pad && r.b > q.t - pad;
 }
