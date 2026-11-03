@@ -39,3 +39,27 @@ The ending says FUSE **went to ThunderClap Gaming and found friends**. Nothing i
 - Title menu: small, warm secondary link (not a menu item that competes with Play), e.g. a corner "☕ Buy ThunderSoap a coffee". Must not collide with FUSE's title stroll/caption or the release label.
 - Click-only, new tab, noopener noreferrer, no widget/script/iframe/remote image. Procedural cup icon. Keyboard + gamepad reachable, axe clean.
 - e2e: the link exists on both screens with the right href/rel and nothing opens without a click. Screenshots at 1920 and 1280/150%.
+
+## Progress log (agent, 2026-11-02)
+- **D-032 done.**
+  - The mock chat (window, server/channel names, handles, reactions, typing, message bar) is gone, along with its CSS, cue code and lines.
+  - FUSE now speaks the three beyond lines (`beat.beyond-*`) as ordinary captions over warm gold light (BEYOND_POST).
+  - The crowd murmur is `amb.crowd`, procedural and optional.
+  - Reduce flashes and reduced motion are kept.
+  - The new title card, credits and "Join ThunderClap Gaming" label are in place; the Join link is created only at the end card.
+  - ending.md (copy section "confirmed by user, D-032") and script.md are updated.
+- **D-034 done.**
+  - `KOFI_URL` lives in content/ending.ts and is https-only; a blank or other URL hides it.
+  - `ui/coffee.ts` builds the link: an `<a>` with an inline-SVG cup, a new tab and `rel="noopener noreferrer"`.
+  - Title: a pill in the bottom-right corner, inside FUSE's avoid regions.
+  - End card: a smaller pill under Join.
+  - `ui/menu-nav.ts` lets up/down (keys and pad) reach every control on the title and the end card; pad A clicks the focused control.
+- **Audio.** `amb.crowd` first failed the loop-seam check at 5.8 dB because every talker's tremolo was in phase at the wrap. Alternating the sign of the tremolo rates, plus a sixth talker, fixed it: 0.80 dB, 0 problems.
+- **Layout.** The three-line title card overlapped the safety slip. Moving the title up and tightening the second and third lines fixed it; verified at 1920 and at 1280/150%.
+- **Tests.**
+  - ending.spec: no chat, the new copy, Join and Ko-fi href/rel, no popups.
+  - title.spec: a new Ko-fi test.
+  - a11y.spec: the end-card Tab order is join → coffee → back.
+  - New content and model unit tests.
+- **Screenshots:** `scripts/playtest/ending-2.spec.ts`, in three runs (1920, 1280-text150, 1920-reduce-flashes).
+- **Open:** a pad A press calls `.click()` on the link, and browsers may not count a gamepad press as user activation, so the new tab could be popup-blocked. Mouse and keyboard work.

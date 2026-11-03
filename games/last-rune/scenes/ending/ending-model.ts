@@ -14,9 +14,9 @@ import {
   type EndingButton,
   type EndingStep,
   endingButtons,
+  KOFI_URL,
   type PlayStats,
   safetyRecordLine,
-  TIP_JAR_URL,
 } from '../../content/ending';
 import { type FuseLine, lineById } from '../../content/lines';
 
@@ -82,24 +82,25 @@ export function endingSkippable(moment: { readonly firstTime: boolean }): boolea
 export interface EndCard {
   readonly title: readonly string[];
   readonly safety: string;
-  readonly buttons: readonly EndingButton[];
   readonly footer: string;
   /** The ThunderClap Gaming door: present only when the invite is a real https link. */
   readonly join: EndingButton | null;
+  /** The Ko-fi link (D-034), secondary to Join; present only when its URL is https. */
+  readonly coffee: EndingButton | null;
 }
 
 export function endCard(
   stats: PlayStats,
   invite: string = DISCORD_INVITE_URL,
-  tip: string = TIP_JAR_URL,
+  coffee: string = KOFI_URL,
 ): EndCard {
-  const buttons = endingButtons(invite, tip);
+  const buttons = endingButtons(invite, coffee);
   return {
     title: ENDING_COPY.titleCard,
     safety: safetyRecordLine(stats),
-    buttons,
     footer: ENDING_COPY.footer,
     join: buttons.find((b) => b.id === 'join') ?? null,
+    coffee: buttons.find((b) => b.id === 'coffee') ?? null,
   };
 }
 

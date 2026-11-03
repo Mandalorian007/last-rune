@@ -1222,12 +1222,15 @@ const ambCrowd: SoundDef = (() => {
   // (buzzy reeds through a vowel band, chopped into syllables, pitch rising and falling)
   // over a soft din, and now and then a burst of laughter. Far away, warm, never words.
   const D = 8;
+  // Syllable rates alternate sign: a negative rate starts that talker's chop falling instead
+  // of rising, so the voices don't all swell together across the loop's wrap.
   const talkers: Layer[] = [
     [118, 0.625, 120, 3.625, 620, -0.6],
-    [152, 0.875, 150, 4.375, 780, -0.2],
+    [152, 0.875, 150, -4.375, 780, -0.2],
     [196, 0.5, 180, 5.125, 900, 0.25],
-    [231, 1.125, 140, 3.875, 1050, 0.6],
+    [231, 1.125, 140, -3.875, 1050, 0.6],
     [136, 0.75, 100, 4.75, 700, 0.05],
+    [174, 0.625, 130, -4.125, 820, -0.4],
   ].map(([f, vib, depth, syl, band, pan]) => ({
     source: { type: 'osc', wave: 'sawtooth', freq: f!, vibrato: { rate: vib!, depth: depth! } },
     env: HOLD,
@@ -1235,8 +1238,8 @@ const ambCrowd: SoundDef = (() => {
       { type: 'bandpass', freq: band!, q: 1.2 },
       { type: 'lowpass', freq: 1600 },
     ],
-    tremolo: { rate: syl!, depth: 0.85 },
-    gain: 0.25,
+    tremolo: { rate: syl!, depth: 0.8 },
+    gain: 0.22,
     pan: pan!,
   }));
   const laughs: Layer[] = (

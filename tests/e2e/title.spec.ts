@@ -81,3 +81,38 @@ test('FUSE chatters on the title, clear of the menu, and stops when the player s
   }
   expect(problems).toEqual([]);
 });
+
+test('the title offers a quiet Ko-fi link that opens only on a click (D-034)', async ({ page }) => {
+  test.setTimeout(60_000);
+  const problems = trackProblems(page);
+  const popups: string[] = [];
+  page.on('popup', (p) => popups.push(p.url()));
+  await page.goto(DEV_URL);
+  await page.waitForFunction(
+    () => (window as unknown as { __game?: GameHandle }).__game?.flow.state === 'title',
+    null,
+    { timeout: 30_000 },
+  );
+  const coffee = page.locator('a.lr-title-coffee');
+  await expect(coffee).toBeVisible();
+  await expect(coffee).toHaveText('Buy ThunderSoap a coffee');
+  await expect(coffee).toHaveAttribute('href', 'https://ko-fi.com/thundersoap');
+  await expect(coffee).toHaveAttribute('target', '_blank');
+  await expect(coffee).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(coffee.locator('img, iframe, script')).toHaveCount(0);
+
+  // Smaller than Play, and below the menu.
+  const box = await coffee.boundingBox();
+  const play = await page.locator('.lr-gold-button').first().boundingBox();
+  const menu = await page.locator('.lr-title-menu').boundingBox();
+  expect(box!.height).toBeLessThan(play!.height);
+  expect(box!.y).toBeGreaterThan(menu!.y + menu!.height);
+
+  // Arrow keys reach it (the pad drives the same up/down actions).
+  await page.keyboard.press('ArrowUp');
+  await expect(coffee).toBeFocused();
+
+  await page.waitForTimeout(1000);
+  expect(popups).toEqual([]);
+  expect(problems).toEqual([]);
+});

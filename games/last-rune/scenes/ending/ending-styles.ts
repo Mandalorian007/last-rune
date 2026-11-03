@@ -14,7 +14,7 @@ const CSS = /* css */ `
 
 /* ── Title card, safety record, credits ─────────────────────────────────── */
 .tc-overlay .lr-end-title {
-  position: absolute; left: 0; right: 0; top: 150px; text-align: center; opacity: 0; transition: opacity 1600ms ease;
+  position: absolute; left: 0; right: 0; top: 92px; text-align: center; opacity: 0; transition: opacity 1600ms ease;
   isolation: isolate;
 }
 /* A scrim so the lines stay readable over the ending's bright bloom. */
@@ -27,9 +27,10 @@ const CSS = /* css */ `
   margin: 0; font-family: var(--tc-font-display); font-weight: 700; font-size: 62px; letter-spacing: 1px;
   color: #fff6dc; text-shadow: 0 2px 4px #3a1e00, 0 4px 24px #2a1400cc;
 }
-.tc-overlay .lr-end-title h2 + h2 { font-size: 44px; margin-top: 18px; color: #ffe7b0; }
+/* Three lines (D-032): the two follow-ups are smaller and tight, so the card clears the safety slip. */
+.tc-overlay .lr-end-title h2 + h2 { font-size: 40px; line-height: 1.25; margin-top: 10px; color: #ffe7b0; }
 .tc-overlay .lr-end-safety {
-  position: absolute; left: 50%; top: 380px; width: 980px; margin-left: -490px; text-align: center;
+  position: absolute; left: 50%; top: 372px; width: 980px; margin-left: -490px; text-align: center;
   font-family: var(--lr-hand); font-size: 38px; line-height: 1.35; color: #2b1a08;
   padding: 26px 40px; box-sizing: border-box; border-radius: 6px;
   background: linear-gradient(#f6e7c4, #ead3a0); box-shadow: 0 16px 40px #3a200066, inset 0 0 40px #b0884a55;
@@ -57,7 +58,6 @@ const CSS = /* css */ `
 .tc-overlay[data-text-scale] .lr-end-card { top: 660px; gap: 16px; }
 .tc-overlay .lr-end-card { position: absolute; left: 0; right: 0; top: 610px; display: flex; flex-direction: column; align-items: center; gap: 22px; opacity: 0; transition: opacity 1200ms ease; }
 .tc-overlay .lr-end-card[data-in] { opacity: 1; }
-.tc-overlay .lr-end-row { display: flex; gap: 28px; }
 .tc-overlay .lr-end-card a.lr-end-join {
   display: inline-flex; align-items: center; gap: 16px; padding: 22px 48px; border-radius: 14px; text-decoration: none;
   font-family: var(--tc-font-display); font-size: 36px; font-weight: 700; color: #2a1600;
@@ -66,10 +66,13 @@ const CSS = /* css */ `
 .tc-overlay .lr-end-card a.lr-end-join:hover { filter: brightness(1.08); }
 .tc-overlay .lr-end-card a.lr-end-join:focus-visible { outline: 4px solid #fff; outline-offset: 5px; }
 .tc-overlay .lr-end-card a.lr-end-join::after { content: '\\2197'; font-size: 26px; opacity: 0.7; }
-.tc-overlay .lr-end-card a.lr-end-tip {
-  display: inline-flex; align-items: center; padding: 22px 40px; border-radius: 14px; text-decoration: none;
-  font-family: var(--tc-font-display); font-size: 32px; color: #fff1cc; border: 2px solid #ffe3a066; background: #3a2408aa;
+.tc-overlay .lr-end-card a.lr-end-coffee {
+  display: inline-flex; align-items: center; gap: 12px; padding: 10px 26px; border-radius: 999px; text-decoration: none;
+  font-family: var(--tc-font-ui); font-size: 22px; color: #fff1cc; border: 2px solid #ffe3a055; background: #2a1606c0;
 }
+.tc-overlay .lr-end-card a.lr-end-coffee:hover { background: #3c220bd8; border-color: #ffe3a0aa; }
+.tc-overlay .lr-end-card a.lr-end-coffee:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+.tc-overlay .lr-coffee-icon { width: 1.25em; height: 1.25em; flex: none; }
 .tc-overlay .lr-end-footer {
   margin: 0; padding: 16px 90px; font-family: var(--tc-font-ui); font-size: 24px; color: #fff4dc;
   text-shadow: 0 1px 3px #2a1400, 0 2px 12px #2a1400aa;

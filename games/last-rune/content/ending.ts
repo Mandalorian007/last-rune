@@ -3,16 +3,16 @@
  *
  * D-032 (amends D-005): FUSE went to ThunderClap Gaming and found friends. He is a
  * game character, not a bot or a member of a real server, so the ending shows no
- * chat, server or member details. The only network touch is the player clicking
- * the invite link on the end card (D-013).
+ * chat, server or member details. The only network touches are the player clicking
+ * the invite (D-013) or the Ko-fi link (D-034): plain links, new tab, no widgets.
  */
 import { wordCount } from './lines';
 
 /** The ThunderClap Gaming invite. If empty, the ending hides the Join button. */
 export const DISCORD_INVITE_URL: string = 'https://discord.gg/thunderclap';
 
-/** Optional tip-jar link. Empty means use itch's own tip prompt (button hidden). */
-export const TIP_JAR_URL: string = '';
+/** ThunderSoap's Ko-fi page (D-034). Shown on the title and the end card; blank hides it. */
+export const KOFI_URL: string = 'https://ko-fi.com/thundersoap';
 
 /**
  * On-screen copy for the title and end card (UI text, not FUSE lines). Confirmed by
@@ -25,28 +25,40 @@ export const ENDING_COPY = {
     'He still has questions about your safety record.',
   ],
   joinLabel: 'Join ThunderClap Gaming',
-  tipLabel: 'Leave a tip',
+  coffeeLabel: 'Buy ThunderSoap a coffee',
   footer: 'This was the whole game. Thank you for finishing it.',
 } as const;
 
 export interface EndingButton {
-  readonly id: 'join' | 'tip';
+  readonly id: 'join' | 'coffee';
   readonly label: string;
   readonly href: string;
 }
 
+const httpsOnly = (u: string): string | null => {
+  const t = u.trim();
+  return /^https:\/\/\S+$/.test(t) ? t : null;
+};
+
+/** The Ko-fi link (title and end card), or null when the URL is blank or not https. */
+export function coffeeLink(url: string = KOFI_URL): EndingButton | null {
+  const href = httpsOnly(url);
+  return href ? { id: 'coffee', label: ENDING_COPY.coffeeLabel, href } : null;
+}
+
 /**
- * Buttons for the ending screen. Any button whose URL is blank or not https is
- * left out, so an unset constant never produces a dead link.
+ * Buttons for the ending screen: Join first, the Ko-fi link second. Any button whose
+ * URL is blank or not https is left out, so an unset constant never produces a dead link.
  */
 export function endingButtons(
   inviteUrl: string = DISCORD_INVITE_URL,
-  tipUrl: string = TIP_JAR_URL,
+  coffeeUrl: string = KOFI_URL,
 ): EndingButton[] {
-  const ok = (u: string) => /^https:\/\/\S+$/.test(u.trim());
   const out: EndingButton[] = [];
-  if (ok(inviteUrl)) out.push({ id: 'join', label: ENDING_COPY.joinLabel, href: inviteUrl.trim() });
-  if (ok(tipUrl)) out.push({ id: 'tip', label: ENDING_COPY.tipLabel, href: tipUrl.trim() });
+  const join = httpsOnly(inviteUrl);
+  if (join) out.push({ id: 'join', label: ENDING_COPY.joinLabel, href: join });
+  const coffee = coffeeLink(coffeeUrl);
+  if (coffee) out.push(coffee);
   return out;
 }
 

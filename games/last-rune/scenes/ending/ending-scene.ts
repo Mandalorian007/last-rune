@@ -23,6 +23,8 @@ import type { FuseLine } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
 import { progressOf } from '../../game/save';
+import { coffeeAnchor } from '../../ui/coffee';
+import { menuNav } from '../../ui/menu-nav';
 import { deriveHall } from '../hall/hall-state';
 import { DeskArt } from '../journal/desk-art';
 import { PROP } from '../journal/desk-wgsl';
@@ -470,8 +472,36 @@ export class EndingScene implements GameScene {
     this.showEndCard();
   }
 
+  /**
+   * The end card's links, created only now: Join ThunderClap Gaming, then the smaller
+   * Ko-fi link (D-034). Plain anchors that open only on the player's click, in a new tab.
+   */
+  private addEndLinks(): void {
+    const links: HTMLElement[] = [];
+    const join = this.card.join;
+    if (join) {
+      links.push(
+        h(
+          'a',
+          {
+            class: 'lr-end-join',
+            href: join.href,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            dataset: { action: 'ending-join' },
+          },
+          join.label,
+        ),
+      );
+    }
+    const coffee = this.card.coffee;
+    if (coffee) links.push(coffeeAnchor(coffee, 'lr-end-coffee', 'ending-coffee'));
+    this.cardEl.prepend(...links);
+  }
+
   private showEndCard(): void {
     this._phase = 'end-card';
+    this.addEndLinks();
     this.creditsEl.hidden = true;
     this.titleEl.setAttribute('data-in', '');
     this.safetyEl.setAttribute('data-in', '');
@@ -529,6 +559,12 @@ export class EndingScene implements GameScene {
     }
     if (this.skippable && this.ctx.input.pressed('cancel') && !this.ctx.ui.stack.hasModal)
       this.skip();
+    // The end card's links and Back answer arrows and the pad as well as Tab.
+    if (
+      (this._phase === 'end-card' || this._phase === 'post-credits') &&
+      !this.ctx.ui.stack.hasModal
+    )
+      menuNav(this.ctx.input, this.cardEl);
 
     for (const tw of this.tweenList) tw.tick(now);
 
@@ -787,23 +823,7 @@ export class EndingScene implements GameScene {
       ...CREDITS.map(([role, who]) => h('div', null, h('small', null, role), h('span', null, who))),
     );
 
-    // End card: the ThunderClap Gaming link opens only on the player's click.
-    const row = h('div', { class: 'lr-end-row' });
-    for (const b of this.card.buttons) {
-      row.append(
-        h(
-          'a',
-          {
-            class: b.id === 'join' ? 'lr-end-join' : 'lr-end-tip',
-            href: b.href,
-            target: '_blank',
-            rel: 'noopener noreferrer',
-            dataset: { action: `ending-${b.id}` },
-          },
-          b.label,
-        ),
-      );
-    }
+    // End card. Its links are added when it is shown (see showEndCard).
     const back = h(
       'button',
       {
@@ -822,7 +842,6 @@ export class EndingScene implements GameScene {
     this.cardEl = h(
       'div',
       { class: 'lr-end-card' },
-      row,
       h('p', { class: 'lr-end-footer' }, this.card.footer),
       back,
     );

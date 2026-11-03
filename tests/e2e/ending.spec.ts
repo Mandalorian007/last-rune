@@ -97,8 +97,23 @@ test('the ending plays to the end card; the ThunderClap Gaming link opens only o
   await expect(join).toHaveAttribute('href', /^https:\/\/discord\.gg\//);
   await expect(join).toHaveAttribute('target', '_blank');
   await expect(join).toHaveAttribute('rel', 'noopener noreferrer');
-  // The tip jar URL is blank: no tip button.
-  await expect(page.locator('.lr-end-card a.lr-end-tip')).toHaveCount(0);
+  // Ko-fi (D-034): a smaller link under Join, same plain-link rules.
+  const coffee = page.locator('.lr-end-card a.lr-end-coffee');
+  await expect(coffee).toBeVisible();
+  await expect(coffee).toHaveText('Buy ThunderSoap a coffee');
+  await expect(coffee).toHaveAttribute('href', 'https://ko-fi.com/thundersoap');
+  await expect(coffee).toHaveAttribute('target', '_blank');
+  await expect(coffee).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(coffee.locator('img, iframe, script')).toHaveCount(0);
+  const [jb, cb] = [await join.boundingBox(), await coffee.boundingBox()];
+  expect(cb!.y).toBeGreaterThan(jb!.y + jb!.height);
+  expect(cb!.height).toBeLessThan(jb!.height);
+  // Arrow keys walk the card: Back has focus, Down wraps to Join, then Ko-fi.
+  await expect(page.locator('.lr-end-back')).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(join).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(coffee).toBeFocused();
   await expect(page.locator('.lr-end-back')).toBeVisible();
 
   // Nothing navigated, opened a window or phoned out on its own.

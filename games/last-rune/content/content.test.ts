@@ -9,7 +9,14 @@ import {
   getMachine,
 } from '../rules/progression';
 import { GEM_KINDS, MACHINE_IDS, type Tier } from '../rules/types';
-import { DISCORD_INVITE_URL, ENDING_SEQUENCE, endingButtons, safetyRecordLine } from './ending';
+import {
+  coffeeLink,
+  DISCORD_INVITE_URL,
+  ENDING_SEQUENCE,
+  endingButtons,
+  KOFI_URL,
+  safetyRecordLine,
+} from './ending';
 import { JOURNAL, pagesFound } from './journal';
 import {
   beatLine,
@@ -270,7 +277,15 @@ describe('ending', () => {
     expect(endingButtons().map((b) => b.id)).toContain('join');
     expect(endingButtons('', '')).toEqual([]);
     expect(endingButtons('   ', 'javascript:alert(1)')).toEqual([]);
-    expect(endingButtons('', 'https://example.itch.io').map((b) => b.id)).toEqual(['tip']);
+    expect(endingButtons('', 'https://example.itch.io').map((b) => b.id)).toEqual(['coffee']);
+  });
+
+  it('links Ko-fi on https only (D-034)', () => {
+    expect(KOFI_URL).toBe('https://ko-fi.com/thundersoap');
+    expect(endingButtons().map((b) => b.id)).toEqual(['join', 'coffee']);
+    expect(coffeeLink()?.href).toBe(KOFI_URL);
+    expect(coffeeLink('http://ko-fi.com/x')).toBeNull();
+    expect(coffeeLink('')).toBeNull();
   });
 
   it('references real lines in order', () => {

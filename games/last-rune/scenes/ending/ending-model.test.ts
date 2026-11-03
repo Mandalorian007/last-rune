@@ -62,25 +62,25 @@ describe('endingBeats', () => {
 describe('endCard', () => {
   const stats = { playSeconds: 5321, breakersTripped: 7 };
 
-  it('offers the ThunderClap Gaming door and hides the tip jar while its URL is blank', () => {
+  it('offers the ThunderClap Gaming door and the Ko-fi link', () => {
     const c = endCard(stats);
     expect(c.join?.href).toBe(DISCORD_INVITE_URL);
-    expect(c.buttons.map((b) => b.id)).toEqual(['join']);
+    expect(c.join?.label).toBe('Join ThunderClap Gaming');
+    expect(c.coffee?.href).toBe('https://ko-fi.com/thundersoap');
     expect(c.footer).toBe(ENDING_COPY.footer);
     expect(c.title).toEqual(ENDING_COPY.titleCard);
     expect(c.safety).toContain('1h 29m');
     expect(c.safety).toContain('Breakers tripped: 7');
   });
 
-  it('shows the tip jar once it has an https URL', () => {
-    const c = endCard(stats, DISCORD_INVITE_URL, 'https://example.invalid/tip');
-    expect(c.buttons.map((b) => b.id)).toEqual(['join', 'tip']);
+  it('hides the Ko-fi link while its URL is blank', () => {
+    expect(endCard(stats, DISCORD_INVITE_URL, '').coffee).toBeNull();
   });
 
   it('drops non-https links; the title card is lore and stays whole', () => {
     const c = endCard(stats, 'http://discord.gg/x', 'javascript:alert(1)');
     expect(c.join).toBeNull();
-    expect(c.buttons).toEqual([]);
+    expect(c.coffee).toBeNull();
     expect(c.title).toEqual(ENDING_COPY.titleCard);
   });
 });
