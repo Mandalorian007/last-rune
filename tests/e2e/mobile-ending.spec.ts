@@ -5,7 +5,11 @@ import { DEV_URL, waitFrames } from './helpers';
 // mobile-3-ending (D-040): the ending on the four realistic phone viewports (browser bars
 // showing, notch insets emulated), replayed so Skip is there:
 //  - Skip has its own lane: on screen, ≥44 CSS px to the finger, never under FUSE's caption;
-//    the caption is ~14 px with a "Tap to continue" cue.
+//    the caption is ~14 px. mobile-7-ending: one instruction only: "Plays by itself" is bare
+//    text (no pill, no taps) and the caption has no "Tap to continue".
+//  - mobile-7-ending: the chat is bottom-anchored (the newest message at the foot of the log),
+//    a channel opens on its start block right above the first message, and the end card's
+//    title band clears the top, the slip clears the title, and the clipboard is uncut.
 //  - The hangout is one conversation: messages use ≥80% of the screen's usable width, nothing
 //    in them is cut off, text is ~14 px, and the form's "Builder, then foreman" stays on one line.
 //  - Tapping Skip goes to the end card, whose controls are ≥40 drawn / ≥44 to the finger,
@@ -175,7 +179,23 @@ for (const vp of PHONES) {
         };
       });
       expect(capText.size).toBeGreaterThanOrEqual(13.5);
-      expect(capText.cue).toContain('Tap to continue');
+      expect(capText.cue, 'a second instruction under the caption').not.toContain('Tap');
+      // "Plays by itself" is a plain caption: no fill, no border, takes no taps.
+      const cue = await page.evaluate(() => {
+        const el = document.querySelector<HTMLElement>('.lr-end-cue');
+        if (!el || el.hidden) return null;
+        const cs = getComputedStyle(el);
+        return {
+          text: el.textContent,
+          bg: cs.backgroundColor,
+          border: cs.borderTopWidth,
+          pe: cs.pointerEvents,
+        };
+      });
+      expect(cue?.text).toBe('Plays by itself');
+      expect(cue?.bg).toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
+      expect(cue?.border).toBe('0px');
+      expect(cue?.pe).toBe('none');
       // Skip is on top where it sits: a finger on it lands on it.
       const onSkip = await page.evaluate(
         ({ x, y }) => {
@@ -244,8 +264,11 @@ for (const vp of PHONES) {
         // Never cut at the bottom: older messages may only leave through the top.
         expect(r.b).toBeLessThanOrEqual(chat.log.b + 0.5);
       }
-      // The newest message is wholly on screen.
+      // The newest message is wholly on screen, at the foot of the log (no empty band under it).
       expect(chat.rows.at(-1)!.t).toBeGreaterThanOrEqual(chat.log.t);
+      expect(chat.log.b - chat.rows.at(-1)!.b, 'empty chat under the newest message').toBeLessThan(
+        12,
+      );
       // "Builder, then foreman" (and every form line) on one line.
       expect(chat.form.length).toBe(3);
       for (const f of chat.form) expect(f.h, f.text).toBeLessThan(f.lh * 1.5);
@@ -273,7 +296,8 @@ for (const vp of PHONES) {
       // mobile-5-chrome: no unread count at all (nothing in a read-only channel is "unread").
       await expect(hg.locator('.lr-hg-badge-count')).toBeHidden();
       // mobile-4-chrome: nothing in the hangout takes focus or looks typeable; the bar reads
-      // "Read-only channel"; one "#introductions" header (the top bar), no repeated start block.
+      // "Read-only channel". mobile-7-ending: the channel's start block ("Welcome to #x!")
+      // is back, as a chat app draws it: one at most, right above the first message.
       const inert = await page.evaluate(() => {
         const hg = document.querySelector('.lr-hg')!;
         const focusable = [
@@ -287,14 +311,24 @@ for (const vp of PHONES) {
           bar: bar.hasAttribute('data-typing')
             ? 'typing'
             : getComputedStyle(bar, '::before').content,
-          starts: [...hg.querySelectorAll<HTMLElement>('.lr-hg-start')].filter(
-            (e) => e.getClientRects().length > 0,
-          ).length,
+          starts: [...hg.querySelectorAll<HTMLElement>('.lr-hg-start')]
+            .filter((e) => e.getClientRects().length > 0)
+            .map((e) => {
+              const r = e.getBoundingClientRect();
+              const next = e.nextElementSibling?.getBoundingClientRect();
+              return { b: r.bottom, nextT: next?.top ?? r.bottom };
+            }),
         };
       });
       expect(inert.focusable, 'focusable controls in the hangout').toEqual([]);
       if (inert.bar !== 'typing') expect(inert.bar).toContain('Read-only channel');
-      expect(inert.starts, 'a repeated channel start header').toBe(0);
+      expect(inert.starts.length, 'a repeated channel start block').toBeLessThanOrEqual(1);
+      for (const st of inert.starts) {
+        expect(st.nextT - st.b, 'start block apart from the first message').toBeGreaterThanOrEqual(
+          -0.5,
+        );
+        expect(st.nextT - st.b, 'start block apart from the first message').toBeLessThan(24);
+      }
       expect(meets(chat.skip, chat.log)).toBe(false);
 
       // ── Skip still works by finger: on to the end card ──────────────────
@@ -376,8 +410,33 @@ for (const vp of PHONES) {
           getComputedStyle(document.querySelector('.lr-end-title')!, '::before').backgroundColor,
       );
       expect(band).toMatch(/rgba?\(24, 12, 3/);
+      // mobile-7-ending: the title band has room above it (>=8 px), the Safety record slip
+      // clears the band, the card clears the slip, and the card ends on screen.
+      const col = await page.evaluate(() => {
+        const t = document.querySelector<HTMLElement>('.lr-end-title')!;
+        const r = t.getBoundingClientRect();
+        const k = document.querySelector('.tc-overlay')!.getBoundingClientRect().width / 1920;
+        const cs = getComputedStyle(t, '::before');
+        const s = document.querySelector('.lr-end-safety')!.getBoundingClientRect();
+        return {
+          bandT: r.top + parseFloat(cs.top) * k,
+          bandB: r.bottom - parseFloat(cs.bottom) * k,
+          safetyT: s.top,
+          safetyB: s.bottom,
+        };
+      });
+      expect(col.bandT - app.t, 'title band against the top edge').toBeGreaterThanOrEqual(8);
+      expect(
+        col.safetyT - col.bandB,
+        'Safety record slip touches the title',
+      ).toBeGreaterThanOrEqual(4);
+      expect(card.t - col.safetyB, 'end card touches the slip').toBeGreaterThanOrEqual(4);
+      expect(card.b).toBeLessThanOrEqual(app.b);
       // The clipboard stays a prop: clear of every control, with room to spare.
       const clip = (await boxOf(page, '.lr-clip-note'))!;
+      // ...and whole: its page (and so the board around it) stays well inside the screen.
+      expect(clip.r, 'clipboard cut at the right').toBeLessThanOrEqual(vp.width - 16);
+      expect(clip.b, 'clipboard cut at the bottom').toBeLessThanOrEqual(vp.height - 10);
       for (const b of boxes) {
         const grown = { l: b.l - 12, t: b.t - 4, r: b.r + 12, b: b.b + 4 };
         expect(meets(grown, clip), 'a control crowds the clipboard').toBe(false);

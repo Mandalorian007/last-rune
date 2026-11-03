@@ -319,4 +319,7 @@ export const HANGOUT_COPY = {
   messagePrefix: 'Message #',
   isTyping: 'is typing',
   formTitle: 'New arrival',
+  /** Phones: a channel's start block, just above its first message (mobile-7-ending). */
+  channelWelcome: ['Welcome to ', '!'],
+  channelStart: ['This is the start of the ', ' channel.'],
 } as const;

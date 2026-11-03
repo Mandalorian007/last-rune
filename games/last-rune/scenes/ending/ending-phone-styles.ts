@@ -4,7 +4,8 @@
  *
  * - **Skip** has its own lane: the top of the right letterbox bar, where no caption, chat or
  *   card ever goes. FUSE's ending lines sit bottom-left, clear of him and of that lane, at
- *   14 px, with a faint "Tap to continue" (a tap on the caption advances it).
+ *   14 px. The ending plays by itself, and says so once: "Plays by itself" in plain text
+ *   beside Skip, and no "Tap to continue" under the captions (mobile-7-ending).
  * - **The hangout** is a phone chat app, not a desktop window: one conversation, full width
  *   (into the bars, up to the safe areas), under a header that reads
  *   "‹ # channel · ThunderClap Gaming". The ‹ carries a count of channels with something new,
@@ -42,10 +43,6 @@ ${P}:has(.lr-ending) .tc-caption {
   max-width: min(${cpx(330)}, 1160px) !important; padding: ${cpx(6)} ${cpx(11)} ${cpx(5)};
 }
 ${P}:has(.lr-ending) .tc-caption-text { font-size: ${tpx(14)}; line-height: 1.32; }
-${P}:has(.lr-ending) .tc-caption-body::after {
-  content: 'Tap to continue'; display: block; margin-top: ${cpx(2)}; text-align: right;
-  font-family: var(--tc-font-ui); font-size: ${tpx(11)}; letter-spacing: 0.3px; color: #e8dcc0; opacity: 0.55;
-}
 
 /* ── Hangout: one conversation, full screen ────────────────────────────── */
 ${P} .lr-hg {
@@ -170,9 +167,8 @@ ${P} .lr-end-card .lr-end-back { margin-top: 0; min-height: ${cpx(40)}; padding:
 ${P} .lr-clip-note { pointer-events: none; }
 
 /* mobile-4-chrome */
-/* Hangout: one channel header (no repeated start block), and no fake text box: the bar is a
+/* Hangout: no fake text box: the bar is a
    flat read-only strip until FUSE drafts in it (D-040: no dead controls). */
-${P} .lr-hg-start { display: none !important; }
 ${P} .lr-hg-compose:not([data-typing]) {
   justify-content: center; background: transparent; border: 0; border-top: 1px solid #ffffff1a; border-radius: 0;
   height: ${cpx(30)}; margin-bottom: ${cpx(4)};
@@ -201,17 +197,18 @@ ${P} .lr-end-cue {
   position: absolute; z-index: 3; top: calc(${CT} + ${cpx(4)}); right: calc(${BAR_IN} + ${LANE} + ${cpx(6)});
   height: ${cpx(36)}; margin: 0; padding: 0 ${cpx(10)}; display: flex; align-items: center; box-sizing: border-box;
   font: italic ${tpx(12)}/1 var(--tc-font-body, serif); color: #efe2c4; white-space: nowrap;
-  border-radius: ${cpx(18)}; background: rgb(14 10 6 / 0.72); pointer-events: none;
+  pointer-events: none;
+  /* mobile-7-ending: a caption, not a pill. Nothing with a button's shape may do nothing, so
+     it is bare text with a soft shadow for the bright scenes behind it. */
+  background: none; border: 0; border-radius: 0;
+  text-shadow: 0 0 ${cpx(3)} #000, 0 0 ${cpx(8)} rgb(0 0 0 / 0.85);
 }
 ${P} .lr-end-cue[data-alone] { right: ${BAR_IN}; }
 ${P} .lr-hg-top { padding-right: calc(${LANE} + ${cpx(130)}); }
-/* The hangout opens with its messages under the header, not under an empty band; once they
-   overflow, the newest stay at the foot and the oldest fade under the header. */
 ${P} .lr-hg-log {
   padding-top: ${cpx(8)};
-  -webkit-mask-image: linear-gradient(#0000 0, #000 ${cpx(8)}); mask-image: linear-gradient(#0000 0, #000 ${cpx(8)});
+  -webkit-mask-image: linear-gradient(#0000 0, #000 ${cpx(14)}); mask-image: linear-gradient(#0000 0, #000 ${cpx(14)});
 }
-${P} .lr-hg-log::after { content: ''; flex: 1 1 auto; }
 
 /* Title, safety record, credits and the end card: one centred column. The title's lines sit
    on a dark band (cream on near-black, well over 4.5:1, never white on the gold). */
@@ -251,4 +248,50 @@ ${P} .lr-end-card .lr-end-back {
   border-radius: ${cpx(10)}; box-shadow: none; font-family: var(--tc-font-body, serif);
 }
 /* end mobile-6-chrome */
+
+/* mobile-7-ending */
+/* The hangout fills the phone like a chat app: the conversation sits at the foot, on the
+   "is typing" line, where the next message lands; type is sized for the height (16 px text,
+   38 px avatars); and each channel opens on its start block ("Welcome to #x!") right above
+   its first message, so a short channel still reads as a channel and not as a blank screen.
+   The start block drops out once the chat outgrows the screen (hangout.ts fitStart). */
+${P} .lr-hg-start {
+  display: flex; flex: none; align-items: center; gap: ${cpx(14)}; margin: 0 0 ${cpx(8)}; padding: ${cpx(6)} ${cpx(4)} ${cpx(12)};
+  border-bottom: 1px solid #ffffff1a; color: #fbf3e0;
+}
+${P} .lr-hg-start[hidden] { display: none; }
+${P} .lr-hg-start-emo { width: ${cpx(60)}; height: ${cpx(60)}; font-size: ${tpx(31)}; background: #3a3f4c; }
+${P} .lr-hg-start-text { display: flex; flex-direction: column; gap: ${cpx(2)}; min-width: 0; }
+${P} .lr-hg-start-text b { font-size: ${tpx(22)}; line-height: 1.15; font-weight: 700; }
+${P} .lr-hg-start-text small { font-size: ${tpx(14)}; line-height: 1.25; color: #a39a88; }
+${P} .lr-hg-msg { gap: ${cpx(11)}; padding: ${cpx(5)} ${cpx(4)}; }
+${P} .lr-hg-av { width: ${cpx(38)}; height: ${cpx(38)}; font-size: ${tpx(20)}; }
+${P} .lr-hg-meta b { font-size: ${tpx(15.5)}; }
+${P} .lr-hg-meta small { font-size: ${tpx(12)}; }
+${P} .lr-hg-text { font-size: ${tpx(16)}; line-height: 1.3; }
+${P} .lr-hg-form { font-size: ${tpx(15)}; padding: ${cpx(5)} ${cpx(16)} ${cpx(6)} ${cpx(13)}; }
+${P} .lr-hg-form small { font-size: ${tpx(11.5)}; }
+${P} .lr-hg-reacts { gap: ${cpx(5)}; margin-top: ${cpx(4)}; }
+${P} .lr-hg-react { height: ${cpx(26)}; padding: 0 ${cpx(8)} 0 ${cpx(6)}; border-radius: ${cpx(13)}; font-size: ${tpx(13.5)}; }
+${P} .lr-hg-react .lr-emo { font-size: ${tpx(15)}; }
+${P} .lr-hg-sys { padding: ${cpx(5)} ${cpx(4)} ${cpx(5)} ${cpx(12)}; font-size: ${tpx(14.5)}; }
+${P} .lr-hg-typing { font-size: ${tpx(13)}; height: ${cpx(20)}; }
+${P} .lr-hg-start[data-compact] { gap: ${cpx(10)}; padding: ${cpx(2)} ${cpx(4)} ${cpx(8)}; }
+${P} .lr-hg-start[data-compact] .lr-hg-start-emo { width: ${cpx(34)}; height: ${cpx(34)}; font-size: ${tpx(18)}; }
+${P} .lr-hg-start[data-compact] .lr-hg-start-text b { font-size: ${tpx(18)}; }
+${P} .lr-hg-start[data-compact] .lr-hg-start-text small { display: none; }
+
+/* The end card's column: the title band 10 px clear of the top, 8 px between the band, the
+   slip and the card, and the whole column inside the screen on the 320 px SE. */
+${P} .lr-end-title { top: calc(${CT} + ${cpx(15)}); }
+${P} .lr-end-safety { top: calc(${CT} + ${cpx(87)}); }
+${P} .lr-end-credits { top: calc(${CT} + ${cpx(166)}); }
+${P} .lr-end-card { top: calc(${CT} + ${cpx(154)}); }
+@media (max-height: 330px) {
+  ${P} .lr-end-title h2 { font-size: ${tpx(18)}; }
+  ${P} .lr-end-title h2 + h2 { font-size: ${tpx(12.5)}; line-height: 1.2; }
+  ${P} .lr-end-safety { top: calc(${CT} + ${cpx(80)}); font-size: ${tpx(12.5)}; line-height: 1.22; }
+  ${P} .lr-end-card { top: calc(${CT} + ${cpx(137)}); }
+}
+/* end mobile-7-ending */
 `;

@@ -260,12 +260,26 @@ export class Hangout {
       log = h(
         'div',
         { class: 'lr-hg-log', dataset: { ch: id } },
-        // The start of the channel (phones show it; it scrolls away as the chat fills).
+        // The start of the channel, as a chat app draws it (phones show it, just above the
+        // first message; it scrolls away once the chat fills): "Welcome to #x!" and a note.
         h(
           'div',
           { class: 'lr-hg-start' },
           h('span', { class: 'lr-hg-start-emo' }, h('span', { class: 'lr-emo' }, ch.emoji)),
-          h('b', null, h('span', { class: 'lr-hg-hash' }, '#'), ch.name),
+          h(
+            'div',
+            { class: 'lr-hg-start-text' },
+            h(
+              'b',
+              null,
+              `${HANGOUT_COPY.channelWelcome[0]}#${ch.name}${HANGOUT_COPY.channelWelcome[1]}`,
+            ),
+            h(
+              'small',
+              null,
+              `${HANGOUT_COPY.channelStart[0]}#${ch.name}${HANGOUT_COPY.channelStart[1]}`,
+            ),
+          ),
         ),
       );
       this.logs.set(id, log);
@@ -287,16 +301,22 @@ export class Hangout {
     const start = log?.firstElementChild as HTMLElement | null | undefined;
     if (!log || !start?.classList.contains('lr-hg-start')) return;
     start.hidden = false;
+    delete start.dataset.compact;
     if (!start.offsetHeight) return;
-    const cs = getComputedStyle(log);
-    let used = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    for (const el of log.children) {
-      const m = getComputedStyle(el);
-      used +=
-        (el as HTMLElement).offsetHeight + parseFloat(m.marginTop) + parseFloat(m.marginBottom);
-    }
-    // The auto margin under the block reads as 0 once there is no room left.
-    start.hidden = used > log.clientHeight + 0.5;
+    const fits = () => {
+      const cs = getComputedStyle(log);
+      let used = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      for (const el of log.children) {
+        const m = getComputedStyle(el);
+        used +=
+          (el as HTMLElement).offsetHeight + parseFloat(m.marginTop) + parseFloat(m.marginBottom);
+      }
+      return used <= log.clientHeight + 0.5;
+    };
+    if (fits()) return;
+    // No room for the full block: one line ("Welcome to #x!") with a small disc, else nothing.
+    start.dataset.compact = '';
+    start.hidden = !fits();
   }
 
   /** The ‹'s badge: how many other channels have something new. */
