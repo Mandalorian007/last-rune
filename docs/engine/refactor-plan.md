@@ -206,6 +206,8 @@ Nothing in Phases 0 to 5 builds 3D content or XR. Agents must refuse workstream 
 
 ## Acceptance gates, tests and risks
 
+> **Test ownership (D-041 addendum 2):** the engine verifies platform capability once, in its own unit tests and on a noun-free e2e harness across the supported viewport, device and wrapper matrix. The game tests product only and does not re-verify platform behaviour. See [test-split.md](test-split.md).
+
 Every phase ends at a gate the PM runs; no phase starts before the previous gate is logged in `docs/STATUS.md`. The regression set is the v1.0 baseline from Phase 0 plus the existing suites: 404 rules tests, 59 engine and game test files, the full-run keyboard e2e (16/16), `mobile-budget`, `mobile-chrome`, `mobile-ending`, `altar-labels`, `layout-fit` at 5 sizes, axe a11y, and the perf harness.
 
 Tests the refactor adds:
