@@ -95,7 +95,9 @@ describe('hall state', () => {
     const intake = lineForAlcove(byId(m, 'intake-desk'))!;
     expect(intake.kind).toBe('door');
     expect(intake.text).not.toMatch(/tray|socket|Step one/);
-    expect(lineForAlcove(byId(deriveHall(solvedAfter('intake-desk')), 'furnace'))!.kind).toBe('arrive');
+    expect(lineForAlcove(byId(deriveHall(solvedAfter('intake-desk')), 'furnace'))!.kind).toBe(
+      'arrive',
+    );
     expect(lineForAlcove(byId(m, 'press-unit-4'))!.kind).toBe('locked');
     expect(lineForAlcove(byId(m, 'furnace'))!.kind).toBe('socket');
     const solved = deriveHall(solvedAfter('intake-desk'));

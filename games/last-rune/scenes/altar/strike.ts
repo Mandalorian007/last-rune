@@ -261,6 +261,15 @@ export function rootFizzle(
 }
 
 /**
+ * The red mark the Try line points at: the cell of the root cause's first fizzle. The verdict
+ * must never cover it.
+ */
+export function rootCell(list: readonly Fizzle[]): Cell | undefined {
+  const cause = rootCause(list.map((f) => f.cause));
+  return cause ? list.find((x) => x.cause === cause)!.cell : undefined;
+}
+
+/**
  * One short, visible next step under a failed verdict, so a first-timer is never left with
  * only "needs 4, got 0". Fizzles name a concrete fix; otherwise the outcome does. Too much
  * charge is about the amount, so it wins over a stray fizzle.

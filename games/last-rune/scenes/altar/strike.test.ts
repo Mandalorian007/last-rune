@@ -3,7 +3,7 @@ import { PUZZLES, puzzleFor } from '../../content/puzzles';
 import { type PuzzleDef, simulate } from '../../rules';
 import { altarDims } from '../../rules/model';
 import { anchorOf, cellAt, computeLayout, DESIGN_H, DESIGN_W } from './layout';
-import { buildTimeline, failText, fizzles, nextStep, rootFizzle } from './strike';
+import { buildTimeline, failText, fizzles, nextStep, rootCell, rootFizzle } from './strike';
 
 function bench(over: Partial<PuzzleDef> = {}): PuzzleDef {
   return {
@@ -86,6 +86,9 @@ describe('fizzle causes', () => {
     });
     expect(rootFizzle('dead', fizzles(p, [], simulate(p, [])))).toEqual({ cause: 'empty' });
     expect(rootFizzle('over', fizzles(p, [], simulate(p, [])))).toBeUndefined();
+    // The verdict keeps clear of the red mark the Try line names.
+    expect(rootCell(fizzles(q, bend, simulate(q, bend)))).toEqual({ x: 0, y: 1 });
+    expect(rootCell([])).toBeUndefined();
     // Gate rot 0 outputs north, inputs E and W: one input only.
     const lone = [{ gem: 'gate' as const, cell: { x: 0, y: 1 }, rot: 0 as const }];
     expect(fizzles(q, lone, simulate(q, lone))[0]!.cause).toBe('gate-alone');
