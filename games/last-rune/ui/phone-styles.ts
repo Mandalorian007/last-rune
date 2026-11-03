@@ -40,6 +40,196 @@ ${P} .lr-hud { top: calc(${CT} + ${cpx(4)}); }
 ${P} .tc-caption[data-corner^="bottom"] { bottom: calc(${CB} + var(--tc-caption-margin)); }
 ${P} .tc-caption[data-corner^="top"] { top: calc(${CT} + var(--tc-caption-margin)); }
 ${P} .tc-layer[data-layer="panels"], ${P} .tc-layer[data-layer="toasts"] { top: ${CT}; bottom: ${CB}; }
+/* FUSE's lines break evenly, never one word alone on the last line. */
+${P} .tc-caption-text { text-wrap: balance; }
+
+/* Title: Play is the one big gold button; the rest are a full thumb tall. The menu sits just
+   under the subtitle so three buttons fit above the bottom edge on every phone. */
+${P} .lr-title-menu { top: 450px; gap: ${cpx(8)}; }
+${P} .lr-title-menu .lr-gold-button {
+  min-width: ${cpx(150)}; min-height: ${cpx(48)}; padding: 0 ${cpx(20)}; border-radius: ${cpx(9)};
+  font-size: ${tpx(19)}; letter-spacing: 1px; border-width: 2px;
+}
+${P} .lr-title-menu .lr-stone-button { min-width: ${cpx(150)}; min-height: ${cpx(44)}; font-size: ${tpx(15)}; border-radius: ${cpx(8)}; }
+${P} .lr-fullscreen { left: ${cpx(8)}; top: calc(${CT} + ${cpx(6)}); min-height: ${cpx(36)}; padding: 0 ${cpx(12)}; font-size: ${tpx(13)}; }
+${P} .lr-release { top: calc(${CT} + ${cpx(8)}); right: ${cpx(10)}; }
+${P} .tc-link.lr-title-links { right: ${cpx(8)}; bottom: calc(${CB} + ${cpx(6)}); }
+${P} .lr-title-links .tc-link-row { gap: ${cpx(8)}; }
+/* Hall: the suggested door, unmistakable at phone size: a pulsing gold outline and a tag on
+   its top edge (kept inside the visible band). Off phones neither shows. */
+.tc-overlay:not([data-phone]) :is(.lr-hall-next, .lr-hall-next-tag, .lr-hud-note) { display: none !important; }
+${P} .lr-hall-next {
+  position: absolute; box-sizing: border-box; pointer-events: none;
+  border: ${cpx(2)} solid #ffd77a; border-radius: 46% 46% ${cpx(8)} ${cpx(8)} / 30% 30% ${cpx(8)} ${cpx(8)};
+  box-shadow: 0 0 ${cpx(6)} rgb(255 205 110 / 0.8), inset 0 0 ${cpx(6)} rgb(255 205 110 / 0.5);
+  animation: lr-next-pulse 1.6s ease-in-out infinite;
+}
+${P} .lr-hall-next[data-round] { border-radius: 50%; }
+${P} .lr-hall-next-tag {
+  position: absolute; top: max(calc(var(--lr-next-top, 0px) - ${cpx(10)}), calc(${CT} + ${cpx(3)})); transform: translateX(-50%);
+  pointer-events: none; white-space: nowrap; padding: ${cpx(2)} ${cpx(8)}; border-radius: ${cpx(9)};
+  font: 700 ${tpx(12)}/1.2 var(--tc-font-display, serif); letter-spacing: 0.5px; color: #2a1906;
+  background: linear-gradient(180deg, #fff1b5, #e8c06a 60%, #b98a34); border: 1px solid #5a3d12;
+  box-shadow: 0 ${cpx(1)} ${cpx(5)} rgb(0 0 0 / 0.7);
+}
+${P} .lr-hall-next-tag::after { content: ' ▾'; }
+@keyframes lr-next-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { ${P} .lr-hall-next { animation: none; } }
+[data-reduced-motion] ${P} .lr-hall-next { animation: none; }
+/* The ☰ list says what its dot means. */
+${P} .lr-hud[data-open] > button[data-action="journal"] { flex-direction: column; align-items: flex-end; justify-content: center; line-height: 1.15; }
+${P} .lr-hud-note { display: block; font: italic ${tpx(11)}/1.1 var(--tc-font-body, serif); color: #ffb27a; letter-spacing: 0; }
+${P} .lr-hud-note[hidden] { display: none; }
+/* Nothing of the hall's chrome shows through an open panel (Settings, Codex). */
+${P}:has(.tc-panel-host[data-modal="true"]) :is(.lr-hud, .lr-hall-next, .lr-hall-next-tag) { visibility: hidden; }
+
+/* Codex: the book fits the visible band; a readable header; tabs a thumb tall (the strip
+   scrolls sideways if every gem is met); bigger text that uses the whole page; FUSE's note in
+   dark ink; the × matches the other panels' ✕. */
+${P} .lr-codex {
+  height: calc(1080px - ${CT} - ${CB} - ${cpx(6)}); padding: ${cpx(22)} ${cpx(6)} ${cpx(46)};
+}
+${P} .lr-codex-head { top: ${cpx(3)}; font-size: ${tpx(13)}; letter-spacing: 0.5px; color: #f8e6b8; }
+${P} .lr-codex-nav {
+  bottom: ${cpx(5)}; gap: ${cpx(5)}; justify-content: safe center; overflow-x: auto; scrollbar-width: none;
+  padding: 0 ${cpx(10)};
+}
+${P} .lr-codex-nav button {
+  flex: none; min-height: ${cpx(36)}; height: ${cpx(36)}; padding: 0 ${cpx(11)}; border-radius: ${cpx(18)};
+  font-size: ${tpx(13)};
+}
+${P} .lr-codex-nav .lr-dot { width: ${cpx(9)}; height: ${cpx(9)}; margin-right: ${cpx(4)}; }
+${P} .lr-codex-page {
+  padding: ${cpx(8)} ${cpx(14)} ${cpx(4)}; grid-template-columns: ${cpx(88)} 1fr; column-gap: ${cpx(12)};
+  font-size: ${tpx(14)}; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+}
+/* The shortest phones (SE, 320 tall): a touch smaller so a page's rule and maths fit above the tabs. */
+@media (max-height: 330px) {
+  ${P} .lr-codex-page { font-size: ${tpx(13)}; grid-template-columns: ${cpx(76)} 1fr; }
+  ${P} .lr-plate { width: ${cpx(76)}; height: ${cpx(76)}; }
+  ${P} .lr-niche { width: ${cpx(72)}; height: ${cpx(72)}; }
+  ${P} .lr-margin { font-size: ${tpx(12)}; line-height: 1.3; }
+  ${P} .lr-codex-rule { margin-top: ${cpx(5)}; font-size: ${tpx(13)}; line-height: 1.3; }
+  ${P} .lr-codex-maths { margin-top: ${cpx(4)}; padding: ${cpx(2)} ${cpx(6)}; font-size: ${tpx(12)}; }
+}
+${P} .lr-codex-page h3 { font-size: ${tpx(18)}; padding-bottom: ${cpx(3)}; padding-right: ${cpx(40)}; gap: ${cpx(3)} ${cpx(6)}; }
+${P} .lr-codex-page .lr-status, ${P} .lr-codex-page .lr-new { font-size: ${tpx(11)}; padding: 0 ${cpx(6)}; letter-spacing: 1px; vertical-align: 0; margin: 0; }
+${P} .lr-codex-status { font-size: ${tpx(12)}; margin: ${cpx(3)} 0 ${cpx(6)}; }
+${P} .lr-plate { width: ${cpx(88)}; height: ${cpx(88)}; }
+${P} .lr-niche { width: ${cpx(84)}; height: ${cpx(84)}; }
+${P} .lr-margin {
+  align-self: center; padding: ${cpx(2)} 0 ${cpx(2)} ${cpx(8)}; font-size: ${tpx(13)}; line-height: 1.35;
+  color: #3e2208; border-left: ${cpx(2)} dashed rgb(110 60 15 / 0.6);
+}
+${P} .lr-margin b { font-size: ${tpx(11)}; letter-spacing: 1px; margin-bottom: ${cpx(2)}; color: #6a3a0c; }
+${P} .lr-codex-rule { margin-top: ${cpx(8)}; font-size: ${tpx(14)}; line-height: 1.35; }
+${P} .lr-codex-maths { margin-top: ${cpx(6)}; padding: ${cpx(4)} ${cpx(8)}; font-size: ${tpx(13)}; }
+${P} .lr-codex-folio { font-size: ${tpx(12)}; }
+${P} .lr-codex-close {
+  top: ${cpx(28)}; right: ${cpx(14)}; width: ${cpx(36)}; height: ${cpx(36)}; font-size: ${tpx(18)};
+  border-width: 1px; color: #3b2414; background: rgb(255 255 255 / 0.4);
+}
+
+/* Journal: the found pages as paper rows a thumb tall, one row for the rest ("12 more pages to
+   find"), scrolling if there are many; solid page arrows; ✕ in the right bar. */
+.tc-overlay:not([data-phone]) .lr-j-more { display: none; }
+${P} .lr-j-stack {
+  position: absolute; left: 28px; top: 150px; width: 470px; height: 800px; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: ${cpx(4)}; overflow-y: auto; overscroll-behavior: contain;
+  pointer-events: auto; scrollbar-width: none; padding: ${cpx(2)} ${cpx(2)} ${cpx(2)} 0;
+}
+${P} .lr-journal .lr-j-slip {
+  position: relative !important; left: auto !important; top: auto !important; width: auto !important;
+  height: auto !important; transform: none !important; flex: none; min-height: ${cpx(36)};
+  padding: 0 ${cpx(6)}; gap: ${cpx(4)}; font-size: ${tpx(13)}; line-height: 1.1; color: #2e1d0e;
+  border-radius: ${cpx(3)}; border-left: ${cpx(3)} solid transparent;
+  background: linear-gradient(180deg, #f0e2c0, #d9c091); box-shadow: 0 ${cpx(1)} ${cpx(3)} rgb(0 0 0 / 0.6);
+}
+${P} .lr-journal .lr-j-slip[aria-current="page"] { border-left-color: #b8322a; background: linear-gradient(180deg, #fff4d6, #ead39e); }
+${P} .lr-journal .lr-j-slip[data-blank] { display: none; }
+${P} .lr-j-slip b { font-size: ${tpx(14)}; min-width: 1.1em; }
+${P} .lr-j-slip .lr-j-new { flex: none; font-size: ${tpx(9.5)}; letter-spacing: 0.3px; padding: ${cpx(1)} ${cpx(3)}; }
+${P} .lr-j-slip span { overflow: hidden; text-overflow: clip; }
+${P} .lr-j-more {
+  flex: none; display: flex; align-items: center; min-height: ${cpx(36)}; padding: 0 ${cpx(8)}; box-sizing: border-box;
+  font: italic ${tpx(12.5)}/1.2 var(--tc-font-body, serif); color: #d9c49a;
+  border: 1px dashed rgb(201 173 130 / 0.6); border-radius: ${cpx(3)};
+}
+${P} .lr-journal .lr-j-turn {
+  width: ${cpx(44)}; height: ${cpx(44)}; line-height: ${cpx(40)}; font-size: ${tpx(28)}; color: #f6dc94;
+  background: radial-gradient(circle at 40% 35%, #5a3a1e, #2a1709); border: 1px solid #c9a052;
+  box-shadow: 0 ${cpx(2)} ${cpx(6)} rgb(0 0 0 / 0.7); transform: translate(${cpx(-6)}, ${cpx(-4)});
+}
+${P} .lr-journal .lr-j-back { top: auto; bottom: calc(${CB} + ${cpx(6)}); }
+${P} .lr-journal .lr-j-x { position: absolute; top: ${cpx(6)}; left: auto; right: calc(-1 * var(--lr-bar, 0px) + ${cpx(4)}); pointer-events: auto; }
+${P} .lr-journal .lr-panel-x { display: grid; background: rgb(255 255 255 / 0.1); border: 1px solid rgb(232 192 106 / 0.5); border-radius: 50%; }
+
+/* Close ✕ (D-040: Settings, Codex and Journal all close from the top-right corner, plus Esc/Back).
+   Phones only; desktop keeps its Done / × / Back. */
+.tc-overlay:not([data-phone]) :is(.lr-seg, .lr-panel-x) { display: none !important; }
+${P} .lr-panel-x {
+  position: absolute; top: ${cpx(4)}; right: ${cpx(4)}; z-index: 2; display: grid; place-items: center;
+  width: ${cpx(36)}; height: ${cpx(36)}; min-height: 0; padding: 0; border-radius: 50%; cursor: pointer;
+  font: 600 ${tpx(16)}/1 var(--tc-font-ui, system-ui, sans-serif); color: #f3e6c8;
+  background: rgb(255 255 255 / 0.1); border: 1px solid rgb(232 192 106 / 0.5);
+}
+${P} .lr-panel-x:active { background: rgb(232 192 106 / 0.3); }
+
+/* Settings: a fixed header (title, ✕) and footer (Done) with the two columns scrolling between,
+   so nothing is ever cut off; every row is a thumb tall; choices are segmented toggles. */
+${P} .tc-panel.lr-settings-host {
+  display: flex; flex-direction: column; overflow: hidden; width: 1840px; max-height: 98%;
+  padding: ${cpx(6)} ${cpx(6)} 0 ${cpx(14)}; box-sizing: border-box;
+}
+${P} .lr-settings-host .tc-panel-title { flex: none; margin: 0; font-size: ${tpx(16)}; line-height: ${cpx(36)}; }
+${P} .lr-settings { width: auto; flex: 1 1 auto; min-height: 0; gap: 0; outline: none; }
+${P} .lr-settings-cols {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: ${cpx(8)};
+  gap: 0 ${cpx(22)}; scrollbar-width: thin; padding-bottom: ${cpx(14)};
+  /* A soft bottom edge says "more below" instead of a half-cut row. */
+  mask-image: linear-gradient(#000 calc(100% - ${cpx(22)}), transparent);
+}
+${P} .lr-settings-col, ${P} .lr-settings section { gap: 0; }
+${P} .lr-settings h3 { margin: ${cpx(6)} 0 0; font-size: ${tpx(12)}; line-height: 1.4; }
+${P} .lr-settings .tc-field, ${P} .lr-choice { min-height: ${cpx(44)}; }
+${P} .lr-choice { display: flex; align-items: center; justify-content: space-between; gap: ${cpx(8)}; }
+${P} .lr-choice label.lr-field { flex: 0 1 auto; min-width: 0; font-size: ${tpx(12.5)}; }
+${P} .lr-choice select { display: none; }
+${P} .lr-seg {
+  display: inline-flex; flex: none; border: 1px solid var(--tc-color-border); border-radius: ${cpx(8)};
+  overflow: hidden; background: var(--tc-color-surface-alt);
+}
+${P} .lr-seg button {
+  min-height: ${cpx(34)}; padding: 0 ${cpx(9)}; border: 0; margin: 0; cursor: pointer;
+  font: ${tpx(12)}/1.1 var(--tc-font-body, serif); color: var(--tc-color-text); background: transparent;
+}
+${P} .lr-seg button + button { border-left: 1px solid var(--tc-color-border); }
+${P} .lr-seg button[aria-checked="true"] { color: #2a1906; background: linear-gradient(180deg, #f3d488, #c99a45); font-weight: 600; }
+${P} .lr-settings .tc-field { font-size: ${tpx(12.5)}; }
+${P} .lr-settings .tc-field > span { flex: 0 0 7.5em; }
+${P} .lr-settings input[type="range"] {
+  -webkit-appearance: none; appearance: none; height: ${cpx(44)}; min-height: 0; margin: 0; background: transparent;
+}
+${P} .lr-settings input[type="range"]::-webkit-slider-runnable-track { height: ${cpx(6)}; border-radius: ${cpx(3)}; background: rgb(232 192 106 / 0.35); }
+${P} .lr-settings input[type="range"]::-moz-range-track { height: ${cpx(6)}; border-radius: ${cpx(3)}; background: rgb(232 192 106 / 0.35); }
+${P} .lr-settings input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: ${cpx(22)}; height: ${cpx(22)}; margin-top: ${cpx(-8)}; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff1b5, #e8c06a 55%, #9a6d2a); border: 1px solid #5a3d12;
+}
+${P} .lr-settings input[type="range"]::-moz-range-thumb {
+  width: ${cpx(22)}; height: ${cpx(22)}; border-radius: 50%; background: #e8c06a; border: 1px solid #5a3d12;
+}
+${P} .lr-settings textarea { height: ${cpx(40)}; margin: ${cpx(4)} 0; }
+${P} .lr-settings .lr-row { gap: ${cpx(8)}; }
+${P} .lr-settings .lr-row .tc-button { min-height: ${cpx(36)}; margin: ${cpx(4)} 0; }
+${P} .lr-settings-danger { margin-top: ${cpx(6)}; padding-top: ${cpx(4)}; border-top: 1px solid rgb(255 120 100 / 0.25); }
+${P} .lr-settings .lr-danger { color: #ffe3dc; background: linear-gradient(180deg, #a3341f, #6e1d12); border-color: #e0664c; }
+${P} .lr-settings .lr-settings-done { flex: none; position: static; padding: ${cpx(4)} ${cpx(8)} ${cpx(6)} 0; margin: 0; }
+${P} .lr-settings .lr-settings-done .tc-button { min-height: ${cpx(40)}; min-width: ${cpx(88)}; }
+
+${P} .lr-title-coffee, ${P} .lr-title-links .tc-link-copy {
+  min-height: ${cpx(36)}; padding: 0 ${cpx(12)}; font-size: ${tpx(12.5)}; box-sizing: border-box;
+}
 `;
 /* end mobile-3-chrome */
 

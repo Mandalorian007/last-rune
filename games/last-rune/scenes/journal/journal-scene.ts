@@ -177,9 +177,11 @@ export class JournalScene implements GameScene {
     );
     art.shadow(frame, c.x, c.y, 18, L.leafL.h - 8, 14, 0.35);
 
-    // The stack of slips (found pages are paper; blank slots barely there).
+    // The stack of slips (found pages are paper; blank slots barely there). Phones list the
+    // found pages as paper rows in the DOM instead (mobile-3-chrome), so none are drawn here.
     const st = L.stack;
-    for (const s of this.slips) {
+    const slips = this.ctx.viewContext.phone?.() ? [] : this.slips;
+    for (const s of slips) {
       const x = st.x + st.w / 2 + s.pull;
       const y = s.y + st.h / 2;
       if (s.slot.found) {
@@ -381,6 +383,17 @@ export class JournalScene implements GameScene {
       list.append(el);
       return view;
     });
+    // Phones: one row stands for every page not found yet (CSS hides the blank slips there).
+    const missing = m.total - m.foundCount;
+    if (missing > 0) {
+      list.append(
+        h(
+          'div',
+          { class: 'lr-j-more', 'aria-hidden': 'true' },
+          `${missing} more page${missing === 1 ? '' : 's'} to find`,
+        ),
+      );
+    }
 
     // The open spread.
     const lx = L.leafL.x - L.leafL.w / 2;
@@ -514,6 +527,22 @@ export class JournalScene implements GameScene {
       h('kbd', { 'aria-hidden': 'true' }, 'Esc'),
     );
     back.dataset.action = 'journal-back';
+    // Phones: the same ✕ in the top-right corner as Settings and the Codex (D-040).
+    const x = h(
+      'button',
+      {
+        type: 'button',
+        class: 'lr-panel-x lr-j-x',
+        'aria-label': 'Close journal',
+        on: {
+          click: (e: Event) => {
+            (e.currentTarget as HTMLElement).blur();
+            this.close();
+          },
+        },
+      },
+      '✕',
+    );
 
     this.root = h(
       'section',
@@ -525,6 +554,7 @@ export class JournalScene implements GameScene {
       this.nextBtn,
       this.plate,
       back,
+      x,
     );
     this.ctx.ui.layers.hud.append(this.root);
   }

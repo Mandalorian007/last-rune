@@ -58,11 +58,12 @@ export const DESIGN_H = 1080;
 /**
  * Phones: scenes whose art fills the width (D-040), with the design band that must stay on
  * screen. Hall: the top row of doors (from y≈60) to the floor door's sockets (y≈1045), less
- * what a very wide phone has to give up. Title: the name down to the candles.
+ * what a very wide phone has to give up (minVisible 880 keeps the floor door whole; 20:9
+ * phones keep slim soft-edged bars). Title: the name down to the candles.
  */
 const FILL_BANDS: Record<string, { minVisible: number; focusY: number }> = {
   title: { minVisible: 760, focusY: 520 },
-  hall: { minVisible: 940, focusY: 515 },
+  hall: { minVisible: 880, focusY: 540 },
 };
 
 export type GameScene = Scene<GameCtx, Frame>;
@@ -207,6 +208,12 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
       top: Math.max(0, -r.y),
       bottom: Math.max(0, r.y + r.height - ch),
     });
+    // A filled scene that still leaves slim bars (very wide phones) fades its side edges into
+    // them, so the art ends softly instead of at a hard letterbox line.
+    const soft = r.height > ch + 1 && r.x > 0;
+    surface.canvas.style.maskImage = soft
+      ? 'linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent)'
+      : '';
   };
   surface.onResize(({ rect, backbuffer }) => {
     renderer.resize(backbuffer.width, backbuffer.height);
