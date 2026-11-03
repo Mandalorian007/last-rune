@@ -861,13 +861,18 @@ ${A} .lr-altar-slot[data-empty] {
   color: #d9c79e; font: 700 ${tpx(18)}/1 var(--tc-font-ui);
 }
 ${A} .lr-altar-slot[data-empty]::after { content: '✓'; }
-${A} .lr-altar-count[data-empty] { opacity: 1; color: #bfae8a; border-color: rgba(191,174,138,0.45); text-decoration: none; }
+${A} .lr-altar-count[data-empty] {
+  opacity: 1; color: #bfae8a; border-color: transparent; background: none; text-decoration: none;
+  padding: 0; font-size: ${tpx(12)}; letter-spacing: -0.2px;
+}
 /* Disabled rail buttons: a 3:1 outline on the dark bar, the label dimmed (not faded away). */
 ${P} .lr-altar-actions button:disabled, ${A} .lr-altar-turnbtn:disabled {
   opacity: 1; filter: none; cursor: default; background: rgba(22,20,18,0.92);
   border: 1px solid #8f826b; color: #8f826b; box-shadow: none;
 }
 ${P} .lr-altar-actions button:disabled .lr-ph-ico, ${A} .lr-altar-turnbtn:disabled b { color: #8f826b; }
+/* A card under its gauge is as wide as its longest line, never narrower than its text. */
+${A} .lr-altar-need:is([data-align="below"], [data-align="above"]) { max-width: none !important; width: max-content; }
 /* mobile-6-board end */
 
 /* ── Title ──────────────────────────────────────────────────────────────── */

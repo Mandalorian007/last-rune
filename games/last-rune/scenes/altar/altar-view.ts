@@ -184,7 +184,9 @@ export class AltarView {
       size: L.storm.size,
       strength: puzzle.storm.strength,
     });
-    this.machines = L.machines.map((m) => new Machine(r, { x: m.x, y: m.y, size: m.size }));
+    this.machines = L.machines.map(
+      (m) => new Machine(r, { x: m.x, y: m.y, size: m.size, meter: !!L.phone }),
+    );
     this.veilK = new Float32Array(L.cols * L.rows);
     this.veilTarget = new Float32Array(L.cols * L.rows);
     this.machineGlow = L.machines.map(() => 0);
@@ -477,7 +479,9 @@ export class AltarView {
         by - (dy / len) * tb,
       ] as const;
     };
-    // Storm → entry socket.
+    // Storm → entry socket. Phones lay a lit brass wire, 2+ CSS px, so each prop's lead to
+    // the board reads (mobile-6-board); the route preview keeps the plain groove.
+    c.bright = !!L.phone;
     cellCenter(L, L.storm.inner, a);
     {
       const [x0, y0, x1, y1] = trim(
@@ -507,6 +511,7 @@ export class AltarView {
             : PREVIEW_GLOW;
       c.conduit(frame, x0, y0, x1, y1, wide, 0.9, g, col);
     }
+    c.bright = false;
     // Route preview between sockets.
     if (this.previewK > 0.01) {
       const b = { x: 0, y: 0 };

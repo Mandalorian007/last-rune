@@ -2,7 +2,8 @@ import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
-import { MACHINE_IDS } from '../../games/last-rune/rules/types';
+import { type GemKind, MACHINE_IDS } from '../../games/last-rune/rules/types';
+import { trayRemaining } from '../../games/last-rune/rules/validate';
 import { DEV_URL, waitFrames } from '../../tests/e2e/helpers';
 
 // PM review (temporary): every altar, half the intended gems placed, at two phone viewports.
@@ -78,6 +79,26 @@ for (const vp of PHONES) {
           path: join(dir, `${String(i).padStart(2, '0')}-${id}.png`),
           scale: 'css',
         });
+        // mobile-6-board: the first gem still in the tray, in hand (the legal rings, the cue).
+        const L = await page.evaluate(() => (window as G).__altarLayout);
+        const held = L.tray.find(
+          (t: { gem: GemKind }) => trayRemaining(puzzleFor(id), half, t.gem) > 0,
+        ) as { x: number; y: number } | undefined;
+        if (held) {
+          const box = (await page.locator('.tc-overlay').boundingBox())!;
+          const k = box.width / 1920;
+          await page.touchscreen.tap(box.x + held.x * k, box.y + held.y * k);
+          await waitFrames(page, 8);
+          await page.screenshot({
+            path: join(dir, `${String(i).padStart(2, '0')}-${id}-held.png`),
+            scale: 'css',
+          });
+          // A second tap on the gem in hand puts it back.
+          await page.touchscreen.tap(box.x + held.x * k, box.y + held.y * k);
+          await waitFrames(page, 4);
+          const still = await page.evaluate(() => !!(window as G).__altarView.held);
+          if (still) throw new Error(`${id}: a second tap on the held gem kept it in hand`);
+        }
         await page.evaluate(() => (window as G).__game.flow.closePuzzle());
         await page.waitForTimeout(400);
       }

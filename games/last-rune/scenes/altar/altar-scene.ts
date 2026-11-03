@@ -1165,10 +1165,15 @@ export class AltarScene implements GameScene {
       });
     };
     search(0, 0);
+    // Never closer than 8 CSS px to the visible band's top (mobile-6-board): a two-line
+    // north card nudges down instead (into the clearance above the board, not over it).
+    const topMin = band.visT + 8 * band.cssPx;
     free.forEach(({ el, sp, opts }, i) => {
       const x = opts[best[i]!]!.x;
       el.toggleAttribute('data-left', x < sp.x);
       el.style.left = `${x}px`;
+      const t = box(el).t;
+      if (t < topMin) el.style.marginTop = `${Math.ceil(topMin - t)}px`;
     });
   }
 

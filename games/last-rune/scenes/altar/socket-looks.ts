@@ -67,6 +67,37 @@ export function huggedSlabDistance(
 }
 
 /**
+ * Phones (mobile-6-board): the blocked cells inside the slab, which the bake fills with sunk
+ * stone (`alt_inner` in `stone-wgsl.ts`) instead of letting the wall show through. A blocked
+ * cell is inside when there are open cells on both sides of it in its row, or both above and
+ * below it in its column. The rest stay off the stone, so the slab still hugs the sockets.
+ */
+export function recessCells(cols: number, rows: number, blocked: readonly Cell[]): Cell[] {
+  const solid = (x: number, y: number) => blocked.some((b) => b.x === x && b.y === y);
+  const out: Cell[] = [];
+  for (let y = 0; y < rows; y++)
+    for (let x = 0; x < cols; x++) {
+      if (!solid(x, y)) continue;
+      let l = false;
+      let r = false;
+      let u = false;
+      let d = false;
+      for (let i = 0; i < cols; i++)
+        if (i !== x && !solid(i, y)) {
+          if (i < x) l = true;
+          else r = true;
+        }
+      for (let j = 0; j < rows; j++)
+        if (j !== y && !solid(x, j)) {
+          if (j < y) u = true;
+          else d = true;
+        }
+      if ((l && r) || (u && d)) out.push({ x, y });
+    }
+  return out;
+}
+
+/**
  * The sockets that get the `legal` ring while `kind` is in hand (mobile-6-board): exactly the
  * empty sockets the rules accept it in (`validatePlacement`), every one alike. Gate review 3
  * found a scattered subset ringed: sockets near the circuit glowed at 0.45 and the rest at 0.1,
