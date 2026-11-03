@@ -4,6 +4,10 @@
  * while a button has focus. Panels opened from here return focus to the canvas when they close,
  * not to the button (`NO_RESTORE_FOCUS_ATTR` on the bar), so play resumes by keyboard. The
  * Journal button switches scene, which hides the HUD and drops focus with it.
+ *
+ * Phones (mobile-2): the buttons fold behind one ☰ in the top-right corner (the right letterbox
+ * bar); a tap opens them as a short list, picking one or tapping elsewhere closes it. The ☰
+ * carries the journal's "new pages" dot. Off phones the ☰ is hidden (CSS) and nothing changes.
  */
 import { h, NO_RESTORE_FOCUS_ATTR } from '@engine/ui';
 
@@ -20,6 +24,8 @@ export class Hud {
   private readonly plateName: HTMLElement;
   private readonly plateNote: HTMLElement;
   private readonly journalBtn: HTMLElement | null;
+  private readonly menuBtn: HTMLElement;
+  private offOutside: (() => void) | null = null;
 
   constructor(layer: HTMLElement, actions: HudActions) {
     const btn = (label: string, key: string, fn: () => void) =>
@@ -29,7 +35,12 @@ export class Hud {
           type: 'button',
           class: 'lr-stone-button',
           'aria-keyshortcuts': key,
-          on: { click: () => fn() },
+          on: {
+            click: () => {
+              this.menu(false);
+              fn();
+            },
+          },
         },
         label,
         h('kbd', { 'aria-hidden': 'true' }, key),
@@ -39,9 +50,21 @@ export class Hud {
       this.journalBtn.dataset.action = 'journal';
       this.journalBtn.hidden = true;
     }
+    this.menuBtn = h(
+      'button',
+      {
+        type: 'button',
+        class: 'lr-stone-button lr-hud-menu',
+        'aria-label': 'Menu',
+        'aria-expanded': 'false',
+        on: { click: () => this.menu(!this.root.hasAttribute('data-open')) },
+      },
+      h('span', { 'aria-hidden': 'true' }, '\u2630'),
+    );
     this.root = h(
       'div',
       { class: 'lr-hud', hidden: true, [NO_RESTORE_FOCUS_ATTR]: '' },
+      this.menuBtn,
       this.journalBtn,
       btn('Codex', 'C', actions.codex),
       btn('Settings', 'O', actions.settings),
@@ -59,6 +82,22 @@ export class Hud {
 
   set visible(v: boolean) {
     this.root.hidden = !v;
+    if (!v) this.menu(false);
+  }
+
+  /** Phones: open or close the ☰ list. */
+  menu(open: boolean): void {
+    this.root.toggleAttribute('data-open', open);
+    this.menuBtn.setAttribute('aria-expanded', String(open));
+    this.offOutside?.();
+    this.offOutside = null;
+    if (!open) return;
+    const doc = this.root.ownerDocument;
+    const away = (e: Event) => {
+      if (!this.root.contains(e.target as Node)) this.menu(false);
+    };
+    doc.addEventListener('pointerdown', away, true);
+    this.offOutside = () => doc.removeEventListener('pointerdown', away, true);
   }
 
   /** Show or hide the Journal button; `unread` > 0 marks it (new pages on the desk). */
@@ -67,6 +106,7 @@ export class Hud {
     if (!b) return;
     b.hidden = !shown;
     b.toggleAttribute('data-unread', unread > 0);
+    this.menuBtn.toggleAttribute('data-unread', shown && unread > 0);
     b.setAttribute('aria-label', unread > 0 ? `Journal, ${unread} new` : 'Journal');
   }
 
