@@ -303,6 +303,25 @@ async function fitProblems(page: Page): Promise<string[]> {
       const fs = Number.parseFloat(getComputedStyle(el).fontSize) * k;
       if (own && fs < 10.8)
         out.push(`text ${fs.toFixed(1)}px: ${el.textContent?.trim().slice(0, 30)}`);
+      // Cut-off text (D-027, mobile-2): no ellipsis, line clamp or clipped overflow on phones.
+      const cs = getComputedStyle(el);
+      const wide = el.scrollWidth > el.clientWidth + 1;
+      const what = el.textContent?.trim().slice(0, 30);
+      if (own && cs.textOverflow === 'ellipsis' && wide) out.push(`ellipsis: ${what}`);
+      if (
+        cs.webkitLineClamp &&
+        cs.webkitLineClamp !== 'none' &&
+        el.scrollHeight > el.clientHeight + 1
+      )
+        out.push(`line-clamped: ${what}`);
+      if (
+        own &&
+        cs.overflowX !== 'visible' &&
+        cs.overflowX !== 'auto' &&
+        cs.overflowX !== 'scroll' &&
+        wide
+      )
+        out.push(`clipped: ${what}`);
     }
     for (const el of document.querySelectorAll<HTMLElement>(
       '.tc-overlay button, .tc-overlay a[href]',

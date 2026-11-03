@@ -113,3 +113,29 @@ The desktop layout, scaled to about 0.33 and then inflated by the 14 px text flo
 | iPhone 844×340, insets | 74–81% | 33–59% | 4.1–4.4% | ≤31% |
 
 **Couldn't fit.** These boards are height-bound: lift-shaft (33%), press-unit-4 (40%), capacitor-bay (41%), roof-array (42%) and intake (43%) can't reach 45% of the width on the iPhone. The usable area there is 750×340, so a square board at full height is 45% of the width before its storm and gauges take room. They already use about 80% of the height, so the spec gives them lower width floors instead of shrinking anything. **PM decision proposed:** for height-bound boards, accept "≥75% of height" in place of the 45% width rule.
+
+**PM review fixes (round 2).**
+- **No cut-off text.**
+  - The gem chip no longer uses an ellipsis. Each gem now has a codex `chip` line: the whole rule in ≤68 characters, fizzles included. It wraps to at most 3 lines in a third of the screen. A long-press still shows the codex `rule` in full.
+  - The hint's line clamp is gone.
+  - Hangout: the sidebar is wider on phones, and channel and server names show in full.
+  - New tests:
+    - The budget spec checks every element in the overlay (excluding screen-reader-only text) for an ellipsis, a line clamp or clipped overflow. It now checks the chip of every tray gem, not just the first.
+    - The fits test in `mobile.spec.ts` does the same check in the hall, Settings, Codex and every altar.
+- **↻ only where it applies.** The touch hint says "↻ turns it" only when the tray holds a gem that turns. That part never splits; on the Last Rune and Control Booth it drops to its own line.
+- **Verdict.** A " · " now separates the verdict from its story or next step.
+- **Budget rule.** The per-altar floors are replaced by the PM rule: a board with ≥75% of the height is exempt from the 45% width rule.
+- **Recaptured.** All four sheets were recaptured from the final code: `docs/design/screens/local/mobile-2/after-{iphone,se,promax,android}.png`. I looked at every frame:
+  - title;
+  - hall, with and without FUSE;
+  - Settings, Codex and journal;
+  - intake, relay (open, held, placed, verdict), furnace, archive, control-booth and the Last Rune, with and without FUSE;
+  - solve card, ending, hangout and end card.
+
+  What I fixed from that review:
+  - the hangout's truncated names, and Skip overlapping the message box;
+  - the verdict running into its next step;
+  - the overlapping journal slips and the Codex header colliding with the pages (both pre-existing);
+  - the intake hint mentioning ↻.
+
+  Pro Max and Android have the same layout with more room; nothing else looked wrong to a first-time player.

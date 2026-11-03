@@ -1,17 +1,18 @@
 import { expect, type Page, test } from '@playwright/test';
 import { LINES, wordCount } from '../../games/last-rune/content/lines';
-import { MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
+import { MACHINE_IDS } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-2: the phone layout's hard budgets, on every altar, at the two tightest real phone
 // viewports (browser bars showing; the iPhone's notch insets emulated):
 //  1. Board first: the board with its storm, machines and gauges takes ≥55% of the usable
-//     height and ≥45% of the usable width (a few tall boards can't, see WIDTH_EXCEPTIONS).
+//     height and ≥45% of the usable width (or ≥75% of the height, see HEIGHT_BOUND).
 //  2. Chrome (HUD, action buttons, title) covers ≤20% of the usable area.
 //  3. Transient cards (hint, gem chip, verdict, FUSE's bubble) are each ≤⅓ of the screen wide
 //     and ≤3 lines, and none of them, nor any chrome, sits over the board.
-//  4. The page never scrolls.
+//  4. The page never scrolls, and no text is cut off (no ellipsis, line clamp or clipped
+//     overflow on anything in the overlay, D-027).
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0 },
@@ -19,18 +20,12 @@ const PHONES = [
 ] as const;
 
 /**
- * Square and tall boards are bound by the phone's height (they already take ~80% of it): their
- * width share tops out near usable height ÷ usable width (340 ÷ 750 = 45% on the iPhone with its
- * notch insets) less the room the storm and machines take. Measured shares are logged; these get
- * a lower floor (just under the iPhone measurement) rather than a smaller board.
+ * Square and tall boards are bound by the phone's height: their width share tops out near usable
+ * height ÷ usable width (340 ÷ 750 = 45% on the iPhone with its notch insets) less the room the
+ * storm and machines take. A board that already takes ≥75% of the height is exempt from the
+ * width rule (PM, mobile-2).
  */
-const WIDTH_EXCEPTIONS: Partial<Record<MachineId, number>> = {
-  'intake-desk': 0.42,
-  'press-unit-4': 0.39,
-  'capacitor-bay': 0.4,
-  'lift-shaft': 0.32,
-  'roof-array': 0.41,
-};
+const HEIGHT_BOUND = 0.75;
 
 // biome-ignore lint/suspicious/noExplicitAny: dev handle
 type G = any;
@@ -128,6 +123,32 @@ async function measure(page: Page) {
         });
       }
     }
+    // Cut-off text: an ellipsis or line clamp in force, or text wider than a clipping box.
+    const clipped: string[] = [];
+    for (const el of document.querySelectorAll<HTMLElement>('.tc-overlay *')) {
+      // Screen-reader-only text is clipped to a pixel on purpose.
+      if (!el.textContent?.trim() || !shown(el) || el.closest('.tc-sr-only')) continue;
+      const cs = getComputedStyle(el);
+      const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim());
+      const clips = cs.overflowX !== 'visible' || cs.overflowY !== 'visible';
+      const name = `${el.tagName.toLowerCase()}.${[...el.classList].join('.')} "${el.textContent.trim().slice(0, 30)}"`;
+      if (own && cs.textOverflow === 'ellipsis' && el.scrollWidth > el.clientWidth + 1)
+        clipped.push(`${name} ellipsis`);
+      else if (
+        cs.webkitLineClamp !== 'none' &&
+        cs.webkitLineClamp !== '' &&
+        el.scrollHeight > el.clientHeight + 1
+      )
+        clipped.push(`${name} line-clamped`);
+      else if (
+        own &&
+        clips &&
+        cs.overflowY === 'hidden' &&
+        cs.overflowX === 'hidden' &&
+        (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1)
+      )
+        clipped.push(`${name} clipped`);
+    }
     const usable = box(app);
     return {
       slab,
@@ -138,6 +159,7 @@ async function measure(page: Page) {
       chromeShare: chrome.reduce((s, c) => s + area(c.box), 0) / area(usable),
       chrome,
       cards,
+      clipped,
       screenW: innerWidth,
       scrolls:
         document.documentElement.scrollHeight > innerHeight + 1 ||
@@ -161,6 +183,7 @@ function cardProblems(m: M, label: string): string[] {
   }
   for (const c of m.chrome) if (hit(c.box, m.slab)) out.push(`${label}: ${c.name} over the board`);
   if (m.scrolls) out.push(`${label}: page scrolls`);
+  for (const c of m.clipped) out.push(`${label}: text cut off: ${c}`);
   return out;
 }
 
@@ -215,7 +238,7 @@ for (const vp of PHONES) {
         await expect(page.locator('.lr-altar')).toBeVisible();
         await waitFrames(page, 8);
         const m = await measure(page);
-        const wMin = WIDTH_EXCEPTIONS[id] ?? 0.45;
+        const wMin = m.hShare >= HEIGHT_BOUND ? 0 : 0.45;
         if (m.hShare < 0.55)
           problems.push(`${id}: board ${(m.hShare * 100).toFixed(0)}% of height`);
         if (m.wShare < wMin) problems.push(`${id}: board ${(m.wShare * 100).toFixed(0)}% of width`);
@@ -244,14 +267,16 @@ for (const vp of PHONES) {
         );
         const ob = (await page.locator('.tc-overlay').boundingBox())!;
         const k = ob.width / 1920;
-        const s0 = L.tray[0]!;
-        await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);
-        await waitFrames(page, 6);
-        const mt = await measure(page);
-        problems.push(...cardProblems(mt, `${id} chip`));
-        note(mt);
-        await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);
-        await waitFrames(page, 4);
+        // Every gem in the tray: its chip.
+        for (const s0 of L.tray) {
+          await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);
+          await waitFrames(page, 6);
+          const mt = await measure(page);
+          problems.push(...cardProblems(mt, `${id} chip ${s0.gem}`));
+          note(mt);
+          await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);
+          await waitFrames(page, 4);
+        }
 
         // The verdict: Strike on the bare board.
         await page.locator('[data-action="strike"]').tap();

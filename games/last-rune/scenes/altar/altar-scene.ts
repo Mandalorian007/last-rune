@@ -25,6 +25,7 @@ import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
 import type { BoltHandle, StormCellHandle } from '../../audio';
+import { codexEntry } from '../../content/codex';
 import { exactLine, gemNudge, machineLine, reactionLine, TEACH_NUDGE } from '../../content/lines';
 import { puzzleFor } from '../../content/puzzles';
 import type { GameCtx, GameScene } from '../../game/ctx';
@@ -660,7 +661,9 @@ export class AltarScene implements GameScene {
             : 'mouse';
     if (mode === this.hintMode) return;
     this.hintMode = mode;
-    this.hint.replaceChildren(...hintLine(mode));
+    // Only mention ↻ where a gem can turn (the Turn button shows only then).
+    const turns = this.view.layout.tray.some((t) => isRotational(t.gem));
+    this.hint.replaceChildren(...hintLine(mode, turns));
     this.hint.dataset.mode = mode;
     this.avoidTray();
   }
@@ -1625,6 +1628,12 @@ export class AltarScene implements GameScene {
     const whole =
       r.how === 'tray' || r.how === 'turnsTray' || r.gem === 'capacitor' || r.gem === 'gate';
     return whole ? rule : firstSentence(rule);
+  }
+
+  /** A phone chip's rule: the whole rule in one short line (the codex's `chip`). */
+  private chipRule(r: { gem: GemKind; how: InfoHow }): string {
+    const line = codexEntry(r.gem).chip;
+    return r.how === 'turns' ? `${line} Turn it to fit.` : line;
   }
 
   /** New fixed gems have been struck through: stop pulsing them, close the arrival card. */
@@ -2959,6 +2968,9 @@ export class AltarScene implements GameScene {
       return;
     }
     this.tip.dataset.source = key === 'intro' ? 'intro' : key[0] === 't' ? 'tray' : 'board';
+    // Phones: a chip, each row its gem's name and first whole sentence (never cut mid-rule);
+    // a long-press pins the full card.
+    const chip = !!L.phone && !key.startsWith('p');
     this.tip.replaceChildren(
       ...rows.map((r) => {
         const tag = this.tagOf(r.how);
@@ -2968,7 +2980,7 @@ export class AltarScene implements GameScene {
           h('b', null, GEM_NAME[r.gem]),
           tag ? h('span', { class: 'lr-info-tag', 'data-how': r.how }, tag) : null,
           ' ',
-          h('span', { class: 'lr-info-rule' }, this.infoRule(r)),
+          h('span', { class: 'lr-info-rule' }, chip ? this.chipRule(r) : this.infoRule(r)),
         );
       }),
       ...(key === 'intro' && this.teachCell
@@ -3429,7 +3441,7 @@ export class AltarScene implements GameScene {
 type HintMode = 'mouse' | 'keys' | 'strike' | 'touch' | 'touchStrike';
 
 /** The key-hint line for each mode. Short enough to sit under the tray at 150% text. */
-function hintLine(mode: HintMode): (Node | string)[] {
+function hintLine(mode: HintMode, turns = true): (Node | string)[] {
   const b = (t: string) => h('b', null, t);
   switch (mode) {
     case 'mouse':
@@ -3459,7 +3471,13 @@ function hintLine(mode: HintMode): (Node | string)[] {
     case 'strike':
       return ['Hold ', b('F'), ' to speed up · ', b('Click'), ' or ', b('Enter'), ' to skip'];
     case 'touch':
-      return [b('Tap'), ' a gem, then a socket · ', b('\u21bb'), ' turns it'];
+      return turns
+        ? [
+            b('Tap'),
+            ' a gem, then a socket · ',
+            h('span', { class: 'lr-nowrap' }, b('\u21bb'), ' turns it'),
+          ]
+        : [b('Tap'), ' a gem, then a socket'];
     case 'touchStrike':
       return [b('Tap'), ' to skip'];
   }

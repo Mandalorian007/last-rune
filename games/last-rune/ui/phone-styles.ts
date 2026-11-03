@@ -137,6 +137,21 @@ ${P} .lr-j-slip b { min-width: 1.4em; }
 ${P} .lr-journal .lr-j-turn { width: ${cpx(36)}; height: ${cpx(36)}; line-height: ${cpx(32)}; font-size: ${cpx(26)}; background: #ffffff1c; }
 ${P} .lr-j-plate { font-size: var(--lr-text-min); padding: 0 ${cpx(10)}; }
 
+/* Hangout: the window fills the screen and the sidebar is wide enough for every channel's
+   whole name (no ellipsis on phones); Skip keeps the strip on the right. */
+${P} .lr-hg { left: 30px; top: 30px; width: 1640px; height: 1020px; }
+${P} .lr-hg-rail { width: ${cpx(30)}; padding-top: ${cpx(6)}; }
+${P} .lr-hg-badge { width: ${cpx(22)}; height: ${cpx(22)}; border-radius: ${cpx(6)}; font-size: ${tpx(12)}; }
+${P} .lr-hg-rail::before { top: ${cpx(8)}; height: ${cpx(14)}; }
+${P} .lr-hg-side { width: 660px; }
+${P} .lr-hg-server { height: ${cpx(24)}; padding: 0 ${cpx(8)}; font-size: ${tpx(13)}; text-overflow: clip; overflow: visible; }
+${P} .lr-hg-list { padding: ${cpx(4)} ${cpx(4)} 0 ${cpx(6)}; }
+${P} .lr-hg-ch { height: auto; min-height: ${cpx(13)}; margin: 0; padding: 0 ${cpx(18)} 0 ${cpx(4)}; gap: ${cpx(3)}; font-size: ${tpx(11)}; line-height: 1.15; }
+${P} .lr-hg-ch .lr-emo { min-width: ${cpx(12)}; font-size: ${tpx(11)}; }
+${P} .lr-hg-hash { min-width: ${cpx(5)}; font-size: ${tpx(11)}; }
+${P} .lr-hg-name { overflow: visible; text-overflow: clip; }
+${P} .lr-hg-cat { margin: ${cpx(1)} 0 ${cpx(2)}; font-size: ${tpx(11)}; letter-spacing: 1px; }
+
 /* ── Altar: board first ────────────────────────────────────────────────────
    Left bar: Back (top), Undo and Clear. Right bar: ☰ (top, the HUD), ↻ Turn, Strike (bottom).
    Bottom band (layout.ts PhoneBand): FUSE and his bubble, the tray, then the info lane where
@@ -188,8 +203,7 @@ ${P} .lr-altar-tip, ${P} .lr-altar-verdict, ${P} .lr-altar-hint {
 }
 ${P} .lr-altar-tip { width: max-content; padding: ${cpx(3)} ${cpx(8)}; }
 ${P} .lr-altar-tip::after { display: none; }
-${P} .lr-altar-tip .lr-info-row { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-${P} .lr-altar-tip .lr-info-row:nth-child(n+4) { display: none; }
+${P} .lr-altar-tip .lr-info-row { white-space: normal; }
 ${P} .lr-altar-tip .lr-info-tag { display: none; }
 ${P} .lr-altar-tip b { margin-right: ${cpx(2)}; }
 /* Long-pressed: the whole card, growing upward from the lane. */
@@ -200,14 +214,16 @@ ${P} .lr-altar-verdict { width: max-content; padding: ${cpx(3)} ${cpx(8)}; anima
    at most three lines in the lane. */
 ${P} .lr-altar-verdict { font-family: var(--tc-font-display); font-size: ${tpx(12)}; line-height: 1.25; }
 ${P} .lr-altar-verdict .lr-verdict-story, ${P} .lr-altar-verdict .lr-verdict-hint {
-  display: inline; margin: 0 0 0 ${cpx(4)}; max-width: none; font-size: ${tpx(11.5)}; line-height: 1.25;
+  display: inline; margin: 0; max-width: none; font-size: ${tpx(11.5)}; line-height: 1.25;
 }
+/* The verdict has no full stop of its own: a dot keeps it from running into what follows. */
+${P} .lr-altar-verdict .lr-verdict-story::before, ${P} .lr-altar-verdict .lr-verdict-hint::before { content: ' · '; }
 ${P} .lr-altar-hint {
   left: var(--lr-info-l) !important; right: auto; width: auto; max-width: min(var(--lr-info-w), var(--lr-third)) !important; min-width: 0;
   padding: ${cpx(2)} ${cpx(6)}; white-space: normal; background: rgba(16,13,10,0.7); border: 0; box-shadow: none;
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
 }
 ${P} .lr-altar-hint:empty { display: none; }
+${P} .lr-altar-hint .lr-nowrap { white-space: nowrap; }
 ${P} .lr-altar[data-phone]:has(.lr-altar-tip:not([hidden])) :is(.lr-altar-verdict, .lr-altar-hint) { visibility: hidden; }
 ${P} .lr-altar[data-phone]:has(.lr-altar-verdict:not([hidden])) .lr-altar-hint { visibility: hidden; }
 /* The tray card covers the gem in hand for its first moments; its ↻ mark waits too. */
