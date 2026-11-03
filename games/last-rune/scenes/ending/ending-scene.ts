@@ -243,6 +243,8 @@ export class EndingScene implements GameScene {
 
   enter(ctx: GameCtx): void {
     this.ctx = ctx;
+    // The solve moment's "Every machine restored." toast would sit on the ending's headline.
+    ctx.ui.toasts.clear();
     const doc = ctx.surface.root.ownerDocument;
     ensureEndingStyles(doc);
     const save = ctx.save.get();

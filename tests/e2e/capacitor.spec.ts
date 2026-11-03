@@ -97,3 +97,36 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
   );
   await expect(cap.locator('.lr-cap-line:not([hidden])')).toHaveCount(2);
 });
+
+test('a machine never shows "got N" beside strike chips that disagree, at any frame', async ({
+  page,
+}) => {
+  await open(page, ROW);
+  // Watch the need label every frame. Once "got" shows on a two-strike altar, the newest
+  // strike chip must carry the same number (bug-bash: "got 4" sat beside only "Strike 1: 2").
+  await page.evaluate(() => {
+    const w = window as unknown as { __mismatch: string[]; __seen: string[] };
+    w.__mismatch = [];
+    w.__seen = [];
+    const tick = () => {
+      for (const el of document.querySelectorAll('.lr-altar-need')) {
+        const got = el.querySelector('.lr-need-got b')?.textContent;
+        if (got == null) continue;
+        const chips = [...el.querySelectorAll('.lr-need-strikes span')].map((c) => c.textContent);
+        const text = `got ${got} | ${chips.join(', ')}`;
+        if (w.__seen.at(-1) !== text) w.__seen.push(text);
+        if (!(chips.at(-1) ?? '').endsWith(`: ${got}`)) w.__mismatch.push(text);
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  await page.keyboard.press('KeyF');
+  await expect(page.locator('.lr-altar-verdict')).toBeVisible({ timeout: 15_000 });
+  const r = await page.evaluate(() => {
+    const w = window as unknown as { __mismatch: string[]; __seen: string[] };
+    return { mismatch: w.__mismatch, seen: w.__seen };
+  });
+  expect(r.seen.length).toBeGreaterThan(0);
+  expect(r.mismatch).toEqual([]);
+});

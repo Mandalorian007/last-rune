@@ -169,21 +169,34 @@ export function openSettings(deps: SettingsPanelDeps): void {
   const content = h(
     'div',
     { class: 'lr-settings' },
-    h('section', null, h('h3', null, 'Sound'), ...volumes),
-    h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed),
-    h('section', null, h('h3', null, 'Graphics'), graphics),
+    // Two columns so the whole panel, Done included, fits a 720p screen at 100% text.
     h(
-      'section',
-      null,
-      h('h3', null, 'Save'),
-      persistent,
-      area,
-      h('div', { class: 'lr-row' }, exportBtn, importBtn, resetBtn),
-      note,
+      'div',
+      { class: 'lr-settings-cols' },
+      h(
+        'div',
+        { class: 'lr-settings-col' },
+        h('section', null, h('h3', null, 'Sound'), ...volumes),
+        h('section', null, h('h3', null, 'Graphics'), graphics),
+      ),
+      h(
+        'div',
+        { class: 'lr-settings-col' },
+        h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed),
+        h(
+          'section',
+          null,
+          h('h3', null, 'Save'),
+          persistent,
+          area,
+          h('div', { class: 'lr-row' }, exportBtn, importBtn, resetBtn),
+          note,
+        ),
+      ),
     ),
     h(
       'div',
-      { class: 'lr-row' },
+      { class: 'lr-row lr-settings-done' },
       button('Done', () => ui.stack.pop('programmatic'), { variant: 'primary' }),
     ),
   );

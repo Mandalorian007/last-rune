@@ -15,6 +15,7 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-altar-title h2 { margin: 0; font-size: 40px; letter-spacing: 2px; color: var(--lr-gold); }
 .tc-overlay .lr-altar-title small { display: block; font-size: 22px; color: #bfae8a; letter-spacing: 1px; min-height: 26px; }
+.tc-overlay .lr-altar-title .lr-nowrap { white-space: nowrap; }
 
 .tc-overlay .lr-altar-actions {
   position: absolute; right: 28px; top: 24px; display: flex; gap: 12px; align-items: center;
@@ -78,7 +79,7 @@ const CSS = /* css */ `
   left: -9px; top: 50%; transform: translateY(-50%) rotate(45deg); border-left-width: 2px; border-bottom-width: 2px;
 }
 .tc-overlay .lr-altar-need[data-align="below"]::before {
-  left: 50%; top: -9px; transform: translateX(-50%) rotate(45deg); border-left-width: 2px; border-top-width: 2px;
+  left: var(--lr-notch, 50%); top: -9px; transform: translateX(-50%) rotate(45deg); border-left-width: 2px; border-top-width: 2px;
 }
 .tc-overlay .lr-altar-need b { font-size: 40px; color: #ffe2a0; font-weight: 600; margin-left: 4px; }
 .tc-overlay .lr-altar-need .lr-need-got { font-size: 22px; }
@@ -106,6 +107,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-need-strikes [data-state="exact"] { border-color: #3fe0ff; color: #bff6ff; }
 .tc-overlay .lr-need-strikes [data-state="under"] { border-color: #ffb03f; color: #ffd9a0; }
 .tc-overlay .lr-need-strikes [data-state="over"] { border-color: #ff5a3c; color: #ffc0b0; }
+.tc-overlay .lr-need-strikes [data-state="live"] { border-style: dashed; color: #f4e6c4; }
 
 /* Charge chips: the bolt's charge where it changes, and what lands at each machine. */
 .tc-overlay .lr-altar-chip {
@@ -238,6 +240,9 @@ const CSS = /* css */ `
   content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -6px;
   border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(255,110,80,0.7);
 }
+/* Hung below its cell (arrow up) when above would cover the verdict. */
+.tc-overlay .lr-altar-tag[data-below] { transform: translate(-50%, 7px); }
+.tc-overlay .lr-altar-tag[data-below]::after { bottom: auto; top: -7px; border: 6px solid transparent; border-top: 0; border-bottom-color: rgba(255,110,80,0.7); }
 .tc-overlay .lr-altar-tag[data-tone="info"] { color: #f4e6c4; background: rgba(20,16,12,0.9); border-color: rgba(232,192,106,0.6); }
 .tc-overlay .lr-altar-tag[data-tone="info"]::after { border-top-color: rgba(232,192,106,0.6); }
 
