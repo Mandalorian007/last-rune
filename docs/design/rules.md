@@ -71,7 +71,7 @@ about rotation (D-031); for the other three `rot` is ignored (treated as 0).
 ## 5. Strikes (pulses) and machines
 
 - The storm fires a fixed number of **strikes** per attempt (`pulses`, shown as pips on the storm's
-  storm cell; 1 unless the puzzle has capacitors in mind). Every strike starts with one bolt
+  Gives card and the Strike button; 1 unless the puzzle has capacitors in mind). Every strike starts with one bolt
   from the storm at tick 0.
 - A strike runs until no bolt is moving. Then each machine reads its gauge for **that strike
   only**: the sum of all charge it received during the strike.
