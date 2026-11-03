@@ -600,7 +600,7 @@ member but ThunderSoap is invented. **[NEW]** throughout, except FUSE's three cl
 **#welcome.** A join notice: FUSE came through the door. Say hi! (👋 9)
 
 **#introductions.** FUSE posts, with a paper form clipped on (*New arrival.* Name: FUSE. Last
-post: Foreman, 40 years. Hobbies: Pending.):
+post: Builder, then foreman. Hobbies: Pending.):
 
 > Hello. This unit has arrived somewhere with a great many people in it. **[NEW]**  
 > <sub>`beat.beyond-arrived` · 13w</sub>

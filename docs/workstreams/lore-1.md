@@ -97,3 +97,8 @@ At 1920 and at 1280/150% the booth line is fully typed and readable by 5.2 s, al
 - `docs/design/script.md`: the changed line entries, p14 plate, p16 direction, clue ladder rungs 2 and 5 plus a "Said" row, rhymes 10/12/13/14/16, Regulation 8. Door section untouched.
 - `scripts/playtest/lore-1.spec.ts`: capture script.
 - Screenshots (not committed): `docs/design/screens/local/lore-1/{before,after}/{1920,1280-text150}/`.
+
+### 2026-11-03: after ending-3 merged
+- Merged `main` (87dcb0d) into ws/lore-1 with no conflicts.
+- The plain reveal stays at the booth, before the door. The hangout keeps one light nod: in #introductions, the "New arrival" form's **Last post** now reads `Builder, then foreman` (was `Foreman, 40 years`). He fills the form in honestly. `content/ending.ts` and the script.md hangout entry are updated, and `ending-model.test.ts` is green. At 1280/150% it wraps onto the form's next ruled line and stays readable (`docs/design/screens/local/lore-1/ending/1280-text150/04-intro-form.png`).
+- The `beat.door-key` "My drawers." proposal above is withdrawn. The booth already says "My drawers", so a second one would repeat it, and the pitch line stays verbatim.
