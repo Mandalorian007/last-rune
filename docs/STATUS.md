@@ -48,6 +48,7 @@ _Last updated: 2026-11-02 by PM_
 | newcomer-2 | ws/newcomer-2 | ✅ merged | suggested next door in hall; locked doors name their source; Strike calm until route reaches a machine; "Try: …" next step on fail verdicts; "no charge reached" wording; full Gate rule on card; tags never cover the verdict (tested at 4 sizes) |
 | newcomer-3 | ws/newcomer-3 | ✅ merged | gem wording in FUSE lines; failure quip matches root fizzle; verdict slides/docks so the red mark is never hidden (tested); tray hotkey keycaps; hall-only intake line; gold-ring row on first altar card; symmetric Amplify mark. Minor open: at 1280×720/150% with a docked verdict, FUSE's caption covers his body on the left |
 | tidy-2 | ws/tidy-2 | ✅ merged | device loss halts loop, audio and timers (tested); clipboard drops from FUSE's clamp under gravity; both flakes root-caused (loaded-machine solver timeout; pad press shorter than a game tick); synth Worker not clean (OfflineAudioContext isn't in Workers), proposal logged |
+| ending-3 | ws/ending-3 | 🟡 running | D-038: ending returns to a fun community-hangout chat: real channel sidebar with emoji, real emoji reactions, invented friendly members, FUSE not a bot |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
