@@ -30,7 +30,7 @@ export interface AltarAssets {
   bolts: BoltRibbon[];
   /**
    * A slab; `margin` and `front` override the default border and front face, and `solid`
-   * cells are carved with no socket (phones).
+   * cells are carved with no socket and `hug` shapes the slab round the open cells (phones).
    */
   slab(
     cols: number,
@@ -39,6 +39,7 @@ export interface AltarAssets {
     margin?: number,
     front?: number,
     solid?: readonly { x: number; y: number }[],
+    hug?: boolean,
   ): AltarSlab;
 }
 
@@ -57,9 +58,9 @@ export function altarAssets(renderer: Renderer, particles: ParticleSystem): Alta
     fuse: new Fuse(renderer, { x: 300, y: 1046, scale: 112 }),
     circuit: new CircuitOverlay(renderer),
     bolts,
-    slab(cols, rows, pitch, margin, front, solid) {
+    slab(cols, rows, pitch, margin, front, solid, hug) {
       const mask = solid?.length ? solidMask(cols, solid).join('.') : '';
-      const key = `${cols}x${rows}@${pitch}/${margin ?? ''}/${front ?? ''}/${mask}`;
+      const key = `${cols}x${rows}@${pitch}/${margin ?? ''}/${front ?? ''}/${mask}/${hug ? 'h' : ''}`;
       let s = slabs.get(key);
       if (!s) {
         // Keep the cache small: boards come in three sizes, pitch varies with props.
@@ -68,7 +69,16 @@ export function altarAssets(renderer: Renderer, particles: ParticleSystem): Alta
           s0.destroy();
           slabs.delete(k0);
         }
-        s = new AltarSlab(renderer, { cols, rows, pitch, margin, front, solid, seed: 5 + cols });
+        s = new AltarSlab(renderer, {
+          cols,
+          rows,
+          pitch,
+          margin,
+          front,
+          solid,
+          hug,
+          seed: 5 + cols,
+        });
         slabs.set(key, s);
       }
       return s;

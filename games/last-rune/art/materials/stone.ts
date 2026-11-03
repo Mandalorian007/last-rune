@@ -182,6 +182,11 @@ export interface AltarOptions {
   seed?: number;
   /** Cells carved solid, with no socket at all (phones: blocked cells, mobile-4-board). */
   solid?: readonly { x: number; y: number }[];
+  /**
+   * Phones (mobile-5-board): the slab hugs its sockets, one block per open (non-solid) cell
+   * grown by the margin, so no blank stone hangs past the sockets and the wall shows there.
+   */
+  hug?: boolean;
 }
 
 /**
@@ -219,7 +224,7 @@ export class AltarSlab {
     const u = new Float32Array(STONE_GEN_FLOATS);
     u.set([this.width, h, opts.seed ?? 3, STONE_MODE.altar]);
     u.set([this.cols, this.rows, this.pitch, this.margin], 4);
-    u.set([this.frontHeight, this.socketRadius, this.topHeight, 0], 8);
+    u.set([this.frontHeight, this.socketRadius, this.topHeight, opts.hug ? 1 : 0], 8);
     u.set(solidMask(this.cols, opts.solid ?? []), 12);
     const t = bake(renderer, 'altar', this.width, h, u);
     this.surface = new StoneSurface(renderer, t.albedo, t.normal, this.width, h, 'altar');
@@ -279,8 +284,11 @@ export class AltarSlab {
     p[2] = intensity;
     dp.x = o.x;
     dp.y = o.y;
-    dp.w = this.socketRadius * 2.6;
-    dp.h = this.socketRadius * 2.6;
+    // The collar reaches further than the other marks (1.42 radii, mobile-5-board).
+    const reach = state === 'collar' ? 1.42 : 1.3;
+    p[3] = state === 'collar' ? reach : 0;
+    dp.w = this.socketRadius * 2 * reach;
+    dp.h = this.socketRadius * 2 * reach;
     dp.tint = color;
     dp.emissive = 1.5;
     frame.sprite(this.socketMat, dp);

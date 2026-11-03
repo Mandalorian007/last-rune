@@ -788,6 +788,51 @@ ${P}:has(.lr-solve[data-phone]) .tc-caption::after {
 ${P}:has(.lr-solve[data-phone][data-crowd]) .tc-caption { visibility: hidden; }
 /* mobile-5-moments end */
 
+/* mobile-5-board ─ The altar fills a wide phone (D-040 gate review 2) ────────────────────
+   The canvas fills the width on the altar and the solve moment too (game/ctx.ts FILL_BANDS),
+   cropping --lr-crop-t/-b design px off the top and bottom: the rail buttons, the title and
+   the solve card move in by the crop (the board and column lay out in the visible band).
+   Strike stands 12 CSS px in from the screen's edge. Text: Gives/Needs numbers 15 px, every
+   other board label, gem count and the hint 13 px. One rotate control: Turn on the rail, dim
+   until there is a gem to turn, then lit; no ↻ chip on the gem. */
+${P} .lr-altar-actions [data-action="back"] { top: calc(${CT} + ${cpx(4)}); }
+${P} .lr-altar-actions [data-action="undo"] { top: calc(${CT} + (1080px - ${CT} - ${CB}) * 0.34); }
+${P} .lr-altar-actions [data-action="clear"] { top: calc(${CT} + (1080px - ${CT} - ${CB}) * 0.34 + ${cpx(52)}); }
+${P} .lr-altar-actions [data-action="strike"] { right: calc(-1 * var(--lr-bar, 0px) + ${cpx(12)}); bottom: calc(${CB} + ${cpx(6)}); }
+${A} .lr-altar-turnbtn { bottom: calc(${CB} + ${cpx(6)}); }
+${A} .lr-altar-title { top: calc(${CT} + ${cpx(3)}); }
+/* The solve card reaches from the column to 12 px inside the screen's edge (the canvas fills
+   the width, so there is no free right bar; Strike and the menu are gone while it shows). */
+${P} .lr-solve[data-phone] {
+  top: calc(${CT} + ${cpx(12)});
+  width: calc(1920px - var(--lr-col-l) + var(--lr-bar, 0px) - ${cpx(12)});
+}
+${P}:has(.lr-solve[data-phone]) .tc-caption { bottom: calc(${CB} + ${cpx(8)}) !important; }
+
+${A} .lr-altar-turnmark { display: none !important; }
+${A} .lr-altar-turnbtn:disabled { opacity: 0.45; filter: saturate(0.3); cursor: default; }
+${A} .lr-altar-turnbtn:disabled b { color: #bfae8a; }
+${A} .lr-altar-turnbtn[data-active] {
+  color: #fff6dd; background: rgba(66,50,22,0.96); border-color: var(--lr-gold);
+  box-shadow: 0 0 0 ${cpx(1)} rgba(232,192,106,0.6), 0 0 ${cpx(12)} rgba(232,192,106,0.55);
+}
+
+${A} .lr-altar-need { font-size: ${tpx(13)}; color: #f4e6c4; }
+${A} .lr-altar-need .lr-need-row b { font-size: ${tpx(15)}; }
+${A} .lr-altar-need :is(.lr-need-note, .lr-storm-row, .lr-need-got, .lr-need-got b, .lr-need-strikes) { font-size: ${tpx(13)}; opacity: 1; }
+${A} .lr-altar-need .lr-need-note { color: #e6d6b2; }
+${A} .lr-altar-need .lr-need-strikes .lr-need-strike-lead { font-style: normal; align-self: center; color: #e6d6b2; }
+/* A one-strike north/south card keeps one line after a strike: "Needs 4  got 0" side by side
+   (the layout gives it one line of room, and the board fills the height). */
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not(:has(.lr-need-note, .lr-need-strikes)) {
+  flex-direction: row; align-items: baseline; gap: ${cpx(6)};
+}
+${A} .lr-altar-count { font-size: ${tpx(13)}; }
+${A} .lr-altar-count[data-empty] { opacity: 1; color: #a89a80; }
+${A} .lr-altar-hint, ${A} .lr-altar-lane > .lr-altar-hint { font-size: ${tpx(13)}; background: rgba(12,10,8,0.86); white-space: normal; text-wrap: balance; line-height: 1.25; }
+${A} .lr-altar-lane .lr-altar-cap, ${A} .lr-cap-head { font-size: ${tpx(13)}; }
+/* mobile-5-board end */
+
 /* ── Title ──────────────────────────────────────────────────────────────── */
 ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cpx(2)} ${cpx(8)}; }
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }

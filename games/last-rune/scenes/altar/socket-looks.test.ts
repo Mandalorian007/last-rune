@@ -1,8 +1,10 @@
+import { computeFillWidth } from '@engine/platform';
 import { describe, expect, it } from 'vitest';
 import { solidMask } from '../../art/materials/stone';
 import { PUZZLES } from '../../content/puzzles';
 import { altarDims } from '../../rules/model';
-import { socketLooks } from './socket-looks';
+import { computeLayout, phoneFrameFor } from './layout';
+import { huggedSlabDistance, socketLooks } from './socket-looks';
 
 describe('socket looks (mobile-4-board)', () => {
   it('phones draw no disc, plate or ring on a blocked cell; only open sockets get a rim', () => {
@@ -51,5 +53,72 @@ describe('socket looks (mobile-4-board)', () => {
     );
     for (const f of all)
       expect(Number.isInteger(f) && f < 2 ** 24 && Math.fround(f) === f).toBe(true);
+  });
+});
+
+describe('hugged slab (mobile-5-board)', () => {
+  // The four phone viewports the e2e budget runs (app size in CSS px, insets removed).
+  const PHONES = [
+    [667, 320],
+    [750, 340],
+    [814, 380],
+    [915, 360],
+  ] as const;
+  const frames = PHONES.map(([w, h]) => {
+    const r = computeFillWidth(w, h, 1920, 1080, { minVisible: 860, focusY: 540 });
+    const frame = phoneFrameFor({
+      phone: true,
+      cssPx: 1 / r.scale,
+      bar: r.x / r.scale,
+      cropT: Math.round(-r.y / r.scale),
+      cropB: Math.round((r.y + r.height - h) / r.scale),
+    });
+    if (!frame) throw new Error('no phone frame');
+    return frame;
+  });
+
+  it('every socket, fixed gem and wire end lies on the stone; blocked cells are wall', () => {
+    for (const p of Object.values(PUZZLES))
+      for (const f of frames) {
+        const L = computeLayout(p, f);
+        const R = L.pitch * 0.36;
+        const inside = (x: number, y: number) =>
+          huggedSlabDistance(L.cols, L.rows, L.pitch, L.margin, p.blocked, x, y);
+        const centre = (c: { x: number; y: number }) => ({
+          x: L.margin + L.pitch * (c.x + 0.5),
+          y: L.margin + L.pitch * (c.y + 0.5),
+        });
+        for (let y = 0; y < L.rows; y++)
+          for (let x = 0; x < L.cols; x++) {
+            const o = centre({ x, y });
+            const isBlocked = p.blocked.some((b) => b.x === x && b.y === y);
+            if (isBlocked) {
+              expect(inside(o.x, o.y), `${p.id} blocked ${x},${y}`).toBeGreaterThan(0);
+              continue;
+            }
+            // The whole bowl and its lip sit on stone.
+            for (let a = 0; a < 8; a++) {
+              const t = (a * Math.PI) / 4;
+              const d = inside(o.x + Math.cos(t) * R * 1.2, o.y + Math.sin(t) * R * 1.2);
+              expect(d, `${p.id} socket ${x},${y}`).toBeLessThan(0);
+            }
+          }
+        for (const fx of p.fixed)
+          expect(p.blocked.some((b) => b.x === fx.cell.x && b.y === fx.cell.y)).toBe(false);
+        // A source or gauge wire runs from its inner socket straight out to the slab's edge:
+        // its last stretch on the slab (to within 4 px of the edge) is on stone.
+        for (const prop of [L.storm, ...L.machines]) {
+          const o = centre(prop.inner);
+          const dir = [
+            [0, -1],
+            [1, 0],
+            [0, 1],
+            [-1, 0],
+          ][prop.side]!;
+          const reach = L.pitch / 2 + L.margin - 7;
+          const end = inside(o.x + dir[0]! * reach, o.y + dir[1]! * reach);
+          expect(end, `${p.id} wire ${prop.side}`).toBeLessThan(0);
+        }
+      }
   });
 });

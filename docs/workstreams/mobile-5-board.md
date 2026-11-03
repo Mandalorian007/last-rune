@@ -82,3 +82,93 @@ Gate review 2 (4 blind reviewers, 2026-11-03) scored 6 / 6 / 6.5 / 6.5, a fail. 
 - The log in this file has the pitch table and a list of changes.
 
 ## Log
+
+### 2026-11-03: mobile-5-board done (branch `ws/mobile-5-board`)
+
+**Changes**
+1. **Fixed-gem collar, every platform** (`shaders/stone-wgsl.ts` SOCKET_WGSL, `art/materials/stone.ts`):
+   - a thicker dark-iron band out to 1.38 R, with a pale bevel just inside its rim;
+   - four rivets of radius 0.15 with a glint; the quad reaches 1.42 R so nothing clips.
+   - It reads as bolted iron, not a hover or selection ring (checked at 1920 and on iPad, before/after in `desk/`).
+2. **The hugged slab, phones** (`AltarOptions.hug`, `altar_surf` hug branch):
+   - the top face is a union of rounded blocks, one per open cell, so blocked cells and blank areas are wall.
+   - Interior depth comes from the holes, so no seams show; there is a contact shadow, and albedo is ×1.3 against the wall.
+   - Pure mirror: `huggedSlabDistance` (`socket-looks.ts`).
+   - Unit test: every socket, wire end and fixed gem of every puzzle sits on the stone on all four phones; every blocked centre is off it.
+3. **The board fills the height** (`game/ctx.ts` FILL_BANDS puzzle/solve; `ui/device-mode.ts` `--lr-crop-t/-b`; `layout.ts` band-relative layout):
+   - on the altar and the solve moment the canvas fills the phone's width, and the board lays out in the visible band;
+   - maxPitch is 76;
+   - trays of up to four kinds go two to a row, so the column can shrink to 116 CSS px;
+   - a phone narrower than 720 CSS px (the SE) keeps the column at ≥140 px so the chip and verdict stay readable.
+4. **Text on phones** (`phone-styles.ts` mobile-5-board block):
+   - Gives/Needs numbers are 15 px; notes, got, strike read-outs, gem counts, lane captions and the hint are 13 px.
+   - The hint may wrap to two balanced lines.
+   - Captions are near-opaque and lighter ink (≥4.5:1).
+   - A one-strike N/S card after a strike reads "Needs 4 got 0" on one line.
+   - Multi-strike N/S cards read "Needs 10 / Strike [1: 0] [2: 0]", so two cards side by side stay clear.
+5. **One rotate control:**
+   - no ↻ chip on phones;
+   - the rail's Turn is dim until a Bend, Gate or Split is in hand or was just placed, then lit gold.
+6. **Rings only while held:** on phones, placing a gem ends the hold, so the valid-socket rings clear and Turn turns the gem just placed.
+7. **Multi-strike copy, phones:**
+   - the storm card reads "Gives 16 / per strike";
+   - Strike reads "Strike / twice", then "1 of 2", "2 of 2" during the run;
+   - aria: "one tap strikes twice".
+8. **Strike** sits 12 CSS px in from the app's right edge (`PHONE_STRIKE_CSS` 58).
+
+**Tests**
+- `tests/e2e/mobile-budget.spec.ts`, items 10–15 on four phones:
+  - height share (`HSHARE_MIN`);
+  - sockets in the slab;
+  - rendered text floors;
+  - raised pitch floors;
+  - no ↻ chip;
+  - Strike ≥12 px from the edge;
+  - rings while held, none after placing;
+  - Turn lit.
+- Unit: `socket-looks.test.ts` "hugged slab".
+
+**Pitch (CSS px) and board share of height, after**
+
+| Altar | SE 667×320 | iPhone 844×340 | Pro Max 932×380 | Android 915×360 |
+|---|---|---|---|---|
+| intake (6×4) | 53.8 · 86% | 66.4 · 97% | 75.9 · 98% | 71.1 · 97% |
+| furnace, relay, conveyor, crane, foundry (6×4, W/E) | 44.1 · 60–67% | 61.3 · 79–80% | 71.2 · 82% | 76.2 · 93% |
+| splitter (6×4) | 44.1 · 74% | 61.3 · 94% | 71.2 · 91% | 71.1 · 100% |
+| press (6×4) | 53.5 · 97% | 57.8 · 97% | 67.4 · 98% | 62.8 · 98% |
+| storm-cell, boiler (6×4) | 44.1 · 84% | 57.8 · 97% | 67.4 · 98% | 62.8 · 98% |
+| archive, control (8×6) | 33.3 · 76% | 43.4–45.7 | 51.3–52.1 | 49.0 · 98% |
+| capacitor, lift (8×6) | 35.1 · 96% | 37.9 · 96% | 44.1 · 99% | 41.0 · 98% |
+| roof (8×6) | 40.6 · 93% | 44.9 · 96% | 50.9 · 96% | 47.7 · 96% |
+| The Last Rune (10×8) | 26.4 · 94% | 28.9 · 95% | 33.5 · 95% | 31.4 · 96% |
+
+- Main's floors were 44/38/30 on iPhone, Pro Max and Android, and 39.6/34.2/27 on the SE.
+- New floors (`PITCH_MIN`):
+  - iPhone 57/37/28.5
+  - SE 43/32.5/25
+  - Pro Max 66/43/32.5
+  - Android 62/40/30.5
+
+**Floors not reached**
+- **85% of height on W/E 6×4 boards** (iPhone 79–80%, Pro Max 82%, SE 60–67%). These boards are width-bound: two 66 px gauge gutters plus the column. The SE also keeps a 140 px column so a gem chip stays ≤5 lines and the verdict ≤6. Floors: iPhone 0.78, SE 0.58, Pro Max 0.8, Android 0.85.
+- **The Last Rune ≥30 px on the SE:** 26.4. It is height-bound by its N and S gauges, and the 13/15 px label floors cost height. iPhone 28.9 is also below main's 30 floor, for the same reason.
+- **8×6 Capacitor/Lift on iPhone:** 37.9 vs main's 38, for the same reason (two-line multi-strike cards at 13 px).
+- **Lane line counts:** in a lane narrower than 150 px a gem chip may take 5 lines and the verdict 6. Both have the lane's height to themselves (budget item 3 relaxed there). Shorter verdict copy (mobile-5-moments) would win this back.
+- **6×4 ≥60 px on Android and Pro Max:** met. The lowest is 62.8.
+
+**Proposals to the PM**
+- **D-040 change:** on phones a placed gem leaves the hand (rings clear, Turn turns the placed gem). Desktop still keeps the gem in hand.
+- **Desktop copy:** align with the phone copy: the storm card "per strike", Strike's aria "one tap strikes twice".
+- **Rule text:** suggested codex/rules wording: "Strike fires the storm N times. Each machine reads each strike on its own; Needs is per strike." No `rules/` semantics were changed.
+- **Fill-width on the solve moment** (FILL_BANDS solve) crops its top and bottom. Its CSS moves in by `--lr-crop-t/-b` (one rule in the block); mobile-5-moments should check its card.
+- **Hint:** now 13 px and may wrap to two lines (the hint slot is mobile-5-moments').
+
+**Captures** (`docs/design/screens/local/mobile-5-board/`, git-ignored):
+- `before-*.png` / `after-*.png` sheets;
+- `after/altars/{iphone,se}`;
+- desktop and iPad collars in `before/desk`, `after/desk`.
+
+**Merge of main (mobile-5-moments, mobile-5-chrome):**
+- `FILL_BANDS` keeps chrome's title and hall bands and adds puzzle and solve.
+- In `phone-styles.ts` my block now sits after the moments block. The lane hint is 13 px and may wrap.
+- The solve card is moved in by the crop, 12 px from the top, and reaches to 12 px inside the right edge (fill-width leaves no free right bar). `mobile-moments.spec` passes.

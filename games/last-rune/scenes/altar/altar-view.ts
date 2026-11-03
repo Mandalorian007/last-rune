@@ -172,10 +172,10 @@ export class AltarView {
     this.assets = altarAssets(r, ctx.particles);
     ensureBolts(this.assets, r, ctx.particles, Math.max(1, puzzle.pulses));
     const dev = ctx.device;
-    const L = computeLayout(puzzle, phoneFrameFor(dev.phone, dev.cssPx, dev.bar));
+    const L = computeLayout(puzzle, phoneFrameFor(dev));
     this.layout = L;
     this.slab = L.phone
-      ? this.assets.slab(L.cols, L.rows, L.pitch, L.margin, L.phone.front, puzzle.blocked)
+      ? this.assets.slab(L.cols, L.rows, L.pitch, L.margin, L.phone.front, puzzle.blocked, true)
       : this.assets.slab(L.cols, L.rows, L.pitch);
     this.slab.place(L.cx, L.cy);
     this.storm = new StormCell(r, {
