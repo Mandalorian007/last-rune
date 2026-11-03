@@ -1,12 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { DISCORD_INVITE_URL, ENDING_COPY, ENDING_SEQUENCE } from '../../content/ending';
+import script from '../../../../docs/design/script.md?raw';
+import {
+  DISCORD_INVITE_URL,
+  ENDING_COPY,
+  ENDING_SEQUENCE,
+  HANGOUT_CHANNELS,
+  HANGOUT_COPY,
+  HANGOUT_HISTORY,
+  HANGOUT_MEMBERS,
+  HANGOUT_SCRIPT,
+  HANGOUT_SERVER,
+  HANGOUT_SUMMARY,
+  type HangoutStep,
+} from '../../content/ending';
 import {
   CLIP_FALL_SECONDS,
   CREDITS,
   clipDropPose,
+  emojiRuns,
   endCard,
   endingBeats,
   endingSkippable,
+  fusePostText,
+  hangoutSeconds,
 } from './ending-model';
 
 describe('clipDropPose', () => {
@@ -75,9 +91,7 @@ describe('endingBeats', () => {
       'line:beat.door-key',
       'cue:through',
       'cue:beyond',
-      'line:beat.beyond-arrived',
-      'line:beat.beyond-arguing',
-      'line:beat.beyond-day-1',
+      'hangout',
       'cue:flood',
       'title-card',
       'idle',
@@ -135,19 +149,138 @@ describe('endingSkippable', () => {
   });
 });
 
-describe('ending UI copy (D-032)', () => {
+describe('ending UI copy (D-032, D-038)', () => {
   it('says FUSE went to ThunderClap Gaming, and credits ThunderSoap', () => {
     expect(ENDING_COPY.titleCard[0]).toBe('FUSE went to ThunderClap Gaming.');
     expect(ENDING_COPY.joinLabel).toBe('Join ThunderClap Gaming');
     expect(CREDITS).toContainEqual(['Made by', 'ThunderSoap']);
   });
+});
 
-  it('gives no chat or server details', () => {
-    const shown = [
-      ...ENDING_COPY.titleCard,
-      ...CREDITS.flat(),
-      ...ENDING_SEQUENCE.flatMap((s) => (s.type === 'direction' ? [s.text] : [])),
-    ].join(' ');
-    expect(shown).not.toMatch(/discord|chat|channel|#|\bbot\b|typing|avatar/i);
+describe('the community hangout (D-038)', () => {
+  const posters = new Set<string>([
+    ...HANGOUT_SCRIPT.flatMap((s) =>
+      s.type === 'post' ? [s.who] : s.type === 'pin' ? [s.by] : s.type === 'fuse' ? ['fuse'] : [],
+    ),
+    ...Object.values(HANGOUT_HISTORY).flatMap((posts) => posts.map((p) => p.who)),
+  ]);
+  const fusePosts = HANGOUT_SCRIPT.filter(
+    (s): s is Extract<HangoutStep, { type: 'fuse' }> => s.type === 'fuse',
+  );
+  /** Every string the hangout can put on screen. */
+  const shown = [
+    HANGOUT_SERVER,
+    ...HANGOUT_CHANNELS.flatMap((c) => [c.emoji, c.name]),
+    ...Object.values(HANGOUT_MEMBERS).map((m) => m.name),
+    ...Object.values(HANGOUT_COPY),
+    ...Object.values(HANGOUT_HISTORY).flatMap((posts) => posts.map((p) => p.text)),
+    ...HANGOUT_SCRIPT.flatMap((s) =>
+      s.type === 'post' || s.type === 'join' || s.type === 'pin'
+        ? [s.text]
+        : s.type === 'fuse'
+          ? [fusePostText(s), ...(s.form ?? []).flat()]
+          : s.type === 'react'
+            ? [s.emoji]
+            : [],
+    ),
+    ...Object.values(HANGOUT_SUMMARY),
+  ].join(' \n ');
+
+  it('lists the real channels in order, with their emoji', () => {
+    expect(HANGOUT_SERVER).toBe('ThunderClap Gaming');
+    expect(HANGOUT_CHANNELS.map((c) => `${c.emoji} ${c.name}`)).toEqual([
+      '👋 welcome',
+      '🧑 introductions',
+      '💬 the-hangout',
+      '👀 supporter-sneak-peeks',
+      '💬 supporter-chat',
+      '🏆 events-and-contests',
+      '🐈 furry-friends',
+      '🍔 omg-food',
+      '🎶 jammin-out',
+      '🍜 otaku-oasis',
+      '📚 book-worms',
+      '🌱 watch-me-grow',
+      '⚽ sports-ball',
+      '🚗 gearhead',
+    ]);
+  });
+
+  it('has no real members but ThunderSoap: every other poster is invented', () => {
+    for (const who of posters) {
+      const m = HANGOUT_MEMBERS[who as keyof typeof HANGOUT_MEMBERS];
+      expect(m, who).toBeDefined();
+      if (who !== 'fuse' && who !== 'thundersoap') expect(m.invented, who).toBe(true);
+    }
+    const real = Object.values(HANGOUT_MEMBERS).filter((m) => !m.invented);
+    expect(real.map((m) => m.name).sort()).toEqual(['FUSE', 'ThunderSoap']);
+  });
+
+  it('FUSE is a game character, not a bot; no member counts', () => {
+    expect(shown).not.toMatch(/\bbot\b|\bapp\b|\bverified\b/i);
+    expect(shown).not.toMatch(/\bmembers?\b|\bonline\b|\bonline\s*[-—]\s*\d/i);
+    expect(HANGOUT_MEMBERS.fuse.emoji).toBe('');
+  });
+
+  it("FUSE's three closing lines anchor the chat, in order", () => {
+    expect(fusePosts.filter((p) => p.line).map((p) => p.line)).toEqual([
+      'beat.beyond-arrived',
+      'beat.beyond-arguing',
+      'beat.beyond-day-1',
+    ]);
+  });
+
+  it('every reaction is a real emoji, and every message it targets exists first', () => {
+    const keys = new Set<string>();
+    for (const s of HANGOUT_SCRIPT) {
+      if (s.type === 'fuse' || s.type === 'join' || (s.type === 'post' && s.key)) keys.add(s.key!);
+      if (s.type === 'react' || s.type === 'pin') expect(keys.has(s.key), s.key).toBe(true);
+      if (s.type === 'react') {
+        expect(emojiRuns(s.emoji), s.emoji).toEqual([{ text: s.emoji, emoji: true }]);
+        expect(s.count).toBeGreaterThanOrEqual(1);
+      }
+    }
+  });
+
+  it('every channel FUSE visits is a real channel, and he ends on Day 1 in watch-me-grow', () => {
+    const ids = new Set<string>(HANGOUT_CHANNELS.map((c) => c.id));
+    const visits = HANGOUT_SCRIPT.flatMap((s) => (s.type === 'go' ? [s.channel] : []));
+    for (const v of visits) expect(ids.has(v)).toBe(true);
+    expect(visits[visits.length - 1]).toBe('watch-me-grow');
+  });
+
+  it('keeps the ending close to its old length (about 30 s, not minutes)', () => {
+    expect(hangoutSeconds(45)).toBeGreaterThan(20);
+    expect(hangoutSeconds(45)).toBeLessThan(36);
+    expect(hangoutSeconds(0)).toBeLessThan(hangoutSeconds(45));
+  });
+
+  it('every chat text is in script.md', () => {
+    const texts = [
+      ...Object.values(HANGOUT_HISTORY).flatMap((posts) => posts.map((p) => p.text)),
+      ...HANGOUT_SCRIPT.flatMap((s) =>
+        s.type === 'post' || s.type === 'join'
+          ? [s.text]
+          : s.type === 'fuse'
+            ? [fusePostText(s)]
+            : [],
+      ),
+    ];
+    for (const t of texts) expect(script.includes(t), t).toBe(true);
+  });
+});
+
+describe('emojiRuns', () => {
+  it('splits text from emoji, keeping joined emoji whole', () => {
+    expect(emojiRuns('he brought a FORM 😭')).toEqual([
+      { text: 'he brought a FORM ', emoji: false },
+      { text: '😭', emoji: true },
+    ]);
+    expect(emojiRuns('🔊🔊 up')).toEqual([
+      { text: '🔊', emoji: true },
+      { text: '🔊', emoji: true },
+      { text: ' up', emoji: false },
+    ]);
+    expect(emojiRuns('Day 1.')).toEqual([{ text: 'Day 1.', emoji: false }]);
   });
 });

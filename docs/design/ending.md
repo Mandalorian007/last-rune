@@ -21,9 +21,9 @@ When the Last Rune is solved and the facility is complete, `flow.finishSolve()` 
 | 6 | `beat.door-list` | |
 | 7 | `beat.door-key` | |
 | 8 | cue `through` | The clipboard falls from his clamp, turns, bounces and lands in the foreground (`clipboardDrop`). It stays there for the rest of the ending. FUSE rolls into the door, shrinking with depth, and fades. The screen goes warm white. |
-| 9 | cue `beyond` (D-032) | The white warms to amber gold with a soft, breathing core (static with reduced motion). `BEYOND_POST` eases in (no fog, no god rays, a light vignette). A quiet procedural crowd murmur (`amb.crowd`: talkers, a din, a few laughs) fades in under it. |
-| 10 | `beat.beyond-arrived`, `beat.beyond-arguing`, `beat.beyond-day-1` | FUSE, from the other side, as ordinary captions over the light: "Hello. This unit has arrived somewhere with a great many people in it." / "You appear to be arguing about a game." / "Day 1." No chat window, server, channel, handles or reactions. |
-| 11 | cue `flood` | The light settles back over the hall. Gold floods out from the rune (radial wash and light). The murmur fades out over 3.5 s. `endingSwell` plays. The flood post is used: warm, but held below white. |
+| 9 | cue `beyond` (D-038) | The white warms to amber gold with a soft, breathing core (static with reduced motion). `BEYOND_POST` eases in (no fog, no god rays, a light vignette). A quiet procedural crowd murmur (`amb.crowd`: talkers, a din, a few laughs) fades in under it. 1.2 s later the hangout window rises into the light. |
+| 10 | `hangout` (D-038, `hangout.ts`, `HANGOUT_SCRIPT`) | A Discord-like chat in the game's style (slate panels, gold edge, cream text). The sidebar is the star: ThunderClap Gaming's 14 real channels with their emoji, in order; unread pips light up as the server notices him; his live procedural face sits beside the channel he is in. #welcome: "FUSE came through the door. Say hi!" (👋). #introductions: he types `beat.beyond-arrived` into the message bar (voice blips), sends it with a paper "New arrival" form (Hobbies: Pending); mossy.lamp "he brought a FORM 😭", ThunderSoap "Welcome home, FUSE 💜". #the-hangout: `beat.beyond-arguing`; "we are DISCUSSING". #jammin-out: "Volume exceeds regulation. Leaving." #gearhead: "Incident report filed on your behalf. Wear gloves." #watch-me-grow: `beat.beyond-day-1`, a burst of reactions (🌱 💜 🥰 🙏 🍕), ThunderSoap pins it. Members other than ThunderSoap are invented; no BOT tag, no member counts. Reactions are colour-emoji text glyphs whose counts tick up; a gentle `ui.blip` per message and reaction. About 35 s. |
+| 11 | cue `flood` | The window folds back into the light (fade and shrink; fade only with reduced motion). The light settles back over the hall. Gold floods out from the rune (radial wash and light). The murmur fades out over 3.5 s. `endingSwell` plays. The flood post is used: warm, but held below white. |
 | 12 | title card | `ENDING_COPY.titleCard` (three lines), then `safetyRecordLine(stats)` on a paper slip, then the credits one at a time. |
 | 13 | end card | Join ThunderClap Gaming (only when the invite is https), the smaller Ko-fi link "Buy ThunderSoap a coffee" (D-034, only when `KOFI_URL` is https), the footer, and Back to the hall (focused). Arrow keys and the pad's d-pad walk the card. |
 | 14 | idle 30 s | If there is no input for 30 s, the top sheet of the dropped clipboard flips to `beat.post-credits` ("Day 1. Hobby: people. Monitoring."). Any input resets the timer. |
@@ -47,7 +47,9 @@ The Join ThunderClap Gaming link and the Ko-fi link are plain `<a href target="_
 
 ## Accessibility and motion
 
-- **Reduced motion:** no camera push, no storm motion, a static door, a still core in the beyond light, and CSS transitions that change opacity only.
+- **Reduced motion:** no camera push, no storm motion, a static door, a still core in the beyond light, and CSS transitions that change opacity only. In the hangout, messages and reactions just appear (no rise, pop, ping or blinking caret) and FUSE's face does not slide between channels.
+- **Screen readers:** the hangout window is `aria-hidden`; a polite live region says what happens in two short lines (`HANGOUT_SUMMARY`).
+- **Text size:** at 125% or 150% the window grows to 1680×920 design px and the sidebar widens to 560 so every channel name fits whole.
 - **Captions:** FUSE's lines go through `ctx.fuse.say`, so they use the player's caption speed.
 - **Keyboard and pad:** Back to the hall is focused on the end card. Tab, the arrow keys or the d-pad move between Join, Ko-fi and Back (`ui/menu-nav.ts`); the pad's A clicks the focused control. Esc skips on replays.
 - **Text size:** the three-line title card sits at top 92 with tighter follow-up lines so it clears the safety slip at 100% and 150%.
@@ -75,7 +77,7 @@ The Join ThunderClap Gaming link and the Ko-fi link are plain `<a href target="_
 - **Title screen:** "Buy ThunderSoap a coffee" in the bottom-right corner (D-034). FUSE's caption avoids it like the menu.
 - **Labels:** "Safety record", "Skip".
 
-FUSE is a game character, not a bot or a member of a real server: the ending shows no chat, server, channel or member details (D-032).
+FUSE is a game character, not a bot: beyond the door he joins ThunderClap Gaming's community as himself (D-038, superseding D-032's no-chat rule). The real channel list and ThunderSoap are shown; every other member is invented; no BOT tag and no member counts. `ending-model.test.ts` holds these rules.
 
 ## Screens
 
@@ -114,8 +116,13 @@ FUSE is a game character, not a bot or a member of a real server: the ending sho
    - Removed the mock chat (window, server and channel names, handles, reactions, typing indicator, message bar) and its CSS and cue code. FUSE now speaks three captions over warm gold light, with a quiet crowd murmur.
    - New title card, credits and end-card copy (above). The three-line title collided with the safety slip; moved the title up to 92 and tightened the follow-up lines.
    - Ko-fi link on the title and the end card (D-034). Captures: `scripts/playtest/ending-2.spec.ts`.
+8. **Pass 8 (ending-3, D-038):**
+   - The captions beyond the door became the community hangout (row 10). Data and copy in `content/ending.ts` (`HANGOUT_*`), pacing in `ending-model.ts` (`HANGOUT_TIMING`, `hangoutSeconds`), DOM in `hangout.ts`, CSS in `hangout-styles.ts`.
+   - First capture at 150% text: the server name wrapped over the category and fixed-width emoji cells overlapped channel names; two names ellipsised. Widened the sidebar at text scale, made the cells min-width, and let older messages fade out under the channel bar instead of being cut in half.
+   - Timing: solve to end card about 2:02 with normal captions (was about 2:20); the hangout itself about 35 s. Captures: `scripts/playtest/ending-3.spec.ts`.
 
 ## Open issues
 
 - A gamepad A press on a link calls `click()`; browsers may not count a gamepad press as user activation, so the new tab can be blocked. Mouse, touch and keyboard Enter open it normally.
-- The ending runs about 2 minutes 20 seconds with normal captions. There is no pacing tune per caption speed beyond `fuse.say`.
+- The ending runs about 2 minutes with normal captions. Within the hangout, FUSE types at 0.75× caption speed (instant with instant captions); other pacing is fixed.
+- Colour emoji depend on the system font: Windows 10+, macOS, Chrome OS and most Linux desktops have one; a system without one shows monochrome glyphs.
