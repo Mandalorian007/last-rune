@@ -14,8 +14,8 @@ import {
   isPortrait,
   toggleFullscreen,
   watchFullscreen,
-} from '@engine/platform';
-import { button, h } from '@engine/ui';
+} from '@thunderclap/engine/platform';
+import { button, h } from '@thunderclap/engine/ui';
 import type { DeviceMode } from './device-mode';
 
 const CSS = /* css */ `

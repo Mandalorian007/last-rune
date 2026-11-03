@@ -7,7 +7,6 @@ export default defineConfig({
   base: './',
   resolve: {
     alias: {
-      '@engine': fileURLToPath(new URL('./engine', import.meta.url)),
       '@game': fileURLToPath(new URL('./games/last-rune', import.meta.url)),
     },
   },
@@ -17,12 +16,7 @@ export default defineConfig({
     assetsInlineLimit: 4096,
   },
   test: {
-    include: [
-      'engine/**/*.test.ts',
-      'games/**/*.test.ts',
-      'tests/unit/**/*.test.ts',
-      'scripts/**/*.test.ts',
-    ],
+    include: ['games/**/*.test.ts', 'tests/unit/**/*.test.ts', 'scripts/**/*.test.ts'],
     // The solver searches run 0.4-2 s idle but over 10 s on a loaded machine (parallel e2e,
     // other worktrees); the 5 s default made them a rare `pnpm check` flake.
     testTimeout: 30_000,

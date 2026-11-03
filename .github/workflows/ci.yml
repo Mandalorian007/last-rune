@@ -1,4 +1,6 @@
-# Gate for main: typecheck + lint + unit tests, production build, itch zip validation.
+# Gate for main, as two jobs (D-041):
+#   engine: @thunderclap/engine typecheck + lint + unit tests (packages/engine).
+#   game:   game typecheck + lint + import-boundary check + unit tests, production build, itch zip.
 # No secrets are used or needed. Nothing is uploaded to itch.io (see docs/shipping-itch.md).
 name: CI
 
@@ -17,10 +19,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check-build:
-    name: check + build + package
+  engine:
+    name: engine check
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -34,7 +36,28 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm check
+      # typecheck + lint + unit tests of packages/engine only.
+      - run: pnpm check:engine
+
+  game:
+    # Keeps the pre-split job name so an existing required status check still matches.
+    name: check + build + package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # typecheck (game + the engine sources it imports) + lint + boundary check + game unit tests.
+      - run: pnpm check:game
 
       - run: pnpm build
 

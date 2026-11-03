@@ -5,7 +5,7 @@ Pointer (mouse/touch/pen), keyboard and gamepad mapped to named **actions**. The
 ## Usage
 
 ```ts
-import { Input } from '@engine/input';
+import { Input } from '@thunderclap/engine/input';
 
 const input = new Input({
   confirm: [{ key: 'Enter' }, { key: 'Space' }, { padButton: 0 }],

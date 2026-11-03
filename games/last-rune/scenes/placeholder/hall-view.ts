@@ -4,8 +4,8 @@
  * from pitch screen 2 (solved gem, unlocked gold glow + empty socket in the
  * grant colour, locked padlock + dotted sockets in the needed colours, conduits).
  */
-import { flicker, ParticleEmitter, pulse } from '@engine/fx';
-import type { Frame } from '@engine/render';
+import { flicker, ParticleEmitter, pulse } from '@thunderclap/engine/fx';
+import type { Frame } from '@thunderclap/engine/render';
 import type { MachineId } from '../../rules/types';
 import { ALCOVE_HIT, type AlcoveModel, type ConduitModel } from '../hall/hall-state';
 import type { HallView, HallViewFrame, ViewContext } from '../views';

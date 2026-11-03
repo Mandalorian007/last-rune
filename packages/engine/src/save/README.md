@@ -5,7 +5,7 @@ Versioned save slots in `localStorage`. Survives the itch.io iframe: storage tha
 ## Usage
 
 ```ts
-import { createSaveStore, s, type Infer } from '@engine/save';
+import { createSaveStore, s, type Infer } from '@thunderclap/engine/save';
 
 const Progress = s.object({
   solved: s.array(s.string()),

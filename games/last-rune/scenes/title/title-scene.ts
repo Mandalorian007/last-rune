@@ -8,9 +8,9 @@
  * open, and stops the moment the player starts.
  */
 
-import type { Frame } from '@engine/render';
-import type { Rect } from '@engine/ui';
-import { h } from '@engine/ui';
+import type { Frame } from '@thunderclap/engine/render';
+import type { Rect } from '@thunderclap/engine/ui';
+import { h } from '@thunderclap/engine/ui';
 import { coffeeLink } from '../../content/ending';
 import { beatLine, type FuseLine, titleLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';

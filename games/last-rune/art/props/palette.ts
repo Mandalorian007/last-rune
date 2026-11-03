@@ -2,9 +2,9 @@
  * Prop palette (art-props). Names follow the pitch's palette list. Every shared colour is
  * read from `art/materials/palette.ts` (`PALETTE_HEX`, the single source of colour truth);
  * only prop-only materials (verdigris, rust, FUSE's eye, ...) are defined here.
- * Values are sRGB hex; convert with `hex()` from `@engine/render`.
+ * Values are sRGB hex; convert with `hex()` from `@thunderclap/engine/render`.
  */
-import { hex, type RGBA } from '@engine/render';
+import { hex, type RGBA } from '@thunderclap/engine/render';
 import { PALETTE_HEX } from '../materials/palette';
 
 /** The pitch palette (Art direction -> Palette), named by colour. Derived from PALETTE_HEX. */

@@ -1,5 +1,5 @@
-import type { FullscreenPass } from '@engine/render/fullscreen';
-import type { PostInputs, PostProcessor, Renderer } from '@engine/render/renderer';
+import type { FullscreenPass } from '../render/fullscreen';
+import type { PostInputs, PostProcessor, Renderer } from '../render/renderer';
 import { type Ease, easeInOut, PostBlender } from './blend';
 import {
   applyPostPatch,

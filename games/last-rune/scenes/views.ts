@@ -8,8 +8,8 @@
  *
  *   ctx.views.hall = (vc) => new CathedralHallView(vc);
  */
-import type { ParticleSystem } from '@engine/fx';
-import type { Frame, Renderer } from '@engine/render';
+import type { ParticleSystem } from '@thunderclap/engine/fx';
+import type { Frame, Renderer } from '@thunderclap/engine/render';
 import type { MachineId } from '../rules/types';
 import type { HallFrame } from './hall/hall-frame';
 import type { HallModel } from './hall/hall-state';

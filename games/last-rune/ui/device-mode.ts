@@ -13,7 +13,7 @@
  * - `data-touch`: the player's last input was a finger. Key caps hide and hints switch to
  *   touch words. A mouse press or a key switches it off again.
  */
-import { isTouchOnly, type PointerKind, watchPointerKind } from '@engine/platform';
+import { isTouchOnly, type PointerKind, watchPointerKind } from '@thunderclap/engine/platform';
 
 /** Below this overlay scale the game is on a phone-sized screen. Phones are 0.33–0.40, tablets 0.53+. */
 export const PHONE_SCALE = 0.45;

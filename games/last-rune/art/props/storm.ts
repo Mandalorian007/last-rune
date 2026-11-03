@@ -14,7 +14,7 @@
  * by a swirling curl field (`shaders/storm-shaders.ts`), so it trails and curls instead of
  * looping like a sprite.
  */
-import { flicker } from '@engine/fx';
+import { flicker } from '@thunderclap/engine/fx';
 import type {
   DrawParams,
   Frame,
@@ -22,7 +22,7 @@ import type {
   Material,
   PingPong,
   Renderer,
-} from '@engine/render';
+} from '@thunderclap/engine/render';
 import {
   STORM_MATERIAL_WGSL,
   STORM_SIM_FLOATS,

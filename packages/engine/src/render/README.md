@@ -29,9 +29,9 @@ endFrame()
 ## Setup
 
 ```ts
-import { boot } from '@engine/platform';
-import { Renderer, installGpuErrorLogging } from '@engine/render';
-import { PostStack } from '@engine/post';
+import { boot } from '@thunderclap/engine/platform';
+import { Renderer, installGpuErrorLogging } from '@thunderclap/engine/render';
+import { PostStack } from '@thunderclap/engine/post';
 
 const res = await boot(document.getElementById('app')!, { title: 'My Game' });
 if (!res.ok) return; // unsupported screen already shown
@@ -160,7 +160,7 @@ textures every frame, as ping-pong does, builds no new bind groups after the fir
 - `ParticleSystem.clear()` (in `engine/fx`) drops every live particle and any emits queued
   this frame. The particle buffer is zeroed on the GPU in the next `prepare`, so nothing
   allocates. Particles emitted after `clear()` in the same frame survive.
-- Tests: `engine/render/fake-gpu.ts` provides a recording fake `GPUDevice`, created with
+- Tests: `engine/render/fake-gpu.ts` (imported as `@thunderclap/engine/testing`) provides a recording fake `GPUDevice`, created with
   `createFakeDevice()` and wrapped with `fakeRendererGpu()`. It checks buffer and texture
   usage flags such as COPY_DST, catches writes past the end of a buffer, and records pass
   commands such as `setBindGroup` offsets and draws. That means `new Renderer(...)` and the

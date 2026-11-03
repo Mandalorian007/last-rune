@@ -14,9 +14,8 @@
     "skipLibCheck": true,
     "noEmit": true,
     "paths": {
-      "@engine/*": ["./engine/*"],
       "@game/*": ["./games/last-rune/*"]
     }
   },
-  "include": ["engine", "games", "tests/unit"]
+  "include": ["games", "tests/unit"]
 }

@@ -6,11 +6,11 @@
  * Keys: 1 bloom · 2 fog · 3 god rays · 4 vignette · 5 grade · P pause · H hud.
  * Click / tap: spark burst. URL `&sparks=20000` sets the ambient particle target.
  */
-import { GameLoop, type Scene, SceneStack, type Time } from '@engine/core';
-import { flicker, ParticleEmitter, ParticleSystem, pulse } from '@engine/fx';
-import type { GpuContext, Surface } from '@engine/platform';
-import { watchReducedMotion, watchVisibility } from '@engine/platform';
-import { PostStack } from '@engine/post';
+import { GameLoop, type Scene, SceneStack, type Time } from '@thunderclap/engine/core';
+import { flicker, ParticleEmitter, ParticleSystem, pulse } from '@thunderclap/engine/fx';
+import type { GpuContext, Surface } from '@thunderclap/engine/platform';
+import { watchReducedMotion, watchVisibility } from '@thunderclap/engine/platform';
+import { PostStack } from '@thunderclap/engine/post';
 import {
   type DrawParams,
   type Frame,
@@ -19,7 +19,7 @@ import {
   type Material,
   Renderer,
   type RGBA,
-} from '@engine/render';
+} from '@thunderclap/engine/render';
 import {
   GLOW_WGSL,
   LIT_STONE_FLOATS,

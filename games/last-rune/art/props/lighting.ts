@@ -7,7 +7,7 @@
  * the LightSet layout). A scene fills one `LightSet` (or a `PropLightRig`, the chainable
  * prop-side writer of the same layout) per frame and passes it to each prop's `draw`.
  */
-import { hex } from '@engine/render';
+import { hex } from '@thunderclap/engine/render';
 import { LIGHT_SET_FLOATS, MAX_LIGHTS } from '../../shaders/lights-wgsl';
 import { lightBudget } from '../materials/lights';
 import { PITCH, PROP } from './palette';

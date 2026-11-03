@@ -9,7 +9,7 @@
  *
  * One small material, drawn as quads after the slab and before the socket marks.
  */
-import type { DrawParams, Frame, Material, Renderer } from '@engine/render';
+import type { DrawParams, Frame, Material, Renderer } from '@thunderclap/engine/render';
 
 const OVERLAY_WGSL = /* wgsl */ `
 @fragment fn fs_main(in: VSOut) -> FragOut {

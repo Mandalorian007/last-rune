@@ -11,7 +11,7 @@
  *   art.prop(frame, mode, x, y, w, h, rot, seed)
  *   art.candleBody(frame) … art.candleFlame(frame)
  */
-import type { DrawParams, Frame, Material, Renderer, RGBA } from '@engine/render';
+import type { DrawParams, Frame, Material, Renderer, RGBA } from '@thunderclap/engine/render';
 import { type CandleInstance, CandleRenderer } from '../../art/materials/candles';
 import { LIGHT_SET_FLOATS, LightSet } from '../../art/materials/lights';
 import { GLOW_WGSL } from '../../shaders/candle-wgsl';

@@ -6,8 +6,8 @@
  *
  * Replace it in main.ts: `solve: (moment) => new SolveScene(moment)`.
  */
-import type { Frame } from '@engine/render';
-import { button, h } from '@engine/ui';
+import type { Frame } from '@thunderclap/engine/render';
+import { button, h } from '@thunderclap/engine/ui';
 import { machineLine } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';

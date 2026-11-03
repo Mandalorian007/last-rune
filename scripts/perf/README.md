@@ -38,7 +38,7 @@ Each scene line reads `frame | gpu | ts | cpu [passes] | scene WxH tier@scale bu
 
 How the numbers are measured:
 
-- **ts** is GPU time from timestamp queries (`engine/render/gpu-timer.ts`), when the adapter
+- **ts** is GPU time from timestamp queries (`packages/engine/src/render/gpu-timer.ts`), when the adapter
   has `timestamp-query`. The bracket splits it per pass (`scene`, `bloom`, `rays`,
   `composite`, `upscale`, `pre` = compute before the scene). Passes overlap on tile-based
   GPUs, so each pass gets its *marginal* time (end minus the later of its start and the

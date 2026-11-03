@@ -12,7 +12,7 @@
  * ```
  * Alcoves share one material per renderer: draw them consecutively for a single draw call.
  */
-import type { DrawParams, Frame, Material, Renderer } from '@engine/render';
+import type { DrawParams, Frame, Material, Renderer } from '@thunderclap/engine/render';
 import type { Capability } from '../../rules/types';
 import { ALCOVE_MATERIAL_WGSL, ALCOVE_UNIFORM_FLOATS } from '../../shaders/alcove-shaders';
 import { PROP_LIGHT_FLOATS, type PropLightSource } from './lighting';

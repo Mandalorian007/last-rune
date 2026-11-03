@@ -1,6 +1,6 @@
-import type { Renderer } from '@engine/render/renderer';
 import { describe, expect, it } from 'vitest';
 import { createFakeDevice, type FakeBuffer, type FakeDevice } from '../render/fake-gpu';
+import type { Renderer } from '../render/renderer';
 import { ParticleSystem } from './particles';
 
 function makeSystem(capacity = 256): { fake: FakeDevice; ps: ParticleSystem } {

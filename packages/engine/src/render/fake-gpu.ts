@@ -1,7 +1,7 @@
 /**
  * Test-only fake WebGPU device. It records resource creation, queue writes and pass commands,
  * and applies the validation rules the engine has tripped over before (e.g. `writeBuffer`
- * into a buffer without `COPY_DST`). Not exported from `@engine/render`; import it from tests.
+ * into a buffer without `COPY_DST`). Not exported from `@thunderclap/engine/render`; tests import it from `@thunderclap/engine/testing`.
  */
 
 const BUFFER_USAGE = {

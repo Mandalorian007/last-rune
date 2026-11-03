@@ -35,7 +35,7 @@ let exitCode = 0;
 try {
   const page = await browser.newPage();
   page.on('pageerror', (e) => console.error('[page]', e.message));
-  // A blank page served by Vite, so the module graph (and @engine/@game aliases) resolve.
+  // A blank page served by Vite, so the module graph (@game, @thunderclap/engine) resolves.
   await page.goto(`${url}@vite/client`);
   const report = await page.evaluate(
     async ({ only, wav }) => {

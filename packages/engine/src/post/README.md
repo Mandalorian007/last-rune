@@ -4,7 +4,7 @@
 image. Every pass can be toggled, and every parameter can change at runtime.
 
 ```ts
-import { PostStack } from '@engine/post';
+import { PostStack } from '@thunderclap/engine/post';
 
 const post = new PostStack(renderer, {
   godRays: { x: 960, y: -60 },   // light point in logical px (may be off-screen)
@@ -25,7 +25,7 @@ pipelines or bind groups.
 at once, so a mood change needs no covering wash.
 
 ```ts
-import { easeOut } from '@engine/post';
+import { easeOut } from '@thunderclap/engine/post';
 
 post.blendTo({ grade: { exposure: 0.6, gain: [1.1, 0.9, 0.8] }, fog: { density: 0.9 } }, 3);
 post.set({ godRays: { intensity: 0 } }).blendTo({ godRays: { enabled: true, intensity: 0.5 } }, 2, easeOut);

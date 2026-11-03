@@ -1,6 +1,6 @@
-import { Renderer } from '@engine/render';
-import { createFakeDevice, fakeRendererGpu } from '@engine/render/fake-gpu';
 import { describe, expect, it } from 'vitest';
+import { Renderer } from '../render';
+import { createFakeDevice, fakeRendererGpu } from '../render/fake-gpu';
 import { PostStack } from './post-stack';
 import { defaultPostQuality, defaultPostSettings, packPostUniforms } from './settings';
 

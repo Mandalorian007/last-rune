@@ -10,19 +10,19 @@
  * (don't auto-cycle), `&nohud`, `&caption` (caption card with FUSE's portrait), `&calm`
  * (reduce flashes).
  */
-import { GameLoop, type Scene, SceneStack, type Time } from '@engine/core';
-import { flicker, ParticleSystem } from '@engine/fx';
-import type { GpuContext, Surface } from '@engine/platform';
-import { watchVisibility } from '@engine/platform';
-import { PostStack } from '@engine/post';
+import { GameLoop, type Scene, SceneStack, type Time } from '@thunderclap/engine/core';
+import { flicker, ParticleSystem } from '@thunderclap/engine/fx';
+import type { GpuContext, Surface } from '@thunderclap/engine/platform';
+import { watchVisibility } from '@thunderclap/engine/platform';
+import { PostStack } from '@thunderclap/engine/post';
 import {
   type DrawParams,
   type Frame,
   gpuDiagnostics,
   type Material,
   Renderer,
-} from '@engine/render';
-import { createOverlay } from '@engine/ui';
+} from '@thunderclap/engine/render';
+import { createOverlay } from '@thunderclap/engine/ui';
 import { Alcove } from '../../art/props/alcove';
 import { type BoltMode, BoltRibbon, boltSegmentsFromPolyline } from '../../art/props/bolt';
 import { Fuse, type FuseMood } from '../../art/props/fuse';

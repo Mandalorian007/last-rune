@@ -11,7 +11,7 @@
  * - Zoomed, a minimap in the column's foot (left of Strike): the whole board, the source, the
  *   gauges, the placed gems and the viewport. A tap (or a drag) on it looks there.
  */
-import { button, h } from '@engine/ui';
+import { button, h } from '@thunderclap/engine/ui';
 import { GEM_COLOUR } from '../../art/props/palette';
 import type { GemKind } from '../../rules/types';
 import { cpx, P, tpx } from '../../ui/phone-styles';

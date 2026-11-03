@@ -11,7 +11,14 @@
  * not per frame). Text that must be read by assistive tech stays in the DOM (D-009): use this
  * for decorative/hero lettering and mirror it with an accessible DOM label.
  */
-import type { DrawParams, Frame, Material, Renderer, RGBA, Texture } from '@engine/render';
+import type {
+  DrawParams,
+  Frame,
+  Material,
+  Renderer,
+  RGBA,
+  Texture,
+} from '@thunderclap/engine/render';
 import { EMBOSS_WGSL } from '../../shaders/emboss-wgsl';
 import { LIGHT_SET_FLOATS, type LightSet } from './lights';
 import { LINEAR } from './palette';

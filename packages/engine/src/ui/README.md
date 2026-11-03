@@ -6,7 +6,7 @@ widgets and theme tokens. It has no dependencies and no game nouns.
 ## Overlay
 
 ```ts
-import { createOverlay } from '@engine/ui';
+import { createOverlay } from '@thunderclap/engine/ui';
 
 const ui = createOverlay({ parent: stageEl, theme: { colorAccent: '#7fd' } });
 platform.onResize((rect) => ui.setRect(rect)); // letterboxed canvas rect, CSS px relative to parent
@@ -122,7 +122,7 @@ caller; the look comes from theme tokens (override `.tc-link`, `.tc-link-row`, `
 `.tc-link-fallback`, `.tc-link-message`, `.tc-link-field`, `.tc-link-close`).
 
 ```ts
-import { activateLink, externalLink } from '@engine/ui';
+import { activateLink, externalLink } from '@thunderclap/engine/ui';
 
 const link = externalLink({
   url: SHOP_URL, // not https, or blank → returns null: render nothing
@@ -157,7 +157,7 @@ activateLink(focusedElement, 'gamepad');
   through `activateLink`.
 - Nothing opens or copies until the player acts. No network calls.
 
-Platform API (`@engine/platform`), usable without the widget:
+Platform API (`@thunderclap/engine/platform`), usable without the widget:
 
 - `safeExternalUrl(url)`: the trimmed URL if it is plain `https` (no credentials, no spaces), else
   null.

@@ -1,4 +1,4 @@
-import { computeFillWidth } from '@engine/platform';
+import { computeFillWidth } from '@thunderclap/engine/platform';
 import { describe, expect, it } from 'vitest';
 import { solidMask } from '../../art/materials/stone';
 import { PUZZLES } from '../../content/puzzles';

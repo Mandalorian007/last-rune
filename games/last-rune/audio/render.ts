@@ -3,7 +3,7 @@
  * spec offline; the game then saturates, adds the room (loop-aware), sets the final peak,
  * trims the inaudible tail and fades the edges of one-shots so nothing clicks.
  */
-import { normalize, type OfflineContextFactory, renderSound } from '@engine/audio';
+import { normalize, type OfflineContextFactory, renderSound } from '@thunderclap/engine/audio';
 import type { SoundDef } from './bank';
 import {
   applyReverbSteps,

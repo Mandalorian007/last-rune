@@ -8,7 +8,7 @@ export interface GpuContext {
   format: GPUTextureFormat;
   /**
    * The device has `timestamp-query`, so GPU pass times can be measured directly
-   * (`@engine/render` `GpuTimer`). Without it, timing falls back to submit → done.
+   * (`@thunderclap/engine/render` `GpuTimer`). Without it, timing falls back to submit → done.
    */
   timestamps: boolean;
 }

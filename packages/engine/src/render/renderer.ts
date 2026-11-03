@@ -33,7 +33,7 @@ export interface PostInputs {
   dt: number;
 }
 
-/** The final stage: turns the HDR scene into swapchain pixels. See `@engine/post`. */
+/** The final stage: turns the HDR scene into swapchain pixels. See `@thunderclap/engine/post`. */
 export interface PostProcessor {
   resize(width: number, height: number): void;
   encode(encoder: GPUCommandEncoder, inputs: PostInputs, output: GPUTextureView): void;

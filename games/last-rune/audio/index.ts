@@ -11,7 +11,7 @@
  * clicks and gems are ready within a frame or two of the first gesture), then cached.
  * Before that, one-shots are silently dropped and loops start once their buffer is ready.
  */
-import type { AudioEngine, Voice } from '@engine/audio';
+import type { AudioEngine, Voice } from '@thunderclap/engine/audio';
 import type { GemKind } from '../rules/types';
 import { BANK, type RenderGroup, renderOrder } from './bank';
 import { type FuseMode, type FuseState, fuseBlip, newFuseState } from './fuse';

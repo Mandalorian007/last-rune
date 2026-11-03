@@ -14,7 +14,7 @@
  * FUSE, particles. The floor props (`hall-floor.ts`) are pipes, cables, lamps, rails, a cart,
  * crates, barrels, steam vents and puddles.
  */
-import type { DrawParams, Frame, Material, Renderer } from '@engine/render';
+import type { DrawParams, Frame, Material, Renderer } from '@thunderclap/engine/render';
 import { MACHINES } from '../../content/machines';
 import {
   capabilityFromKey,

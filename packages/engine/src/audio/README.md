@@ -5,7 +5,7 @@ WebAudio buses, one-shots and loops, plus a **procedural synth toolkit**: we shi
 ## Quick start
 
 ```ts
-import { AudioEngine, persistMixer, recipes } from '@engine/audio';
+import { AudioEngine, persistMixer, recipes } from '@thunderclap/engine/audio';
 
 const audio = new AudioEngine();
 audio.attach();                                  // unlock on first gesture; pause while tab hidden

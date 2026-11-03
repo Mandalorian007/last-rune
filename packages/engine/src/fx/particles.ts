@@ -1,6 +1,6 @@
-import type { Drawable } from '@engine/render/frame';
-import type { Renderer } from '@engine/render/renderer';
-import { createShaderModule } from '@engine/render/wgsl';
+import type { Drawable } from '../render/frame';
+import type { Renderer } from '../render/renderer';
+import { createShaderModule } from '../render/wgsl';
 import { PARTICLE_COMPUTE_WGSL, PARTICLE_RENDER_WGSL } from './particles-wgsl';
 
 const PARTICLE_BYTES = 80;

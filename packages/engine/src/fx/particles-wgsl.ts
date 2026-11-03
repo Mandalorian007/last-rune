@@ -1,4 +1,4 @@
-import { WGSL_GLOBALS } from '@engine/render/wgsl';
+import { WGSL_GLOBALS } from '../render/wgsl';
 
 const COMMON = /* wgsl */ `
 struct Particle {

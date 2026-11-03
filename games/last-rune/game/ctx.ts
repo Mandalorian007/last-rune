@@ -6,10 +6,10 @@
  * doesn't import scenes, and so rules-puzzles' altar scene can replace the
  * puzzle stub by swapping one factory.
  */
-import { AudioEngine, persistMixer, recipes } from '@engine/audio';
-import { GameLoop, type Scene, SceneStack, type Time } from '@engine/core';
-import { ParticleSystem } from '@engine/fx';
-import { Input } from '@engine/input';
+import { AudioEngine, persistMixer, recipes } from '@thunderclap/engine/audio';
+import { GameLoop, type Scene, SceneStack, type Time } from '@thunderclap/engine/core';
+import { ParticleSystem } from '@thunderclap/engine/fx';
+import { Input } from '@thunderclap/engine/input';
 import {
   deviceTraits,
   type GpuContext,
@@ -17,10 +17,10 @@ import {
   type Surface,
   watchLifecycle,
   watchReducedMotion,
-} from '@engine/platform';
-import { PostStack } from '@engine/post';
-import { type Frame, Renderer } from '@engine/render';
-import { createOverlay, type Overlay, PadNav } from '@engine/ui';
+} from '@thunderclap/engine/platform';
+import { PostStack } from '@thunderclap/engine/post';
+import { type Frame, Renderer } from '@thunderclap/engine/render';
+import { createOverlay, type Overlay, PadNav } from '@thunderclap/engine/ui';
 import { createGemPortraits } from '../art/gem-portraits';
 import { cathedralHallView } from '../art/hall/hall-view';
 import { stormTitleView } from '../art/hall/title-view';

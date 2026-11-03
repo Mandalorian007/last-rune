@@ -14,8 +14,8 @@
  * Machines share one material per renderer (state rides in per-instance params), so draw them
  * consecutively with the same light rig to keep it one draw call.
  */
-import { flicker } from '@engine/fx';
-import type { DrawParams, Frame, Material, Renderer } from '@engine/render';
+import { flicker } from '@thunderclap/engine/fx';
+import type { DrawParams, Frame, Material, Renderer } from '@thunderclap/engine/render';
 import {
   MACHINE_GAUGE_MAX,
   MACHINE_MATERIAL_WGSL,
