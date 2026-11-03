@@ -50,6 +50,7 @@ _Last updated: 2026-11-02 by PM_
 | tidy-2 | ws/tidy-2 | ✅ merged | device loss halts loop, audio and timers (tested); clipboard drops from FUSE's clamp under gravity; both flakes root-caused (loaded-machine solver timeout; pad press shorter than a game tick); synth Worker not clean (OfflineAudioContext isn't in Workers), proposal logged |
 | ending-3 | ws/ending-3 | 🟡 running | D-038: ending returns to a fun community-hangout chat: real channel sidebar with emoji, real emoji reactions, invented friendly members, FUSE not a bot |
 | tidy-3 | ws/tidy-3 | 🟡 running | last minor items: FUSE caption vs docked verdict at 150%, Codex Amplify diamonds under bloom, hall doorway gold not white-gold, ~52 ms audio-load task |
+| lore-1 | ws/lore-1 | 🟡 running | the FUSE-is-the-Builder twist is too subtle (user missed it): FUSE says it plainly once at the end, page 16's signature reads as his sign-off, clues ramp through tiers 2–3; lore unchanged |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
