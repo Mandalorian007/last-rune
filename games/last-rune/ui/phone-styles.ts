@@ -851,14 +851,25 @@ ${A} .lr-altar-verdict .lr-verdict-cause {
   display: block; margin-top: ${cpx(2)}; font-family: var(--tc-font-ui); font-size: ${tpx(12.5)}; line-height: 1.3;
   letter-spacing: 0; color: #ffb3a0;
 }
-/* The teach card's footer: its place in the run, and a button to turn the page. */
+/* The teach card: the rule, then "New here · 1 of 3" and the button that turns the page. Where
+   the column is short (data-compact, altar-scene arrangeColumn) they stand top-right, the
+   counter over the button, and the rule wraps round them. */
+${A} .lr-altar-tip:has(> .lr-info-foot):not([data-compact]) { display: flex; flex-direction: column; }
 ${A} .lr-altar-tip .lr-info-foot {
-  display: flex; align-items: center; justify-content: space-between; gap: ${cpx(8)}; margin-top: ${cpx(4)};
+  order: 1; display: flex; align-items: center; justify-content: space-between; gap: ${cpx(8)};
+  margin-top: ${cpx(3)};
 }
-${A} .lr-altar-tip .lr-info-page { margin: 0; font-size: ${tpx(12)}; }
+${A} .lr-altar-tip[data-compact] .lr-info-foot {
+  float: right; flex-direction: column; align-items: stretch; gap: ${cpx(2)};
+  margin: ${cpx(1)} 0 ${cpx(1)} ${cpx(8)};
+}
+${A} .lr-altar-tip .lr-info-page { margin: 0; font-size: ${tpx(12)}; line-height: 1.15; white-space: nowrap; }
+${A} .lr-altar-tip[data-compact] .lr-info-page { text-align: center; }
+${A} .lr-altar-tip:not([data-compact]) .lr-info-of::before { content: ' ·'; }
+${A} .lr-altar-tip[data-compact] .lr-info-of { display: block; }
 ${A} .lr-altar-tip .lr-info-next {
-  position: relative; flex: none; pointer-events: auto; min-height: ${cpx(36)}; min-width: ${cpx(72)};
-  padding: 0 ${cpx(12)}; font-size: ${tpx(13)}; line-height: 1; border-radius: ${cpx(8)}; border-width: 1px;
+  position: relative; flex: none; pointer-events: auto; min-height: ${cpx(36)}; min-width: 0;
+  padding: 0 ${cpx(10)}; font-size: ${tpx(13)}; line-height: 1; border-radius: ${cpx(8)}; border-width: 1px;
 }
 /* A 44 px finger target around the 36 px button. */
 ${A} .lr-altar-tip .lr-info-next::before {

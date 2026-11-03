@@ -84,10 +84,20 @@ describe('column arbiter: one owner at a time', () => {
   });
 
   it('a waiting voice leaves its room to the next one down', () => {
-    // The tip (no line form) cannot fit, but the shorter FUSE bubble can.
-    const g = arbitrate([v('tip', 'tip', 120), v('fuse', 'fuse', 40)], 100, 8);
+    // The tip (no line form) cannot fit under the teach card, but the shorter bubble can.
+    const g = arbitrate(
+      [v('teach', 'teach', 90), v('tip', 'tip', 120), v('fuse', 'fuse', 40)],
+      140,
+      8,
+    );
     expect(g.get('tip')).toBe('wait');
     expect(g.get('fuse')).toBe('full');
+  });
+
+  it('the top voice owns the column even when it alone overfills it', () => {
+    const g = arbitrate([v('teach', 'teach', 150), v('fuse', 'fuse', 10)], 100, 8);
+    expect(g.get('teach')).toBe('full');
+    expect(g.get('fuse')).toBe('wait');
   });
 
   it('never holds back the verdict, even alone in too small a room', () => {

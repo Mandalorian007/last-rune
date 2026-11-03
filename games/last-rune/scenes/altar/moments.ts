@@ -70,7 +70,8 @@ export type Grant = 'full' | 'line' | 'wait';
 /**
  * Share the column's `room` among `asks`, highest voice first (input order within a voice),
  * with `gap` between neighbours. Each gets its whole height if that fits in what is left, else
- * one line if it has one and that fits, else it waits. The verdict is the moment's answer: it is
+ * one line if it has one and that fits, else it waits. The first to ask is the owner and always
+ * shows whole (it has the room to itself). The verdict is the moment's answer: it is
  * never shrunk or held back, even when it alone overfills the room.
  */
 export function arbitrate(
@@ -85,7 +86,7 @@ export function arbitrate(
   let used = 0;
   for (const { a } of order) {
     const need = (h: number) => used + (used > 0 ? gap : 0) + h;
-    if (a.voice === 'verdict' || need(a.full) <= room) {
+    if (a.voice === 'verdict' || used === 0 || need(a.full) <= room) {
       used = need(a.full);
       out.set(a.id, 'full');
     } else if (a.line !== undefined && need(a.line) <= room) {

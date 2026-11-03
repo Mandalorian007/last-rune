@@ -3324,15 +3324,15 @@ export class AltarScene implements GameScene {
           ariaLabel: label === 'Got it' ? 'Got it: close the card' : 'Next new piece',
         },
       );
-      this.tip.replaceChildren(
-        items[i]!,
-        h(
-          'div',
-          { class: 'lr-info-foot' },
-          h('span', { class: 'lr-info-page' }, n > 1 ? `New here · ${i + 1} of ${n}` : 'New here'),
-          next,
-        ),
+      // "New here" (and "1 of 3") over the button, top-right; the rule wraps round them, so
+      // the card is no taller than its words (on an iPhone SE it fits between tray and FUSE).
+      const page = h(
+        'span',
+        { class: 'lr-info-page' },
+        'New here',
+        n > 1 ? h('span', { class: 'lr-info-of' }, ` ${i + 1} of ${n}`) : null,
       );
+      this.tip.replaceChildren(h('div', { class: 'lr-info-foot' }, page, next), items[i]!);
     } else this.tip.replaceChildren(...items);
     // A card with a button is read and used, not a hover tooltip (the announcer reads the rest).
     this.tip.setAttribute('aria-hidden', String(!paged));
@@ -3451,13 +3451,17 @@ export class AltarScene implements GameScene {
       if (!el || el.hidden) continue;
       const q = el.getBoundingClientRect();
       if (q.width === 0 || q.bottom < lr.top - gap || q.top > floorY) continue;
-      if (q.right + 8 > left && q.left < baseL + 40) left = q.right + 8;
+      // Its words, which may run past the card's own box ("in one strike").
+      let right = q.right;
+      for (const c of el.querySelectorAll('*'))
+        right = Math.max(right, c.getBoundingClientRect().right);
+      if (right + 8 > left && q.left < baseL + 40) left = right + 8;
     }
     const shift = Math.max(0, Math.round((left - baseL) * css));
     if (shift !== this.laneShift) {
       this.laneShift = shift;
       lane.style.setProperty('--lr-lane-l', `${band.colL + shift}px`);
-      lane.style.setProperty('--lr-lane-w', `${band.colR - band.colL - shift}px`);
+      lane.style.setProperty('--lr-lane-w', `${Math.round(band.colR - band.colL - shift)}px`);
     }
     // 2. FUSE's bubble: over his head, its bottom at least 10 px above Strike, and never left
     // of the lane (so it clears the labels too).
@@ -3499,6 +3503,14 @@ export class AltarScene implements GameScene {
       if (el.parentElement === lane) ask(`cap${i}`, el, 'verdict', false);
     });
     const teach = this.tip.dataset.source === 'intro';
+    if (teach && !this.tip.hidden) {
+      // The teach card's button sits under the rule when there is room; where there is not (an
+      // iPhone SE under a two-row tray) it stands top-right and the rule wraps round it.
+      this.tip.removeAttribute('data-compact');
+      const below = this.verdict.hidden ? 0 : this.verdict.getBoundingClientRect().height + gap;
+      if (this.tip.getBoundingClientRect().height + below > room)
+        this.tip.setAttribute('data-compact', '');
+    }
     if (!this.tip.hidden) ask('tip', this.tip, teach ? 'teach' : 'tip', !teach);
     ask('hint', this.hint, 'hint', false);
     const cap = ui.root.querySelector<HTMLElement>('.tc-caption');
