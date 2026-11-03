@@ -67,8 +67,8 @@ import {
   type Fizzle,
   failText,
   fizzles,
-  gemsUsed,
   nextStep,
+  rootFizzle,
   type StrikeTimeline,
   strikeStory,
 } from './strike';
@@ -2020,7 +2020,7 @@ export class AltarScene implements GameScene {
       const line = reactionLine(
         o,
         Math.min(3, this.ctx.tier()) as 1 | 2 | 3,
-        gemsUsed(res),
+        rootFizzle(o, this.fizzleList),
         this.attempts - 1,
       );
       if (line) void this.ctx.fuse.say(line, { interrupt: true });

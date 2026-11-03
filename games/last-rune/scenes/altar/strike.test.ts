@@ -3,7 +3,7 @@ import { PUZZLES, puzzleFor } from '../../content/puzzles';
 import { type PuzzleDef, simulate } from '../../rules';
 import { altarDims } from '../../rules/model';
 import { anchorOf, cellAt, computeLayout, DESIGN_H, DESIGN_W } from './layout';
-import { buildTimeline, failText, fizzles, nextStep } from './strike';
+import { buildTimeline, failText, fizzles, nextStep, rootFizzle } from './strike';
 
 function bench(over: Partial<PuzzleDef> = {}): PuzzleDef {
   return {
@@ -75,6 +75,17 @@ describe('fizzle causes', () => {
     // Gate rot 1 outputs east, inputs N and S; fed from W it refuses.
     const gate = [{ gem: 'gate' as const, cell: { x: 0, y: 1 }, rot: 1 as const }];
     expect(fizzles(q, gate, simulate(q, gate))[0]!.cause).toBe('facing');
+    // FUSE's quip hears the same root, with the gem it happened on.
+    expect(rootFizzle('dead', fizzles(q, bend, simulate(q, bend)))).toEqual({
+      cause: 'facing',
+      gem: 'bend',
+    });
+    expect(rootFizzle('dead', fizzles(q, gate, simulate(q, gate)))).toEqual({
+      cause: 'facing',
+      gem: 'gate',
+    });
+    expect(rootFizzle('dead', fizzles(p, [], simulate(p, [])))).toEqual({ cause: 'empty' });
+    expect(rootFizzle('over', fizzles(p, [], simulate(p, [])))).toBeUndefined();
     // Gate rot 0 outputs north, inputs E and W: one input only.
     const lone = [{ gem: 'gate' as const, cell: { x: 0, y: 1 }, rot: 0 as const }];
     expect(fizzles(q, lone, simulate(q, lone))[0]!.cause).toBe('gate-alone');

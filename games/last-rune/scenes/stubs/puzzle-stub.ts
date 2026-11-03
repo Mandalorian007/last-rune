@@ -78,7 +78,7 @@ export class PuzzleStubScene implements GameScene {
     this.ctx.sfx('ui.deny');
     this.ctx.flow.recordAttempt(this.machine, 'over');
     const tier = storyTier(progressOf(this.ctx.save.get()));
-    const line = reactionLine('over', tier, [], this.tripped++);
+    const line = reactionLine('over', tier, undefined, this.tripped++);
     if (line) void this.ctx.fuse.say(line, { interrupt: true });
   }
 

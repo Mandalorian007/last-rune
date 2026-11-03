@@ -6,6 +6,8 @@
  * seconds between them (the gauges read out, capacitors glow). The verdict lands
  * `verdictDelay` after the last bolt arrives.
  */
+
+import type { FizzleCause, RootFizzle } from '../../content/lines';
 import type { MachineResult, Placement, PuzzleDef, SimResult, TraceSegment } from '../../rules';
 import { altarDims } from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
@@ -95,20 +97,15 @@ export function buildTimeline(result: SimResult, opts: TimelineOptions = {}): St
   return { segments, pulses, arrivals, verdictAt: last.end + verdictDelay };
 }
 
-/** Why a bolt fizzled (or grounded). Drives the on-board hint. */
-export type FizzleCause =
-  | 'empty' // no gem in the socket
-  | 'blocked' // carved stone
-  | 'ground' // ran off the altar where no machine stands
-  | 'facing' // a Bend/Gate/Split that does not accept that side
-  | 'odd-split' // odd charge into a Split
-  | 'gate-alone' // a Gate input with no partner
-  | 'spent'; // the gem was already used this strike (or two bolts met in it)
+/** Why a bolt fizzled (or grounded). Drives the on-board hint (defined with FUSE's quips). */
+export type { FizzleCause };
 
 export interface Fizzle {
   cell: Cell;
   pulse: number;
   cause: FizzleCause;
+  /** The gem in that socket, if any. */
+  gem?: GemKind;
   /** Seconds (when the timeline is given), for staging the marker. */
   t: number;
 }
@@ -160,10 +157,12 @@ export function fizzles(
     const c = s.to;
     const t = timeline?.segments[i]?.t1 ?? 0;
     let cause: FizzleCause;
+    let gem: GemKind | undefined;
     if (s.end === 'ground' || c.x < 0 || c.y < 0 || c.x >= w || c.y >= h) cause = 'ground';
     else if (p.blocked.some((b) => b.x === c.x && b.y === c.y)) cause = 'blocked';
     else {
       const g = gemOn(p, placements, c);
+      gem = g?.gem;
       const side = entrySide(s.from, c);
       if (!g) cause = 'empty';
       else if (g.gem === 'bend') {
@@ -190,17 +189,10 @@ export function fizzles(
         else cause = s.charge % 2 !== 0 ? 'odd-split' : 'spent';
       } else cause = 'spent';
     }
-    out.push({ cell: { x: c.x, y: c.y }, pulse: s.pulse, cause, t });
+    out.push({ cell: { x: c.x, y: c.y }, pulse: s.pulse, cause, ...(gem ? { gem } : {}), t });
   });
   out.sort((a, b) => a.t - b.t);
   return out;
-}
-
-/** Gem kinds the bolt actually passed through (for FUSE's gem-specific reactions). */
-export function gemsUsed(result: SimResult): GemKind[] {
-  const set = new Set<GemKind>();
-  for (const s of result.trace) if (s.tick > 0) set.add(s.colour);
-  return [...set];
 }
 
 /**
@@ -248,6 +240,26 @@ const CAUSE_HINT: Record<FizzleCause, string> = {
   spent: 'Try: give each bolt its own gems. A gem carries one bolt per strike.',
 };
 
+/** The root cause among an attempt's fizzles (see `CAUSE_ORDER`), if any. */
+export function rootCause(causes: readonly FizzleCause[]): FizzleCause | undefined {
+  return CAUSE_ORDER.find((c) => causes.includes(c));
+}
+
+/**
+ * The root fizzle of a failed attempt, for FUSE's quip: the same cause `nextStep` names
+ * (undefined when too much charge is the story), with the gem where it first happened.
+ */
+export function rootFizzle(
+  outcome: SimResult['outcome'],
+  list: readonly Fizzle[],
+): RootFizzle | undefined {
+  if (outcome === 'exact' || outcome === 'over') return undefined;
+  const cause = rootCause(list.map((f) => f.cause));
+  if (!cause) return undefined;
+  const f = list.find((x) => x.cause === cause)!;
+  return f.gem ? { cause, gem: f.gem } : { cause };
+}
+
 /**
  * One short, visible next step under a failed verdict, so a first-timer is never left with
  * only "needs 4, got 0". Fizzles name a concrete fix; otherwise the outcome does. Too much
@@ -256,7 +268,7 @@ const CAUSE_HINT: Record<FizzleCause, string> = {
 export function nextStep(outcome: SimResult['outcome'], causes: readonly FizzleCause[]): string {
   if (outcome === 'exact') return '';
   if (outcome === 'over') return 'Try: less charge. Skip an Amplify, or halve it with a Split.';
-  const first = CAUSE_ORDER.find((c) => causes.includes(c));
+  const first = rootCause(causes);
   if (first) return CAUSE_HINT[first];
   if (outcome === 'under') return 'Try: more charge. An Amplify doubles it.';
   return 'Try: lay gems from the storm to the machine.';

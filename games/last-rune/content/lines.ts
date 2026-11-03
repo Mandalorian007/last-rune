@@ -21,6 +21,26 @@ import type { GemKind, MachineId, Tier } from '../rules/types';
 export type LineSource = 'pitch' | 'new';
 export type Outcome = 'dead' | 'under' | 'over';
 
+/**
+ * Why a bolt fizzled (or grounded). The altar's on-board hint and its "Try:" line name the
+ * root one; FUSE's failure quip follows the same root (see `reactionLine`).
+ */
+export type FizzleCause =
+  | 'empty' // no gem in the socket
+  | 'blocked' // carved stone
+  | 'ground' // ran off the altar where no machine stands
+  | 'facing' // a Bend/Gate/Split that does not accept that side
+  | 'odd-split' // odd charge into a Split
+  | 'gate-alone' // a Gate input with no partner
+  | 'spent'; // the gem was already used this strike (or two bolts met in it)
+
+/** The root fizzle of a failed attempt, as FUSE hears about it. */
+export interface RootFizzle {
+  cause: FizzleCause;
+  /** The gem in the socket where it fizzled, if any. */
+  gem?: GemKind;
+}
+
 /** One-off story beats outside the arrive/solve pattern. */
 export type BeatId =
   | 'title-knock'
@@ -55,8 +75,13 @@ export type FuseLine =
   | (LineBase & {
       readonly kind: 'reaction';
       readonly outcome: Outcome;
-      /** Only use when the attempt contains this gem. */
-      readonly needsGem?: GemKind;
+      /**
+       * Only said when this is the attempt's root fizzle (any outcome but 'over'). Such a line
+       * is about the cause, so it is never picked for an attempt without it.
+       */
+      readonly cause?: FizzleCause;
+      /** With `cause`: only when the root fizzle sits on this gem. */
+      readonly atGem?: GemKind;
     })
   | (LineBase & { readonly kind: 'hall'; readonly beat: 'first-entry' | 'ambient' | 'echo' })
   /** Idle chatter on the title screen, said in random order while nobody presses Play. */
@@ -284,7 +309,7 @@ const DEFS: Def[] = [
     'furnace',
     1,
     'The furnace. Went cold the week Management left. Everything did. Unrelated.',
-    'Amber rune doubles the charge. Stack two and the second one just feels important. Like a deputy foreman.',
+    'Amber gem doubles the charge. Stack two and the second one just feels important. Like a deputy foreman.',
   ),
   ...machineLines(
     'splitter-mill',
@@ -295,7 +320,7 @@ const DEFS: Def[] = [
   ...machineLines(
     'relay-tower',
     1,
-    'The relay. Needs two full signals to pass one. Two signatures. Regulation 9. Nobody remembers who signed.',
+    'The relay. Needs two signals at once to pass one. Two signatures. Regulation 9. Nobody remembers who signed.',
     "Emerald. Good. Regulation 8: don't ask where Management went. Regulation 8 is new. Regulation 8 is for you.",
   ),
   ...machineLines(
@@ -407,7 +432,7 @@ const DEFS: Def[] = [
     when: 'gem:capacitor',
     tier: 2,
     source: N,
-    text: 'The roof. Wants the ice rune first. Also the lift. Or the ladder. This unit does not do ladders.',
+    text: 'The roof. Wants the ice gem first. Also the lift. Or the ladder. This unit does not do ladders.',
   },
   {
     kind: 'locked',
@@ -423,7 +448,7 @@ const DEFS: Def[] = [
     'capacitor-bay',
     3,
     'Capacitor bay. Stores a bolt for later. The committee said that was cheating. It is. Do it anyway.',
-    "Ice rune. The last one I… the last one that was cut. Didn't get to use it. Someone didn't. Monitoring self.",
+    "Ice gem. The last one I… the last one that was cut. Didn't get to use it. Someone didn't. Monitoring self.",
   ),
   ...machineLines(
     'lift-shaft',
@@ -568,10 +593,68 @@ const DEFS: Def[] = [
   {
     kind: 'reaction',
     outcome: 'dead',
-    needsGem: 'bend',
+    cause: 'facing',
+    atGem: 'bend',
     tier: 1,
     source: P,
     text: 'Incident report #4,211: visitor set a Bend facing a wall. Outcome: wall remains unpowered. Visitor remains hopeful.',
+  },
+  // Tier 1 quips about the root fizzle, said first when it is the cause the "Try:" line names.
+  {
+    kind: 'reaction',
+    outcome: 'dead',
+    cause: 'facing',
+    tier: 1,
+    source: N,
+    text: 'Bolt knocked on the back of a gem. Nobody answered. The gem has other priorities.',
+  },
+  {
+    kind: 'reaction',
+    outcome: 'dead',
+    cause: 'empty',
+    tier: 1,
+    source: N,
+    text: 'Empty socket. The bolt stopped to ask directions. Nobody was there. Very on-brand for this facility.',
+  },
+  {
+    kind: 'reaction',
+    outcome: 'dead',
+    cause: 'ground',
+    tier: 1,
+    source: N,
+    text: 'Bolt left the altar and went into the floor. The floor is fully charged now. Nobody asked the floor.',
+  },
+  {
+    kind: 'reaction',
+    outcome: 'dead',
+    cause: 'blocked',
+    tier: 1,
+    source: N,
+    text: 'Bolt met carved stone. Stone won. Stone usually wins. Long career.',
+  },
+  {
+    kind: 'reaction',
+    outcome: 'dead',
+    cause: 'odd-split',
+    tier: 1,
+    source: N,
+    text: "Odd charge into a Split. Can't split a spark. Someone tried once. The ceiling remembers.",
+  },
+  {
+    kind: 'reaction',
+    outcome: 'dead',
+    cause: 'gate-alone',
+    tier: 1,
+    source: N,
+    text: 'One signature on a two-signature form. The Gate waited. Gates are patient. Not that patient.',
+  },
+  {
+    kind: 'reaction',
+    outcome: 'dead',
+    cause: 'spent',
+    tier: 1,
+    source: N,
+    text: 'Two bolts, one gem. First come, first served. The second bolt has filed a complaint.',
   },
   {
     kind: 'reaction',
@@ -764,12 +847,14 @@ function idFor(d: Def): string {
       return `title.${DEFS.filter((o, i) => o.kind === 'title' && i < DEFS.indexOf(d)).length + 1}`;
     case 'hall':
     case 'reaction': {
-      const tag = d.kind === 'hall' ? d.beat : d.outcome;
+      const tagOf = (o: Def): string =>
+        o.kind === 'hall' ? o.beat : o.kind === 'reaction' ? (o.cause ?? o.outcome) : '';
+      const tag = tagOf(d);
       const n = DEFS.filter(
         (o) =>
           o.kind === d.kind &&
           o.tier === d.tier &&
-          (o.kind === 'hall' ? o.beat : o.kind === 'reaction' ? o.outcome : '') === tag &&
+          tagOf(o) === tag &&
           DEFS.indexOf(o) < DEFS.indexOf(d),
       ).length;
       return `${d.kind}.${tag}.t${d.tier}.${n + 1}`;
@@ -818,27 +903,39 @@ export function socketLine(capability: CapabilityKey): FuseLine {
 }
 
 /**
- * Reaction lines for a failed attempt in the given story tier (falls back to
- * lower tiers). `gemsUsed` filters lines that only make sense with a gem.
- * Pick deterministically with `pick` (e.g. the attempt count).
+ * FUSE's quip for a failed attempt in the given story tier. Lines about the attempt's root
+ * fizzle (`root`: the same cause the verdict's "Try:" line names) come first, from this tier
+ * only so the voice fits the tier. Then come the outcome's generic lines (falling back to lower
+ * tiers). A cause line is never said without its cause, so an empty socket never gets "set a
+ * Bend facing a wall". Pick deterministically with `pick` (the attempt count): the first
+ * failure gets the most specific line.
  */
 export function reactionLine(
   outcome: Outcome,
   tier: Tier,
-  gemsUsed: readonly GemKind[],
+  root?: RootFizzle,
   pick = 0,
 ): FuseLine | undefined {
-  for (let t = Math.min(tier, 3); t >= 1; t--) {
-    const pool = LINES.filter(
-      (l) =>
-        l.kind === 'reaction' &&
-        l.outcome === outcome &&
-        l.tier === t &&
-        (!l.needsGem || gemsUsed.includes(l.needsGem)),
+  const t0 = Math.min(tier, 3);
+  const atGem = (l: FuseLine) => (l.kind === 'reaction' && l.atGem ? 1 : 0);
+  const specific =
+    root && outcome !== 'over'
+      ? LINES.filter(
+          (l) =>
+            l.kind === 'reaction' &&
+            l.tier === t0 &&
+            l.cause === root.cause &&
+            (!l.atGem || l.atGem === root.gem),
+        ).sort((a, b) => atGem(b) - atGem(a))
+      : [];
+  for (let t = t0; t >= 1; t--) {
+    const generic = LINES.filter(
+      (l) => l.kind === 'reaction' && !l.cause && l.outcome === outcome && l.tier === t,
     );
+    const pool = [...specific, ...generic];
     if (pool.length > 0) return pool[Math.abs(pick) % pool.length];
   }
-  return undefined;
+  return specific[0];
 }
 
 /** Hall lines for a beat that belong to a tier. */
