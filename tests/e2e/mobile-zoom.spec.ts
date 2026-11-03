@@ -499,7 +499,10 @@ for (const vp of PHONES) {
       await expect(map).toBeVisible();
       const mb = (await map.boundingBox())!;
       const sb = (await page.locator('[data-action="strike"]').boundingBox())!;
-      if (mb.x + mb.width > sb.x - 4) problems.push('minimap runs into Strike');
+      // Beside Strike or on top of it, never touching it.
+      const apart =
+        mb.x + mb.width <= sb.x - 4 || mb.y + mb.height <= sb.y - 4 || mb.x >= sb.x + sb.width + 4;
+      if (!apart) problems.push('minimap runs into Strike');
       if (mb.y + mb.height > ob.y + ob.height + 1) problems.push('minimap off the screen');
       for (const [fx, fy] of [
         [0.97, 0.97],

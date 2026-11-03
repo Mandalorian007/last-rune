@@ -322,14 +322,23 @@ export class ZoomUi {
     const right = s.x0 - 10 * css;
     const left = Math.max(band.colL + band.edge, band.fuseX + 0.7 * band.fuseScale + 8 * css);
     const bottom = Math.min(s.y1, band.visB - band.edge);
-    let h = MAP_MAX_CSS * css;
-    let w = h * aspect;
-    if (w > right - left) {
-      w = right - left;
-      h = w / aspect;
-    }
-    if (Math.min(w, h) < MAP_MIN_CSS * css * Math.min(1, aspect)) return null;
-    return { x0: right - w, y0: bottom - h, x1: right, y1: bottom };
+    const sized = (room: number, max = MAP_MAX_CSS): { w: number; h: number } | null => {
+      let h = max * css;
+      let w = h * aspect;
+      if (w > room) {
+        w = room;
+        h = w / aspect;
+      }
+      return Math.min(w, h) < MAP_MIN_CSS * css * Math.min(1, aspect) ? null : { w, h };
+    };
+    const beside = sized(right - left);
+    if (beside) return { x0: right - beside.w, y0: bottom - beside.h, x1: right, y1: bottom };
+    // A wide Strike ("Strike (2 left)") leaves no room beside it: stand on top of it instead,
+    // right-aligned with it, still clear of FUSE, at its smallest so the column's cards keep room.
+    const above = sized(s.x1 - left, MAP_MIN_CSS);
+    if (!above) return null;
+    const top = s.y0 - 8 * css;
+    return { x0: s.x1 - above.w, y0: top - above.h, x1: s.x1, y1: top };
   }
 
   private placeMap(L: AltarLayout, c: Cam): void {
