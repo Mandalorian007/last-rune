@@ -587,6 +587,35 @@ ${P}:has(.lr-solve[data-phone]) .tc-caption {
 }
 /* mobile-3-board end */
 
+/* mobile-4-board ─ Altar polish (D-040 gate review 1) ────────────────────────────────────
+   Tray: bigger gems (layout.ts), counts 13 px; a used-up type is dimmed, never struck out.
+   The ↻ badge on a held gem is small and sits on its corner, under the title. The hint stays
+   inside the column (altar-scene drops its ↻ clause if it would not fit). Gives/Needs: the
+   same two-line card everywhere: "Gives N" / "×K strikes", "Needs N" / "in one strike". */
+${A} .lr-altar-count { font-size: ${tpx(13)}; line-height: 1.2; }
+${A} .lr-altar-count[data-empty] { opacity: 0.4; color: inherit; text-decoration: none; border-color: rgba(232,192,106,0.45); }
+${A} .lr-altar-slot[data-empty] { display: none; }
+${A} .lr-altar-turnmark {
+  width: ${cpx(26)}; height: ${cpx(26)}; font-size: ${tpx(17)}; border-width: 1px; transform: translate(-50%, -50%);
+  box-shadow: 0 ${cpx(1)} ${cpx(4)} rgba(0,0,0,0.7);
+}
+${A} .lr-altar-hint {
+  max-width: var(--lr-col-w) !important; overflow: hidden; font-size: ${tpx(11)}; padding: ${cpx(2)} ${cpx(4)};
+}
+${A} .lr-altar-need { padding: ${cpx(1)} ${cpx(4)}; }
+${A} .lr-altar-need .lr-need-row { white-space: nowrap; }
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"]) {
+  flex-direction: column; flex-wrap: nowrap; align-items: center; gap: 0; max-width: none;
+}
+${A} .lr-altar-need :is(.lr-need-note, .lr-storm-row) { display: block; white-space: nowrap; line-height: 1.05; margin-top: 0; font-size: ${tpx(11)}; }
+${A} .lr-altar-need .lr-need-row { line-height: 1.05; }
+/* After a multi-strike, a north/south card stays two lines: each strike's reading stands in
+   for "got" (the last strike's), so the card fits the room the layout gave it. */
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):has(.lr-need-strikes) .lr-need-got { display: none; }
+${A} .lr-altar-need .lr-need-strikes { line-height: 1.05; margin-top: ${cpx(1)}; }
+${A} .lr-altar-need .lr-need-strikes span { padding: 0 ${cpx(3)}; border-radius: ${cpx(4)}; }
+/* mobile-4-board end */
+
 /* ── Title ──────────────────────────────────────────────────────────────── */
 ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cpx(2)} ${cpx(8)}; }
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }

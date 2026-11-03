@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { LINES, wordCount } from '../../games/last-rune/content/lines';
+import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { MACHINE_IDS } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, waitFrames } from './helpers';
@@ -18,10 +19,19 @@ import { DEV_URL, waitFrames } from './helpers';
 //  6. Gives/Needs cards stand ≥8 px clear of the board and of each other; the Capacitor
 //     read-out, the verdict, the hint and FUSE's bubble sit over neither the board nor a card;
 //     the hint is one line.
+// mobile-4-board (D-040 gate review 1), on four phones:
+//  7. Every gauge (orb, cabinet) and Gives/Needs card stands ≥4 px inside the play area (the
+//     safe-area insets and the side bars).
+//  8. A held gem and its ↻ badge stay on screen and off the altar title; the gem chip never
+//     covers the tray or its counts; the hint is never cut and never runs under Strike.
+//  9. Blocked cells are not sockets on phones: no mark is drawn on them (socket-looks.test.ts
+//     covers the rule; this checks the live marks).
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0 },
   { name: 'iphone', width: 844, height: 340, inset: 47 },
+  { name: 'promax', width: 932, height: 380, inset: 59 },
+  { name: 'android', width: 915, height: 360, inset: 0 },
 ] as const;
 
 /**
@@ -36,10 +46,14 @@ const HEIGHT_BOUND = 0.75;
 const PITCH_MIN: Record<(typeof PHONES)[number]['name'], [number, number, number]> = {
   iphone: [44, 38, 30],
   se: [39.6, 34.2, 27],
+  promax: [44, 38, 30],
+  android: [44, 38, 30],
 };
 const pitchClass = (cols: number) => (cols <= 6 ? 0 : cols <= 8 ? 1 : 2);
 /** A Gives/Needs card's clearance from the board, CSS px. */
 const LABEL_CLEAR = 8;
+/** Gauges and cards stand this far inside the play area, CSS px (mobile-4-board). */
+const EDGE_IN = 4;
 
 // biome-ignore lint/suspicious/noExplicitAny: dev handle
 type G = any;
@@ -92,8 +106,12 @@ async function measure(page: Page) {
       });
     }
     const labels: Box[] = [];
+    const labelText: string[] = [];
     for (const el of document.querySelectorAll('.lr-altar-need'))
-      if (shown(el)) labels.push(box(el.getBoundingClientRect()));
+      if (shown(el)) {
+        labels.push(box(el.getBoundingClientRect()));
+        labelText.push(el.textContent?.trim() ?? '');
+      }
     for (const b of labels) grow(b);
     const caps: Box[] = [];
     for (const el of document.querySelectorAll('.lr-altar-cap'))
@@ -169,7 +187,79 @@ async function measure(page: Page) {
         clipped.push(`${name} clipped`);
     }
     const usable = box(app);
+    // The play area: the canvas between the side bars, inside the safe-area insets.
+    const band = L.phone!;
+    const play: Box = {
+      l: Math.max(usable.l, X(band.padL)),
+      r: Math.min(usable.r, X(1920 - band.padL)),
+      t: Math.max(usable.t, ov.top),
+      b: Math.min(usable.b, ov.bottom),
+    };
+    // Gauges as drawn: the storm's orb (with its halo), a machine's cabinet.
+    const gauges: Box[] = [];
+    {
+      const s = L.storm;
+      const r = 0.29 * s.size;
+      const cy = s.y - 0.048 * s.size;
+      gauges.push({ l: X(s.x - r), r: X(s.x + r), t: Y(cy - r), b: Y(cy + r) });
+    }
+    for (const m of L.machines)
+      gauges.push({
+        l: X(m.x - 0.46 * m.size),
+        r: X(m.x + 0.46 * m.size),
+        t: Y(m.y - 0.46 * m.size),
+        b: Y(m.y + 0.35 * m.size),
+      });
+    const one = (sel: string) => {
+      const el = document.querySelector<HTMLElement>(sel);
+      return el && shown(el) ? box(el.getBoundingClientRect()) : null;
+    };
+    // The gem in hand as drawn (lifted 16 px and 7% bigger; gems.ts).
+    const view = (window as unknown as { __altarView: { held: G } }).__altarView;
+    const hd = view?.held;
+    let held: Box | null = null;
+    if (hd) {
+      const size = (hd.size ?? L.gemSize * 1.05) * 1.07;
+      const cy = hd.y - 16 * (hd.snapped ? 0.6 : 1);
+      held = {
+        l: X(hd.x - size / 2),
+        r: X(hd.x + size / 2),
+        t: Y(cy - size / 2),
+        b: Y(cy + size / 2),
+      };
+    }
+    const tray: Box[] = L.tray.map((t) => ({
+      l: X(t.x - t.size / 2),
+      r: X(t.x + t.size / 2),
+      t: Y(t.y - t.size / 2),
+      b: Y(t.y + t.size / 2),
+    }));
+    for (const el of document.querySelectorAll('.lr-altar-count'))
+      if (shown(el)) tray.push(box(el.getBoundingClientRect()));
+    const hintEl = document.querySelector<HTMLElement>('.lr-altar-hint');
+    const hint =
+      hintEl && shown(hintEl) && hintEl.textContent?.trim()
+        ? {
+            box: box(hintEl.getBoundingClientRect()),
+            cut: hintEl.scrollWidth > hintEl.clientWidth + 1,
+            text: hintEl.textContent.trim(),
+          }
+        : null;
+    // Marks drawn on blocked cells (phones draw none: the slab is solid there).
+    const marks = (view as unknown as { marks: { col: number; row: number; state: string }[] })
+      .marks;
     return {
+      play,
+      labelText,
+      gauges,
+      held,
+      title: one('.lr-altar-title h2'),
+      badge: one('.lr-altar-turnmark'),
+      tip: one('.lr-altar-tip'),
+      tray,
+      hint,
+      strike: one('[data-action="strike"]'),
+      marks: marks.map((k) => ({ x: k.col, y: k.row, state: k.state })),
       slab,
       board,
       usable,
@@ -224,6 +314,35 @@ function cardProblems(m: M, label: string): string[] {
   for (const c of m.chrome) if (hit(c.box, m.slab)) out.push(`${label}: ${c.name} over the board`);
   if (m.scrolls) out.push(`${label}: page scrolls`);
   for (const c of m.clipped) out.push(`${label}: text cut off: ${c}`);
+  // mobile-4-board.
+  const inside = (b: Box, d: number) =>
+    b.l >= m.play.l + d - 0.5 &&
+    b.r <= m.play.r - d + 0.5 &&
+    b.t >= m.play.t + d - 0.5 &&
+    b.b <= m.play.b - d + 0.5;
+  m.gauges.forEach((g, i) => {
+    if (!inside(g, EDGE_IN))
+      out.push(
+        `${label}: gauge ${i} within ${EDGE_IN}px of the edge (${[g.l - m.play.l, g.t - m.play.t, m.play.r - g.r, m.play.b - g.b].map((v) => v.toFixed(1)).join(' ')})`,
+      );
+  });
+  m.labels.forEach((b, i) => {
+    if (!inside(b, EDGE_IN))
+      out.push(
+        `${label}: Gives/Needs card "${m.labelText[i]}" within ${EDGE_IN}px of the edge (${[b.l - m.play.l, b.t - m.play.t, m.play.r - b.r, m.play.b - b.b].map((v) => v.toFixed(1)).join(' ')})`,
+      );
+  });
+  const onScreen = (b: Box) =>
+    b.l >= m.usable.l && b.r <= m.usable.r && b.t >= m.usable.t && b.b <= m.usable.b;
+  if (m.held && m.title && hit(m.held, m.title)) out.push(`${label}: held gem over the title`);
+  if (m.held && !onScreen(m.held)) out.push(`${label}: held gem off screen`);
+  if (m.badge && m.title && hit(m.badge, m.title)) out.push(`${label}: ↻ badge over the title`);
+  if (m.badge && !onScreen(m.badge)) out.push(`${label}: ↻ badge off screen`);
+  if (m.tip && m.tray.some((t) => hit(m.tip!, t))) out.push(`${label}: gem chip over the tray`);
+  if (m.hint) {
+    if (m.hint.cut) out.push(`${label}: hint cut off "${m.hint.text}"`);
+    if (m.strike && hit(m.hint.box, m.strike)) out.push(`${label}: hint under Strike`);
+  }
   return out;
 }
 
@@ -288,6 +407,10 @@ for (const vp of PHONES) {
         if (m.pitch < pMin - 0.05)
           problems.push(`${id}: ${m.dims} pitch ${m.pitch.toFixed(1)}px < ${pMin}px`);
         problems.push(...cardProblems(m, `${id} open`));
+        const blocked = puzzleFor(id).blocked;
+        for (const k of m.marks)
+          if (blocked.some((b) => b.x === k.x && b.y === k.y))
+            problems.push(`${id}: ${k.state} mark on blocked cell ${k.x},${k.y}`);
         let widest = 0;
         const note = (x: M) => {
           for (const c of x.cards) widest = Math.max(widest, (c.box.r - c.box.l) / x.screenW);
@@ -321,6 +444,36 @@ for (const vp of PHONES) {
           await waitFrames(page, 4);
         }
 
+        // A turnable gem set down: the ↻ badge on it, and the hint with (or without) its ↻.
+        const turner = L.tray.find((t) => ['bend', 'gate', 'split'].includes(t.gem));
+        if (turner) {
+          const pz = puzzleFor(id);
+          const taken = (x: number, y: number) =>
+            [...pz.blocked, ...pz.fixed.map((f) => f.cell)].some((c) => c.x === x && c.y === y);
+          let placed = false;
+          for (let y = 0; y < L.rows && !placed; y++)
+            for (let x = 0; x < L.cols && !placed; x++) {
+              if (taken(x, y)) continue;
+              await page.touchscreen.tap(ob.x + turner.x * k, ob.y + turner.y * k);
+              await waitFrames(page, 3);
+              const cx = L.left + L.margin + L.pitch * (x + 0.5);
+              const cy = L.top + L.margin + L.pitch * (y + 0.5);
+              await page.touchscreen.tap(ob.x + cx * k, ob.y + cy * k);
+              await waitFrames(page, 4);
+              placed = await page.evaluate(() => !(window as G).__altarView.held);
+              if (!placed) {
+                await page.touchscreen.tap(ob.x + turner.x * k, ob.y + turner.y * k);
+                await waitFrames(page, 3);
+              }
+            }
+          await waitFrames(page, 6);
+          const mp = await measure(page);
+          problems.push(...cardProblems(mp, `${id} placed ${turner.gem}`));
+          if (!mp.badge) problems.push(`${id}: no ↻ badge on the placed ${turner.gem}`);
+          await page.locator('[data-action="clear"]').tap();
+          await waitFrames(page, 4);
+        }
+
         // The verdict: Strike on the bare board.
         await page.locator('[data-action="strike"]').tap();
         await waitFrames(page, 4);
@@ -333,8 +486,12 @@ for (const vp of PHONES) {
         problems.push(...cardProblems(mv, `${id} verdict`));
         note(mv);
 
+        const sideW = Math.max(
+          0,
+          ...m.labels.map((b, i) => (m.labelText[i]!.startsWith('Gives') ? b.r - b.l : 0)),
+        );
         table.push(
-          `${id.padEnd(14)} ${m.dims.padEnd(5)} pitch ${m.pitch.toFixed(1)}px · board ${(m.hShare * 100).toFixed(0)}%H ${(m.wShare * 100).toFixed(0)}%W · chrome ${(m.chromeShare * 100).toFixed(1)}% · widest card ${(widest * 100).toFixed(0)}% of screen`,
+          `${id.padEnd(14)} ${m.dims.padEnd(5)} pitch ${m.pitch.toFixed(1)}px · Gives card ${sideW.toFixed(0)}px · board ${(m.hShare * 100).toFixed(0)}%H ${(m.wShare * 100).toFixed(0)}%W · chrome ${(m.chromeShare * 100).toFixed(1)}% · widest card ${(widest * 100).toFixed(0)}% of screen`,
         );
         await page.evaluate(() => (window as G).__game.flow.closePuzzle());
         await waitFrames(page, 4);

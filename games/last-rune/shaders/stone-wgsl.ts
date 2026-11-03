@@ -5,8 +5,11 @@
  */
 import { LIGHTS_WGSL } from './lights-wgsl';
 
-/** Generator uniforms (`StoneGen`), 12 floats. */
-export const STONE_GEN_FLOATS = 12;
+/** Generator uniforms (`StoneGen`), 16 floats. */
+export const STONE_GEN_FLOATS = 16;
+
+/** Cells per float of the altar's solid-cell mask (an f32 holds 24 integer bits exactly). */
+export const SOLID_BITS = 24;
 
 /** Generator modes. */
 export const STONE_MODE = { wall: 0, floor: 1, altar: 2 } as const;
@@ -19,6 +22,7 @@ struct StoneGen {
   size: vec4f,    // width px, height px, seed, mode
   altar: vec4f,   // cols, rows, pitch px, margin px
   altar2: vec4f,  // front face height px, socket radius px, top face height px, -
+  solid: vec4f,   // altar: cells carved solid (no socket), 24 bits per float, row-major
 };
 @group(0) @binding(0) var<uniform> G: StoneGen;
 
@@ -267,7 +271,10 @@ fn altar_surf(px: vec2f) -> Surf {
     let sc = margin + pitch * 0.5 + cell * pitch;
     let r = length(px - sc);
     let ch = engine_hash21(cell + seed);
-    let rr = r / R;
+    // A solid cell (phones: blocked) has no socket: the worn slab runs on over it.
+    let ci = u32(cell.y * G.altar.x + cell.x);
+    let solid = (u32(G.solid[ci / ${SOLID_BITS}u]) >> (ci % ${SOLID_BITS}u)) & 1u;
+    let rr = select(r / R, 2.0, solid == 1u);
     if (rr < 1.0) {
       let bowl = sqrt(1.0 - rr * rr);
       h = 0.95 - 0.7 * bowl + (engine_noise(px * 0.3) - 0.5) * 0.03;
@@ -278,7 +285,7 @@ fn altar_surf(px: vec2f) -> Surf {
       c = c * mix(0.55, 0.8, rr) * vec3f(0.95, 0.97, 1.05);
     } else {
       // Raised, worn lip.
-      let lip = 1.0 - smoothstep(0.0, 10.0, r - R);
+      let lip = (1.0 - smoothstep(0.0, 10.0, r - R)) * f32(1u - solid);
       h += lip * 0.12 * (1.0 - smoothstep(0.0, 3.0, R - r));
       c = mix(c, SLATE_LIGHT * 0.75, lip * 0.35);
     }
@@ -378,7 +385,8 @@ export const LIT_SURFACE_WGSL = /* wgsl */ `${LIGHTS_WGSL}
 
 /**
  * Socket state overlay, drawn over a baked socket (quad = 2.6 × socket radius).
- * params.x = state (1 blocked, 2 highlighted, 3 wanted: dotted ring in the needed colour),
+ * params.x = state (1 blocked, 2 highlighted, 3 wanted: dotted ring in the needed colour, 4 rim,
+ * 5 plate, 6 collar: the iron ring and rivets of a fixed gem),
  * params.y = seed, params.z = intensity/pulse (0..1+). tint = highlight colour (linear).
  */
 export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
@@ -474,6 +482,50 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
     col *= lights_floor(in.world);
     o.color = vec4f(col, a * 0.92);
     o.emissive = vec4f(0.0, 0.0, 0.0, a * 0.92);
+    return o;
+  }
+
+  if (state == 6) {
+    // Collar (fixed gems, every platform): a solid dark-iron ring bolted round the socket with
+    // four rivets, so the gem reads as part of the machine. Lit metal, never a glow, so it
+    // cannot pass for a selection or hover mark.
+    let r0 = 0.98;
+    let r1 = 1.27;
+    let band = smoothstep(r0 - 0.03, r0 + 0.02, r) * (1.0 - smoothstep(r1 - 0.03, r1 + 0.01, r));
+    let mid = (r0 + r1) * 0.5;
+    let t = (r - mid) / ((r1 - r0) * 0.5); // -1 inner edge .. +1 outer edge
+    // Rounded section: the normal tips inward at the inner edge and outward at the outer.
+    let rd = p / max(r, 0.001);
+    var n = normalize(vec3f(rd * t * 0.9, 1.0));
+    var hgt = 1.0 - t * t * 0.6;
+    // Four rivets on the diagonals.
+    let q = abs(p) * 0.70710678;
+    let rv = vec2f(q.x + q.y, abs(q.x - q.y));
+    let rp = rv - vec2f(mid, 0.0);
+    let rl = length(rp);
+    let rivR = 0.11;
+    let riv = 1.0 - smoothstep(rivR - 0.025, rivR + 0.01, rl);
+    if (riv > 0.0) {
+      // Domed head: the slope runs out from the rivet's centre (signs follow the quadrant).
+      let sx = sign(p.x);
+      let sy = sign(p.y);
+      let d = vec2f(p.x - sx * mid * 0.70710678, p.y - sy * mid * 0.70710678) / rivR;
+      n = normalize(mix(n, vec3f(d * 0.9, 1.0), riv));
+      hgt = mix(hgt, 1.3 - dot(d, d) * 0.3, riv);
+    }
+    let lit = lights_shade(in.world, hgt * 6.0, n, 8.0);
+    let grain = 0.9 + 0.15 * engine_noise(p * 22.0 + seed);
+    let iron = vec3f(0.032, 0.034, 0.04) * grain;
+    let steel = vec3f(0.09, 0.092, 0.1);
+    let base = mix(iron, steel, riv);
+    var col = base * (0.25 + lit.diffuse * 0.55) + lit.spec * mix(0.06, 0.16, riv);
+    // A dark seam at both edges so the ring reads cut, not painted, on any stone.
+    col *= 1.0 - 0.6 * (exp(-pow((r - r0) * 30.0, 2.0)) + exp(-pow((r - r1) * 30.0, 2.0)));
+    col = max(col, base * 0.25);
+    col *= lights_floor(in.world);
+    let a = max(band, riv) * 0.98;
+    o.color = vec4f(col, a);
+    o.emissive = vec4f(0.0, 0.0, 0.0, a);
     return o;
   }
 

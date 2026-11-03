@@ -6,7 +6,7 @@ import { MACHINE_IDS } from '../../games/last-rune/rules/types';
 import { DEV_URL, waitFrames } from '../../tests/e2e/helpers';
 
 // PM review (temporary): every altar, half the intended gems placed, at two phone viewports.
-const OUT = resolve('docs/design/screens/local/mobile-2/pm-review-altars');
+const OUT = resolve(process.env.PMR_OUT ?? 'docs/design/screens/local/mobile-2/pm-review-altars');
 const PHONES = [
   { name: 'iphone', width: 844, height: 340, inset: 47 },
   { name: 'se', width: 667, height: 320, inset: 0 },
