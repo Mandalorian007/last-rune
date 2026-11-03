@@ -51,7 +51,7 @@ describe('text utilities', () => {
     expect(wordCount("Bzzt. That wasn't one.")).toBe(4);
     expect(wordCount('Day 14,610. A visitor.')).toBe(4);
     expect(countI("I cut… the foundry. I'll go. I've. It is. If. 'I")).toBe(4);
-    expect(countI('Ice rune. In. Is it.')).toBe(0);
+    expect(countI('Ice gem. In. Is it.')).toBe(0);
   });
 
   it('splits long lines into cards at sentence boundaries', () => {
@@ -152,11 +152,54 @@ describe('lines', () => {
   it('has a reaction for every outcome in every tier, and respects gem conditions', () => {
     for (const outcome of ['dead', 'under', 'over'] as const) {
       for (const tier of [1, 2, 3, 4] as const) {
-        expect(reactionLine(outcome, tier, [])).toBeDefined();
+        expect(reactionLine(outcome, tier)).toBeDefined();
+        expect(reactionLine(outcome, tier, { cause: 'empty' })).toBeDefined();
       }
     }
-    for (let i = 0; i < 4; i++) {
-      expect(reactionLine('dead', 1, ['channel'], i)?.text).not.toMatch(/Bend/);
+    for (let i = 0; i < 8; i++) {
+      expect(reactionLine('dead', 1, { cause: 'facing', gem: 'gate' }, i)?.text).not.toMatch(
+        /Bend/,
+      );
+    }
+  });
+
+  it("picks FUSE's failure quip by the root fizzle, never a mismatched one", () => {
+    const causes = [
+      'empty',
+      'blocked',
+      'ground',
+      'facing',
+      'odd-split',
+      'gate-alone',
+      'spent',
+    ] as const;
+    const causeLines = LINES.filter((l) => l.kind === 'reaction' && l.cause);
+    for (const cause of causes) {
+      // The first failure gets a line about its own cause (tier 1).
+      const first = reactionLine('dead', 1, { cause });
+      expect(first?.kind === 'reaction' && first.cause, cause).toBe(cause);
+      // No pick ever lands on another cause's line.
+      for (let i = 0; i < 8; i++) {
+        for (const outcome of ['dead', 'under'] as const) {
+          const l = reactionLine(outcome, 1, { cause }, i);
+          if (l?.kind === 'reaction' && l.cause) expect(l.cause).toBe(cause);
+        }
+      }
+    }
+    // The Bend line only when the root fizzle is a Bend facing away, and then first.
+    expect(reactionLine('dead', 1, { cause: 'facing', gem: 'bend' })?.text).toMatch(/Bend/);
+    for (let i = 0; i < 8; i++) {
+      expect(reactionLine('dead', 1, { cause: 'empty' }, i)?.text).not.toMatch(/Bend/);
+      expect(reactionLine('dead', 1, undefined, i)?.text).not.toMatch(/Bend/);
+    }
+    // Without a root, or on a breaker trip, only the outcome's generic lines.
+    for (let i = 0; i < 8; i++) {
+      for (const l of [
+        reactionLine('dead', 1, undefined, i),
+        reactionLine('over', 1, { cause: 'empty' }, i),
+        reactionLine('dead', 3, { cause: 'empty' }, i),
+      ])
+        expect(causeLines).not.toContain(l);
     }
   });
 

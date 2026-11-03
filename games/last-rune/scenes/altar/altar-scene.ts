@@ -67,8 +67,9 @@ import {
   type Fizzle,
   failText,
   fizzles,
-  gemsUsed,
   nextStep,
+  rootCell,
+  rootFizzle,
   type StrikeTimeline,
   strikeStory,
 } from './strike';
@@ -170,6 +171,12 @@ const INTRO_SECS = 7;
 /** The card fades over its last this-many seconds. */
 const INTRO_FADE = 0.5;
 const TEACH_MACHINE: MachineId = 'intake-desk';
+/**
+ * The first altar's arrival card also says what the gold socket rings mean: the teach socket,
+ * the machine's exit and, once building, the open ends of the route all ring gold.
+ */
+const RING_NAME = 'Gold ring';
+const RING_RULE = "A socket the bolt's route must reach. Set a gem there.";
 
 const SLOT_ACTIONS = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6'] as const;
 const CYAN: RGBA = [0.25, 1.3, 1.8, 1];
@@ -222,6 +229,8 @@ export class AltarScene implements GameScene {
   private result: SimResult | null = null;
   private timeline: StrikeTimeline | null = null;
   private fizzleList: Fizzle[] = [];
+  /** The root red mark of a failed strike: the verdict moves so it never covers this socket. */
+  private verdictAvoid: Cell | null = null;
   private pulseSegs: BoltSegment[][] = [];
   private st = 0;
   private pulse = -1;
@@ -383,7 +392,9 @@ export class AltarScene implements GameScene {
     ensureAltarStyles(ctx.ui.root.ownerDocument);
     this.buildDom();
     this.refreshHud();
-    this.introLeft = this.introRows().length > 0 ? INTRO_SECS : 0;
+    // On the first altar the card (with the gold-ring line) stays until the first placement.
+    this.introLeft =
+      this.introRows().length === 0 ? 0 : this.teachCell ? Number.POSITIVE_INFINITY : INTRO_SECS;
     this.announce(this.briefing());
 
     this.updateHint(); // also keeps the caption off the tray and the hint
@@ -488,6 +499,7 @@ export class AltarScene implements GameScene {
       const ui = this.ctx.ui;
       const o = ui.root.getBoundingClientRect();
       const els = [
+        ...(this.verdict.hidden ? [] : [this.verdict]),
         ...this.needs,
         ...(this.stormLabel ? [this.stormLabel] : []),
         this.actionsEl,
@@ -661,7 +673,11 @@ export class AltarScene implements GameScene {
     L.tray.forEach((s, i) => {
       const el = this.counts[i]!;
       const n = this.board.remaining(s.gem);
-      el.replaceChildren(h('span', { class: 'lr-k' }, String(i + 1)), `×${n}`);
+      // A keycap for the hotkey, then the count apart from it: "1 ×6" must never read "16".
+      el.replaceChildren(
+        h('kbd', { class: 'lr-k' }, String(i + 1)),
+        h('span', { class: 'lr-n' }, `×${n}`),
+      );
       el.toggleAttribute('data-empty', n === 0);
       el.toggleAttribute('data-held', this.hand?.kind === s.gem && !this.hand.from);
       el.title = GEM_NAME[s.gem];
@@ -732,6 +748,8 @@ export class AltarScene implements GameScene {
     // The verdict sits under the title, however many lines the title took.
     const titleBottom = this.titleEl.offsetTop + this.titleEl.offsetHeight;
     this.verdict.style.top = `${Math.max(96, titleBottom + 6)}px`;
+    this.verdict.removeAttribute('data-docked');
+    if (!this.verdict.hidden) this.clearRootMark(lo, hi);
     this.avoidTray();
   }
 
@@ -876,6 +894,53 @@ export class AltarScene implements GameScene {
   }
 
   /**
+   * The verdict never hides the red mark its Try line points at (at 1280×720 with big text the
+   * box reaches the board's top row). Slide it sideways within the title band if that clears
+   * the socket; otherwise dock it under the altar, between the board and the tray.
+   */
+  private clearRootMark(lo: number, hi: number): void {
+    const cell = this.verdictAvoid;
+    if (!cell) return;
+    const L = this.view.layout;
+    const c = { x: 0, y: 0 };
+    anchorOf(L, cell, c);
+    const r = L.pitch * 0.5;
+    const covers = () => {
+      const b = designBox(this.verdict);
+      return b.l < c.x + r && b.r > c.x - r && b.t < c.y + r && b.b > c.y - r;
+    };
+    if (!covers()) return;
+    const v = this.verdict;
+    const w = v.offsetWidth;
+    const x0 = v.style.left;
+    for (const x of [lo + w / 2, hi - w / 2]) {
+      v.style.left = `${Math.round(x)}px`;
+      if (!covers()) return;
+    }
+    // Docked: under the last row of sockets, above the tray gems, a little wider so the
+    // headline and the Try line take a line each.
+    const last = { x: 0, y: 0 };
+    anchorOf(L, { x: 0, y: L.rows - 1 }, last);
+    const top = last.y + L.pitch * 0.5 + 10;
+    const floor = L.trayY - (L.tray[0]?.size ?? 92) / 2 - 6;
+    const top0 = v.style.top;
+    const maxW0 = v.style.maxWidth;
+    const narrow0 = v.hasAttribute('data-narrow');
+    v.toggleAttribute('data-docked', true);
+    v.removeAttribute('data-narrow');
+    v.style.maxWidth = `${Math.round(Math.min(780, L.right - L.left))}px`;
+    v.style.left = `${Math.round((L.left + L.right) / 2)}px`;
+    v.style.top = `${Math.round(top)}px`;
+    if (top + v.offsetHeight <= floor && !covers()) return;
+    // No room under the board: keep the usual place (better than covering the tray).
+    v.removeAttribute('data-docked');
+    v.toggleAttribute('data-narrow', narrow0);
+    v.style.maxWidth = maxW0;
+    v.style.left = x0;
+    v.style.top = top0;
+  }
+
+  /**
    * Say `text` through the sr-only live region. It is set a beat after clearing, so a repeat
    * of the same line (the same miss twice) is announced again.
    */
@@ -902,6 +967,7 @@ export class AltarScene implements GameScene {
     return [
       `${getMachine(this.machine).name} altar. Storm ×${p.storm.strength} gives ${gives}${strikes}. ${ask}`,
       ...intro,
+      ...(this.teachCell ? [`${RING_NAME}: ${RING_RULE}`] : []),
     ].join(' ');
   }
 
@@ -1966,6 +2032,9 @@ export class AltarScene implements GameScene {
     const L = this.view.layout;
     const o = res.outcome;
     const ms = res.machines;
+    const root = o === 'exact' ? undefined : rootCell(this.fizzleList);
+    this.verdictAvoid =
+      root && root.x >= 0 && root.y >= 0 && root.x < L.cols && root.y < L.rows ? root : null;
     // The numbers name the machine: its need label shows the same "Needs N · got M", lit in
     // the outcome colour, so a multi-machine verdict needs no "second machine" ordinal.
     const say = (_i: number, text: string) => text;
@@ -2020,7 +2089,7 @@ export class AltarScene implements GameScene {
       const line = reactionLine(
         o,
         Math.min(3, this.ctx.tier()) as 1 | 2 | 3,
-        gemsUsed(res),
+        rootFizzle(o, this.fizzleList),
         this.attempts - 1,
       );
       if (line) void this.ctx.fuse.say(line, { interrupt: true });
@@ -2049,6 +2118,7 @@ export class AltarScene implements GameScene {
   private backToEdit(): void {
     this.mode = 'edit';
     this.verdict.hidden = true;
+    this.verdictAvoid = null;
     this.subtitle.style.display = '';
     this.clearTags();
     this.clearChips();
@@ -2484,6 +2554,16 @@ export class AltarScene implements GameScene {
           ` ${this.infoRule(r)}`,
         );
       }),
+      ...(key === 'intro' && this.teachCell
+        ? [
+            h(
+              'div',
+              { class: 'lr-info-row', 'data-how': 'ring' },
+              h('b', null, RING_NAME),
+              ` ${RING_RULE}`,
+            ),
+          ]
+        : []),
     );
     // Bottom edge just above the tray slots (translate -100%), clear of the board's sockets.
     const s0 = L.tray[0];

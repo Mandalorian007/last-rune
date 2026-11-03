@@ -189,6 +189,11 @@ ending. They stop the moment the player starts.
 
 ### Intake Desk `intake-desk`
 
+*Hall, hovering the open door* (its arrive line is an altar instruction, so the hall gets its own)
+
+> The intake desk. All visitors start here. The form is inside. It has been waiting a while. **[NEW]**  
+> <sub>`intake-desk.door` · 16w</sub>
+
 *Arrive*
 
 > Day 14,610. A visitor. There's a form for that. Step one: gem from the tray, onto a lit socket. **[NEW]**  
@@ -216,7 +221,7 @@ FUSE's plate **[NEW]**:
 
 *Solve*
 
-> Amber rune doubles the charge. Stack two and the second one just feels important. Like a deputy foreman.  
+> Amber gem doubles the charge. Stack two and the second one just feels important. Like a deputy foreman.  
 > <sub>`furnace.solve` · 18w</sub>
 
 **Journal page 2** · Day 9,402
@@ -251,8 +256,8 @@ FUSE's plate **[NEW]**:
 
 *Arrive*
 
-> The relay. Needs two full signals to pass one. Two signatures. Regulation 9. Nobody remembers who signed.  
-> <sub>`relay-tower.arrive` · 17w</sub>
+> The relay. Needs two signals at once to pass one. Two signatures. Regulation 9. Nobody remembers who signed.  
+> <sub>`relay-tower.arrive` · 18w</sub>
 
 *Solve*
 
@@ -305,7 +310,7 @@ FUSE's plate **[NEW]**:
 
 **Roof Array** (until `gem:capacitor`)
 
-> The roof. Wants the ice rune first. Also the lift. Or the ladder. This unit does not do ladders. **[NEW]**  
+> The roof. Wants the ice gem first. Also the lift. Or the ladder. This unit does not do ladders. **[NEW]**  
 > <sub>`roof-array.locked` · 19w</sub>
 
 **Control Booth** (until `machines`)
@@ -471,7 +476,7 @@ FUSE's plate **[NEW]**:
 
 *Solve*
 
-> Ice rune. The last one I… the last one that was cut. Didn't get to use it. Someone didn't. Monitoring self.  
+> Ice gem. The last one I… the last one that was cut. Didn't get to use it. Someone didn't. Monitoring self.  
 > <sub>`capacitor-bay.solve` · 21w</sub>
 
 **Journal page 13** · Day 13,512 **[NEW]**
@@ -638,15 +643,56 @@ FUSE's plate: *(blank)*
 
 ## Reactions to a failed bolt
 
-**Tier 1, dead** (needs a bend)
+FUSE's quip follows the attempt's root fizzle, the same cause the verdict's "Try:" line names
+(`reactionLine` in `lines.ts`). On the first failure he says the line about that cause; later
+failures rotate through it and the generic lines for the outcome. A cause line is never said
+without its cause. Cause lines are Tier 1 only, so in later tiers he keeps to the generic lines.
+A breaker trip always gets an "over" line.
+
+**Tier 1, root fizzle: a Bend facing away**
 
 > Incident report #4,211: visitor set a Bend facing a wall. Outcome: wall remains unpowered. Visitor remains hopeful.  
-> <sub>`reaction.dead.t1.1` · 17w</sub>
+> <sub>`reaction.facing.t1.1` · 17w</sub>
+
+**Tier 1, root fizzle: any gem facing away**
+
+> Bolt knocked on the back of a gem. Nobody answered. The gem has other priorities. **[NEW]**  
+> <sub>`reaction.facing.t1.2` · 15w</sub>
+
+**Tier 1, root fizzle: empty socket**
+
+> Empty socket. The bolt stopped to ask directions. Nobody was there. Very on-brand for this facility. **[NEW]**  
+> <sub>`reaction.empty.t1.1` · 16w</sub>
+
+**Tier 1, root fizzle: ran off the altar**
+
+> Bolt left the altar and went into the floor. The floor is fully charged now. Nobody asked the floor. **[NEW]**  
+> <sub>`reaction.ground.t1.1` · 19w</sub>
+
+**Tier 1, root fizzle: carved stone**
+
+> Bolt met carved stone. Stone won. Stone usually wins. Long career. **[NEW]**  
+> <sub>`reaction.blocked.t1.1` · 11w</sub>
+
+**Tier 1, root fizzle: odd charge into a Split**
+
+> Odd charge into a Split. Can't split a spark. Someone tried once. The ceiling remembers. **[NEW]**  
+> <sub>`reaction.odd-split.t1.1` · 15w</sub>
+
+**Tier 1, root fizzle: a Gate with one input**
+
+> One signature on a two-signature form. The Gate waited. Gates are patient. Not that patient. **[NEW]**  
+> <sub>`reaction.gate-alone.t1.1` · 15w</sub>
+
+**Tier 1, root fizzle: a gem already spent**
+
+> Two bolts, one gem. First come, first served. The second bolt has filed a complaint. **[NEW]**  
+> <sub>`reaction.spent.t1.1` · 15w</sub>
 
 **Tier 1, dead**
 
 > Bolt went nowhere. Very calm about it. Regulation 4: nowhere is not a destination. **[NEW]**  
-> <sub>`reaction.dead.t1.2` · 14w</sub>
+> <sub>`reaction.dead.t1.1` · 14w</sub>
 
 **Tier 1, under**
 

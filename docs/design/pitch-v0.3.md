@@ -117,12 +117,12 @@ Arrive: "Day 14,610. A visitor. There's a form for that. Take a rune from the tr
 Solve: "Regulation 1: the hallway rune. Regulation 2: this unit does not do a victory noise. Bzzt. That wasn't one."
 FURNACE · grants Amplify
 Arrive: "The furnace. Went cold the week Management left. Everything did. Unrelated."
-Solve: "Amber rune doubles the charge. Stack two and the second one just feels important. Like a deputy foreman."
+Solve: "Amber gem doubles the charge. Stack two and the second one just feels important. Like a deputy foreman."
 SPLITTER MILL · grants Split
 Arrive: "Splitter Mill. Takes one thing and makes it two smaller things. Management loved it. Management loved committees."
 Solve: "Half and half. Like this unit's optimism. Incident report #4,211: visitor appears competent. Monitoring."
 RELAY TOWER · grants Gate
-Arrive: "The relay. Needs two full signals to pass one. Two signatures. Regulation 9. Nobody remembers who signed."
+Arrive: "The relay. Needs two signals at once to pass one. Two signatures. Regulation 9. Nobody remembers who signed."
 Solve: "Emerald. Good. Regulation 8: don't ask where Management went. Regulation 8 is new. Regulation 8 is for you."
 CONVEYOR A · no gem · 1× bolt check
 Arrive: "Conveyor A. Carried parts to the big one. Then carried them back. Then stopped. Very relatable machine."
@@ -155,7 +155,7 @@ Script · Tier 3 and the Last Rune
 Quiet, fast, then one line
 CAPACITOR BAY · needs 2× bolt · grants Capacitor
 Arrive: "Capacitor bay. Stores a bolt for later. The committee said that was cheating. It is. Do it anyway."
-Solve: "Ice rune. The last one I… the last one that was cut. Didn't get to use it. Someone didn't. Monitoring self."
+Solve: "Ice gem. The last one I… the last one that was cut. Didn't get to use it. Someone didn't. Monitoring self."
 LIFT SHAFT · needs Capacitor
 Arrive: "Lift to the roof. Hasn't run since the day the counting started. Day one. The count started for a reason. Can't find the form."
 Solve: "Going up. I don't like heights. This unit doesn't have a setting for heights. So where did that come from."

@@ -35,7 +35,7 @@ granted by exactly one machine.** A machine opens when the player owns every cap
 - **Relay Tower requires Bend only.** The pitch doesn't say. Bend keeps it in Tier 1 and
   gives the start three branches (heat, storm, signal) instead of two. Note for
   rules-puzzles: the relay hands out Gate, so its own puzzle can't need Split from the
-  player. It needs two full signals from pre-set gems or two emitters.
+  player. It needs two signals at once from pre-set gems or two emitters.
 - **Roof Array grants Storm ×4.** It's "the storm's right there", and ×4 is the only
   storm left. It is the signal wing's Tier 3 reward. The roof doesn't require the lift
   (sockets can't express "reach the roof"). FUSE's locked line covers the ladder ("This unit

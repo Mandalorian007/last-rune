@@ -81,13 +81,14 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     d = min(d, g_seg(p, vec2f(e - h, h), vec2f(e, 0.0)));
     d -= 0.035;
   } else if (kind == 3) {
-    // Amplify: straight through, two stacked chevrons pointing the way out.
-    d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.3));
-    for (var i = 0; i < 2; i++) {
-      let o = f32(i) * -0.3;
-      d = min(d, g_seg(p, vec2f(-0.36, 0.18 + o), vec2f(0.0, -0.14 + o)));
-      d = min(d, g_seg(p, vec2f(0.36, 0.18 + o), vec2f(0.0, -0.14 + o)));
-    }
+    // Amplify: a Channel with its diamond node doubled (a diamond inside a diamond), so it reads
+    // "a Channel, twice". Symmetric end to end: it can't turn and points neither way (D-031).
+    d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.46));
+    d = min(d, g_seg(p, vec2f(0.0, -0.46), vec2f(0.0, -0.72)));
+    d = min(d, abs(abs(p.x) + abs(p.y) - 0.46));
+    d = min(d, abs(abs(p.x) + abs(p.y) - 0.22));
+    d = min(d, g_seg(p, vec2f(-0.16, 0.72), vec2f(0.16, 0.72)));
+    d = min(d, g_seg(p, vec2f(-0.16, -0.72), vec2f(0.16, -0.72)));
   } else if (kind == 4) {
     // Gate: inputs from west and east meet in a ring; one output leaves north (rules rot 0).
     d = g_seg(p, vec2f(-0.66, 0.0), vec2f(-0.17, 0.0));

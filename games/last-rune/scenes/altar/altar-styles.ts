@@ -39,7 +39,16 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-altar-count[data-empty] { opacity: 0.35; }
 .tc-overlay .lr-altar-count[data-held] { border-color: var(--lr-gold); color: #fff6dd; box-shadow: 0 0 14px rgba(232,192,106,0.5); }
-.tc-overlay .lr-altar-count .lr-k { opacity: 0.55; margin-right: 6px; }
+/* The slot's hotkey is a keycap and the count sits apart from it, so "1 ×6" never reads "16". */
+.tc-overlay .lr-altar-count { display: flex; align-items: center; gap: 8px; padding: 2px 10px 2px 4px; white-space: nowrap; }
+.tc-overlay .lr-altar .lr-altar-count kbd.lr-k {
+  display: inline-block; min-width: 24px; margin: 0; padding: 0 5px; box-sizing: border-box;
+  font-family: var(--tc-font-ui); font-size: 15px; font-weight: 600; line-height: 20px; text-align: center;
+  opacity: 0.85; color: #f4e6c4; background: linear-gradient(180deg, #5d6375 0%, #3a3f4d 100%);
+  border: 1px solid rgba(232,192,106,0.5); border-bottom-width: 3px; border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.tc-overlay .lr-altar-count .lr-n { letter-spacing: 0.5px; }
 .tc-overlay .lr-altar-tip {
   position: absolute; transform: translate(-50%, -100%); max-width: 600px; padding: 6px 14px; border-radius: 10px;
   font-family: var(--tc-font-body, serif); font-size: 20px; line-height: 1.3; color: #f4e6c4; text-align: center;

@@ -238,6 +238,85 @@ for (const width of [1280, 1920] as const) {
   }
 }
 
+// newcomer-3: Relay Tower with the top-row Bend at (3,0) turned the wrong way, so the root red
+// mark sits on the top row, right under where the verdict hangs. The verdict (headline and Try
+// line) must never cover that socket, and no tag may sit on the verdict, at 1280×720 or 1920.
+const TOP_ROW_ROOT = {
+  'relay-tower': {
+    attempts: 0,
+    placements: [
+      { gem: 'channel', cell: { x: 0, y: 1 }, rot: 0 },
+      { gem: 'channel', cell: { x: 1, y: 1 }, rot: 0 },
+      { gem: 'channel', cell: { x: 2, y: 1 }, rot: 0 },
+      { gem: 'bend', cell: { x: 3, y: 0 }, rot: 0 },
+      { gem: 'channel', cell: { x: 4, y: 0 }, rot: 0 },
+      { gem: 'bend', cell: { x: 5, y: 0 }, rot: 2 },
+      { gem: 'bend', cell: { x: 3, y: 2 }, rot: 0 },
+      { gem: 'channel', cell: { x: 4, y: 2 }, rot: 0 },
+      { gem: 'bend', cell: { x: 5, y: 2 }, rot: 3 },
+    ],
+  },
+};
+for (const [width, scale] of [
+  [1280, 150],
+  [1280, 100],
+  [1920, 150],
+] as const) {
+  test(`relay top-row root at ${width}px, ${scale}%: the verdict never hides the red mark`, async ({
+    page,
+  }) => {
+    const problems = trackProblems(page);
+    await boot(page, scale, ['intake-desk', 'furnace', 'splitter-mill'], TOP_ROW_ROOT, width);
+    await page.evaluate(() => {
+      const g = (window as unknown as { __game: GameHandle }).__game;
+      g.flow.openPuzzle('relay-tower');
+      g.fuse.hush();
+    });
+    await expect(page.locator('.lr-altar')).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.keyboard.press('KeyF');
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+    const hint = page.locator('.lr-altar-verdict .lr-verdict-hint');
+    await expect(hint).toBeVisible({ timeout: 10_000 });
+    await expect(hint).toHaveText('Try: turn the gem at the red mark (R or scroll).');
+    await page.waitForTimeout(400);
+    const L = computeLayout(puzzleFor('relay-tower'));
+    const c = { x: 0, y: 0 };
+    cellCenter(L, { x: 3, y: 0 }, c);
+    const r = await page.evaluate(() => {
+      const o = document.querySelector('.tc-overlay')!.getBoundingClientRect();
+      const k = o.width / 1920;
+      const box = (el: Element) => {
+        const b = el.getBoundingClientRect();
+        return {
+          left: (b.left - o.left) / k,
+          right: (b.right - o.left) / k,
+          top: (b.top - o.top) / k,
+          bottom: (b.bottom - o.top) / k,
+        };
+      };
+      return {
+        verdict: box(document.querySelector('.lr-altar-verdict')!),
+        tags: [...document.querySelectorAll('.lr-altar-tag')].map((t) => ({
+          text: t.textContent ?? '',
+          ...box(t),
+        })),
+        tray: [...document.querySelectorAll('.lr-altar-count')].map(box),
+      };
+    });
+    // The socket under the red mark, in design pixels.
+    const rr = L.pitch * 0.4;
+    const mark = { left: c.x - rr, right: c.x + rr, top: c.y - rr, bottom: c.y + rr };
+    expect(hits(mark, r.verdict), 'the verdict covers the root red mark').toBe(false);
+    expect(r.verdict.top).toBeGreaterThanOrEqual(0);
+    expect(r.verdict.bottom).toBeLessThanOrEqual(1080);
+    for (const t of r.tags) expect(hits(t, r.verdict), `${t.text} on the verdict`).toBe(false);
+    for (const t of r.tray) expect(hits(t, r.verdict), 'the verdict on the tray').toBe(false);
+    expect(problems).toEqual([]);
+  });
+}
+
 test('the-last-rune at 150%: the storm card stays off the board', async ({ page }) => {
   const problems = trackProblems(page);
   await boot(
