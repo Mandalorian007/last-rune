@@ -277,6 +277,8 @@ export class EndingScene implements GameScene {
     }
     this.buildDom(doc);
     // A hard cut, like the view itself (the solve moment hands straight over to the hall).
+    // The resolution cap switches here too, where nobody can see it change.
+    this.capPixels();
     ctx.post.set(POST_PRESETS.ending);
     ctx.post.set(DUSK_POST);
     ctx.setMood('ending');
@@ -306,6 +308,18 @@ export class EndingScene implements GameScene {
     this.matAdd.destroy();
     this.ctx.post.finishBlend();
     this.ctx.post.set(POST_PRESETS.hall);
+    this.ctx.graphics.capPixels(null);
+  }
+
+  /**
+   * The ending is the costliest stretch of the game: the storm-lit door, then the hall under
+   * full-screen gold washes. It renders at most one scene pixel per CSS pixel: identical at
+   * DPR 1, about 0.56× the fill at DPR 2 (2560×1440 → 1920×1080), where the soft light hides
+   * the upscale (perf-low). Cleared on exit.
+   */
+  private capPixels(): void {
+    const r = this.ctx.surface.rect;
+    this.ctx.graphics.capPixels(r.width * r.height);
   }
 
   // ── Director ─────────────────────────────────────────────────────────────
@@ -551,6 +565,7 @@ export class EndingScene implements GameScene {
 
   update(dt: number): void {
     this.time += dt;
+    this.capPixels(); // follows a resize; a no-op otherwise
     const now = this.time;
     if (this.waits.length) {
       // Resolve due waits without allocating: compact in place.

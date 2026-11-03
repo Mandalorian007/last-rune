@@ -26,7 +26,13 @@ export type GraphicsTier = 'high' | 'low';
 export interface TierSpec {
   /** Scene-target pixel budget (width × height). */
   readonly maxPixels: number;
-  readonly post: { maxBloomLevels: number; raySamples: number; fogOctaves: number };
+  readonly post: {
+    maxBloomLevels: number;
+    raySamples: number;
+    fogOctaves: number;
+    /** Composite at scene resolution and upscale (saves fill at high DPR; softer mist). */
+    compositeAtScene: boolean;
+  };
   /** Most point lights per light set (MAX_LIGHTS = 16). */
   readonly lights: number;
   /** Multiplier on particle spawning (on top of reduced motion). */
@@ -36,13 +42,13 @@ export interface TierSpec {
 export const TIERS: Readonly<Record<GraphicsTier, TierSpec>> = {
   high: {
     maxPixels: 2560 * 1440,
-    post: { maxBloomLevels: 8, raySamples: 64, fogOctaves: 5 },
+    post: { maxBloomLevels: 8, raySamples: 64, fogOctaves: 5, compositeAtScene: false },
     lights: 16,
     particles: 1,
   },
   low: {
     maxPixels: 1280 * 720,
-    post: { maxBloomLevels: 5, raySamples: 32, fogOctaves: 3 },
+    post: { maxBloomLevels: 5, raySamples: 32, fogOctaves: 3, compositeAtScene: true },
     lights: 16,
     particles: 0.5,
   },
@@ -87,6 +93,8 @@ export class GraphicsController {
   private probeSamples: number[] = [];
   private probed = false;
   private saturatedSince = -1;
+  /** Scene pixel cap from `capPixels` (null = none). */
+  private cap: number | null = null;
   private readonly listeners = new Set<(tier: GraphicsTier) => void>();
   /** Why auto chose low (for diagnostics), or null. */
   autoReason: string | null = null;
@@ -136,6 +144,24 @@ export class GraphicsController {
     if (pref === this.pref) return;
     this.pref = pref;
     this.apply();
+  }
+
+  /**
+   * Cap the scene's pixel budget below the tier's (null clears it). For a heavy stretch of a
+   * scene: the ending's gold flood caps itself to CSS pixels (DPR 1), which leaves a 1× image
+   * untouched and halves the fill on a DPR 2 screen. Cheap when unchanged.
+   */
+  capPixels(px: number | null): void {
+    const next = px === null ? null : Math.max(1, Math.floor(px));
+    if (next === this.cap) return;
+    this.cap = next;
+    this.targets.setResolution({ maxPixels: this.maxPixels });
+  }
+
+  /** The scene pixel budget in effect: the tier's, under any `capPixels` cap. */
+  get maxPixels(): number {
+    const tier = TIERS[this._tier].maxPixels;
+    return this.cap === null ? tier : Math.min(tier, this.cap);
   }
 
   onChange(fn: (tier: GraphicsTier) => void): () => void {
@@ -198,7 +224,7 @@ export class GraphicsController {
     const spec = TIERS[tier];
     this.dr.reset(1, nowMs);
     this.saturatedSince = -1;
-    this.targets.setResolution({ maxPixels: spec.maxPixels, scale: 1 });
+    this.targets.setResolution({ maxPixels: this.maxPixels, scale: 1 });
     this.targets.setPostQuality(spec.post);
     this.targets.setLightCap(spec.lights);
     this.targets.setParticleScale(spec.particles);
