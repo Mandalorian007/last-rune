@@ -349,20 +349,8 @@ ${P} .lr-j-slip b { min-width: 1.4em; }
 ${P} .lr-journal .lr-j-turn { width: ${cpx(36)}; height: ${cpx(36)}; line-height: ${cpx(32)}; font-size: ${cpx(26)}; background: #ffffff1c; }
 ${P} .lr-j-plate { font-size: var(--lr-text-min); padding: 0 ${cpx(10)}; }
 
-/* Hangout: the window fills the screen and the sidebar is wide enough for every channel's
-   whole name (no ellipsis on phones); Skip keeps the strip on the right. */
-${P} .lr-hg { left: 30px; top: 30px; width: 1640px; height: 1020px; }
-${P} .lr-hg-rail { width: ${cpx(30)}; padding-top: ${cpx(6)}; }
-${P} .lr-hg-badge { width: ${cpx(22)}; height: ${cpx(22)}; border-radius: ${cpx(6)}; font-size: ${tpx(12)}; }
-${P} .lr-hg-rail::before { top: ${cpx(8)}; height: ${cpx(14)}; }
-${P} .lr-hg-side { width: 660px; }
-${P} .lr-hg-server { height: ${cpx(24)}; padding: 0 ${cpx(8)}; font-size: ${tpx(13)}; text-overflow: clip; overflow: visible; }
-${P} .lr-hg-list { padding: ${cpx(4)} ${cpx(4)} 0 ${cpx(6)}; }
-${P} .lr-hg-ch { height: auto; min-height: ${cpx(13)}; margin: 0; padding: 0 ${cpx(18)} 0 ${cpx(4)}; gap: ${cpx(3)}; font-size: ${tpx(11)}; line-height: 1.15; }
-${P} .lr-hg-ch .lr-emo { min-width: ${cpx(12)}; font-size: ${tpx(11)}; }
-${P} .lr-hg-hash { min-width: ${cpx(5)}; font-size: ${tpx(11)}; }
-${P} .lr-hg-name { overflow: visible; text-overflow: clip; }
-${P} .lr-hg-cat { margin: ${cpx(1)} 0 ${cpx(2)}; font-size: ${tpx(11)}; letter-spacing: 1px; }
+/* mobile-3-ending: the ending, hangout and end card on phones live in
+   scenes/ending/ending-phone-styles.ts (injected with the ending's own styles). */
 
 /* ── Altar: board first ────────────────────────────────────────────────────
    Left bar: Back (top), Undo and Clear. Right bar: ☰ (top, the HUD), ↻ Turn, Strike (bottom).
