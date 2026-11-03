@@ -461,7 +461,7 @@ fn altar_surf(px: vec2f) -> Surf {
     // shaded where the raised stone overhangs it. Never the black wall in a clipped box.
     let rd = alt_recess(px) - (engine_fbm(px * 0.04 + 3.0, 3) - 0.4) * 6.0;
     let rk = (1.0 - smoothstep(-1.5, 1.5, rd)) * (1.0 - s.alpha);
-    let sunk = st_slate_albedo(px * 0.9, hb, 1.4) * 1.3 * (0.55 + 0.35 * smoothstep(2.0, 26.0, -e));
+    let sunk = st_slate_albedo(px * 0.9, hb, 1.4) * 1.3 * (0.62 + 0.3 * smoothstep(2.0, 22.0, -e));
     s.albedo = mix(SLATE_DARK * 0.15, s.albedo * 1.3, s.alpha);
     s.albedo = mix(s.albedo, sunk, rk);
     s.h = mix(s.h, 0.0, rk);
@@ -701,7 +701,7 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
     let a = max(band, key * 0.7) * min(k, 1.0);
     let c = mix(vec3f(0.015, 0.012, 0.01), tint, band / max(max(band, key * 0.7), 0.001));
     o.color = vec4f(c, a);
-    o.emissive = vec4f(tint * band * in.emissive * 0.3 * k, a);
+    o.emissive = vec4f(tint * band * in.emissive * 0.1 * k, a);
     return o;
   }
   if (state == 2) {

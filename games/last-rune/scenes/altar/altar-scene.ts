@@ -220,7 +220,7 @@ const CYAN: RGBA = [0.25, 1.3, 1.8, 1];
 const WHITE_HOT: RGBA = [2, 2, 2, 1];
 const OPEN_END: RGBA = [1.5, 1.05, 0.5, 1];
 /** The ring round every socket the held gem may go in: pale gold, bright on navy or stone. */
-const LEGAL_RING: RGBA = [1.7, 1.38, 0.78, 1];
+const LEGAL_RING: RGBA = [1.35, 1.1, 0.62, 1];
 /** Conduit colours by outcome (match the need label's CSS colours). */
 const OUT_GLOW: Record<'exact' | 'under' | 'over' | 'flow', RGBA> = {
   exact: [0.35, 1.6, 2.2, 1],
