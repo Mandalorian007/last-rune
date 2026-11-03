@@ -46,7 +46,7 @@ _Last updated: 2026-11-02 by PM_
 | perf-low | ws/perf-low | ✅ merged | GPU timestamp timing per pass (DynamicResolution sees real cost; the old 'gpu' column was queue latency); Low composites at scene res + upscale; ending caps at DPR 1 (High DPR 2: 21.6→12.2 ms p50, in budget); audio pre-render yields (title keeps animating); first frame 0.1–0.16 s; perf harness `ts` column, baseline + load specs |
 | finish-1 | ws/finish-1 | ✅ merged | serif on toasts, closing line, Ko-fi/Copy links, FUSE's journal plate; end-card prop is now clearly FUSE's clipboard with his form, bottom right, clear of everything at 150%; below-cell tags pop from their own cell |
 | newcomer-2 | ws/newcomer-2 | 🟡 running | fresh-eyes first session (hall + first 5 altars): fix every hesitation, wording, hierarchy |
-| tidy-2 | ws/tidy-2 | 🟡 running | device-lost pauses loop/audio; clipboard drop arc; audio synth Worker (if clean); hunt the lone flakes |
+| tidy-2 | ws/tidy-2 | ✅ merged | device loss halts loop, audio and timers (tested); clipboard drops from FUSE's clamp under gravity; both flakes root-caused (loaded-machine solver timeout; pad press shorter than a game tick); synth Worker not clean (OfflineAudioContext isn't in Workers), proposal logged |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
