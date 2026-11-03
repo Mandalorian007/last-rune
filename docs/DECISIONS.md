@@ -229,7 +229,7 @@ Format: `D-NNN · date · decision · why · who`.
   - v1.0 is released per shipping-itch.md: GitHub Release, tags `v1.0.0` and `engine-v0.1` on the same commit, and Pages.
   - **The itch upload stays manual, with the user (D-012).** It does not block Phase 1. ws/workspace may start on its branch early, but nothing from Phase 1 merges until the tags and baselines are on main.
   - **Committed baselines:** the regression baselines in `docs/design/screens/v1.0/` are an exception to "don't commit images". They cover every scene at 1280×720, 1920×1080 and iPad, with e2e timings and perf numbers. They are kept small, and nothing else in screens/ is committed.
-- **Defaults for the plan's open questions** (the user can override any of them):
+- **The plan's open questions:** the PM's defaults, which the user confirmed on 2026-11-03:
   - package scope `@thunderclap/engine`;
   - the registry is decided at Phase 5;
   - Electron ships unsigned until the user has certificates;
