@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅ (D-032–D-035). Next: user playtest of alpha-1 feeds difficulty-fun phase 2 + polish backlog. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
+**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅ (D-032–D-035). Now (PM judgement, user playtests later): candle-light, difficulty-2, bug-bash, perf-low running; Firefox not a target. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
@@ -40,6 +40,10 @@ _Last updated: 2026-11-02 by PM_
 | perf-tiers | ws/perf-tiers | ✅ merged | fill-bound (CPU ≤1.2 ms p95 at 4× throttle); scene resolution decoupled from canvas, DynamicResolution with hysteresis, Auto/High/Low in Settings (High = today's image); bloom mip realloc bug fixed; budgets in engineering.md; `scripts/perf/` |
 | a11y | ws/a11y | ✅ merged | audit (docs/design/a11y-audit.md); S1: title menu role, gamepad stuck in panels (engine PadNav); HUD focus restore fixed in engine (blur workaround gone); altar briefing + verdict announced; locked doors say what they need; contrast ≥ 4.5:1; axe e2e |
 | engine-cleanup | ws/engine-cleanup | ✅ merged | particles clear, bolt timing from trace, Fuse.destroy, per-draw uniforms, texture uploads, PingPong, global keys, queued taps, master limiter + reverb, post.blendTo. 60fps, no new churn |
+| candle-light | ws/candle-light | 🟡 running | candles dimmer + warm flicker; selectable highlights always brightest; capacitor-bay washout, puddles, vignette |
+| difficulty-2 | ws/difficulty-2 | 🟡 running | phase 2 on PM judgement: solver scores turn choice, tighten conveyor-a/press-unit-4/capacitor-bay, curve review, intake-desk chattiness |
+| bug-bash | ws/bug-bash | 🟡 running | first-time-player sweep of every screen/res/input; robustness (resize, device lost, bad saves); panel scroll; lint |
+| perf-low | ws/perf-low | 🟡 running | GPU timestamps, Low composite at scene res, ending flood at DPR 2, weak-GPU estimate, first-frame timing |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
@@ -53,7 +57,6 @@ _Last updated: 2026-11-02 by PM_
 - Photosensitivity: the breaker flash whites out most of the frame for ~0.3 s. hall-art adds a "Reduce flashes" setting (on with reduced motion).
 - Perf measured on Apple M4 only. The game is fill-bound; Auto scales resolution (floor 0.6) and drops to Low if needed. The ending flood at DPR 2 on High is over budget (~17–20 ms GPU); Auto/Low handle it. Still want a real integrated-PC-GPU check.
 - Difficulty curve is calibrated to designer estimates, not players (D-022). Risk: early/mid puzzles may still feel too easy. Phase 2 needs real playtest data; the novice bot can't plan gate merges (flat signal on gate puzzles). conveyor-a / press-unit-4 / capacitor-bay are still loose (8–11 solutions).
-- Firefox + WebGPU in the itch iframe untested (manual check at launch).
 - docs/design/screens is 31 MB of PNGs in a public repo; prune or move to a release asset before v1.0.
 - Puzzle quality: 16 puzzles must be interesting, not just solvable. The solver gives difficulty metrics, and the PM reviews.
 - Procedural art reaching "painterly" quality: art R&D is front-loaded in wave 2.
