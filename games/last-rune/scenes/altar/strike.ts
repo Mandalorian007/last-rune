@@ -97,7 +97,7 @@ export function buildTimeline(result: SimResult, opts: TimelineOptions = {}): St
   return { segments, pulses, arrivals, verdictAt: last.end + verdictDelay };
 }
 
-/** Why a bolt fizzled (or grounded). Drives the on-board hint (defined with FUSE's quips). */
+/** Why charge was lost (or ran off). Drives the on-board hint (defined with FUSE's quips). */
 export type { FizzleCause };
 
 export interface Fizzle {
@@ -111,13 +111,13 @@ export interface Fizzle {
 }
 
 const CAUSE_TEXT: Record<FizzleCause, string> = {
-  empty: 'Empty socket: the bolt fizzled',
-  blocked: 'Carved stone: the bolt fizzled',
-  ground: 'Ran off the altar',
-  facing: 'Faces the wrong way',
-  'odd-split': 'Odd charge cannot split',
-  'gate-alone': 'Gate needs both inputs',
-  spent: 'Gem already spent this strike',
+  empty: 'Empty socket: charge lost',
+  blocked: 'Carved stone: charge lost',
+  ground: 'Charge ran off the altar',
+  facing: 'Turned the wrong way: charge lost',
+  'odd-split': "Odd charge can't split: lost",
+  'gate-alone': 'Gate needs charge on both sides',
+  spent: 'Gem already used this strike',
 };
 
 /** Short UI label for a fizzle cause. */
@@ -233,11 +233,11 @@ const CAUSE_ORDER: readonly FizzleCause[] = [
 const CAUSE_HINT: Record<FizzleCause, string> = {
   facing: 'Try: turn the gem at the red mark (R or scroll).',
   empty: 'Try: put a gem in the socket at the red mark.',
-  ground: 'Try: steer the bolt to the machine before it runs off the altar.',
+  ground: 'Try: lead the charge to the machine before it runs off the altar.',
   blocked: 'Try: route around the carved stone.',
   'odd-split': 'Try: feed the Split an even charge.',
-  'gate-alone': "Try: bring a second bolt into the Gate's other side.",
-  spent: 'Try: give each bolt its own gems. A gem carries one bolt per strike.',
+  'gate-alone': "Try: bring charge into the Gate's other side line too.",
+  spent: 'Try: give each path its own gems. A gem carries charge once per strike.',
 };
 
 /** The root cause among an attempt's fizzles (see `CAUSE_ORDER`), if any. */
@@ -274,10 +274,16 @@ export function rootCell(list: readonly Fizzle[]): Cell | undefined {
  * only "needs 4, got 0". Fizzles name a concrete fix; otherwise the outcome does. Too much
  * charge is about the amount, so it wins over a stray fizzle.
  */
-export function nextStep(outcome: SimResult['outcome'], causes: readonly FizzleCause[]): string {
+export function nextStep(
+  outcome: SimResult['outcome'],
+  causes: readonly FizzleCause[],
+  touch = false,
+): string {
   if (outcome === 'exact') return '';
   if (outcome === 'over') return 'Try: less charge. Skip an Amplify, or halve it with a Split.';
   const first = rootCause(causes);
+  // A finger has no R key or wheel: name the on-screen Turn control instead.
+  if (first === 'facing' && touch) return 'Try: turn the gem at the red mark (↻ Turn).';
   if (first) return CAUSE_HINT[first];
   if (outcome === 'under') return 'Try: more charge. An Amplify doubles it.';
   return 'Try: lay gems from the storm to the machine.';

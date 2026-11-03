@@ -77,7 +77,16 @@ import {
   traySlotAt,
   trayTipX,
 } from './layout';
-import { hintRetired, introPage, introSecs, phoneHint } from './moments';
+import {
+  arbitrate,
+  type Grant,
+  type HintSlot,
+  hintRetired,
+  introButton,
+  phoneHint,
+  pickHint,
+  type VoiceAsk,
+} from './moments';
 import { legalSockets, socketLooks } from './socket-looks';
 import {
   type Arrival,
@@ -156,9 +165,9 @@ const INFO_TAG: Record<InfoHow, string> = {
  * gems need no turning; a fixed Bend, Gate or Split is part of the machine.
  */
 const NO_TURN: Record<GemKind, string> = {
-  channel: "Can't turn: the bolt goes straight through",
-  amplify: "Can't turn: the bolt goes straight through",
-  capacitor: "Can't turn: the bolt goes straight through",
+  channel: "Can't turn: charge goes straight through",
+  amplify: "Can't turn: charge goes straight through",
+  capacitor: "Can't turn: charge goes straight through",
   split: "Can't turn: fixed in place",
   bend: "Can't turn: fixed in place",
   gate: "Can't turn: fixed in place",
@@ -224,7 +233,7 @@ const TEACH_MACHINE: MachineId = 'intake-desk';
  * the machine's exit and, once building, the open ends of the route all ring gold.
  */
 const RING_NAME = 'Gold ring';
-const RING_RULE = "A socket the bolt's route must reach. Set a gem there.";
+const RING_RULE = 'A socket the charge must reach. Set a gem there.';
 
 const SLOT_ACTIONS = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6'] as const;
 const CYAN: RGBA = [0.25, 1.3, 1.8, 1];
@@ -404,8 +413,14 @@ export class AltarScene implements GameScene {
   private pendingNudges: GemKind[] = [];
   /** Seconds left on the arrival card for this altar's new gems (0 = gone). */
   private introLeft = 0;
-  /** Seconds the arrival card has shown (phones page it, one new piece at a time). */
-  private introT = 0;
+  /** Phones: the arrival card's page, one new piece at a time; the player turns it (Next ›). */
+  private introPageIdx = 0;
+  /** Phones: lines other workstreams put in the how-to slot (`setHintLine`, moments.ts). */
+  private hintLines: Partial<Record<HintSlot, string | null>> = {};
+  /** Phones: the column arbiter froze FUSE's caption to make room (released when it fits). */
+  private fuseHeld = false;
+  /** Phones: FUSE's bubble height when last measured (it is not laid out while frozen). */
+  private fuseH = 0;
   /** Phones: the how-to line has retired (moments.ts), and FUSE's fail quip waits its turn. */
   private hintRetired = false;
   private pendingQuip: ReturnType<typeof reactionLine> | null = null;
@@ -437,9 +452,12 @@ export class AltarScene implements GameScene {
   private capEls: HTMLElement[] = [];
   /** Phones: the column lane under the tray (gem chip, verdict, Capacitor read-outs). */
   private lane: HTMLElement | null = null;
-  /** Phones: Strike's "twice" / "1 of 2" for multi-strike altars (the pips are for big screens). */
   /** Gives/Needs card sizes when last placed (phone). */
   private labelKey = '';
+  /** Phones: how far (design px) the lane steps right of a label, and the bubble's last place. */
+  private laneShift = 0;
+  private capKey2 = '';
+  /** Phones: Strike's "twice" / "1 of 2" for multi-strike altars (the pips are for big screens). */
   private strikeCount: HTMLElement | null = null;
   /** Phones: one marker per tray slot (a used-up slash; the first visit's pulse). */
   private slotEls: HTMLElement[] = [];
@@ -503,15 +521,14 @@ export class AltarScene implements GameScene {
       this.relayoutPending = this.frameKey() !== this.frame;
     });
     // On the first altar the card (with the gold-ring line) stays until the first placement.
+    // Phones: until the player taps Got it (or places a gem), never on a timer.
     this.introLeft =
       this.introRows().length === 0
         ? 0
-        : this.teachCell
+        : this.teachCell || this.view.layout.phone
           ? Number.POSITIVE_INFINITY
-          : this.view.layout.phone
-            ? introSecs(this.introPages(), INTRO_SECS)
-            : INTRO_SECS;
-    this.introT = 0;
+          : INTRO_SECS;
+    this.introPageIdx = 0;
     this.announce(this.briefing());
 
     this.updateHint(); // also keeps the caption off the tray and the hint
@@ -538,6 +555,7 @@ export class AltarScene implements GameScene {
 
   exit(): void {
     this.ctx.fuse.avoid(null);
+    this.holdFuse(false);
     this.phoneCaption(false);
     this.offDevice?.();
     this.offDevice = null;
@@ -582,6 +600,8 @@ export class AltarScene implements GameScene {
     this.strikeRow = null;
     this.strikeCount = null;
     this.lane = null;
+    this.laneShift = 0;
+    this.capKey2 = '';
     this.slotEls.length = 0;
   }
 
@@ -739,15 +759,41 @@ export class AltarScene implements GameScene {
     const turns = this.view.layout.phone
       ? this.turnTarget !== null
       : this.view.layout.tray.some((t) => isRotational(t.gem));
-    const key = `${mode}${turns ? '+' : ''}`;
+    // Phones: another workstream's line ("Holding: X", "Tap the board to zoom") may stand in
+    // the slot (moments.ts HINT_SLOTS); the strike's own line always wins.
+    const slot =
+      this.view.layout.phone && mode !== 'touchStrike'
+        ? pickHint({ ...this.hintLines, howto: null })
+        : null;
+    const other = slot ? (this.hintLines[slot] ?? '') : '';
+    const key = other ? `slot:${other}` : `${mode}${turns ? '+' : ''}`;
     if (key === this.hintMode) return;
     this.hintMode = key;
+    if (other) {
+      this.hint.replaceChildren(other);
+      this.hint.dataset.mode = 'slot';
+      this.avoidTray();
+      return;
+    }
     this.hint.replaceChildren(...hintLine(mode, turns));
     // Phones: one line inside the column, never cut. Too long? The ↻ clause goes first.
     if (turns && this.view.layout.phone && this.hint.scrollWidth > this.hint.clientWidth + 1)
       this.hint.replaceChildren(...hintLine(mode, false));
     this.hint.dataset.mode = mode;
     this.avoidTray();
+  }
+
+  /**
+   * Phones: put a line in the how-to slot under the tray, or clear it with `null`. The slot
+   * shows one line, in `HINT_SLOTS` order ('holding' first, then 'zoom', then the how-to line),
+   * and the column arbiter (`arrangeColumn`) gives it room after the verdict, the teach card
+   * and a gem's tip, before FUSE. For mobile-6-board ("Holding: X") and mobile-6-zoom ("Tap
+   * the board to zoom"); off phones it is ignored.
+   */
+  setHintLine(slot: Exclude<HintSlot, 'howto'>, text: string | null): void {
+    if ((this.hintLines[slot] ?? null) === text) return;
+    this.hintLines[slot] = text;
+    this.updateHint();
   }
 
   private setMood(): void {
@@ -1365,10 +1411,12 @@ export class AltarScene implements GameScene {
     });
   }
 
-  private showVerdict(text: string, outcome: BoltOutcome, story = '', hint = ''): void {
+  private showVerdict(text: string, outcome: BoltOutcome, story = '', hint = '', cause = ''): void {
     // The verdict sits where the subtitle is; the subtitle steps aside until the next edit.
     this.subtitle.style.display = 'none';
     this.verdict.textContent = text;
+    // Phones: where it went wrong rides in the verdict, not in a tag over the board.
+    if (cause) this.verdict.append(h('small', { class: 'lr-verdict-cause' }, cause));
     if (story) this.verdict.append(h('small', { class: 'lr-verdict-story' }, story));
     // One visible next step (the fizzle tags fade; this stays until the next edit).
     else if (hint) this.verdict.append(h('small', { class: 'lr-verdict-hint' }, hint));
@@ -1479,7 +1527,7 @@ export class AltarScene implements GameScene {
       }
     });
     if (this.tags.length > 0) {
-      parts.push(`Fizzled: ${this.tags.map((t) => t.textContent ?? '').join('; ')}.`);
+      parts.push(`Where it went wrong: ${this.tags.map((t) => t.textContent ?? '').join('; ')}.`);
     }
     return parts.join(' ');
   }
@@ -1764,7 +1812,12 @@ export class AltarScene implements GameScene {
   /** Chips for this strike's charge changes (and every hop into a machine). */
   private buildChips(res: SimResult): void {
     this.clearChips();
-    const chips = chargeChips(res);
+    // Phones: the storm's first hop is already its "Gives 4" card; an unlabelled "4" on the
+    // first cell read as a rule of its own (mobile-6-moments). Changes and arrivals stay.
+    const phone = !!this.view.layout.phone;
+    const chips = chargeChips(res).filter(
+      (c) => !phone || res.trace[c.seg]!.tick !== 0 || res.trace[c.seg]!.end === 'machine',
+    );
     const have = new Set(chips.map((c) => c.seg));
     res.trace.forEach((seg, i) => {
       if (seg.end === 'machine' && !have.has(i))
@@ -2628,20 +2681,24 @@ export class AltarScene implements GameScene {
       const hint = nextStep(
         o,
         this.fizzleList.map((f) => f.cause),
+        this.touch && !this.keyboard,
       );
+      // Phones: the root cause is in the verdict (the headline when nothing arrived, else a line
+      // unless the strike's story already fills it); the red mark on the socket says where.
+      const phone = !!L.phone;
+      const why = phone ? rootFizzle('dead', this.fizzleList) : undefined;
+      const cause = why ? causeText(why.cause) : '';
       if (o === 'over') {
         const m = ms[over]!;
-        this.showVerdict(say(over, failText(m, 'over', this.puzzle.pulses)), 'over', story, hint);
+        const text = say(over, failText(m, 'over', this.puzzle.pulses));
+        this.showVerdict(text, 'over', story, hint, story ? '' : cause);
       } else if (o === 'under') {
         const m = ms[under] ?? ms[0]!;
-        this.showVerdict(
-          say(under, failText(m, 'under', this.puzzle.pulses)),
-          'under',
-          story,
-          hint,
-        );
+        const text = say(under, failText(m, 'under', this.puzzle.pulses));
+        this.showVerdict(text, 'under', story, hint, story ? '' : cause);
       } else {
-        this.showVerdict('No charge reached the machine', 'dead', '', hint);
+        // On a phone the cause is the headline ("Empty socket: charge lost"): the lane is narrow.
+        this.showVerdict(cause || 'No charge reached the machine', 'dead', '', hint);
       }
       // Idle hints ("Bend already here") give way to the verdict and its fizzle tags.
       this.clearTags();
@@ -2652,7 +2709,7 @@ export class AltarScene implements GameScene {
       const placed: HTMLElement[] = [];
       let count = 0;
       const pt = { x: 0, y: 0 };
-      for (let i = this.fizzleList.length - 1; i >= 0 && count < 3; i--) {
+      for (let i = this.fizzleList.length - 1; !phone && i >= 0 && count < 3; i--) {
         const f = this.fizzleList[i]!;
         const k = `${f.cell.x},${f.cell.y}`;
         if (shown.has(k)) continue;
@@ -3002,7 +3059,6 @@ export class AltarScene implements GameScene {
     this.updateTray();
     if (this.introLeft > 0 && this.mode === 'edit') {
       this.introLeft = Math.max(0, this.introLeft - dt);
-      this.introT += dt;
     }
     this.updateInfo();
     this.updateTurnBadge();
@@ -3433,9 +3489,14 @@ export class AltarScene implements GameScene {
       !strike && (!this.hand || overPlaced) ? (this.keyboard ? this.cursor : this.hoverCell) : null;
     const fixedHere = focus ? this.board.fixedAt(focus) : undefined;
     const onBoard = focus ? (this.board.at(focus) ?? fixedHere) : undefined;
+    // Phones: the arrival card outranks a gem's tip (moments.ts); only a long-press pin wins.
+    const teachUp = this.introLeft > 0 && !strike;
     if (pin) {
       rows = [pin];
       key = `p${pin.gem}${pin.how}`;
+    } else if (L.phone && teachUp) {
+      rows = this.introRows();
+      key = `intro${Math.min(this.introPageIdx, this.introPages() - 1)}`;
     } else if (s) {
       rows = [{ gem: s.gem, how: this.turnTeach.has(s.gem) ? 'turnsTray' : 'tray' }];
       slotX = s.x;
@@ -3445,12 +3506,9 @@ export class AltarScene implements GameScene {
       const how: InfoHow = fixed ? 'fixed' : isRotational(onBoard.gem) ? 'boardTurns' : 'board';
       rows = [{ gem: onBoard.gem, how }];
       key = `b${focus.x},${focus.y}${fixed ? 'f' : ''}${this.keyboard ? 'k' : ''}${this.hand ? 'h' : ''}`;
-    } else if (this.introLeft > 0 && !strike) {
+    } else if (teachUp) {
       rows = this.introRows();
       key = 'intro';
-      // Phones: one new piece at a time, so the card stays a short chip above Strike.
-      if (L.phone && this.introPages() > 1)
-        key = `intro${introPage(this.introPages(), this.introT)}`;
     }
     // Keyboard focus on a board gem: say what it is (once per gem).
     const fk = this.keyboard && key.startsWith('b') ? key : '';
@@ -3502,15 +3560,37 @@ export class AltarScene implements GameScene {
           ]
         : []),
     ];
+    // Phones: one new piece at a time, so the card stays short; the player turns the page.
     const paged = key.length > 5 && intro;
     if (paged) {
       const n = items.length;
       const i = Number(key.slice(5));
-      this.tip.replaceChildren(
-        items[i]!,
-        h('div', { class: 'lr-info-page', 'aria-hidden': 'true' }, `New here · ${i + 1} of ${n}`),
+      const label = introButton(i, n);
+      const next = button(
+        label,
+        (e) => {
+          (e.currentTarget as HTMLElement).blur();
+          if (label === 'Got it') this.introLeft = 0;
+          else this.introPageIdx = i + 1;
+          this.updateInfo();
+        },
+        {
+          className: 'lr-info-next',
+          ariaLabel: label === 'Got it' ? 'Got it: close the card' : 'Next new piece',
+        },
       );
+      // "New here" (and "1 of 3") over the button, top-right; the rule wraps round them, so
+      // the card is no taller than its words (on an iPhone SE it fits between tray and FUSE).
+      const page = h(
+        'span',
+        { class: 'lr-info-page' },
+        'New here',
+        n > 1 ? h('span', { class: 'lr-info-of' }, ` ${i + 1} of ${n}`) : null,
+      );
+      this.tip.replaceChildren(h('div', { class: 'lr-info-foot' }, page, next), items[i]!);
     } else this.tip.replaceChildren(...items);
+    // A card with a button is read and used, not a hover tooltip (the announcer reads the rest).
+    this.tip.setAttribute('aria-hidden', String(!paged));
     this.tip.toggleAttribute('data-full', key.startsWith('p'));
     if (L.phone) {
       // Phones: a chip in the info lane, bottom-aligned (CSS), never over the board.
@@ -3600,16 +3680,124 @@ export class AltarScene implements GameScene {
         this.placePhoneLabels(band);
       }
     }
-    const cap = this.ctx.ui.root.querySelector<HTMLElement>('.tc-caption');
-    let crowd = false;
-    if (cap && !cap.hidden && this.lane.offsetHeight > 0) {
-      const a = this.lane.getBoundingClientRect();
-      // Measure where the bubble would sit even while hidden for crowding.
-      const b = cap.getBoundingClientRect();
-      crowd = b.height > 0 && b.top < a.bottom + 4 && b.left < a.right;
+    if (band) this.arrangeColumn(band);
+  }
+
+  /**
+   * Phones: one owner of the right column at a time (mobile-6-moments, moments.ts `arbitrate`).
+   * The lane grows down from under the tray; FUSE's bubble sits over his head, 10 px clear of
+   * Strike. Between them the verdict, the teach card, a gem's tip, the how-to line and FUSE's
+   * bubble get room in that order: a tip that does not fit shrinks to its name line, anything
+   * else waits (FUSE's line is frozen, not lost). The lane also steps right of any Gives/Needs
+   * card that reaches into the column, so no card ever touches a board label.
+   */
+  private arrangeColumn(band: PhoneBand): void {
+    const lane = this.lane;
+    if (!lane || !this.dom.isConnected) return;
+    const ui = this.ctx.ui;
+    const css = band.cssPx; // design px per CSS px
+    const gap = 4;
+    // 1. Clear of board labels: the lane starts 8 px right of any card that reaches it.
+    const lr = lane.getBoundingClientRect();
+    const baseL = lr.left - this.laneShift / css;
+    const floorY = this.strikeBtn.getBoundingClientRect().top;
+    let left = baseL;
+    for (const el of [this.stormLabel, ...this.needs]) {
+      if (!el || el.hidden) continue;
+      const q = el.getBoundingClientRect();
+      if (q.width === 0 || q.bottom < lr.top - gap || q.top > floorY) continue;
+      // Its words, which may run past the card's own box ("in one strike").
+      let right = q.right;
+      for (const c of el.querySelectorAll('*'))
+        right = Math.max(right, c.getBoundingClientRect().right);
+      if (right + 8 > left && q.left < baseL + 40) left = right + 8;
     }
-    if (crowd !== this.dom.hasAttribute('data-crowd'))
-      this.dom.toggleAttribute('data-crowd', crowd);
+    const shift = Math.max(0, Math.round((left - baseL) * css));
+    if (shift !== this.laneShift) {
+      this.laneShift = shift;
+      lane.style.setProperty('--lr-lane-l', `${band.colL + shift}px`);
+      lane.style.setProperty('--lr-lane-w', `${Math.round(band.colR - band.colL - shift)}px`);
+    }
+    // 2. FUSE's bubble: over his head, its bottom at least 10 px above Strike, and never left
+    // of the lane (so it clears the labels too).
+    const f = this.view.fuse;
+    const strikeTop = (this.strikeBtn.getBoundingClientRect().top - this.overlayTop()) * css;
+    const bubB = Math.min(f.y - 2.3 * f.scale - 6 * css, band.bubbleB, strikeTop - 10 * css);
+    const capL = Math.max(band.bubbleL, band.colL + shift);
+    const capKey = `${Math.round(bubB)},${capL}`;
+    if (capKey !== this.capKey2) {
+      this.capKey2 = capKey;
+      const st = ui.root.style;
+      st.setProperty('--lr-cap-b', `${Math.round(1080 - bubB)}px`);
+      st.setProperty('--lr-cap-l', `${capL}px`);
+      st.setProperty('--lr-cap-w', `${1920 - capL}px`);
+      st.setProperty('--lr-cap-tail', `${Math.round(Math.max(22 * css, f.x - capL))}px`);
+    }
+    // 3. Who gets the room between the lane's top and the bubble's bottom.
+    const room = this.overlayTop() + bubB / css - lr.top;
+    const asks: VoiceAsk[] = [];
+    const els = new Map<string, HTMLElement>();
+    const ask = (id: string, el: HTMLElement, voice: VoiceAsk['voice'], shrinks: boolean) => {
+      if (el.hidden || getComputedStyle(el).display === 'none') return;
+      els.set(id, el);
+      // Measured whole, even while it waits or is shrunk (briefly laid out whole to measure).
+      const was = el.dataset.arb;
+      if (was) el.removeAttribute('data-arb');
+      const full = el.getBoundingClientRect().height;
+      const cs = getComputedStyle(el);
+      const first = el.firstElementChild ? getComputedStyle(el.firstElementChild) : cs;
+      const lh = Number.parseFloat(first.lineHeight) || Number.parseFloat(first.fontSize) * 1.3;
+      const edge = (k: 'Top' | 'Bottom') =>
+        Number.parseFloat(cs[`padding${k}`]) + Number.parseFloat(cs[`border${k}Width`]);
+      const line = lh + edge('Top') + edge('Bottom');
+      if (was) el.dataset.arb = was;
+      asks.push(shrinks && line < full ? { id, voice, full, line } : { id, voice, full });
+    };
+    if (!this.verdict.hidden) ask('verdict', this.verdict, 'verdict', false);
+    this.capEls.forEach((el, i) => {
+      if (el.parentElement === lane) ask(`cap${i}`, el, 'verdict', false);
+    });
+    const teach = this.tip.dataset.source === 'intro';
+    if (teach && !this.tip.hidden) {
+      // The teach card's button sits under the rule when there is room; where there is not (an
+      // iPhone SE under a two-row tray) it stands top-right and the rule wraps round it.
+      this.tip.removeAttribute('data-compact');
+      const below = this.verdict.hidden ? 0 : this.verdict.getBoundingClientRect().height + gap;
+      if (this.tip.getBoundingClientRect().height + below > room)
+        this.tip.setAttribute('data-compact', '');
+    }
+    if (!this.tip.hidden) ask('tip', this.tip, teach ? 'teach' : 'tip', !teach);
+    ask('hint', this.hint, 'hint', false);
+    const cap = ui.root.querySelector<HTMLElement>('.tc-caption');
+    const talking = !!cap && !cap.hidden && cap.textContent !== '';
+    if (talking && cap) {
+      const h0 = cap.getBoundingClientRect().height;
+      if (h0 > 0) this.fuseH = h0;
+      // The bubble keeps its own 8 px from the lane (the gap adds 4).
+      asks.push({ id: 'fuse', voice: 'fuse', full: this.fuseH + gap });
+    }
+    const grants = arbitrate(asks, room, gap);
+    for (const [id, el] of els) {
+      const g: Grant = grants.get(id) ?? 'full';
+      if (g === 'full') el.removeAttribute('data-arb');
+      else if (el.dataset.arb !== g) el.dataset.arb = g;
+    }
+    this.holdFuse(talking && grants.get('fuse') === 'wait');
+  }
+
+  /** The overlay's top edge in CSS px (design y 0). */
+  private overlayTop(): number {
+    return this.ctx.ui.root.getBoundingClientRect().top;
+  }
+
+  /** Freeze FUSE's caption while the column has no room for it; release it when it does. */
+  private holdFuse(on: boolean): void {
+    if (on === this.fuseHeld) return;
+    this.fuseHeld = on;
+    const ui = this.ctx.ui;
+    // A modal holds the caption on its own account: leave it held until the modal closes.
+    if (!on && ui.stack.hasModal) return;
+    ui.caption.suspend(on);
   }
 
   /**

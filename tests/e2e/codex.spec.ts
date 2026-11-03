@@ -91,7 +91,7 @@ test('a gem seen at an altar gets its Codex page before it is earned', async ({ 
   await expect(amp.locator('.lr-codex-rule')).toBeVisible();
   // The picture: the real gem (rendered on the GPU), with the bolt's in and out charges.
   const plate = amp.getByRole('img');
-  await expect(plate).toHaveAttribute('aria-label', /Amplify\. A bolt of 4 enters from below/);
+  await expect(plate).toHaveAttribute('aria-label', /Amplify\. Charge of 4 enters from below/);
   await expect(plate).toHaveAttribute('data-real', 'true');
   await expect(plate.locator('.lr-plate-chip')).toHaveText(['4', '8']);
 

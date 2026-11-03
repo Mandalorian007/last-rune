@@ -13,7 +13,7 @@ attention. Text is short, sits around the board, and never covers it.
 | Top right | `Undo Z` · `Clear Del` · `Back Esc` · **`Strike F`** (gold, the largest control) |
 | Below the title | Verdict after a strike (`Not enough: needs 2, got 0`). On exact it is FUSE's `exactLine(tier)`. The numbers match a need label, so multi-machine verdicts carry no ordinal. In a narrow title gap (finale) it drops to 24 px. |
 | Next to each machine | A large `Needs N` (40 px number), then `got M` after a strike, plus `Strike k: r` pips on multi-strike altars. Border and numbers are cyan for exact, amber for under and red for over. North and south machines put the label beside the cabinet (a south label sits level with the cabinet's top half); east and west machines put it below. A notch on the label points at its machine. Machines are 180–230 px and sit against the exit socket. |
-| Bottom row, left of centre | Tray: one gem per kind, with `slot ×count`, between FUSE's sprite and the caption (slot centres x 470–1070; six slots close up to 120 px). Hover or hold a gem to see a one-line rule (`Bend Turns the bolt 90°.`); the tip is clamped between FUSE and the caption and its pointer still marks the slot. |
+| Bottom row, left of centre | Tray: one gem per kind, with `slot ×count`, between FUSE's sprite and the caption (slot centres x 470–1070; six slots close up to 120 px). Hover or hold a gem to see a one-line rule (`Bend Turns the charge along its bent line. Other sides lose it.`); the tip is clamped between FUSE and the caption and its pointer still marks the slot. |
 | Bottom right | FUSE caption card. It owns the caption lane (`CAPTION_LANE`: x ≥ 1130, y ≥ 820). No tray slot, count, label or tooltip may enter it (tested in `clarity.test.ts`). |
 | Bottom line | One line of controls in small type. |
 
@@ -56,7 +56,7 @@ sides. It fits every puzzle from 4×4 up to the 10×8 finale.
   the turn arrow badge hides. Placing keeps the same kind in hand (stamping a route stays one
   click per socket); a turn made right after placing turns the gem just placed.
 - **A gem that cannot turn says so, at that gem**, with the deny sound and the announcer, and
-  nothing else turns in its place: Channel, Amplify, Capacitor `Can't turn: the bolt goes
+  nothing else turns in its place: Channel, Amplify, Capacitor `Can't turn: charge goes
   straight through`; a fixed Bend, Gate or Split `Can't turn: fixed in place`. Over a fixed gem this holds even with a Bend in hand.
 - **A socket that will not take the held gem** (fixed gem, carved stone) shows why in a tag above
   it while hovered, and the held gem is drawn beside the socket, not on it, so the gem or stone
@@ -133,8 +133,8 @@ It sits between FUSE (x ≤ 410) and his caption card; the altar passes its meas
   whose arms end in arrowheads on the sides the halves leave by (rules.md section 4). Nothing on
   the gem points at its input (the old trillion's apex did, and read as an arrow backwards). The tray Split shows rot 0 (in from below, out left and
   right). A fixed Split met for the first time gets guide stubs into its stem and out of both
-  arms. Its card reads the Codex rule (`Takes the bolt in at its stem and sends it out both
-  arms, half charge each.`). A bolt into any other side fizzles with `Faces the wrong way`.
+  arms. Its card reads the Codex rule (`Charge enters at the plain end and leaves by both
+  arrows, half each.`). Charge into any other side is lost (`Turned the wrong way: charge lost`).
 - **Storm and needs.** Every altar shows `Gives N` by the storm and `Needs N` by each machine.
 - **Strike-ready.** Strike glows on any altar once the route (over all strikes) reaches every
   machine. Reaching is not exact: the glow says the bolt has somewhere to go, not that the
@@ -161,10 +161,10 @@ reading update per strike. Hold `F` to fast-forward at 3×; click, `Enter` or `E
 | exact | Gauges settle cyan, the board flares white-hot, the machine wakes; solve moment |
 | under | Amber needle short of the mark; the machine's conduit and label turn amber; verdict gives both numbers |
 | over | Breaker trips: red flash (softened by `reduceFlashes`), shake (off in reduced motion), spark burst. Funny, never punishing: nothing is lost. |
-| dead | Fizzle ring and tag at the cell where the bolt stopped (`Empty socket: the bolt fizzled`) |
+| dead | Red ring at the cell where the charge was lost; the cause names it (`Empty socket: charge lost`): a tag there on big screens, a line in the verdict on phones (mobile-6-moments) |
 
 **Charge chips** (`chargeChips`) label the bolt on the board as it plays: the storm's charge as
-it enters, every place the charge changes (Amplify, Split, Gate, Capacitor), and what lands at
+it enters (not on phones, where the `Gives N` card already says it), every place the charge changes (Amplify, Split, Gate, Capacitor), and what lands at
 each machine, in the outcome colour. Channels and Bends get no chip, so a long route stays clean.
 Chips scale with the board pitch (16–24 px).
 

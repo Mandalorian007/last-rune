@@ -61,8 +61,22 @@ const grow = (a: Box, d: number): Box => ({ l: a.l - d, t: a.t - d, r: a.r + d, 
 /** The arrival card's clearance from Strike, CSS px. */
 const STRIKE_CLEAR = 8;
 
-/** Every page of the arrival card now up: clear of Strike and FUSE. Pages turn every 4 s. */
-async function arrivalProblems(page: Page, label: string): Promise<string[]> {
+/** Least drawn height of the teach card's Next / Got it, and its finger target, CSS px. */
+const NEXT_MIN = 36;
+const NEXT_HIT = 44;
+/** Least size of the "New here · 1 of 3" counter, CSS px. */
+const COUNTER_MIN = 12;
+
+/**
+ * Every page of the arrival card now up: clear of Strike and FUSE, its counter ≥12 px and its
+ * Next / Got it ≥36 px drawn (44 px to the finger). Pages turn only on a tap (mobile-6-moments);
+ * `check` runs on each page. Ends with the card closed by "Got it".
+ */
+async function arrivalProblems(
+  page: Page,
+  label: string,
+  check?: (p: string) => Promise<string[]>,
+): Promise<string[]> {
   const out: string[] = [];
   const first = await shownBox(page, '.lr-altar-tip[data-source="intro"]');
   if (!first) return [`${label}: no arrival card`];
@@ -71,18 +85,90 @@ async function arrivalProblems(page: Page, label: string): Promise<string[]> {
   );
   const pages = Number(/of (\d+)/.exec(marker)?.[1] ?? 1);
   for (let i = 0; i < pages; i++) {
-    if (i > 0) await page.waitForTimeout(4000);
     const tip = await shownBox(page, '.lr-altar-tip[data-source="intro"]');
     const strike = await shownBox(page, '[data-action="strike"]');
     if (!tip) {
       out.push(`${label}: arrival card gone at page ${i + 1} of ${pages}`);
       break;
     }
+    const at = `${label} page ${i + 1}`;
     if (strike && hit(grow(tip, STRIKE_CLEAR), strike))
-      out.push(`${label} page ${i + 1}: arrival card within ${STRIKE_CLEAR}px of Strike`);
-    if (hit(tip, await fuseBox(page))) out.push(`${label} page ${i + 1}: arrival card over FUSE`);
+      out.push(`${at}: arrival card within ${STRIKE_CLEAR}px of Strike`);
+    if (hit(tip, await fuseBox(page))) out.push(`${at}: arrival card over FUSE`);
+    const m = await page.evaluate(() => {
+      const c = document.querySelector<HTMLElement>('.lr-altar-tip .lr-info-page');
+      const b = document.querySelector<HTMLElement>('.lr-altar-tip .lr-info-next');
+      if (!b) return null;
+      const r = b.getBoundingClientRect();
+      const before = getComputedStyle(b, '::before');
+      return {
+        font: c ? Number.parseFloat(getComputedStyle(c).fontSize) : 0,
+        text: b.textContent ?? '',
+        h: r.height,
+        hitH: Math.max(r.height, Number.parseFloat(before.height) || 0),
+        x: r.left + r.width / 2,
+        y: r.top + r.height / 2,
+      };
+    });
+    if (!m) {
+      out.push(`${at}: no Next / Got it button`);
+      break;
+    }
+    if (m.font < COUNTER_MIN - 0.05) out.push(`${at}: counter ${m.font.toFixed(1)}px`);
+    if (m.h < NEXT_MIN - 0.5) out.push(`${at}: "${m.text}" drawn ${m.h.toFixed(1)}px tall`);
+    if (m.hitH < NEXT_HIT - 0.5) out.push(`${at}: "${m.text}" hit area ${m.hitH.toFixed(1)}px`);
+    const want = i < pages - 1 ? 'Next ›' : 'Got it';
+    if (m.text !== want) out.push(`${at}: button says "${m.text}", not "${want}"`);
+    if (check) out.push(...(await check(at)));
+    await page.touchscreen.tap(m.x, m.y);
+    await waitFrames(page, 4);
   }
+  if (await shownBox(page, '.lr-altar-tip[data-source="intro"]'))
+    out.push(`${label}: arrival card still up after "Got it"`);
   return out;
+}
+
+/**
+ * The phone's right column: no two of these boxes intersect (mobile-6-moments): the gem tip or
+ * teach card, FUSE's bubble, the how-to line, the verdict, the tray's counts, Strike and the
+ * board's Gives/Needs cards.
+ */
+async function columnProblems(page: Page, at: string): Promise<string[]> {
+  return page.evaluate((at) => {
+    const parts: [string, string][] = [
+      ['tip', '.lr-altar-tip'],
+      ['bubble', '.tc-caption'],
+      ['hint', '.lr-altar-hint'],
+      ['verdict', '.lr-altar-verdict'],
+      ['cap', '.lr-altar-lane .lr-altar-cap'],
+      ['tray', '.lr-altar-count'],
+      ['strike', '[data-action="strike"]'],
+      ['label', '.lr-altar-need'],
+    ];
+    const boxes: { name: string; r: DOMRect }[] = [];
+    for (const [name, sel] of parts)
+      for (const el of document.querySelectorAll<HTMLElement>(sel)) {
+        if (el.hidden || el.closest('[hidden]')) continue;
+        const cs = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) < 0.05)
+          continue;
+        if (r.width < 1 || r.height < 1) continue;
+        boxes.push({ name, r });
+      }
+    const out: string[] = [];
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i]!;
+        const b = boxes[j]!;
+        if (a.name === b.name && (a.name === 'tray' || a.name === 'label' || a.name === 'cap'))
+          continue;
+        const x = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
+        const y = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+        if (x > 0.5 && y > 0.5) out.push(`${at}: ${a.name} overlaps ${b.name}`);
+      }
+    return out;
+  }, at);
 }
 
 /** The play area: the app box (inside the emulated notch insets), client px. */
@@ -297,6 +383,78 @@ for (const vp of PHONES) {
       const fz3 = await fuseBox(page);
       if (fz3.l < area.l || fz3.r > area.r || fz3.t < area.t || fz3.b > area.b - 1)
         problems.push(`solve: FUSE off screen ${JSON.stringify(fz3)}`);
+      expect(problems).toEqual([]);
+    });
+
+    // mobile-6-moments: one owner of the column. At first meeting of Capacitor Bay and the Last
+    // Rune, through each teach page, a gem's tip, a fail and FUSE talking over each, no two of
+    // tip / bubble / hint / verdict / tray / Strike / board labels touch.
+    test(`the right column has one owner at a time (${vp.name})`, async ({ page }) => {
+      await insets(page, vp.inset);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(DEV_URL);
+      await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+        timeout: 30_000,
+      });
+      await page.evaluate(() =>
+        document.dispatchEvent(
+          new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }),
+        ),
+      );
+      const problems: string[] = [];
+      const talk = (line: string) =>
+        page.evaluate((line) => {
+          const g = (window as G).__game;
+          g.fuse.hush();
+          void g.fuse.say(line, { hold: 0 });
+        }, line);
+      const LINE = 'Two strikes, one bay. The first fills the jar; the second empties it.';
+      for (const id of ['capacitor-bay', 'the-last-rune']) {
+        const at = MACHINE_IDS.indexOf(id as (typeof MACHINE_IDS)[number]);
+        await seed(page, MACHINE_IDS.slice(0, at) as unknown as string[]);
+        await page.evaluate((id) => (window as G).__game.flow.openPuzzle(id), id);
+        await expect(page.locator('.lr-altar')).toBeVisible();
+        await waitFrames(page, 6);
+        await talk(LINE);
+        await waitFrames(page, 6);
+        // Capacitor Bay teaches the Capacitor; the Last Rune has no new piece (no card).
+        if (id === 'capacitor-bay')
+          problems.push(
+            ...(await arrivalProblems(page, id, (p) => columnProblems(page, `${p} (FUSE)`))),
+          );
+        else problems.push(...(await columnProblems(page, `${id} arrival (FUSE)`)));
+        // A gem's tip, with FUSE talking.
+        const L = await page.evaluate(
+          () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+        );
+        const ob = (await page.locator('.tc-overlay').boundingBox())!;
+        const k = ob.width / 1920;
+        await page.touchscreen.tap(ob.x + L.tray[0]!.x * k, ob.y + L.tray[0]!.y * k);
+        await talk(LINE);
+        await waitFrames(page, 6);
+        problems.push(...(await columnProblems(page, `${id} gem tip`)));
+        await page.touchscreen.tap(ob.x + L.tray[0]!.x * k, ob.y + L.tray[0]!.y * k);
+        await waitFrames(page, 4);
+        // A fail (an empty board), then FUSE and a gem's tip on top of the verdict.
+        await page.locator('[data-action="strike"]').tap();
+        await waitFrames(page, 4);
+        const sure = page.locator('.lr-confirm .lr-gold-button');
+        if (await sure.isVisible()) await sure.tap();
+        await expect(page.locator('.lr-altar-verdict')).toBeVisible({ timeout: 20_000 });
+        await waitFrames(page, 6);
+        problems.push(...(await columnProblems(page, `${id} verdict`)));
+        await talk(LINE);
+        await waitFrames(page, 6);
+        problems.push(...(await columnProblems(page, `${id} verdict + FUSE`)));
+        await page.touchscreen.tap(ob.x + L.tray[0]!.x * k, ob.y + L.tray[0]!.y * k);
+        await waitFrames(page, 6);
+        problems.push(...(await columnProblems(page, `${id} verdict + tip`)));
+        // The tag over the top row is gone on phones: the cause rides in the verdict.
+        if (await shownBox(page, '.lr-altar-tag'))
+          problems.push(`${id} verdict: a tag over the board`);
+        await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+        await waitFrames(page, 4);
+      }
       expect(problems).toEqual([]);
     });
   });

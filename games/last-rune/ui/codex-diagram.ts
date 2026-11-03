@@ -26,13 +26,13 @@ export const GEM_DIAGRAMS: Readonly<Record<GemKind, GemDiagram>> = {
     ins: [{ side: 'S', charge: '4' }],
     outs: [{ side: 'N', charge: '4' }],
     fizzle: [],
-    alt: 'A bolt of 4 enters from below and leaves straight out the top with 4.',
+    alt: 'Charge of 4 enters from below and leaves straight out the top with 4.',
   },
   bend: {
     ins: [{ side: 'N', charge: '4' }],
     outs: [{ side: 'E', charge: '4' }],
     fizzle: ['S', 'W'],
-    alt: 'A bolt of 4 enters from the top and leaves to the right with 4. The bottom and left sides fizzle.',
+    alt: 'Charge of 4 enters from the top and leaves to the right with 4. Charge entering the bottom or left side is lost.',
   },
   split: {
     ins: [{ side: 'S', charge: '4' }],
@@ -41,13 +41,13 @@ export const GEM_DIAGRAMS: Readonly<Record<GemKind, GemDiagram>> = {
       { side: 'E', charge: '2' },
     ],
     fizzle: ['N'],
-    alt: 'A bolt of 4 enters from below and leaves left and right with 2 each. The top side fizzles.',
+    alt: 'Charge of 4 enters from below and leaves left and right with 2 each. Charge entering the top is lost.',
   },
   amplify: {
     ins: [{ side: 'S', charge: '4' }],
     outs: [{ side: 'N', charge: '8' }],
     fizzle: [],
-    alt: 'A bolt of 4 enters from below and leaves straight out the top with 8.',
+    alt: 'Charge of 4 enters from below and leaves straight out the top with 8.',
   },
   gate: {
     ins: [
@@ -56,13 +56,13 @@ export const GEM_DIAGRAMS: Readonly<Record<GemKind, GemDiagram>> = {
     ],
     outs: [{ side: 'N', charge: '8' }],
     fizzle: ['S'],
-    alt: 'Bolts of 4 enter from the left and the right in the same strike; one bolt of 8 leaves out the top. The bottom side fizzles.',
+    alt: 'Charge of 4 enters from the left and the right in the same strike; 8 leaves out the top. Charge entering the bottom is lost.',
   },
   capacitor: {
     ins: [{ side: 'S', charge: '4' }],
     outs: [{ side: 'N', charge: '0, then 8' }],
     fizzle: [],
-    alt: 'A bolt of 4 enters from below. On the first strike nothing comes out; on the next, 8 leaves out the top.',
+    alt: 'Charge of 4 enters from below. On the first strike nothing comes out; on the next, 8 leaves out the top.',
   },
 };
 
