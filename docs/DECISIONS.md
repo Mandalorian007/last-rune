@@ -115,3 +115,30 @@ Format: `D-NNN · date · decision · why · who`.
     - **Hall.** The hall's welcome line must agree with the Start here marker.
     - **Next.** mobile-4-board and mobile-4-chrome, then gate review 2.
     - mobile-4-board result: the fixed-gem treatment is a dark iron collar with four rivets (overlay state `collar`) on all platforms; dashed brackets are retired. The unused phone `plate` socket state may be deleted in a later tidy.
+  - **Addendum 3 (gate review 2, 2026-11-03).** Blind scores were 6 / 6 / 6.5 / 6.5, so the gate failed again. The PM checked every issue against the screens.
+    - **False issue.** "The pre-placed Gate gem is never named" is a capture artefact: the captures seed every altar as solved, so first-appearance teaching (`teach.ts`) never shows.
+    - **Board calls (mobile-5-board):**
+      - fixed gems must read as fixed at arm's length: the D-040 addendum 2 collar is too faint (3 of 4 reviewers);
+      - the stone slab must enclose every socket;
+      - the board fills the phone's height, using the right column's dead space on wide phones;
+      - phone label text ≥13 px, with Gives/Needs numbers ≥15 px;
+      - one rotate control on phones: the ↻ chip that overlaps the gem and board edge goes, and the rail's Turn button stays;
+      - valid-socket rings show only while a gem is held;
+      - multi-strike copy a newcomer can parse: what one tap of Strike does, and whether N is per strike;
+      - Strike ≥12 px from the screen edge.
+    - **Moments calls (mobile-5-moments):**
+      - FUSE never replaces or covers the how-to hint;
+      - a fail shows one message at a time (FUSE's quip waits);
+      - the phone solve screen keeps the finished circuit readable (bloom toned down, no oversized gem over the board);
+      - one result card holds the text, the journal scrap and Continue, with Continue ≥44 px tall;
+      - captures show first-appearance teaching on a fresh save.
+    - **Chrome calls (mobile-5-chrome):**
+      - the hall gets door names on phones, legible lock and requirement state, and fills the usable width (no black side bands);
+      - FUSE's hall bubble points at FUSE;
+      - Settings never shows a half-cut row or header at the fold;
+      - the Codex on SE shows the whole rule, formula included, without hidden overflow;
+      - the hall exposes the Codex with a labelled control;
+      - the title, end-card and hangout leftovers are fixed;
+      - chrome text ≥12 px on phones.
+    - **Kept:** the end card's Join/Ko-fi order (user decision D-034).
+    - **Gate unchanged:** ≥8/10 average with no blocker or major issue.
