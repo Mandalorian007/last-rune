@@ -347,6 +347,7 @@ export class AltarScene implements GameScene {
     this.board.restore(ctx.flow.placementsFor(this.machine) as Placement[]);
     this.view = new AltarView(ctx, this.puzzle);
     this.view.reducedMotion = ctx.settings.reducedMotion;
+    this.view.reduceFlashes = ctx.settings.reduceFlashes;
     this.view.syncBoard(this.board);
     this.cursor = {
       x: 0,
@@ -1998,6 +1999,7 @@ export class AltarScene implements GameScene {
     const input = ctx.input;
     this.time += dt;
     this.view.reducedMotion = ctx.settings.reducedMotion;
+    this.view.reduceFlashes = ctx.settings.reduceFlashes;
 
     if (this.mode === 'strike') this.updateStrike(dt);
     else this.updateEdit(dt);

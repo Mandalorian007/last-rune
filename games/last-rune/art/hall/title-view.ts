@@ -153,7 +153,7 @@ export class StormTitleView implements TitleView {
     storm.update(dt);
     this.updateFuse(dt, s);
     const k = this.kit.candles;
-    k.reducedMotion = s.reducedMotion;
+    k.reducedMotion = s.reducedMotion || !!s.reduceFlashes;
     k.update(this.all, this.time);
   }
 

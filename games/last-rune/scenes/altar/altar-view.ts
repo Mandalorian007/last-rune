@@ -108,6 +108,8 @@ export class AltarView {
   wake = 0;
   time = 0;
   reducedMotion = false;
+  /** Reduce flashes: candles hold a steady light (as in reduced motion). */
+  reduceFlashes = false;
   /** Bolt playback speed (fast-forward). */
   boltRate = 1;
   private readonly markPool: SocketMark[] = [];
@@ -428,7 +430,7 @@ export class AltarView {
     this.storm.update(dt);
     for (const m of this.machines) m.update(dt);
     for (let i = 0; i < this.activeBolts; i++) this.assets.bolts[i]!.update(dt * this.boltRate);
-    this.assets.candles.reducedMotion = rm;
+    this.assets.candles.reducedMotion = rm || this.reduceFlashes;
     this.assets.candles.update(CANDLES, this.time);
     this.fuse.update(dt);
     this.shake = Math.max(0, this.shake - dt * 2.4);
