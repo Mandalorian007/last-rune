@@ -21,3 +21,6 @@ Plan: [../engine/refactor-plan.md](../engine/refactor-plan.md), "Phase 1" → ws
 - `pnpm check`, `pnpm build` and `pnpm test:e2e` must be green.
 
 ## Log
+
+## Test ownership (D-041 addendum 2)
+Platform assertions for the modules you move or create go in the engine suite: unit tests plus the engine e2e harness. Then trim the matching checks out of the game specs in this same branch. Follow `docs/engine/test-split.md`. Coverage must never drop between the two.

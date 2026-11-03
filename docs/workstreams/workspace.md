@@ -26,6 +26,14 @@ Plan: [../engine/refactor-plan.md](../engine/refactor-plan.md), "Phase 1" → ws
 - **Commit** to `ws/workspace` and never merge.
 - pnpm only. No new runtime deps (D-008). Dev deps are fine if justified in the log.
 
+## Added by the PM (D-041 addendum 2: test ownership)
+- Set up `packages/engine` test infrastructure:
+  - `vitest` for unit tests;
+  - an engine e2e harness: its own Playwright project, served from `packages/engine/harness/` as a noun-free page, with a viewport, device and wrapper matrix that includes an itch-style cross-origin iframe.
+- Seed the harness with one smoke spec: WebGPU init, surface resize, one input tap.
+- CI runs engine and game test jobs separately.
+- Do not move game specs yet. `docs/engine/test-split.md` (being written) maps what moves where.
+
 ## Log
 
 ### 2026-11-03: package move, boundary check, CI split (commit 63aca2f, then main merged)

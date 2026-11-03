@@ -7,7 +7,7 @@
  * (conduits, socket veils), socket overlays, props (storm, machines), gem shadows/pools, gems, held gem, bolts, candle flames,
  * FUSE, particles.
  */
-import type { DrawParams, Frame, RGBA } from '@thunderclap/engine/render';
+import type { Frame, RGBA } from '@thunderclap/engine/render';
 import type { CandleInstance } from '../../art/materials/candles';
 import { addGemLight, type GemInstance, type GemState } from '../../art/materials/gems';
 import { LightSet } from '../../art/materials/lights';
@@ -29,12 +29,10 @@ import {
   anchorOf,
   cellCenter,
   computeLayout,
-  DESIGN_H,
   DESIGN_W,
   phoneFrameFor,
 } from './layout';
 import type { StrikeTimeline } from './strike';
-import { type Cam, cellRect, FIT, rendererCam, sameCam, transformLayout, viewRect } from './zoom';
 
 const W = DESIGN_W;
 const GOLD: RGBA = [LINEAR.gold[0] * 1.4, LINEAR.gold[1] * 1.4, LINEAR.gold[2] * 1.4, 1];
@@ -99,27 +97,8 @@ export interface HeldGem {
 }
 
 export class AltarView {
-  /** The fitted layout: where things are drawn (world px; the renderer's camera zooms it). */
-  readonly world: AltarLayout;
-  /**
-   * Phones, dense boards (mobile-6-zoom): the zoomed view's camera, `screen = o + z · world`.
-   * FIT everywhere else, where `layout` is `world` and every draw is as before.
-   */
-  private cam: Cam = { ...FIT };
-  private screenL: AltarLayout;
-  /** Where things are on screen: hit tests and DOM labels use this. */
-  get layout(): AltarLayout {
-    return this.screenL;
-  }
-  get zoom(): Readonly<Cam> {
-    return this.cam;
-  }
-  /** Set the zoomed view's camera (the screen layout follows). */
-  setZoom(c: Cam): void {
-    if (sameCam(c, this.cam)) return;
-    this.cam = { ...c };
-    this.screenL = transformLayout(this.world, this.cam);
-  }
+  /** The fitted layout: where things are drawn, hit-tested and labelled (design px). */
+  readonly layout: AltarLayout;
   readonly slab: AltarSlab;
   readonly storm: StormCell;
   readonly machines: Machine[];
@@ -183,10 +162,6 @@ export class AltarView {
   };
   private readonly heldList: GemInstance[] = [this.heldInst];
   private readonly drawList: GemInstance[] = [];
-  /** The tray gems as drawn while zoomed (back through the zoom, so they stay put). */
-  private readonly trayZ: GemInstance[] = [];
-  private readonly maskUv = [0, 0, 1, 1];
-  private readonly maskDp: DrawParams = { x: 0, y: 0, params: [1, 0.08, 0, 0] };
   private readonly pt = { x: 0, y: 0 };
   private activeBolts = 0;
 
@@ -199,8 +174,7 @@ export class AltarView {
     ensureBolts(this.assets, r, ctx.particles, Math.max(1, puzzle.pulses));
     const dev = ctx.device;
     const L = computeLayout(puzzle, phoneFrameFor(dev));
-    this.world = L;
-    this.screenL = L;
+    this.layout = L;
     this.slab = L.phone
       ? this.assets.slab(L.cols, L.rows, L.pitch, L.margin, L.phone.front, puzzle.blocked, true)
       : this.assets.slab(L.cols, L.rows, L.pitch);
@@ -297,7 +271,7 @@ export class AltarView {
    * blocked sockets never get a veil (the gem or rubble covers them). `instant` skips easing.
    */
   setLive(mask: Uint8Array, occupied: (x: number, y: number) => boolean, instant = false): void {
-    const L = this.world;
+    const L = this.layout;
     for (let y = 0; y < L.rows; y++) {
       for (let x = 0; x < L.cols; x++) {
         const i = y * L.cols + x;
@@ -312,7 +286,7 @@ export class AltarView {
 
   /** Rebuild the board gem list after an edit, keeping animation state for gems that stayed. */
   syncBoard(state: BoardState, justPlaced: Cell | null = null): void {
-    const L = this.world;
+    const L = this.layout;
     const want: { p: Placement; fixed: boolean }[] = [
       ...this.puzzle.fixed.map((p) => ({ p, fixed: true })),
       ...state.placements.map((p) => ({ p, fixed: state.lockedPlacements.includes(p) })),
@@ -419,8 +393,8 @@ export class AltarView {
     const b = { x: 0, y: 0 };
     for (const s of timeline.segments) {
       if (s.seg.pulse !== pulse) continue;
-      anchorOf(this.world, s.seg.from, a);
-      anchorOf(this.world, s.seg.to, b);
+      anchorOf(this.layout, s.seg.from, a);
+      anchorOf(this.layout, s.seg.to, b);
       out.push({
         ax: a.x,
         ay: a.y,
@@ -455,7 +429,7 @@ export class AltarView {
       // Settle: a small overshoot squash as the gem seats (easeOutBack-ish bounce).
       const s = b.settle;
       const bounce = rm ? 0 : Math.sin(s * Math.PI * 2.2) * s * 0.09;
-      g.size = this.world.gemSize * (1 + bounce);
+      g.size = this.layout.gemSize * (1 + bounce);
       g.state = b.energy > 0.15 ? 'energised' : b.hidden ? 'dim' : 'placed';
       const hold = b.holding ? 0.35 + 0.25 * Math.sin(this.time * 6) : 0;
       g.glow = 1 + b.energy * 0.6 + hold + (b.fixed ? 0 : 0);
@@ -491,7 +465,7 @@ export class AltarView {
    */
   private drawCircuit(frame: Frame): void {
     const c = this.assets.circuit;
-    const L = this.world;
+    const L = this.layout;
     const r = this.slab.socketRadius;
     const wide = Math.max(8, L.pitch * 0.15);
     const a = this.pt;
@@ -594,75 +568,9 @@ export class AltarView {
     return this.beckonK * (0.15 + 0.6 * Math.exp(-(((u - 0.25) * 6) ** 2)));
   }
 
-  /**
-   * Zoomed: the wall again over the right-hand column and the left rail (the strips of screen
-   * outside the board's view), so the zoomed board slides under them, with a thin rule where
-   * it is cut. Drawn at screen positions through the inverse of the zoom.
-   *
-   * mobile-7-zoom: the gutter round the cells (arrows, chips of gauges out of view) dims the
-   * board under it, so it reads as "more board this way" and never as cells to tap, with a
-   * faint gold rule where the cells end.
-   */
-  private drawMasks(frame: Frame, z: Cam): void {
-    const v = viewRect(this.world);
-    const R = cellRect(this.world);
-    const wall = this.assets.wall;
-    const dp = this.maskDp;
-    const uv = this.maskUv;
-    const H = DESIGN_H;
-    // A piece of the wall over the screen rect (x0, y0)–(x1, y1), optionally darkened.
-    const rect = (x0: number, y0: number, x1: number, y1: number, tint?: RGBA) => {
-      if (x1 - x0 < 0.5 || y1 - y0 < 0.5) return;
-      uv[0] = x0 / W;
-      uv[1] = y0 / H;
-      uv[2] = x1 / W;
-      uv[3] = y1 / H;
-      dp.x = ((x0 + x1) / 2 - z.ox) / z.z;
-      dp.y = ((y0 + y1) / 2 - z.oy) / z.z;
-      dp.w = (x1 - x0) / z.z;
-      dp.h = (y1 - y0) / z.z;
-      dp.uv = uv;
-      dp.tint = tint;
-      frame.sprite(wall.material, dp);
-    };
-    const strip = (x0: number, x1: number) => rect(x0, 0, x1, H);
-    // The gutter: darker wall, so it reads as a frame and never as cells to tap.
-    const dark: RGBA = [0.5, 0.48, 0.55, 1];
-    rect(v.x0, 0, v.x1, R.y0, dark);
-    rect(v.x0, R.y1, v.x1, H, dark);
-    rect(v.x0, R.y0, R.x0, R.y1, dark);
-    rect(R.x1, R.y0, v.x1, R.y1, dark);
-    const g = 1.5 * (this.world.phone?.cssPx ?? 1);
-    const gold: RGBA = [0.91, 0.75, 0.42, 0.6];
-    const line = (x0: number, y0: number, x1: number, y1: number) =>
-      frame.sprite(null, {
-        x: ((x0 + x1) / 2 - z.ox) / z.z,
-        y: ((y0 + y1) / 2 - z.oy) / z.z,
-        w: (x1 - x0) / z.z,
-        h: (y1 - y0) / z.z,
-        tint: gold,
-      });
-    line(R.x0 - g, R.y0 - g, R.x1 + g, R.y0);
-    line(R.x0 - g, R.y1, R.x1 + g, R.y1 + g);
-    line(R.x0 - g, R.y0, R.x0, R.y1);
-    line(R.x1, R.y0, R.x1 + g, R.y1);
-    strip(0, v.x0);
-    strip(v.x1, W);
-    // The cut edge: a dark rule so the board reads as running on under the column.
-    const rule = { x: 0, y: 0, w: 0, h: 0, tint: [0, 0, 0, 0.55] as RGBA };
-    const t = 2 * (this.world.phone?.cssPx ?? 1);
-    for (const x of v.x0 > 0 ? [v.x0, v.x1] : [v.x1]) {
-      rule.x = (x - z.ox) / z.z;
-      rule.y = (H / 2 - z.oy) / z.z;
-      rule.w = t / z.z;
-      rule.h = H / z.z;
-      frame.sprite(null, rule);
-    }
-  }
-
   render(frame: Frame): void {
     const a = this.assets;
-    const L = this.world;
+    const L = this.layout;
     const cam = this.ctx.renderer.camera;
     if (this.shake > 0 && !this.reducedMotion) {
       const s = this.shake * this.shake * 14;
@@ -672,17 +580,7 @@ export class AltarView {
       cam.x = 0;
       cam.y = 0;
     }
-    // Zoomed (mobile-6-zoom): the camera draws the world through the zoom; what stays put on
-    // screen (wall, column, tray, FUSE, the gem in hand) is drawn back through its inverse.
-    const z = this.cam;
-    const zoomed = z.z !== 1 || z.ox !== 0 || z.oy !== 0;
-    if (zoomed) {
-      const sx = cam.x;
-      const sy = cam.y;
-      rendererCam(z, W, DESIGN_H, cam);
-      cam.x += sx / z.z;
-      cam.y += sy / z.z;
-    } else cam.zoom = 1;
+    cam.zoom = 1;
 
     // ── Lights ──
     const Ls = this.lights;
@@ -696,9 +594,8 @@ export class AltarView {
     const span = Math.max(L.right - L.left, L.frontBottom - L.top);
     if (ph) {
       Ls.add(L.cx, L.cy, span * 1.5, WORK, 0.62, span);
-      // The tray in the column (it stays put on screen when the board zooms).
-      const tx = ((ph.colL + ph.colR) / 2 - z.ox) / z.z;
-      Ls.add(tx, (L.trayY - z.oy) / z.z, 700 / z.z, WORK, 0.45, 400 / z.z);
+      // The tray in the column.
+      Ls.add((ph.colL + ph.colR) / 2, L.trayY, 700, WORK, 0.45, 400);
     } else Ls.add(L.cx, L.cy, span * 0.95, WORK, 0.5, span * 0.55);
     const st = this.storm.light;
     Ls.add(st.x, st.y, L.pitch * 6, st.color, 0.55 * st.intensity, 160);
@@ -740,14 +637,7 @@ export class AltarView {
     rig.add(st.x, st.y, 1100, st.color, 0.8 * st.intensity, 200);
     if (bc) rig.add(bx, by, 700, bc, 0.8 * Math.max(glow, 0.5), 80);
     const f = this.fuse;
-    rig.add(
-      zoomed ? (f.eye.x - z.ox) / z.z : f.eye.x,
-      zoomed ? (f.eye.y - z.oy) / z.z : f.eye.y,
-      380 / z.z,
-      f.eye.color,
-      f.eye.intensity,
-      40 / z.z,
-    );
+    rig.add(f.eye.x, f.eye.y, 380, f.eye.color, f.eye.intensity, 40);
     let lit: Machine | null = null;
     for (const m of this.machines) if (!lit || m.light.intensity > lit.light.intensity) lit = m;
     if (lit && lit.light.intensity > 0.02) {
@@ -756,9 +646,7 @@ export class AltarView {
 
     // ── Draw ──
     frame.clear(0, 0, 0, 1);
-    if (zoomed)
-      a.wall.draw(frame, (W / 2 - z.ox) / z.z, (540 - z.oy) / z.z, W / z.z, DESIGN_H / z.z);
-    else a.wall.draw(frame, W / 2, 540);
+    a.wall.draw(frame, W / 2, 540);
     if (!ph) {
       a.floor.draw(frame, W / 2, 1080 - 150, W, 300, undefined, 1, 0.18);
       a.candles.drawBodies(frame, CANDLES);
@@ -775,28 +663,7 @@ export class AltarView {
     const list = this.drawList;
     list.length = 0;
     for (const b of this.board) if (!b.hidden) list.push(b.g);
-    if (zoomed) {
-      // The board, then the column's wall over whatever of it slid under the column, then the
-      // tray on top, all where they stand at the fitted view.
-      a.gems.drawUnder(frame, list);
-      a.gems.drawGems(frame, list);
-      this.drawMasks(frame, z);
-      list.length = 0;
-      for (let i = 0; i < this.tray.length; i++) {
-        const t = this.tray[i]!;
-        if (t.size === 0) continue;
-        let u = this.trayZ[i];
-        if (!u) {
-          u = { ...t };
-          this.trayZ[i] = u;
-        }
-        Object.assign(u, t);
-        u.x = (t.x - z.ox) / z.z;
-        u.y = (t.y - z.oy) / z.z;
-        u.size = t.size / z.z;
-        list.push(u);
-      }
-    } else for (const t of this.tray) if (t.size !== 0) list.push(t);
+    for (const t of this.tray) if (t.size !== 0) list.push(t);
     a.gems.drawUnder(frame, list);
     a.gems.drawGems(frame, list);
 
@@ -811,13 +678,6 @@ export class AltarView {
       g.lift = h.snapped ? 0.6 : 1;
       g.state = 'hover';
       g.size = h.size ?? L.gemSize * (h.snapped ? 1 : 1.05);
-      if (zoomed) {
-        // The scene places it on screen: back through the zoom (a board gem's size is the
-        // zoomed one already, as `L` is the fitted layout).
-        g.x = (h.x - z.ox) / z.z;
-        g.y = (h.y - z.oy) / z.z;
-        if (h.size !== undefined) g.size = h.size / z.z;
-      }
       g.glow = 1.1;
       a.gems.drawUnder(frame, this.heldList);
       a.gems.drawGems(frame, this.heldList);
@@ -831,16 +691,7 @@ export class AltarView {
 
     for (let i = 0; i < this.activeBolts; i++) a.bolts[i]!.draw(frame);
     if (!ph) a.candles.drawFlames(frame, CANDLES);
-    if (zoomed) {
-      const { x, y, scale } = f;
-      f.x = (x - z.ox) / z.z;
-      f.y = (y - z.oy) / z.z;
-      f.scale = scale / z.z;
-      f.draw(frame, rig);
-      f.x = x;
-      f.y = y;
-      f.scale = scale;
-    } else f.draw(frame, rig);
+    f.draw(frame, rig);
     frame.drawable(this.ctx.particles);
   }
 }

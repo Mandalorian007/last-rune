@@ -241,3 +241,23 @@ Format: `D-NNN · date · decision · why · who`.
   - Phones get their dense-board answer from the Phase 2 layout and camera model.
   - promote-ui no longer promotes `zoom.ts` to `camera2d.ts`; Phase 3's Camera builds `fitRect` itself.
   - Browser-zoom blocking and the loupe stay.
+- **Addendum 2 (2026-11-03, user):** "The engine verifies platform testing. All product testing should remain in the game and we shouldn't need to re-verify platform capability testing." Split the tests by ownership:
+  - **Engine (`packages/engine`):** unit tests plus an engine e2e harness on a noun-free test page. It proves platform capability once:
+    - WebGPU init and loss;
+    - surface and resize;
+    - input, gestures, and the tap-vs-pan boundary;
+    - layout regions, safe areas, form factors and orientation;
+    - text scale and density tokens;
+    - host link, copy, fullscreen and storage (quota, blocked, itch iframe);
+    - lifecycle, pause and audio unlock;
+    - browser-zoom blocking;
+    - camera math.
+
+    The viewports, devices and wrappers the engine supports form a matrix, and the engine's CI runs it.
+  - **Game (`games/last-rune`):** product tests only. These cover rules, puzzles and solvability, teach and moments, copy, the flow (full-run), the D-026 press counts, a11y of game content, and the game's own visual baselines.
+    - Game e2e runs at a small set of representative sizes and trusts the engine for platform behaviour.
+    - It does not re-assert "fits every phone viewport", tap-target sizing math, iframe clipboard or resize handling.
+  - **Migration:** `docs/engine/test-split.md` classifies every current spec and test. Each Phase 1–2 workstream moves the platform assertions it touches into the engine suite in the same branch, so no coverage is lost in between, then trims the game spec.
+    - Gate 1 requires the engine harness.
+    - Gate 2 requires the mobile-* platform checks to be engine-owned.
+    - The D-040 blind screenshot review stays a product check.

@@ -6,7 +6,7 @@
  *
  * - The line teaches the tap: "Tap a gem, then a socket", then "Now tap a socket" while a gem
  *   is in hand (with "↻ Turn spins it" when the held gem turns). Other workstreams may put their
- *   own line in that slot (`HINT_SLOTS`: "Holding: X", "Tap the board to zoom").
+ *   own line in that slot (`HINT_SLOTS`: "Holding: X").
  * - It retires once the player has restored `HINT_RETIRE` machines: by then the tap is known and
  *   the line is noise. The strike's "Tap to skip" stays (it says something new each time).
  * - Phones show an altar's arrival card one new piece at a time, and the player pages it with
@@ -35,10 +35,9 @@ export function phoneHint(retired: boolean, holding: boolean): PhoneHint {
 
 /**
  * Lines that may stand in the how-to slot, highest first. `holding` is mobile-6-board's
- * "Holding: X", `zoom` is mobile-6-zoom's "Tap the board to zoom"; `howto` is this file's
- * `phoneHint`. Set one with `AltarScene.setHintLine(slot, text)`; `null` clears it.
+ * "Holding: X"; `howto` is this file's `phoneHint`. Set one with `AltarScene.setHintLine(slot, text)`; `null` clears it.
  */
-export const HINT_SLOTS = ['holding', 'zoom', 'howto'] as const;
+export const HINT_SLOTS = ['holding', 'howto'] as const;
 export type HintSlot = (typeof HINT_SLOTS)[number];
 
 /** The slot whose line shows: the first in `HINT_SLOTS` order with any text. */
