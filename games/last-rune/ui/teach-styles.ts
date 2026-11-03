@@ -31,6 +31,17 @@ ${A} .lr-altar-title[data-holding] h2 { font-size: ${tpx(10.5)}; line-height: 1;
 ${A} .lr-altar-title[data-holding] .lr-altar-holding {
   position: static; padding-top: 0; padding-bottom: 0; font-size: ${tpx(12)}; line-height: 1.25;
 }
+
+/* All of a kind placed: the gem stays as a dimmed silhouette (drawn by the scene) with
+   "all placed" under it: one quiet line in the UI face. No ✓ circle, no outline, no plate:
+   nothing there reads as a button. */
+${A} .lr-altar-slot[data-empty] { display: none; }
+${A} .lr-altar-count[data-empty] {
+  opacity: 1; color: #a89a80; border: 0; background: none; box-shadow: none; text-decoration: none;
+  padding: 0; white-space: nowrap; font: 400 ${tpx(10)}/1.2 var(--tc-font-ui); letter-spacing: -0.2px;
+}
+${A} .lr-altar-count[data-empty] .lr-k { display: none; }
+${A} .lr-altar-count[data-empty] .lr-n { font: inherit; letter-spacing: inherit; }
 /* mobile-7-teach end */
 `;
 }

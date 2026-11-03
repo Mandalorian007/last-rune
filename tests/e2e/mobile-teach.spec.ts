@@ -49,10 +49,10 @@ async function boot(page: Page, inset: number) {
 }
 
 /** Open `id` at first meeting (its arrival card up) with half its intended gems placed. */
-async function openFresh(page: Page, id: string) {
+async function openFresh(page: Page, id: string, share = 0.5) {
   const at = MACHINE_IDS.indexOf(id as (typeof MACHINE_IDS)[number]);
   const placed = puzzleFor(id as (typeof MACHINE_IDS)[number]).design.intended;
-  const half = placed.slice(0, Math.floor(placed.length / 2));
+  const half = placed.slice(0, Math.floor(placed.length * share));
   await page.evaluate(
     ({ solved, id, half }) => {
       const g = (window as G).__game;
@@ -217,6 +217,61 @@ for (const vp of PHONES) {
           await tap();
           await waitFrames(page, 4);
         }
+        await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+        await waitFrames(page, 4);
+      }
+      expect(problems).toEqual([]);
+    });
+
+    test(`a used-up gem is a quiet "all placed" silhouette (${vp.name})`, async ({ page }) => {
+      await boot(page, vp.inset);
+      const problems: string[] = [];
+      for (const id of ['capacitor-bay', 'the-last-rune', 'storm-cell-2'] as const) {
+        await openFresh(page, id, 1);
+        await waitFrames(page, 4);
+        if (SHOTS) await page.screenshot({ path: `${SHOTS}/teach-allplaced-${vp.name}-${id}.png` });
+        const g = await page.evaluate(() => {
+          const view = (window as G).__altarView;
+          const counts = [...document.querySelectorAll<HTMLElement>('.lr-altar-count')];
+          const slots = [...document.querySelectorAll<HTMLElement>('.lr-altar-slot')];
+          return counts.map((c, i) => {
+            const r = c.getBoundingClientRect();
+            const cs = getComputedStyle(c);
+            const sl = slots[i];
+            const ss = sl ? getComputedStyle(sl) : null;
+            const after = sl ? getComputedStyle(sl, '::after').content : 'none';
+            return {
+              empty: c.hasAttribute('data-empty'),
+              text: (c.querySelector('.lr-n')?.textContent ?? '').trim(),
+              box: { l: r.left, r: r.right, t: r.top, b: r.bottom, h: r.height },
+              line: Number.parseFloat(cs.fontSize) * 1.6,
+              border: cs.borderTopWidth !== '0px' && cs.borderTopStyle !== 'none',
+              plate:
+                cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backgroundColor !== 'transparent',
+              cursor: cs.cursor,
+              slotSeen: !!ss && ss.display !== 'none' && ss.visibility !== 'hidden',
+              tick: after !== 'none' && after !== 'normal' && after !== '""',
+              gem: { size: view.tray[i]?.size ?? 0, state: view.tray[i]?.state ?? '' },
+            };
+          });
+        });
+        const hit = (a: { l: number; r: number; t: number; b: number }, b: typeof a) =>
+          a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < b.b - 0.5 && b.t < a.b - 0.5;
+        g.forEach((c, i) => {
+          if (!c.empty) return;
+          const tag = `${id} slot ${i + 1}`;
+          if (c.text !== 'all placed') problems.push(`${tag}: reads "${c.text}"`);
+          if (c.box.h > c.line) problems.push(`${tag}: "all placed" takes two lines`);
+          if (c.border || c.plate) problems.push(`${tag}: "all placed" wears a button's outline`);
+          if (c.cursor === 'pointer') problems.push(`${tag}: pointer cursor`);
+          if (c.slotSeen && c.tick) problems.push(`${tag}: a ✓ circle`);
+          if (!(c.gem.size > 0) || c.gem.state !== 'dim')
+            problems.push(`${tag}: no dimmed silhouette (${c.gem.state} ${c.gem.size})`);
+          g.forEach((o, j) => {
+            if (j !== i && hit(c.box, o.box)) problems.push(`${tag}: overlaps count ${j + 1}`);
+          });
+        });
+        if (!g.some((c) => c.empty)) problems.push(`${id}: nothing used up (test set-up)`);
         await page.evaluate(() => (window as G).__game.flow.closePuzzle());
         await waitFrames(page, 4);
       }

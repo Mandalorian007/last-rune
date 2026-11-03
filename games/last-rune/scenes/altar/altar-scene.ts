@@ -1047,8 +1047,8 @@ export class AltarScene implements GameScene {
       // A keycap for the hotkey, then the count apart from it: "1 ×6" must never read "16".
       el.replaceChildren(
         h('kbd', { class: 'lr-k' }, String(i + 1)),
-        // Phones: a used-up gem leaves its slot to a ✓ and reads "placed", never locked.
-        h('span', { class: 'lr-n' }, n === 0 && L.phone ? 'placed' : `×${n}`),
+        // Phones: a used-up gem stays as a dimmed silhouette that reads "all placed".
+        h('span', { class: 'lr-n' }, n === 0 && L.phone ? 'all placed' : `×${n}`),
       );
       el.toggleAttribute('data-empty', n === 0);
       this.slotEls[i]?.toggleAttribute('data-empty', n === 0);
@@ -4005,8 +4005,9 @@ export class AltarScene implements GameScene {
       const n = this.board.remaining(s.gem);
       const held = this.hand && !this.hand.from && this.hand.kind === s.gem;
       t.state = n === 0 ? 'dim' : held || i === this.hoverSlot ? 'hover' : 'idle';
-      // Phones: all of a kind on the board, its tray gem goes (the slot shows a ✓).
-      t.size = n === 0 && L.phone ? 0 : s.size;
+      // All of a kind on the board: a dimmed, smaller silhouette stays in its slot ("all
+      // placed" under it), so the tray keeps its shape and nothing there reads as a button.
+      t.size = n === 0 && L.phone ? s.size * 0.8 : s.size;
       const lift = this.view.trayLift[i]!;
       const fresh = (i === 0 && this.teaching) || this.teachTray.has(s.gem);
       const bob =
@@ -4014,7 +4015,7 @@ export class AltarScene implements GameScene {
           ? 0.35 + 0.35 * Math.sin(this.time * 4 + i)
           : 0;
       this.view.trayLift[i] =
-        lift < 0 ? Math.min(0, lift + 0.05) : held ? 1 : i === this.hoverSlot ? 0.6 : bob;
+        lift < 0 ? Math.min(0, lift + 0.05) : held ? 1 : i === this.hoverSlot && n > 0 ? 0.6 : bob;
     }
     // Held gem: follows the pointer, snaps to the socket it would land in.
     const hand = this.hand;
