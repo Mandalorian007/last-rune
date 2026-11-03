@@ -79,6 +79,15 @@ async function main(): Promise<void> {
       },
     );
   }
+  // Device lost: the engine shows the reload screen; stop all work behind it for good.
+  res.onDeviceLost(() => {
+    ctx.loop.halt();
+    ctx.sound.dispose();
+    void ctx.audio.halt();
+    ctx.ui.caption.suspend(true);
+    ctx.flow.commitPlayTime();
+    ctx.save.flush();
+  });
   ctx.flow.start();
   ctx.loop.start();
   res.surface.canvas.focus();

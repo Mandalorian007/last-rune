@@ -159,8 +159,42 @@ test('a hidden tab pauses play time and the game picks up where it was', async (
   expect(problems).toEqual([]);
 });
 
+type Work = { frames: number; intervals: number; audio: string[] };
+
 test('a lost GPU device shows the friendly reload screen above everything', async ({ page }) => {
   await page.addInitScript(() => {
+    // Work trackers: frames scheduled, live intervals and every AudioContext's state.
+    let frames = 0;
+    const raf = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = (cb) => {
+      frames++;
+      return raf(cb);
+    };
+    const intervals = new Set<unknown>();
+    const setI = window.setInterval.bind(window);
+    const clearI = window.clearInterval.bind(window);
+    window.setInterval = ((fn: TimerHandler, ms?: number, ...args: unknown[]) => {
+      const id = setI(fn, ms, ...args);
+      intervals.add(id);
+      return id;
+    }) as typeof window.setInterval;
+    window.clearInterval = ((id?: number) => {
+      intervals.delete(id);
+      clearI(id);
+    }) as typeof window.clearInterval;
+    const contexts: AudioContext[] = [];
+    const AC = window.AudioContext;
+    window.AudioContext = class extends AC {
+      constructor(o?: AudioContextOptions) {
+        super(o);
+        contexts.push(this);
+      }
+    };
+    (window as unknown as { __work: () => Work }).__work = () => ({
+      frames,
+      intervals: intervals.size,
+      audio: contexts.map((c) => c.state),
+    });
     const orig = GPUAdapter.prototype.requestDevice;
     GPUAdapter.prototype.requestDevice = async function (this: GPUAdapter, d) {
       const dev = await orig.call(this, d);
@@ -195,6 +229,25 @@ test('a lost GPU device shows the friendly reload screen above everything', asyn
   await page.waitForTimeout(500);
   await expect(screen).toBeVisible();
   await snap(page, 'device-lost');
+  // Nothing runs behind the dialog: no frames are scheduled, the audio context is suspended
+  // and the music timer is cleared, even after the tab is hidden and shown again.
+  const halted = () => page.evaluate(() => (window as unknown as { __work: () => Work }).__work());
+  await page.waitForTimeout(200);
+  const before = await halted();
+  expect(before.audio.length).toBeGreaterThan(0);
+  expect(before.audio.every((s) => s !== 'running')).toBe(true);
+  expect(before.intervals).toBe(0);
+  await page.evaluate(() => {
+    for (const state of ['hidden', 'visible']) {
+      Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }
+  });
+  await page.waitForTimeout(500);
+  const after = await halted();
+  expect(after.frames).toBe(before.frames);
+  expect(after.audio.every((s) => s !== 'running')).toBe(true);
+  expect(after.intervals).toBe(0);
   // Only the one expected error: the loss itself. No error storm from a loop still drawing.
   await page.waitForTimeout(1000);
   expect(problems.filter((p) => !p.includes('[gpu] device lost'))).toEqual([]);

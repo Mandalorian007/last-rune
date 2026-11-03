@@ -92,6 +92,7 @@ export class GameLoop {
   private last = 0;
   private running = false;
   private _paused = false;
+  private _halted = false;
 
   constructor(cb: LoopCallbacks, opts: GameLoopOptions = {}) {
     this.cb = cb;
@@ -116,8 +117,13 @@ export class GameLoop {
     if (v) this.stepper.reset();
   }
 
+  /** True after `halt()`: the loop is stopped for good. */
+  get halted(): boolean {
+    return this._halted;
+  }
+
   start(): void {
-    if (this.running) return;
+    if (this.running || this._halted) return;
     this.running = true;
     this.last = this.now();
     this.stepper.reset();
@@ -130,8 +136,18 @@ export class GameLoop {
     this.caf(this.rafId);
   }
 
+  /**
+   * Stop for good (e.g. the GPU device is lost): later `start()` calls, such as a
+   * tab-visible handler, are ignored, and `tickOnce` does nothing.
+   */
+  halt(): void {
+    this._halted = true;
+    this.stop();
+  }
+
   /** Run one frame manually with an explicit delta (tests, frame stepping). */
   tickOnce(frameDt: number): void {
+    if (this._halted) return;
     this.runFrame(frameDt);
   }
 

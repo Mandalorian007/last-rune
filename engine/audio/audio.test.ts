@@ -297,6 +297,39 @@ describe('AudioEngine', () => {
     expect(audio.state).toBe('running');
   });
 
+  it('halt silences for good: no resume on a gesture, tab switch or resume()', async () => {
+    const { ctx, audio } = setup();
+    const target = new EventTarget();
+    audio.attach({ target, pauseWhenHidden: false });
+    await audio.unlock();
+    await audio.prepare();
+    const music = audio.loop('beep');
+    expect(music.playing).toBe(true);
+    await audio.halt();
+    expect(audio.halted).toBe(true);
+    expect(music.playing).toBe(false);
+    expect(ctx.state).toBe('suspended');
+    expect(audio.state).toBe('suspended');
+    await audio.resume();
+    expect(await audio.unlock()).toBe(false);
+    target.dispatchEvent(new Event('pointerdown'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ctx.state).toBe('suspended');
+    expect(audio.play('beep').playing).toBe(false);
+    expect(audio.loop('beep').playing).toBe(false);
+    expect(audio.voiceCount).toBe(0);
+  });
+
+  it('halt before unlock drops waiting loops and never unlocks', async () => {
+    const { ctx, audio } = setup();
+    const music = audio.loop('beep');
+    await audio.halt();
+    expect(music.playing).toBe(false);
+    expect(await audio.unlock()).toBe(false);
+    expect(audio.state).toBe('locked');
+    expect(ctx.played.length).toBe(0);
+  });
+
   it('warns on unknown sounds instead of throwing', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { audio } = setup();

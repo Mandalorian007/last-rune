@@ -302,6 +302,7 @@ export class AudioEngine {
   private detachFns: (() => void)[] = [];
   private userSuspended = false;
   private hidden = false;
+  private _halted = false;
   private readonly limiterOpts: Required<LimiterOptions> | null;
   private limiterNode: DynamicsCompressorNode | null = null;
   private reverbOpts: ReverbOptions | null;
@@ -336,6 +337,10 @@ export class AudioEngine {
   }
   get settings(): Readonly<MixerSettings> {
     return this._settings;
+  }
+  /** True after `halt()`: silent for good. */
+  get halted(): boolean {
+    return this._halted;
   }
 
   onStateChange(fn: (s: AudioState) => void): () => void {
@@ -390,7 +395,7 @@ export class AudioEngine {
    * (`attach` does this for you). Resolves true once audio is running.
    */
   async unlock(): Promise<boolean> {
-    if (this._state === 'unavailable') return false;
+    if (this._state === 'unavailable' || this._halted) return false;
     if (!this.ctx) {
       try {
         this.ctx = this.createContext();
@@ -423,7 +428,7 @@ export class AudioEngine {
   }
 
   private isPaused(): boolean {
-    return this.hidden || this.userSuspended;
+    return this.hidden || this.userSuspended || this._halted;
   }
 
   private onContextState() {
@@ -465,6 +470,21 @@ export class AudioEngine {
       // ignore
     }
     this.onContextState();
+  }
+
+  /**
+   * Fall silent for good, e.g. when the page can no longer run (GPU device lost) and only a
+   * reload helps. Stops every voice, drops loops waiting for unlock, removes the gesture and
+   * visibility listeners and suspends the context. After this, `unlock`, `resume`, `play`,
+   * `loop` and `prepare` do nothing, so no timer or tab switch can bring sound back.
+   */
+  async halt(): Promise<void> {
+    if (this._halted) return;
+    this._halted = true;
+    this.detach();
+    this.stopAll();
+    this.deferred.clear();
+    await this.syncSuspension();
   }
 
   /** Close the context and drop everything. */
@@ -675,6 +695,7 @@ export class AudioEngine {
 
   /** Render several (default: all) defined sounds up front. Call at boot or behind a loading screen. */
   async prepare(names: readonly string[] = [...this.sounds.keys()]): Promise<void> {
+    if (this._halted) return;
     await Promise.all(names.map((n) => this.load(n)));
   }
 
@@ -688,7 +709,7 @@ export class AudioEngine {
    * unavailable: a click sound arriving seconds late after unlock would be wrong.
    */
   play(sound: string | AudioBuffer, opts: PlayOptions = {}): Voice {
-    if (this._state !== 'running' || !this.ctx) return NULL_VOICE;
+    if (this._state !== 'running' || !this.ctx || this._halted) return NULL_VOICE;
     return this.startVoice(sound, false, opts, false);
   }
 
@@ -697,7 +718,7 @@ export class AudioEngine {
    * Stop it with `voice.stop(fade)`.
    */
   loop(sound: string | AudioBuffer, opts: PlayOptions = {}): Voice {
-    if (this._state === 'unavailable') return NULL_VOICE;
+    if (this._state === 'unavailable' || this._halted) return NULL_VOICE;
     return this.startVoice(sound, true, opts, this._state !== 'running');
   }
 

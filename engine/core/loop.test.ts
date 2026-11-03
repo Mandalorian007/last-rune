@@ -99,4 +99,30 @@ describe('GameLoop', () => {
     loop.stop();
     expect(loop.isRunning).toBe(false);
   });
+
+  it('halt stops for good: a later start (tab visible again) schedules nothing', () => {
+    let scheduled = 0;
+    let renders = 0;
+    const loop = new GameLoop(
+      { update: () => {}, render: () => renders++ },
+      {
+        now: () => 0,
+        raf: () => {
+          scheduled++;
+          return scheduled;
+        },
+        caf: () => {},
+      },
+    );
+    loop.start();
+    expect(scheduled).toBe(1);
+    loop.halt();
+    expect(loop.halted).toBe(true);
+    expect(loop.isRunning).toBe(false);
+    loop.start();
+    loop.tickOnce(1 / 60);
+    expect(scheduled).toBe(1);
+    expect(renders).toBe(0);
+    expect(loop.isRunning).toBe(false);
+  });
 });
