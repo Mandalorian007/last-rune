@@ -85,9 +85,18 @@ export function createPhoneChrome(hudLayer: HTMLElement, device: DeviceMode): Ph
   doc.body.append(card);
 
   let fsWanted = false;
+  // iPhone Safari only takes <video> full screen; some versions still report the element API.
+  // A press that changes nothing (refused) also retires the button: no dead controls (D-040).
+  let fsRefused = /iPhone|iPod/.test(win.navigator.userAgent);
   const fsBtn = button(
     'Full screen',
-    () => void toggleFullscreen(doc.documentElement, { lockLandscape: true }),
+    () =>
+      void toggleFullscreen(doc.documentElement, { lockLandscape: true }).then((on) => {
+        if (!on) {
+          fsRefused = true;
+          update();
+        }
+      }),
     {
       className: 'lr-stone-button lr-fullscreen',
     },
@@ -100,7 +109,13 @@ export function createPhoneChrome(hudLayer: HTMLElement, device: DeviceMode): Ph
     // desktop window never gets "turn your phone".
     const phoneInHand = deviceTraits().handheld || (device.touch && device.phone);
     card.hidden = !(isPortrait(win) && phoneInHand);
-    fsBtn.hidden = !(fsWanted && device.phone && fullscreenAvailable(doc) && !isFullscreen(doc));
+    fsBtn.hidden = !(
+      fsWanted &&
+      device.phone &&
+      !fsRefused &&
+      fullscreenAvailable(doc) &&
+      !isFullscreen(doc)
+    );
   };
   const offDevice = device.onChange(update);
   const offFs = watchFullscreen(update, doc);

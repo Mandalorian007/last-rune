@@ -53,3 +53,63 @@ Keep `ui/phone-styles.ts` edits in a `/* mobile-4-chrome */` block.
 - Log in this file.
 
 ## Log
+
+### 2026-11-03: mobile-4-chrome pass
+
+**Item 1 finding: a capture artefact, not a real-play bug.**
+- Gate review 1's `02-hall-fuse` shot came from `scripts/playtest/mobile-2.spec.ts` and `mobile-3-chrome.spec.ts`. Both *forced* `fuse.say(hallLines('first-entry')…)` on a save seeded with three solved machines.
+- In real play the welcome plays only while `flags.hallIntro` is false. `HallScene.enter()` sets that flag on the very first hall visit, and no machine can be solved without entering the hall first. Nothing reads the URL for a save outside DEV demos.
+- The only way to reach it was an imported or hand-made save with progress and `hallIntro: false`. That case is now guarded as well: the welcome plays only while the Intake Desk is the suggested door (`welcomeFits` in `hall-scene.ts`).
+- The welcome is now said on the first `update()`, not inside `enter()`. The flow's `onChange` (which clears FUSE's avoid regions outside puzzles) runs after `enter()`, so the regions set for the welcome were being wiped.
+- Every hall line (welcome, door barks, ambient) now passes the suggested door and the named door (ring plus tag) as avoid regions. The card can't cover them. `exit()` and `pause()` clear the regions.
+- The capture now shows a real new game (`02-hall-first`) and an ambient line on a save with progress (`02-hall-fuse`).
+
+**What changed**
+- **Settings (phones):**
+  - Native scroll, with a drawn gold thumb on a rail (`.lr-settings-rail`/`-thumb`, since iOS hides its own).
+  - The existing bottom fade shows only while more is below.
+  - "More ▾" is now "Graphics & Save ▾". It smooth-scrolls to the Graphics/Save sections and hides once they are in view.
+  - The Save box (Reset included) is always reachable by scrolling.
+- **Codex (phones):**
+  - The ✕ has its own gutter in the leather, right of the pages (`.lr-codex` padding-right), and is light-on-leather.
+  - Page headers no longer reserve room for it.
+  - The folio is hidden.
+  - A page that still runs long scrolls, with a bottom fade while more is below (`data-more`, synced in `codex.ts`).
+- **Journal (phones):**
+  - Handwriting is `tpx(15.5)` bold in near-black ink, on the 54 px rule pitch (`max(54px, 1.15em)`).
+  - Day list at `tpx(14.5–15)`. "New" is a red dot, so "Day 10,366" is never cut.
+  - "Back to the hall" is hidden; the ✕ is the one exit.
+  - Page 16's signature moves two rules down so the larger hand never runs into it. All 16 pages fit on every phone.
+- **Title:**
+  - "Full screen" is hidden where the Fullscreen API is off (already the case through `fullscreenAvailable`), on iPhone/iPod user agents, and after a press the browser refuses.
+  - The gate shot was Chromium emulation, where the API exists.
+- **Hangout (phones):**
+  - The message bar is a flat, unfocusable "🔒 Read-only channel" strip until FUSE drafts in it. Nothing in the hangout is focusable.
+  - The repeated `.lr-hg-start` "#introductions" block is hidden; the top bar names the channel.
+- **End card (phones):**
+  - The closing line sits on a solid dark plate: ≥4.5:1 against the brightest gold, and the test checks it.
+  - The Copy buttons read "Copy invite link" and "Copy Ko-fi link". Desktop keeps "Copy link", and the aria-labels already named the target.
+  - The clipboard was already `pointer-events: none` and clear of controls.
+- **"Time on site"** is real (`stats.playSeconds`, ticked by `flow.tick`). The gate run had played about 1 minute. It is kept as is.
+- Desktop and iPad are unchanged. Every rule is under the phone selector, and the Copy label switch needs `data-phone`.
+
+**Tests**
+- `tests/e2e/mobile-chrome.spec.ts`, new test "phone chrome polish" on se, iphone, promax and android:
+  - no Full screen button with `fullscreenEnabled = false`;
+  - the welcome plays on a new game, and its card misses the Start here ring and tag;
+  - no welcome on a save with progress but `hallIntro: false`;
+  - Settings shows the thumb and "Graphics & Save", and scrolls Reset into view;
+  - on every Codex tab, no page box meets the tabs or the ✕, and a long page scrolls;
+  - Journal body ≥15 px, one exit, and all 16 pages fit at 100% and 150% text.
+- `tests/e2e/mobile-ending.spec.ts`:
+  - the hangout has no focusable control;
+  - the bar reads "Read-only channel";
+  - no repeated start header;
+  - the Copy labels name their links;
+  - the footer contrast is ≥4.5:1.
+
+**Captures** (git-ignored): `docs/design/screens/local/mobile-4-chrome/{before,after}-<vp>.png` and `…-<vp>-ending.png` for iphone, se, promax, android, desktop and ipad. The spec is `scripts/playtest/mobile-4-chrome.spec.ts`.
+- Capture note: Vite's dev server reloads the page when a source file changes. Editing while the slow ending capture runs sends it back to the title, which is why the first "before" phone ending sheets showed the title. Don't edit during captures.
+
+**Proposals (for the PM)**
+- `scripts/playtest/mobile-2.spec.ts` and the gate-review capture still force the first-entry line on a save with progress. Retire that shot or point it at a new game, or a reviewer will flag it again.

@@ -154,6 +154,16 @@ export class Codex {
       nav,
       close,
     );
+    // A page that runs past its foot says so (phones fade its foot until it is scrolled down).
+    for (const page of book.querySelectorAll<HTMLElement>('.lr-codex-page')) {
+      const sync = () =>
+        page.toggleAttribute(
+          'data-more',
+          page.scrollHeight - page.clientHeight - page.scrollTop > 2,
+        );
+      page.addEventListener('scroll', sync, { passive: true });
+      requestAnimationFrame(sync);
+    }
     close.focus();
   }
 

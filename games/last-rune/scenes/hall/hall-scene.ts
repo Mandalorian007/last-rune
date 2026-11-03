@@ -8,7 +8,8 @@
  * - Coming back from a solve: tells the view what was restored and opened.
  */
 import type { Frame } from '@engine/render';
-import { hallLines } from '../../content/lines';
+import type { Rect } from '@engine/ui';
+import { type FuseLine, hallLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { progressOf } from '../../game/save';
 import { type ProgressState, storyTier } from '../../rules/progression';
@@ -46,6 +47,8 @@ export class HallScene implements GameScene {
   private idle = 0;
   private ambientIndex = 0;
   private lastPointer = { x: -1, y: -1 };
+  /** FUSE's welcome waits for the first update, after the flow has settled the caption. */
+  private introPending = false;
 
   enter(ctx: GameCtx): void {
     this.ctx = ctx;
@@ -57,8 +60,9 @@ export class HallScene implements GameScene {
     });
     ctx.setMood('hall');
     if (!ctx.save.get().flags.hallIntro) {
-      const first = hallLines('first-entry', 1)[0];
-      if (first) void ctx.fuse.say(first);
+      // The welcome points at the Intake Desk, so it plays only while that is the "Start here"
+      // door (an imported or hand-made save can have progress without the flag).
+      this.introPending = welcomeFits(this.model);
       ctx.save.update((d) => {
         d.flags.hallIntro = true;
         return undefined;
@@ -70,12 +74,14 @@ export class HallScene implements GameScene {
     this.view.dispose();
     this.ctx.hud.plate(null);
     this.ctx.hud.suggest(null);
+    this.ctx.fuse.avoid(null);
   }
 
   pause(): void {
     this.ctx.hud.plate(null);
     this.ctx.hud.suggest(null);
     this.ctx.fuse.hush();
+    this.ctx.fuse.avoid(null);
   }
 
   resume(): void {
@@ -98,6 +104,12 @@ export class HallScene implements GameScene {
     const { input } = this.ctx;
     this.time += dt;
     this.idle += dt;
+
+    if (this.introPending) {
+      this.introPending = false;
+      const first = hallLines('first-entry', 1)[0];
+      if (first) this.say(first);
+    }
 
     // Pointer hover (pointer movement takes over from keyboard focus).
     const p = input.pointer;
@@ -222,7 +234,7 @@ export class HallScene implements GameScene {
     this.spoken = id;
     this.idle = 0;
     const line = a ? lineForAlcove(a) : undefined;
-    if (line && !this.ctx.fuse.isSaying(line)) void this.ctx.fuse.say(line, { interrupt: true });
+    if (line && !this.ctx.fuse.isSaying(line)) this.say(line, { interrupt: true }, id);
   }
 
   private activate(a: AlcoveModel): void {
@@ -243,6 +255,30 @@ export class HallScene implements GameScene {
     const pool = [...hallLines('ambient', tier), ...(tier >= 3 ? hallLines('echo', tier) : [])];
     if (pool.length === 0) return;
     const line = pool[this.ambientIndex++ % pool.length]!;
-    void this.ctx.fuse.say(line);
+    this.say(line);
   }
+
+  /** FUSE speaks with his card kept off the suggested door (and its tag) and the one he names. */
+  private say(line: FuseLine, opts?: { interrupt?: boolean }, about?: MachineId): void {
+    const regions: Rect[] = [];
+    for (const a of this.model.alcoves) {
+      if (a.suggested || a.id === about) regions.push(doorRect(a));
+    }
+    this.ctx.fuse.avoid(regions);
+    void this.ctx.fuse.say(line, opts);
+  }
+}
+
+/** The welcome names the Intake Desk: true only while it is the suggested door. */
+export function welcomeFits(model: HallModel): boolean {
+  return model.alcoves.find((a) => a.suggested)?.id === 'intake-desk';
+}
+
+/** A door's arch-to-sill box plus the phone "Start here ▾" tag above it, design px. */
+export function doorRect(a: AlcoveModel): Rect {
+  if (a.floor) {
+    const r = ALCOVE_HIT.h * 0.65;
+    return { x: a.x - r, y: a.y - r - 40, width: r * 2, height: r * 2 + 40 };
+  }
+  return { x: a.x - 113, y: a.y - 125 - 40, width: 226, height: 224 + 40 };
 }

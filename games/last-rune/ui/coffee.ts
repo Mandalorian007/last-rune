@@ -54,12 +54,14 @@ export function coffeeLinkWidget(
     action: string;
     place: 'above' | 'below';
     align: 'center' | 'end';
+    /** Copy button text, if it must say which link it copies (phone end card). */
+    copy?: string;
   },
 ): ExternalLink | null {
   return externalLink({
     url: link.href,
     content: [cupIcon(), h('span', null, link.label)],
-    labels: linkLabels("ThunderSoap's Ko-fi"),
+    labels: { ...linkLabels("ThunderSoap's Ko-fi"), ...(opts.copy ? { copy: opts.copy } : {}) },
     linkClass: opts.cls,
     className: opts.wrap,
     action: opts.action,

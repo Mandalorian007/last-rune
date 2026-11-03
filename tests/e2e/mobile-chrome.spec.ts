@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { hallLines } from '../../games/last-rune/content/lines';
 import { MACHINES } from '../../games/last-rune/content/machines';
 import { DEV_URL, waitFrames } from './helpers';
 
@@ -9,6 +10,12 @@ import { DEV_URL, waitFrames } from './helpers';
 //  2. Nothing is clipped: every control in Settings, the Codex and the Journal lies on screen
 //     (Settings after scrolling its body into view).
 //  3. The title art reaches the safe-area edges; the hall's art leaves at most slim side bars.
+// mobile-4-chrome (gate review 1):
+//  4. FUSE's welcome plays on a fresh save only, and its card keeps off the Start here door; a
+//     save with progress but no welcome flag stays quiet.
+//  5. Settings scrolls to its Save box (Reset included); the thumb shows while there is more.
+//  6. No Codex page runs under the tabs or the ✕; the Journal's handwriting is ≥15 px with one
+//     exit; with no Fullscreen API (iPhone Safari) there is no Full screen button.
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0 },
@@ -354,6 +361,211 @@ for (const vp of PHONES) {
       problems.push(...small(await sizes(page, '.lr-j-turn'), { w: 44, h: 44 }));
       problems.push(...small(await sizes(page, '.lr-j-x'), { w: 36, h: 36, hitW: 44, hitH: 44 }));
       problems.push(...(await offscreen(page, '.lr-journal')).map((s) => `journal: ${s}`));
+
+      expect(problems).toEqual([]);
+    });
+  });
+}
+
+type Box = { x: number; y: number; width: number; height: number };
+const meets = (a: Box, b: Box) =>
+  a.x < b.x + b.width - 0.5 &&
+  b.x < a.x + a.width - 0.5 &&
+  a.y < b.y + b.height - 0.5 &&
+  b.y < a.y + a.height - 0.5;
+
+for (const vp of PHONES) {
+  test.describe(`phone chrome polish ${vp.name}`, () => {
+    test.use({
+      viewport: { width: vp.width, height: vp.height },
+      isMobile: true,
+      hasTouch: true,
+      deviceScaleFactor: 2,
+    });
+
+    test(`welcome, Settings to Save, Codex, Journal and Full screen at ${vp.width}×${vp.height}`, async ({
+      page,
+    }) => {
+      await insets(page, vp.inset);
+      // iPhone Safari: no element Fullscreen API.
+      await page.addInitScript(() => {
+        Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => false });
+      });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(DEV_URL);
+      await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+        timeout: 30_000,
+      });
+      await page.evaluate(() =>
+        document.dispatchEvent(
+          new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }),
+        ),
+      );
+      await waitFrames(page, 6);
+      const problems: string[] = [];
+      if (await page.locator('.lr-fullscreen').isVisible())
+        problems.push('title: Full screen shows with no Fullscreen API');
+
+      // A fresh save: the welcome plays and keeps off the Start here ring and tag.
+      const welcome = hallLines('first-entry', 1)[0]!.text.slice(0, 24);
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.save.update((d: G) => {
+          d.settings.captionSpeed = 'instant';
+        });
+        g.flow.newGame();
+      });
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'hall');
+      await expect(page.locator('.tc-caption')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('.tc-caption')).toContainText(welcome);
+      await waitFrames(page, 4);
+      const cap = (await page.locator('.tc-caption').boundingBox())!;
+      for (const sel of ['.lr-hall-next', '.lr-hall-next-tag']) {
+        const b = await page.locator(sel).boundingBox();
+        if (b && meets(cap, b)) problems.push(`hall welcome: FUSE's card covers ${sel}`);
+      }
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.fuse.hush();
+        g.flow.toTitle();
+      });
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'title');
+
+      // Progress but no welcome flag (an old or hand-made save): no welcome over a later door.
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.save.update((d: G) => {
+          d.flags.hallIntro = false;
+          d.progress.solved = ['intake-desk', 'furnace'];
+          d.puzzles = {};
+          d.journal.found = [1, 2, 3, 4];
+          d.journal.read = [1, 2, 3];
+        });
+        g.flow.continueGame();
+      });
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'hall');
+      await page.waitForTimeout(600);
+      const said = await page.locator('.tc-caption').isVisible();
+      if (said && ((await page.locator('.tc-caption').textContent()) ?? '').includes(welcome))
+        problems.push('hall: the welcome played on a save with progress');
+      await page.evaluate(() => (window as G).__game.fuse.hush());
+
+      // Settings: the thumb shows, "Graphics & Save" scrolls, and Reset ends up in view.
+      await page.evaluate(() => (window as G).__game.openSettings());
+      await expect(page.locator('.lr-settings')).toBeVisible();
+      await waitFrames(page, 4);
+      const jump = page.locator('.lr-settings-more');
+      const scrolls = await page.evaluate(() => {
+        const c = document.querySelector('.lr-settings-cols')!;
+        return c.scrollHeight - c.clientHeight > 4;
+      });
+      if (scrolls) {
+        await expect(page.locator('.lr-settings-thumb')).toBeVisible();
+        await expect(jump).toBeVisible();
+        await expect(jump).toHaveText(/Graphics & Save/);
+        await jump.click();
+        await page.waitForTimeout(700);
+      }
+      const save = await page.evaluate(() => {
+        const cols = document.querySelector('.lr-settings-cols')!;
+        // Scroll the rest of the way by hand, as a thumb would.
+        cols.scrollTop = cols.scrollHeight;
+        const view = cols.getBoundingClientRect();
+        const app = document.getElementById('app')!.getBoundingClientRect();
+        const reset = [...document.querySelectorAll<HTMLElement>('.lr-settings button')].find((b) =>
+          /reset/i.test(b.textContent ?? ''),
+        )!;
+        const r = reset.getBoundingClientRect();
+        return {
+          inView: r.top >= view.top - 1 && r.bottom <= view.bottom + 1,
+          onScreen: r.top >= app.top - 1 && r.bottom <= app.bottom + 1,
+        };
+      });
+      if (!save.inView || !save.onScreen)
+        problems.push(`settings: the Save box's Reset is not reachable ${JSON.stringify(save)}`);
+      await page.evaluate(() => (window as G).__game.ui.stack.clear());
+
+      // Codex: every page's box keeps clear of the tabs and the ✕, on every tab.
+      await page.evaluate(() => (window as G).__game.codex.open());
+      await expect(page.locator('.lr-codex-nav')).toBeVisible();
+      const tabs = await page.locator('.lr-codex-nav button').count();
+      for (let i = 0; i < tabs; i++) {
+        await page.locator('.lr-codex-nav button').nth(i).click();
+        await waitFrames(page, 3);
+        const hits = await page.evaluate(() => {
+          const box = (e: Element) => e.getBoundingClientRect();
+          const meet = (a: DOMRect, b: DOMRect) =>
+            a.left < b.right - 0.5 &&
+            b.left < a.right - 0.5 &&
+            a.top < b.bottom - 0.5 &&
+            b.top < a.bottom - 0.5;
+          const nav = box(document.querySelector('.lr-codex-nav')!);
+          const x = box(document.querySelector('.lr-codex-close')!);
+          const out: string[] = [];
+          for (const p of document.querySelectorAll('.lr-codex-page')) {
+            const r = box(p);
+            const name = p.querySelector('h3')?.textContent?.trim().slice(0, 20);
+            if (meet(r, nav)) out.push(`page "${name}" runs under the tabs`);
+            if (meet(r, x)) out.push(`page "${name}" runs under the ✕`);
+            const cs = getComputedStyle(p);
+            if (p.scrollHeight > p.clientHeight + 2 && !/auto|scroll/.test(cs.overflowY))
+              out.push(`page "${name}" is cut and does not scroll`);
+          }
+          return out;
+        });
+        problems.push(...hits.map((s) => `codex tab ${i}: ${s}`));
+      }
+      await page.evaluate(() => (window as G).__game.ui.stack.clear());
+
+      // Journal: the handwriting ≥15 px; the ✕ is the one exit; every page's words fit its two
+      // leaves, at 100% and 150% text.
+      await page.evaluate(() =>
+        (window as G).__game.save.update((d: G) => {
+          d.journal.found = Array.from({ length: 16 }, (_, i) => i + 1);
+          d.journal.read = d.journal.found.slice();
+        }),
+      );
+      await page.evaluate(() => (window as G).__game.flow.openJournal());
+      await expect(page.locator('.lr-journal')).toBeVisible();
+      await page.waitForTimeout(400);
+      const fonts = await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>('.lr-j-body')]
+          .filter((e) => e.getBoundingClientRect().width > 0)
+          .map((e) => Number.parseFloat(getComputedStyle(e).fontSize)),
+      );
+      if (!fonts.length || fonts.some((f) => f < 15 - 0.05))
+        problems.push(`journal: body text ${fonts.map((f) => f.toFixed(1))} px, want ≥15`);
+      await expect(page.locator('.lr-j-x')).toBeVisible();
+      if (await page.locator('.lr-j-back').isVisible())
+        problems.push('journal: "Back to the hall" shows beside the ✕');
+      // The arrows wrap, so sixteen turns visit every page once.
+      const next = page.getByRole('button', { name: 'Next page' });
+      const date = page.locator('.lr-j-date');
+      for (const scale of [100, 150]) {
+        await page.evaluate((scale) => {
+          (window as G).__game.save.update((d: G) => {
+            d.settings.textScale = scale;
+          });
+        }, scale);
+        await waitFrames(page, 2);
+        for (let n = 1; n <= 16; n++) {
+          const over = await page.evaluate(() => {
+            const b = document.querySelector<HTMLElement>('.lr-j-body')!;
+            const cs = getComputedStyle(b);
+            return {
+              // A descender may dip a hair below the last rule.
+              cut: b.scrollWidth > b.clientWidth + 1 || b.scrollHeight > b.clientHeight + 4,
+              lines: Number.parseFloat(cs.lineHeight) < Number.parseFloat(cs.fontSize),
+            };
+          });
+          const day = (await date.textContent()) ?? '';
+          if (over.cut) problems.push(`journal "${day}" at ${scale}%: the words overflow`);
+          if (over.lines) problems.push(`journal "${day}" at ${scale}%: lines overlap`);
+          await next.click();
+          await expect(date).not.toHaveText(day);
+          await page.waitForTimeout(300);
+        }
+      }
 
       expect(problems).toEqual([]);
     });

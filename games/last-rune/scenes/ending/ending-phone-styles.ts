@@ -165,4 +165,23 @@ ${P} .lr-end-footer { padding: ${cpx(1)} ${cpx(30)}; font-size: ${tpx(12.5)}; }
 ${P} .lr-end-card .lr-end-back { margin-top: 0; min-height: ${cpx(40)}; padding: 0 ${cpx(18)}; font-size: ${tpx(14)}; }
 /* The clipboard is a prop: nothing about it says "press me". */
 ${P} .lr-clip-note { pointer-events: none; }
+
+/* mobile-4-chrome */
+/* Hangout: one channel header (no repeated start block), and no fake text box: the bar is a
+   flat read-only strip until FUSE drafts in it (D-040: no dead controls). */
+${P} .lr-hg-start { display: none !important; }
+${P} .lr-hg-compose:not([data-typing]) {
+  justify-content: center; background: transparent; border: 0; border-top: 1px solid #ffffff1a; border-radius: 0;
+  height: ${cpx(30)}; margin-bottom: ${cpx(4)};
+}
+${P} .lr-hg-compose:not([data-typing]) .lr-hg-placeholder { display: none; }
+${P} .lr-hg-compose:not([data-typing])::before {
+  content: '🔒\\00a0\\00a0Read-only channel'; font-size: ${tpx(12)}; color: #9a9385; letter-spacing: 0.3px;
+}
+/* End card: the closing line on a solid dark plate, not thin white on the gold. */
+${P} .lr-end-footer {
+  padding: ${cpx(3)} ${cpx(14)}; border-radius: ${cpx(12)}; color: #fff6e2; text-shadow: none;
+  background: rgb(28 13 2 / 0.9); box-shadow: 0 0 ${cpx(10)} rgb(28 13 2 / 0.6);
+}
+/* end mobile-4-chrome */
 `;
