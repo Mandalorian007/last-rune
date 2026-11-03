@@ -121,6 +121,10 @@ const CSS = /* css */ `
 .tc-overlay .lr-need-strikes [data-state="under"] { border-color: #ffb03f; color: #ffd9a0; }
 .tc-overlay .lr-need-strikes [data-state="over"] { border-color: #ff5a3c; color: #ffc0b0; }
 .tc-overlay .lr-need-strikes [data-state="live"] { border-style: dashed; color: #f4e6c4; }
+/* Phones: a strike chip never breaks across lines ("1:" over "0") in a narrow card; the
+   chips drop under "Strike" instead, inside the card. */
+.tc-overlay[data-phone] .lr-need-strikes { flex-wrap: wrap; justify-content: center; row-gap: 2px; }
+.tc-overlay[data-phone] .lr-need-strikes span { white-space: nowrap; }
 
 /* Charge chips: the bolt's charge where it changes, and what lands at each machine. */
 .tc-overlay .lr-altar-chip {

@@ -6,11 +6,13 @@ import { type GemKind, MACHINE_IDS } from '../../games/last-rune/rules/types';
 import { trayRemaining } from '../../games/last-rune/rules/validate';
 import { DEV_URL, waitFrames } from '../../tests/e2e/helpers';
 
-// PM review (temporary): every altar, half the intended gems placed, at two phone viewports.
+// PM review (temporary): every altar, half the intended gems placed, at the four phone viewports.
 const OUT = resolve(process.env.PMR_OUT ?? 'docs/design/screens/local/mobile-2/pm-review-altars');
 const PHONES = [
   { name: 'iphone', width: 844, height: 340, inset: 47 },
   { name: 'se', width: 667, height: 320, inset: 0 },
+  { name: 'promax', width: 932, height: 380, inset: 59 },
+  { name: 'android', width: 915, height: 360, inset: 0 },
 ] as const;
 test.setTimeout(900_000);
 // biome-ignore lint/suspicious/noExplicitAny: dev handle
