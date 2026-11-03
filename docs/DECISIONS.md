@@ -64,3 +64,4 @@ Format: `D-NNN · date · decision · why · who`.
   - never opens or copies without a user action; no network calls.
 - Embed context (itch frame vs top level) is detected, not assumed. Facts: docs/research/itch-webgpu.md "Clipboard and popups".
 - Game code (Join ThunderClap Gaming, Ko-fi, future links) uses only this API. Do not add per-game link handling.
+- D-036 addendum (merge): the gamepad path uses `window.open` without `noreferrer` so a blocked tab can be detected; `opener` is nulled, and the browser default policy sends only the origin. Engine `input` now counts a repeat press of the same key on adjacent frames as a new press. PadNav routes A through `activateLink`.
