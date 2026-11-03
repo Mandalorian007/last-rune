@@ -51,3 +51,16 @@ Format: `D-NNN · date · decision · why · who`.
 - Pages: Not met yet (name hidden, "?" tab) / Seen (full rule, "Restore the X to earn it") / Yours.
 - Diagrams count charge in sparks like the altar chips (bolt of 4).
 - `engine/render/snapshot.ts` SnapshotRenderer (offscreen one-frame render to ImageBitmap, same device) is accepted engine API; `installGpuErrorLogging` is idempotent per device.
+
+## D-036: External links are an engine service (2026-11-02, user)
+- User: "make sure our game engine logic can handle external links I think in a game this will come up a bunch".
+- `engine/platform/links.ts` (logic, no DOM widgets) + an `engine/ui` link widget. No game nouns. Games pass URLs and labels.
+- One API for every outbound link:
+  - https-only allowlist check; blank or invalid URL hides the control;
+  - open via a real `<a target=_blank rel="noopener noreferrer">` on click/key;
+  - open via `window.open` on non-activation paths (gamepad), with blocked-popup detection → fallback;
+  - copy chain: Clipboard API → execCommand textarea (itch frame, Chromium) → selected read-only field;
+  - "Copied" feedback + aria-live; padnav-reachable;
+  - never opens or copies without a user action; no network calls.
+- Embed context (itch frame vs top level) is detected, not assumed. Facts: docs/research/itch-webgpu.md "Clipboard and popups".
+- Game code (Join ThunderClap Gaming, Ko-fi, future links) uses only this API. Do not add per-game link handling.

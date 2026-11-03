@@ -220,3 +220,8 @@ Tested 2026-11-02 with Playwright 1.64.1 and Chromium 156.
 | Linux amd64, same image under QEMU emulation on Apple Silicon | n/a | Chromium failed to launch under emulation. Not tested on real x86 GitHub runners. |
 
 This is why the e2e workflow is manual and runs on `ubuntu-24.04-arm` (see `.github/workflows/e2e.yml`).
+
+## Clipboard and popups in the itch frame (PM, 2026-11-02)
+- **Popups.** There is no `sandbox` attribute, so `<a target="_blank" rel="noopener noreferrer">` works under the normal popup blocker, which allows tabs opened by a real click or key press. A gamepad button press does not count as user activation, so `window.open` from the pad path can be blocked. Show a copy fallback there.
+- **Clipboard.** `clipboard-write` is not in itch's `allow` list. Chromium rejects `navigator.clipboard.writeText` in the cross-origin frame. Firefox and Safari allow it on a gesture. The issue is open, unanswered by staff since 2021: https://github.com/itchio/itch.io/issues/1202. The community workaround is a hidden textarea plus `document.execCommand('copy')` inside the gesture handler. Last resort: a read-only field with the URL selected.
+- itch's docs (https://itch.io/docs/creators/html5) don't document the iframe's permissions. Re-check the live `allow` list at launch.
