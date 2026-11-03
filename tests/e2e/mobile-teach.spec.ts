@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
-import { MACHINE_IDS } from '../../games/last-rune/rules/types';
+import { GEM_KINDS, MACHINE_IDS } from '../../games/last-rune/rules/types';
 import { trayRemaining } from '../../games/last-rune/rules/validate';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, waitFrames } from './helpers';
@@ -69,6 +69,18 @@ async function openFresh(page: Page, id: string, share = 0.5) {
   await page.evaluate((id) => (window as G).__game.flow.openPuzzle(id), id);
   await expect(page.locator('.lr-altar')).toBeVisible();
   await waitFrames(page, 6);
+}
+
+/** Turn the arrival card's pages with a finger until it closes. */
+async function dismissCard(page: Page) {
+  for (let i = 0; i < 6; i++) {
+    const next = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
+    if ((await next.count()) === 0) return;
+    const b = await next.first().boundingBox({ timeout: 2000 });
+    if (!b) return;
+    await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+    await waitFrames(page, 4);
+  }
 }
 
 /**
@@ -275,6 +287,180 @@ for (const vp of PHONES) {
         await page.evaluate(() => (window as G).__game.flow.closePuzzle());
         await waitFrames(page, 4);
       }
+      expect(problems).toEqual([]);
+    });
+
+    test(`one panel while teaching (${vp.name})`, async ({ page }) => {
+      await boot(page, vp.inset);
+      const problems: string[] = [];
+      for (const id of MACHINE_IDS) {
+        await openFresh(page, id, 0);
+        for (let pg = 0; pg < 6; pg++) {
+          await waitFrames(page, 4);
+          const g = await page.evaluate(() => {
+            const seen = (el: Element | null) => {
+              if (!el || (el as HTMLElement).hidden || el.closest('[hidden]')) return null;
+              const cs = getComputedStyle(el);
+              const r = el.getBoundingClientRect();
+              if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05)
+                return null;
+              if (r.width <= 0 || r.height <= 0) return null;
+              return { l: r.left, r: r.right, t: r.top, b: r.bottom, text: el.textContent ?? '' };
+            };
+            const tip = document.querySelector('.lr-altar-tip');
+            return {
+              card: seen(tip),
+              next: seen(document.querySelector('.lr-altar-tip .lr-info-next')),
+              hint: seen(document.querySelector('.lr-altar-hint')),
+              fuse: seen(document.querySelector('.tc-caption')),
+              label: document.querySelector('.lr-altar-tip .lr-info-next')?.textContent ?? '',
+              page: document.querySelector('.lr-altar-tip .lr-info-page')?.textContent ?? '',
+              how:
+                document.querySelector<HTMLElement>('.lr-altar-tip .lr-info-row')?.dataset.how ??
+                '',
+              rule: document.querySelector('.lr-altar-tip .lr-info-rule')?.textContent ?? '',
+              leader: document.querySelectorAll('.lr-teach-leader .lr-leader-line').length,
+              lit: [...document.querySelectorAll<HTMLElement>('.lr-altar-slot[data-teach]')].filter(
+                (s) => getComputedStyle(s).display !== 'none',
+              ).length,
+            };
+          });
+          if (!g.next || !g.card) break;
+          const tag = `${id} "${g.page}"`;
+          if (SHOTS && pg === 0)
+            await page.screenshot({ path: `${SHOTS}/teach-card-${vp.name}-${id}.png` });
+          if (g.hint)
+            problems.push(`${tag}: the how-to line "${g.hint.text}" shows beside the card`);
+          if (g.fuse) problems.push(`${tag}: FUSE's bubble shows beside the card`);
+          const n = g.next;
+          const c = g.card;
+          if (n.l < c.l - 0.5 || n.r > c.r + 0.5 || n.t < c.t - 0.5 || n.b > c.b + 0.5)
+            problems.push(`${tag}: "${g.label}" pokes out of the card`);
+          // The card points at what it teaches: a line to a fixed gem, a lit tray tile for
+          // a gem the player places; and says which it is.
+          if (g.how === 'fixed') {
+            if (!g.leader) problems.push(`${tag}: no line from the card to the fixed gem`);
+            if (!g.rule.startsWith('Fixed: part of the machine'))
+              problems.push(`${tag}: a fixed gem's page says "${g.rule}"`);
+          } else if (g.how === 'tray' || g.how === 'turns') {
+            if (g.how === 'tray' && !g.lit) problems.push(`${tag}: its tray tile is not lit`);
+            if (g.leader) problems.push(`${tag}: a line points at the board for a tray gem`);
+          }
+          if (g.how === 'tray' && !g.rule.startsWith('Yours to place'))
+            problems.push(`${tag}: a tray gem's page says "${g.rule}"`);
+          // A finger, not the mouse (a click would switch the hints to mouse wording).
+          await page.touchscreen.tap((n.l + n.r) / 2, (n.t + n.b) / 2);
+        }
+        await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+        await waitFrames(page, 4);
+      }
+      expect(problems).toEqual([]);
+    });
+    test(`a fixed gem says so, and stays still (${vp.name})`, async ({ page }) => {
+      await boot(page, vp.inset);
+      const problems: string[] = [];
+      let checked = 0;
+      for (const id of MACHINE_IDS) {
+        const pz = puzzleFor(id);
+        if (pz.fixed.length === 0) continue;
+        await openFresh(page, id, 0);
+        await dismissCard(page);
+        for (const f of pz.fixed.slice(0, 2)) {
+          const tapCell = async () => {
+            const L = await page.evaluate(
+              () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+            );
+            const ob = (await page.locator('.tc-overlay').boundingBox())!;
+            const k = ob.width / 1920;
+            const x = L.left + L.margin + L.pitch * (f.cell.x + 0.5);
+            const y = L.top + L.margin + L.pitch * (f.cell.y + 0.5);
+            await page.touchscreen.tap(ob.x + x * k, ob.y + y * k);
+            await waitFrames(page, 6);
+          };
+          // A dense board zooms in on the first tap; the second reaches the gem.
+          const zoomable = await page.locator('.lr-altar[data-zoomable]').count();
+          await tapCell();
+          if (zoomable) {
+            await page.waitForTimeout(400);
+            await tapCell();
+          }
+          const g = await page.evaluate(({ x, y }) => {
+            const v = (window as G).__altarView;
+            const b = v.board.find(
+              (q: { cell: { x: number; y: number } }) => q.cell.x === x && q.cell.y === y,
+            );
+            const tip = document.querySelector<HTMLElement>('.lr-altar-tip');
+            return {
+              tip: tip && !tip.hidden ? (tip.textContent ?? '') : '',
+              eg: tip?.querySelector('.lr-info-eg')?.textContent ?? '',
+              settle: b?.settle ?? -1,
+              lift: b?.g?.lift ?? 0,
+              held: v.held?.kind ?? null,
+            };
+          }, f.cell);
+          const tag = `${id} ${f.gem} at ${f.cell.x},${f.cell.y}`;
+          checked++;
+          if (SHOTS && checked <= 3)
+            await page.screenshot({ path: `${SHOTS}/teach-fixed-${vp.name}-${id}.png` });
+          if (!g.tip.includes('Fixed: part of the machine'))
+            problems.push(`${tag}: the card says "${g.tip}"`);
+          if (!g.eg) problems.push(`${tag}: no worked example on the card`);
+          if (g.settle > 0.01) problems.push(`${tag}: the gem bounces (settle ${g.settle})`);
+          if (g.lift > 0.01) problems.push(`${tag}: the gem lifts (${g.lift})`);
+          if (g.held) problems.push(`${tag}: the tap picked up ${g.held}`);
+          await page.waitForTimeout(2700);
+        }
+        await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+        await waitFrames(page, 4);
+      }
+      expect(checked).toBeGreaterThan(0);
+      expect(problems).toEqual([]);
+    });
+
+    test(`every gem card carries its worked example (${vp.name})`, async ({ page }) => {
+      await boot(page, vp.inset);
+      const problems: string[] = [];
+      const seen = new Set<string>();
+      for (const id of MACHINE_IDS) {
+        if (seen.size === GEM_KINDS.length) break;
+        await openFresh(page, id);
+        await dismissCard(page);
+        const L = await page.evaluate(
+          () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+        );
+        const ob = (await page.locator('.tc-overlay').boundingBox())!;
+        const k = ob.width / 1920;
+        const pz = puzzleFor(id);
+        const half = pz.design.intended.slice(0, Math.floor(pz.design.intended.length / 2));
+        for (const slot of L.tray) {
+          if (seen.has(slot.gem) || trayRemaining(pz, half, slot.gem) <= 0) continue;
+          const tap = () => page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);
+          await tap();
+          await waitFrames(page, 6);
+          const eg = await page.evaluate(() => {
+            const e = document.querySelector<HTMLElement>(
+              '.lr-altar-tip:not([hidden]) .lr-info-eg',
+            );
+            if (!e) return null;
+            const r = e.getBoundingClientRect();
+            return {
+              text: e.textContent ?? '',
+              h: r.height,
+              shown: getComputedStyle(e).display !== 'none',
+            };
+          });
+          if (!eg?.shown || eg.h <= 0) problems.push(`${id} ${slot.gem}: no worked example`);
+          else if (!eg.text.includes('→')) problems.push(`${id} ${slot.gem}: "${eg.text}"`);
+          else seen.add(slot.gem);
+          if (SHOTS && eg)
+            await page.screenshot({ path: `${SHOTS}/teach-eg-${vp.name}-${slot.gem}.png` });
+          await tap();
+          await waitFrames(page, 4);
+        }
+        await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+        await waitFrames(page, 4);
+      }
+      expect([...seen].sort()).toEqual([...GEM_KINDS].sort());
       expect(problems).toEqual([]);
     });
   });

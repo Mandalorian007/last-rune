@@ -63,6 +63,10 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-tip b { color: var(--lr-gold); font-weight: 600; margin-right: 4px; }
 .tc-overlay .lr-altar-tip:not([data-source="tray"])::after { display: none; }
 .tc-overlay .lr-altar-tip .lr-info-row + .lr-info-row { margin-top: 3px; }
+/* The worked example under the rule, in the read-out's blue (mobile-7-teach). */
+.tc-overlay .lr-altar-tip .lr-info-eg {
+  display: block; margin-top: 2px; font-family: var(--tc-font-ui); font-size: 0.85em; color: #a8ccf5; white-space: nowrap;
+}
 .tc-overlay .lr-altar-tip .lr-info-tag {
   display: inline-block; margin-right: 6px; padding: 0 8px; border-radius: 6px; font-size: 16px; line-height: 1.4;
   vertical-align: 1px; color: #dfe6f2; background: rgba(150,165,190,0.22); border: 1px solid rgba(196,208,226,0.6);

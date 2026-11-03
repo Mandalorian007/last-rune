@@ -42,6 +42,31 @@ ${A} .lr-altar-count[data-empty] {
 }
 ${A} .lr-altar-count[data-empty] .lr-k { display: none; }
 ${A} .lr-altar-count[data-empty] .lr-n { font: inherit; letter-spacing: inherit; }
+
+/* One panel while teaching (the arbiter, moments.ts, holds the how-to line and FUSE's bubble).
+   "Next ›" stands wholly inside the card: "New here · 1 of 3" wraps before the button can
+   push past the card's edge. */
+${A} .lr-altar-tip .lr-info-foot { min-width: 0; max-width: 100%; box-sizing: border-box; }
+${A} .lr-altar-tip:not([data-compact]) .lr-info-page { flex: 1 1 auto; min-width: 0; white-space: normal; }
+${A} .lr-altar-tip .lr-info-of { display: block; }
+${A} .lr-altar-tip:not([data-compact]) .lr-info-of::before { content: none; }
+/* Worked examples: one line with real numbers under each gem's rule (the codex's maths line). A card
+   shrunk to its name line drops it. */
+${A} .lr-altar-tip .lr-info-eg { margin-top: ${cpx(1)}; font-size: ${tpx(12)}; line-height: 1.25; white-space: normal; }
+${A} .lr-altar-lane > .lr-altar-tip[data-arb="line"] .lr-info-eg { display: none; }
+/* The arrival card points at what it teaches. A fixed gem's page: a gold line from the card
+   to the gem, ringed. A tray gem's page: its tray tile rings gold and breathes. */
+${A} .lr-teach-leader { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+${A} .lr-teach-leader .lr-leader-shade { stroke: rgba(10,6,2,0.75); stroke-linecap: round; }
+${A} .lr-teach-leader .lr-leader-line { stroke: #ffd77a; stroke-linecap: round; }
+${A} .lr-teach-leader .lr-leader-ring { fill: none; stroke: #ffd77a; animation: lr-t7-breathe 1.6s ease-in-out infinite; }
+${A} .lr-altar-slot[data-teach]:not([data-empty]):not([data-held]) {
+  display: block; box-shadow: 0 0 0 ${cpx(2)} #ffd77a, 0 0 ${cpx(12)} ${cpx(2)} rgba(255,205,110,0.6);
+  animation: lr-t7-breathe 1.6s ease-in-out infinite;
+}
+@keyframes lr-t7-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+[data-reduced-motion] ${A} .lr-teach-leader .lr-leader-ring,
+[data-reduced-motion] ${A} .lr-altar-slot[data-teach] { animation: none; }
 /* mobile-7-teach end */
 `;
 }

@@ -75,6 +75,10 @@ export type Grant = 'full' | 'line' | 'wait';
  * one line if it has one and that fits, else it waits. The first to ask is the owner and always
  * shows whole (it has the room to itself). The verdict is the moment's answer: it is
  * never shrunk or held back, even when it alone overfills the room.
+ *
+ * While a teach card is up it is the one panel beside the verdict (mobile-7-teach, D-040
+ * addendum 5): the how-to line and FUSE's bubble wait, however much room is left, so the
+ * newcomer reads one thing and its button.
  */
 export function arbitrate(
   asks: readonly VoiceAsk[],
@@ -86,7 +90,12 @@ export function arbitrate(
     .sort((p, q) => VOICES.indexOf(p.a.voice) - VOICES.indexOf(q.a.voice) || p.i - q.i);
   const out = new Map<string, Grant>();
   let used = 0;
+  const teaching = asks.some((a) => a.voice === 'teach');
   for (const { a } of order) {
+    if (teaching && (a.voice === 'hint' || a.voice === 'fuse')) {
+      out.set(a.id, 'wait');
+      continue;
+    }
     const need = (h: number) => used + (used > 0 ? gap : 0) + h;
     if (a.voice === 'verdict' || used === 0 || need(a.full) <= room) {
       used = need(a.full);

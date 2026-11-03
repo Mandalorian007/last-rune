@@ -144,6 +144,7 @@ const HOLD_SECS = 0.45;
 const LIFT_CSS = 56;
 /** Touch: how long the held gem's card stays up after the pick (no hover to keep it). */
 const TOUCH_CARD_SECS = 2.5;
+const SVG_NS = 'http://www.w3.org/2000/svg';
 /** Phones: under this socket pitch (CSS px) a finger aiming a gem gets the loupe. */
 const LOUPE_PITCH_CSS = 44;
 /** The loupe: diameter (CSS px) and magnification. */
@@ -233,6 +234,10 @@ const TEACH_MACHINE: MachineId = 'intake-desk';
  * The first altar's arrival card also says what the gold socket rings mean: the teach socket,
  * the machine's exit and, once building, the open ends of the route all ring gold.
  */
+/** A fixed gem's card on a phone opens with this (mobile-7-teach). */
+const FIXED_LINE = 'Fixed: part of the machine.';
+/** A tray gem on the arrival card: the player's to place. */
+const YOURS_LINE = 'Yours to place.';
 const RING_NAME = 'Gold ring';
 const RING_RULE = 'A socket the charge must reach. Set a gem there.';
 
@@ -604,6 +609,9 @@ export class AltarScene implements GameScene {
     this.laneShift = 0;
     this.capKey2 = '';
     this.slotEls.length = 0;
+    this.leader = null;
+    this.leaderKey = '';
+    this.fixedTap = null;
   }
 
   /** The altar's look; phones drop the fog and vignette so the whole grid reads evenly. */
@@ -1000,6 +1008,11 @@ export class AltarScene implements GameScene {
         }),
       );
       this.dom.prepend(...this.slotEls);
+      this.leader = document.createElementNS(SVG_NS, 'svg');
+      this.leader.setAttribute('class', 'lr-teach-leader');
+      this.leader.setAttribute('viewBox', '0 0 1920 1080');
+      this.leader.setAttribute('aria-hidden', 'true');
+      this.dom.append(this.leader);
     }
     this.phoneCaption(true);
     this.ctx.ui.layers.hud.append(this.dom);
@@ -1984,10 +1997,18 @@ export class AltarScene implements GameScene {
     return whole ? rule : firstSentence(rule);
   }
 
-  /** A phone chip's rule: the whole rule in one short line (the codex's `chip`). */
-  private chipRule(r: { gem: GemKind; how: InfoHow }): string {
+  /**
+   * A phone chip's rule: the whole rule in one short line (the codex's `chip`). A fixed gem
+   * says it is part of the machine first; on the arrival card a tray gem says it is the
+   * player's to place, so the first lesson reads "this one's fixed and turns the charge; you
+   * place Channels" (mobile-7-teach).
+   */
+  private chipRule(r: { gem: GemKind; how: InfoHow }, intro = false): string {
     const line = codexEntry(r.gem).chip;
-    return r.how === 'turns' ? `${line} Turn it to fit.` : line;
+    if (r.how === 'turns') return `${line} Turn it to fit.`;
+    if (r.how === 'fixed') return `${FIXED_LINE} ${line}`;
+    if (intro && r.how === 'tray') return `${YOURS_LINE} ${line}`;
+    return line;
   }
 
   /** New fixed gems have been struck through: stop pulsing them, close the arrival card. */
@@ -2167,6 +2188,14 @@ export class AltarScene implements GameScene {
       return;
     }
     if (this.board.fixedAt(cell)) {
+      // Phones: a tap on a fixed gem asks what it is. Its card says "Fixed: part of the
+      // machine" in the tip slot; the gem stays still (no bounce, no red flash), so nothing
+      // suggests it could move (mobile-7-teach).
+      if (this.view.layout.phone) {
+        this.fixedTap = { cell: { x: cell.x, y: cell.y }, t: TOUCH_CARD_SECS };
+        this.ctx.sound.sfx.play('uiClick');
+        return;
+      }
       this.denyAt(cell, 'fixed');
       return;
     }
@@ -2175,6 +2204,91 @@ export class AltarScene implements GameScene {
       return;
     }
   }
+
+  /** Phones: the line from the arrival card to the fixed gem it teaches (mobile-7-teach). */
+  private leader: SVGSVGElement | null = null;
+  private leaderKey = '';
+
+  /**
+   * Phones: the arrival card points at what it teaches. A fixed gem's page draws a gold line
+   * from the card to that gem on the board (which also pulses); a tray gem's page rings its
+   * tray tile. Nothing while the card is down.
+   */
+  private updateTeachPointer(): void {
+    const L = this.view.layout;
+    if (!L.phone) return;
+    const teachUp = this.introLeft > 0 && this.mode === 'edit' && !this.tip.hidden;
+    const row =
+      teachUp && this.tip.dataset.source === 'intro'
+        ? this.introRows()[Math.min(this.introPageIdx, this.introPages() - 1)]
+        : undefined;
+    const trayGem = row && row.how !== 'fixed' ? row.gem : null;
+    L.tray.forEach((t, i) => {
+      this.slotEls[i]?.toggleAttribute('data-teach', t.gem === trayGem);
+    });
+    const svg = this.leader;
+    if (!svg) return;
+    const cells = row?.how === 'fixed' ? this.news.fixed.filter((f) => f.gem === row.gem) : [];
+    if (cells.length === 0) {
+      if (this.leaderKey) svg.replaceChildren();
+      this.leaderKey = '';
+      return;
+    }
+    // From the card's left edge, a third of the way down (by the gem's name), in design px.
+    const box = this.dom.getBoundingClientRect();
+    const r = this.tip.getBoundingClientRect();
+    if (box.width <= 0 || r.width <= 0) return;
+    const k = 1920 / box.width;
+    const x0 = Math.round((r.left - box.left) * k);
+    const y0 = Math.round((r.top - box.top + Math.min(r.height / 3, 24 / k)) * k);
+    const ends = cells.map((f) => {
+      const cx = L.left + L.margin + L.pitch * (f.cell.x + 0.5);
+      const cy = L.top + L.margin + L.pitch * (f.cell.y + 0.5);
+      return { cx, cy };
+    });
+    const ring = L.pitch * 0.52;
+    const key = `${x0},${y0},${ring.toFixed(1)}:${ends.map((e) => `${e.cx},${e.cy}`).join(';')}`;
+    if (key === this.leaderKey) return;
+    this.leaderKey = key;
+    const w = Math.round(2 * (L.phone.cssPx || 1) * 10) / 10;
+    const el = (tag: string, a: Record<string, string | number>) => {
+      const e = document.createElementNS(SVG_NS, tag);
+      for (const [n, v] of Object.entries(a)) e.setAttribute(n, String(v));
+      return e;
+    };
+    svg.replaceChildren(
+      ...ends.flatMap(({ cx, cy }) => {
+        // Stop at the gem's ring, so the line never covers the gem itself.
+        const dx = x0 - cx;
+        const dy = y0 - cy;
+        const d = Math.hypot(dx, dy) || 1;
+        const x1 = cx + (dx / d) * ring;
+        const y1 = cy + (dy / d) * ring;
+        return [
+          el('line', {
+            x1: x0,
+            y1: y0,
+            x2: x1,
+            y2: y1,
+            class: 'lr-leader-shade',
+            'stroke-width': w * 2.2,
+          }),
+          el('line', {
+            x1: x0,
+            y1: y0,
+            x2: x1,
+            y2: y1,
+            class: 'lr-leader-line',
+            'stroke-width': w,
+          }),
+          el('circle', { cx, cy, r: ring, class: 'lr-leader-ring', 'stroke-width': w }),
+        ];
+      }),
+    );
+  }
+
+  /** Phones: the fixed gem just tapped, whose card shows for a moment (mobile-7-teach). */
+  private fixedTap: { cell: Cell; t: number } | null = null;
 
   /** " Joins north and east. R or Q turns it." for a Bend, Gate or Split; nothing for others. */
   private turnNote(gem: GemKind, rot: number): string {
@@ -3086,7 +3200,12 @@ export class AltarScene implements GameScene {
     if (this.introLeft > 0 && this.mode === 'edit') {
       this.introLeft = Math.max(0, this.introLeft - dt);
     }
+    if (this.fixedTap) {
+      this.fixedTap.t -= dt;
+      if (this.fixedTap.t <= 0 || this.hand || this.mode !== 'edit') this.fixedTap = null;
+    }
     this.updateInfo();
+    this.updateTeachPointer();
     this.updateTurnBadge();
     this.updateTurnButton();
     this.updateCrowd();
@@ -3514,7 +3633,9 @@ export class AltarScene implements GameScene {
     const pin = this.infoPin;
     const s = !pin && slot >= 0 ? L.tray[slot] : undefined;
     const focus =
-      !strike && (!this.hand || overPlaced) ? (this.keyboard ? this.cursor : this.hoverCell) : null;
+      !strike && (!this.hand || overPlaced)
+        ? (this.fixedTap?.cell ?? (this.keyboard ? this.cursor : this.hoverCell))
+        : null;
     const fixedHere = focus ? this.board.fixedAt(focus) : undefined;
     const onBoard = focus ? (this.board.at(focus) ?? fixedHere) : undefined;
     // Phones: the arrival card outranks a gem's tip (moments.ts); only a long-press pin wins.
@@ -3583,7 +3704,10 @@ export class AltarScene implements GameScene {
           h('b', null, GEM_NAME[r.gem]),
           tag ? h('span', { class: 'lr-info-tag', 'data-how': r.how }, tag) : null,
           ' ',
-          h('span', { class: 'lr-info-rule' }, chip ? this.chipRule(r) : this.infoRule(r)),
+          h('span', { class: 'lr-info-rule' }, chip ? this.chipRule(r, intro) : this.infoRule(r)),
+          // The worked example, with real numbers (the codex's line; mobile-7-teach).
+          // Phones only: desktop and iPad tips keep their v1.0 look (D-041).
+          L.phone ? h('span', { class: 'lr-info-eg' }, codexEntry(r.gem).maths) : null,
         );
       }),
       ...(intro && this.teachCell
@@ -4015,7 +4139,13 @@ export class AltarScene implements GameScene {
           ? 0.35 + 0.35 * Math.sin(this.time * 4 + i)
           : 0;
       this.view.trayLift[i] =
-        lift < 0 ? Math.min(0, lift + 0.05) : held ? 1 : i === this.hoverSlot && n > 0 ? 0.6 : bob;
+        lift < 0
+          ? Math.min(0, lift + 0.05)
+          : held
+            ? 1
+            : i === this.hoverSlot && (n > 0 || !L.phone)
+              ? 0.6
+              : bob;
     }
     // Held gem: follows the pointer, snaps to the socket it would land in.
     const hand = this.hand;

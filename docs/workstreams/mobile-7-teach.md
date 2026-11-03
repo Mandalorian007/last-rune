@@ -28,3 +28,27 @@ Gate review 4 failed at 6.4 (D-040 addendum 5). Evidence is in `docs/design/scre
 
 ## Log
 
+
+**2026-11-03: wrapped up early on PM request (D-041: v1.0 ships for desktop and iPad; phones wait for the engine rewrite).** Every change below is phone-only unless marked otherwise. Desktop and iPad should look the same as before, except for the Codex maths line.
+1. **Blocker fixed: the tip names the gem in hand.** `pickInfo` (moments.ts) picks the card's source. With a gem in hand, the card names that gem or nothing. A Capacitor plan read-out steps aside while a gem is held, which was the se/16 cause. Covered by e2e over every altar and every tray gem.
+2. **The teach card points at what it teaches.**
+   - A fixed gem's page draws a gold line from the card to the gem, plus a ring around the gem (`updateTeachPointer`, `.lr-teach-leader`). The gem's existing pulse stays.
+   - A tray gem's page rings its tray tile (`.lr-altar-slot[data-teach]`).
+   - The copy says which kind a gem is: "Fixed: part of the machine. …" or "Yours to place. …". At the Intake Desk, the lesson now reads "Bend: fixed, turns the charge" and then "Channel: yours to place".
+3. **Fixed gems look fixed.**
+   - Fixed and hint-locked gems keep the existing riveted iron collar (stone-wgsl state 6); placed gems have none.
+   - A tap on a fixed gem no longer bounces or flashes red. Instead its card shows in the tip slot for 2.5 s: "Fixed: part of the machine." Covered by e2e: the card text is right, there is no settle or lift, and nothing gets picked up.
+4. **Worked examples.**
+   - Every gem's codex `maths` line is now a worked example with real numbers, e.g. "In 4 → out 2 and 2. Odd charge is lost." The Codex shows it on every platform.
+   - Phone tips and teach cards show it under the rule.
+   - Covered by a content test and by e2e (every gem kind's tray tip shows its example).
+5. **No ✓ circles.** A used-up gem stays as a dimmed, smaller silhouette with one quiet "all placed" line under it. Covered by e2e.
+6. **One panel while teaching.** While the teach card is up, the arbiter holds back the how-to line and FUSE's bubble. "Next ›" stays inside the card because the page label wraps. Covered by e2e over every altar and every page, which also checks the pointing.
+7. **The puzzle name stays while holding.** The title shrinks and the "Holding X" pill sits under it. Covered by e2e for overlap and clipping.
+
+Captures (git-ignored): `docs/design/screens/local/teach7-before/`, `teach7-before6/` (before) and `teach7-after/` (after, from `TEACH_SHOTS=… pnpm exec playwright test tests/e2e/mobile-teach.spec.ts`).
+
+Open:
+- Mini inline diagrams for the worked examples were not done.
+- The collar was not made more visible on phones.
+- Leader lines were only checked in captures on the four phones. Their ends are not checked against the cell positions while zoomed.

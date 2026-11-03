@@ -50,11 +50,22 @@ describe('column arbiter: one owner at a time', () => {
 
   it('gives everyone room when it fits', () => {
     const g = arbitrate(
-      [v('hint', 'hint', 20), v('teach', 'teach', 60), v('fuse', 'fuse', 40)],
+      [v('hint', 'hint', 20), v('tip', 'tip', 60), v('fuse', 'fuse', 40)],
       200,
       8,
     );
     expect([...g.values()]).toEqual(['full', 'full', 'full']);
+  });
+
+  it('a teach card is the one panel: the how-to line and FUSE wait, room or not', () => {
+    const g = arbitrate(
+      [v('hint', 'hint', 20), v('teach', 'teach', 60), v('fuse', 'fuse', 40)],
+      1000,
+      8,
+    );
+    expect(g.get('teach')).toBe('full');
+    expect(g.get('hint')).toBe('wait');
+    expect(g.get('fuse')).toBe('wait');
   });
 
   it('ranks verdict > teach > tip > hint > FUSE, whatever the input order', () => {
@@ -62,17 +73,18 @@ describe('column arbiter: one owner at a time', () => {
       v('fuse', 'fuse', 50),
       v('hint', 'hint', 20),
       v('tip', 'tip', 60, 20),
-      v('teach', 'teach', 70),
       v('verdict', 'verdict', 60),
     ];
-    // 60 + 8 + 70 = 138; the tip shrinks to a line (138 + 8 + 20 = 166); the hint fits
-    // (166 + 8 + 20 = 194); FUSE does not (194 + 8 + 50 > 200).
+    // 60 + 8 + 60 = 128; the hint fits (128 + 8 + 20 = 156); FUSE does not (156 + 8 + 50 > 200).
     const g = arbitrate(asks, 200, 8);
     expect(g.get('verdict')).toBe('full');
-    expect(g.get('teach')).toBe('full');
-    expect(g.get('tip')).toBe('line');
+    expect(g.get('tip')).toBe('full');
     expect(g.get('hint')).toBe('full');
     expect(g.get('fuse')).toBe('wait');
+    // With a teach card: verdict, card, then the tip shrinks to a line (138 + 8 + 20 = 166).
+    const t = arbitrate([...asks, v('teach', 'teach', 70)], 200, 8);
+    expect(t.get('teach')).toBe('full');
+    expect(t.get('tip')).toBe('line');
   });
 
   it('makes a lower voice wait when even one line will not fit', () => {
@@ -87,9 +99,9 @@ describe('column arbiter: one owner at a time', () => {
   });
 
   it('a waiting voice leaves its room to the next one down', () => {
-    // The tip (no line form) cannot fit under the teach card, but the shorter bubble can.
+    // The tip (no line form) cannot fit under the verdict, but the shorter bubble can.
     const g = arbitrate(
-      [v('teach', 'teach', 90), v('tip', 'tip', 120), v('fuse', 'fuse', 40)],
+      [v('verdict', 'verdict', 90), v('tip', 'tip', 120), v('fuse', 'fuse', 40)],
       140,
       8,
     );
