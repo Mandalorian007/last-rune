@@ -27,7 +27,8 @@ export interface AltarAssets {
   circuit: CircuitOverlay;
   /** One ribbon per strike (grown on demand). */
   bolts: BoltRibbon[];
-  slab(cols: number, rows: number, pitch: number): AltarSlab;
+  /** A slab; `margin` and `front` override the default border and front face (phones). */
+  slab(cols: number, rows: number, pitch: number, margin?: number, front?: number): AltarSlab;
 }
 
 const cache = new WeakMap<Renderer, AltarAssets>();
@@ -45,8 +46,8 @@ export function altarAssets(renderer: Renderer, particles: ParticleSystem): Alta
     fuse: new Fuse(renderer, { x: 300, y: 1046, scale: 112 }),
     circuit: new CircuitOverlay(renderer),
     bolts,
-    slab(cols, rows, pitch) {
-      const key = `${cols}x${rows}@${pitch}`;
+    slab(cols, rows, pitch, margin, front) {
+      const key = `${cols}x${rows}@${pitch}/${margin ?? ''}/${front ?? ''}`;
       let s = slabs.get(key);
       if (!s) {
         // Keep the cache small: boards come in three sizes, pitch varies with props.
@@ -55,7 +56,7 @@ export function altarAssets(renderer: Renderer, particles: ParticleSystem): Alta
           s0.destroy();
           slabs.delete(k0);
         }
-        s = new AltarSlab(renderer, { cols, rows, pitch, seed: 5 + cols });
+        s = new AltarSlab(renderer, { cols, rows, pitch, margin, front, seed: 5 + cols });
         slabs.set(key, s);
       }
       return s;

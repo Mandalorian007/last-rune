@@ -180,7 +180,10 @@ for (const vp of PHONES) {
         await page.waitForTimeout(300);
       }
 
-      await seed(['intake-desk']);
+      // A really solved board under the solve card: the intended gems, placed (mobile-3-board).
+      await seed(['intake-desk'], {
+        puzzles: { furnace: { placements: puzzleFor('furnace').design.intended, attempts: 0 } },
+      });
       await page.evaluate(() => {
         const g = (window as G).__game;
         g.flow.openPuzzle('furnace');

@@ -445,6 +445,38 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
     return o;
   }
 
+  if (state == 4) {
+    // Rim (phones): a faint pale lip round an open socket, so every empty socket reads as a
+    // place for a gem from edge to edge of the board. Painted stone, not light.
+    let lip = exp(-pow((r - 0.97) * 13.0, 2.0));
+    let lit = lights_shade(in.world, 4.0, vec3f(0.0, 0.0, 1.0), 6.0);
+    let c = vec3f(0.5, 0.48, 0.44) * (0.55 + 0.45 * lit.diffuse);
+    let g = lip * 0.42 * k;
+    o.color = vec4f(c * g, g);
+    o.emissive = vec4f(0.0, 0.0, 0.0, g);
+    return o;
+  }
+
+  if (state == 5) {
+    // Plate (phones): a blocked socket filled flush with matte stone, sitting a hair low: a
+    // soft shadow along its upper edge, a faint light lip along its lower. No mark on it, so
+    // it reads as "nothing goes here", never as a button.
+    let cap = 0.94;
+    let a = 1.0 - smoothstep(cap - 0.04, cap + 0.02, r);
+    let edge = smoothstep(cap - 0.22, cap, r);
+    let dir = p.y / max(r, 0.001); // -1 top, +1 bottom (y-down)
+    let lit = lights_shade(in.world, 2.0, vec3f(0.0, 0.0, 1.0), 6.0);
+    let grain = 0.85 + 0.25 * engine_fbm(p * 4.0 + seed * 3.0, 3);
+    var col = vec3f(0.085, 0.082, 0.078) * grain * (0.5 + 0.7 * lit.diffuse);
+    col *= 1.0 - edge * 0.55 * max(-dir, 0.0);
+    col += vec3f(0.05, 0.048, 0.044) * edge * max(dir, 0.0);
+    col = max(col, vec3f(0.02));
+    col *= lights_floor(in.world);
+    o.color = vec4f(col, a * 0.92);
+    o.emissive = vec4f(0.0, 0.0, 0.0, a * 0.92);
+    return o;
+  }
+
   let tint = in.color.rgb;
   if (state == 2) {
     // Highlighted: the rim glows, light pools in the bowl.

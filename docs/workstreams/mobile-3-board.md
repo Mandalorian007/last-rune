@@ -73,3 +73,55 @@ These are PM decisions. Phone only: the desktop and iPad output must be pixel-id
 - Commit to your branch. The PM merges, then runs the blind review (D-040).
 
 ## Log
+
+### 2026-11-03 · board framed, column on the right (agent)
+
+**Layout (`scenes/altar/layout.ts` `phoneLayout`, phones only).**
+- The board and its gauges take the canvas height on the left. A column on the right holds, top to bottom:
+  - the title;
+  - the tray (rows of ≤3, gems 38 px with 46×56 px hits, counts 12 px);
+  - the *lane* (gem chip, verdict, Capacitor read-out, stacked top-down);
+  - FUSE's bubble or the hint (one line, reaching into the free right bar);
+  - FUSE.
+- West/east gauges stand in a 62 px gutter with their Gives/Needs card under them. North/south cards sit beside their gauge, 8 px clear of the board. Sides are chosen jointly (`placePhoneLabels`): never off-canvas, then never over another card, then never over a gauge. Cards are placed again whenever a card changes size (readings after a strike).
+- Slab border 0.22 and front face 0.16 pitch (desktop: 0.8 / 0.42). The pitch is the biggest that fits (≤52 px).
+- Turn (↻) moves to the left bar under Clear, so the right bar between ☰ and Strike is free for the chip and FUSE's bubble.
+
+**Light.**
+- Phones drop the candles, floor, fog and vignette.
+- One even work light over the board, plus one on the tray.
+- New socket states (`stone-wgsl` 4 'rim', 5 'plate'): empty sockets get a pale lip; blocked sockets are a matte recessed plate (no ✕). These are phone-only, so desktop shaders are unchanged.
+
+**Cards.**
+- The fail tag sits by its socket: above, else below, avoiding the cards, else dropped.
+- The Capacitor read-out has a "Capacitor" head and stands in the lane, never over the board.
+- The hint hides while FUSE speaks. FUSE's bubble hides if it would crowd the lane.
+
+**Tray and Strike.**
+- A ×0 gem gets a slash over its slot and a struck-through count.
+- On Intake Desk's first visit the tray pulses until the first pick (static with reduced motion).
+- Strike is full gold whenever it can fire.
+- Multi-strike shows "×2", then "1/2", as text; the pips are hidden on phones.
+
+**Solve.** On phones the card, journal page and Continue fill the column and the right bar, so the solved board stays in view on the left. The journal heading doesn't wrap, and FUSE's line sits beside him at the column's foot. Both capture scripts now place the intended gems before `completePuzzle`.
+
+**Socket pitch (CSS px), before → after:**
+
+| Board | iPhone 844×340 (47 px insets), target | iPhone before → after | SE 667×320, target | SE before → after |
+|---|---|---|---|---|
+| 6×4 | ≥44 | 31.5–41.5 → **51.6–51.9** | ≥39.6 | 29.6–39.1 → **45.6–52.1** |
+| 8×6 class | ≥38 | 25.5–28 → **39.3–45.0** | ≥34.2 | 24–26.4 → **35.0–41.8** |
+| 10×8 (The Last Rune) | ≥30 | 21.4 → **30.2** | ≥27 | 20.1 → **27.9** |
+
+**Tests.** `tests/e2e/mobile-budget.spec.ts` now also asserts, at iphone and se:
+- the pitch per board class;
+- Gives/Needs cards ≥8 px clear of the board, not overlapping each other or chrome;
+- the Capacitor read-out off the board and the cards;
+- the hint, chip, verdict and bubble off the cards;
+- the hint is one line.
+
+**Captures.** `MB_TAG=after pnpm exec playwright test -c scripts/playtest/playwright.config.ts mobile-3-board`. Contact sheets are `docs/design/screens/local/mobile-3-board/{before,after}-<viewport>.png`, with pitch JSON alongside.
+
+**Proposals for the PM.**
+- **D-040 addendum.** On phones, Turn lives in the left bar, bottom. The right bar is for ☰, the transient cards and Strike.
+- **Shared phone-styles hygiene.** The mobile-2 info-lane rules (`--lr-info-l/-w`) are now overridden by the lane on altars. They can be deleted once mobile-3 merges.
