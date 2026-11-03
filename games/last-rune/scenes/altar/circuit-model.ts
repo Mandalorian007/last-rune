@@ -175,3 +175,75 @@ export function guideHops(p: PuzzleDef, cells: readonly Cell[]): PathHop[] {
   }
   return out;
 }
+
+/** What a Capacitor did on one strike (rules §4): kept the bolt, or let out stored + incoming. */
+export interface CapBeat {
+  cell: Cell;
+  pulse: number;
+  kind: 'keep' | 'release';
+  /** Charge it held before this bolt (keep: what it keeps now). */
+  stored: number;
+  /** The bolt that arrived. */
+  incoming: number;
+  /** Charge that left (release only; 0 on keep). */
+  out: number;
+  /** Index into `result.trace` of the hop into the Capacitor. */
+  seg: number;
+}
+
+/**
+ * Every Capacitor's keeps and releases, in trace order, read off the simulation: a hop ending
+ * `store` on a Capacitor kept its bolt; a hop it handled (`gem`) released stored + incoming. A
+ * bolt that fizzles there (already used this strike) is not a beat.
+ */
+export function capacitorBeats(
+  p: PuzzleDef,
+  placements: readonly Placement[],
+  result: SimResult,
+): CapBeat[] {
+  const caps = new Set<string>();
+  for (const f of p.fixed) if (f.gem === 'capacitor') caps.add(key(f.cell));
+  for (const q of placements) if (q.gem === 'capacitor') caps.add(key(q.cell));
+  const held = new Map<string, number>();
+  const out: CapBeat[] = [];
+  result.trace.forEach((s, i) => {
+    const k = key(s.to);
+    if (!caps.has(k)) return;
+    const cell = { x: s.to.x, y: s.to.y };
+    if (s.end === 'store') {
+      held.set(k, s.charge);
+      out.push({
+        cell,
+        pulse: s.pulse,
+        kind: 'keep',
+        stored: s.charge,
+        incoming: s.charge,
+        out: 0,
+        seg: i,
+      });
+    } else if (s.end === 'gem') {
+      const stored = held.get(k) ?? 0;
+      held.delete(k);
+      out.push({
+        cell,
+        pulse: s.pulse,
+        kind: 'release',
+        stored,
+        incoming: s.charge,
+        out: stored + s.charge,
+        seg: i,
+      });
+    }
+  });
+  return out;
+}
+
+/**
+ * One line of a Capacitor's read-out: "Strike 1: keeps 8", "Strike 2: 8 + 8 → 16". A bolt
+ * kept on the altar's last strike never comes out, and the line says so.
+ */
+export function capBeatText(b: CapBeat, pulses: number): string {
+  const n = `Strike ${b.pulse + 1}: `;
+  if (b.kind === 'release') return `${n}${b.stored} + ${b.incoming} → ${b.out}`;
+  return `${n}keeps ${b.stored}${b.pulse >= pulses - 1 ? ', never let out' : ''}`;
+}

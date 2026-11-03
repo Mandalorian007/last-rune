@@ -46,7 +46,10 @@ import { ensureAltarStyles } from './altar-styles';
 import { AltarView, DANGER, GOLD } from './altar-view';
 import { BoardState } from './board';
 import {
+  type CapBeat,
   type ChargeChip,
+  capacitorBeats,
+  capBeatText,
   chargeChips,
   guideHops,
   liveSockets,
@@ -62,9 +65,11 @@ import {
   buildTimeline,
   causeText,
   type Fizzle,
+  failText,
   fizzles,
   gemsUsed,
   type StrikeTimeline,
+  strikeStory,
 } from './strike';
 import { firstSentence, type NewGems, newGems, nudgeGems } from './teach';
 
@@ -320,6 +325,17 @@ export class AltarScene implements GameScene {
   private noGoEls: HTMLElement[] = [];
   private noGoKey = '';
 
+  // Multi-strike read-outs (capacitor-clarity)
+  /** "2 strikes" row in the storm's Gives card, and pips on Strike: one per strike. */
+  private strikeRow: HTMLElement | null = null;
+  private strikePips: HTMLElement[] = [];
+  /** One read-out per Capacitor the bolt reaches: what it keeps and lets out, per strike. */
+  private capEls: HTMLElement[] = [];
+  private capKey = '';
+  /** The strike's Capacitor beats (live read-out), with their line elements. */
+  private capBeats: CapBeat[] = [];
+  private capLines: HTMLElement[] = [];
+
   constructor(readonly machine: MachineId) {}
 
   // ── Lifecycle ───────────────────────────────────────────────────────────
@@ -404,6 +420,12 @@ export class AltarScene implements GameScene {
     this.chipEls.length = 0;
     this.previewChipEls.length = 0;
     this.noGoEls.length = 0;
+    this.capEls.length = 0;
+    this.capLines.length = 0;
+    this.capBeats = [];
+    this.capKey = '';
+    this.strikePips.length = 0;
+    this.strikeRow = null;
     this.pins.length = 0;
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
     this.ctx.particles.clear();
@@ -579,6 +601,25 @@ export class AltarScene implements GameScene {
         h('b', null, String(stormCharge(this.puzzle.storm.strength))),
       ),
     );
+    // A multi-strike altar says so at the storm and on Strike, one pip per strike; the pips
+    // light as each strike fires.
+    const pulses = this.puzzle.pulses;
+    if (pulses > 1) {
+      const pips = () =>
+        h(
+          'span',
+          { class: 'lr-strike-pips', 'aria-hidden': 'true' },
+          ...Array.from({ length: pulses }, () => h('i')),
+        );
+      const stormPips = pips();
+      this.strikeRow = h('span', { class: 'lr-storm-strikes' });
+      this.stormLabel.append(h('span', { class: 'lr-storm-row' }, stormPips, this.strikeRow));
+      const btnPips = pips();
+      this.strikeBtn.firstElementChild?.insertBefore(btnPips, this.strikeBtn.querySelector('kbd'));
+      this.strikeBtn.setAttribute('aria-label', `Strike (F), ${pulses} strikes`);
+      this.strikePips = [...stormPips.children, ...btnPips.children] as HTMLElement[];
+      this.setStrikeRow(-1);
+    }
     this.titleEl = h(
       'div',
       { class: 'lr-altar-title', style: { left: `${L.titleX}px` } },
@@ -686,10 +727,109 @@ export class AltarScene implements GameScene {
     this.avoidTray();
   }
 
-  private showVerdict(text: string, outcome: BoltOutcome): void {
+  /**
+   * The storm's strike row and the pips: "2 strikes" while editing (`now` < 0), "Strike 2 of 2"
+   * once strike `now` fires, with that many pips lit.
+   */
+  private setStrikeRow(now: number): void {
+    if (!this.strikeRow) return;
+    const n = this.puzzle.pulses;
+    this.strikeRow.textContent = now < 0 ? `${n} strikes` : `Strike ${now + 1} of ${n}`;
+    this.strikePips.forEach((el, i) => {
+      el.toggleAttribute('data-lit', i % n <= now);
+    });
+  }
+
+  /**
+   * Capacitor read-outs beside each Capacitor the bolt reaches, one line per strike it acts
+   * on. `live` lines start hidden and appear as the strike reaches them (see `updateCapLive`);
+   * otherwise it is the plan for the board as built, shown before Strike.
+   */
+  private renderCaps(beats: readonly CapBeat[], sim: SimResult | null, live: boolean): void {
+    const key =
+      (live ? 'L' : 'P') +
+      beats
+        .map((b) => `${b.cell.x},${b.cell.y}:${b.pulse}${b.kind}${b.stored}+${b.incoming}`)
+        .join(';');
+    if (key === this.capKey) return;
+    this.capKey = key;
+    for (const el of this.capEls) el.remove();
+    this.capEls.length = 0;
+    this.capLines.length = 0;
+    this.capBeats = live ? [...beats] : [];
+    const L = this.view.layout;
+    const route = new Set<string>();
+    for (const s of sim?.trace ?? []) route.add(`${s.to.x},${s.to.y}`);
+    const cells = new Map<string, CapBeat[]>();
+    for (const b of beats) {
+      const k = `${b.cell.x},${b.cell.y}`;
+      cells.set(k, [...(cells.get(k) ?? []), b]);
+    }
+    const pt = { x: 0, y: 0 };
+    for (const list of cells.values()) {
+      const c = list[0]!.cell;
+      cellCenter(L, c, pt);
+      // Off the board where the Capacitor sits on an edge column; else above it, or below
+      // when the route runs through the socket above.
+      const free = (x: number, y: number) => y < 0 || y >= L.rows || !route.has(`${x},${y}`);
+      const side =
+        c.x === 0
+          ? 'left'
+          : c.x === L.cols - 1
+            ? 'right'
+            : !free(c.x, c.y - 1) && free(c.x, c.y + 1)
+              ? 'below'
+              : 'above';
+      const off = L.pitch * 0.42;
+      const x = side === 'left' ? pt.x - off : side === 'right' ? pt.x + off : pt.x;
+      const y = side === 'above' ? pt.y - off : side === 'below' ? pt.y + off : pt.y;
+      const lines = list.map((b) => {
+        const el = h(
+          'span',
+          { class: 'lr-cap-line', 'data-kind': b.kind },
+          capBeatText(b, this.puzzle.pulses),
+        );
+        if (live) el.hidden = true;
+        this.capLines.push(el);
+        return el;
+      });
+      const el = h(
+        'div',
+        {
+          class: 'lr-altar-cap',
+          'data-side': side,
+          'aria-hidden': 'true',
+          ...(live ? {} : { 'data-plan': '' }),
+          style: { left: `${x}px`, top: `${y}px` },
+        },
+        ...lines,
+      );
+      this.dom.insertBefore(el, this.tip);
+      this.capEls.push(el);
+    }
+  }
+
+  /** Live read-out: show each Capacitor line once its bolt has arrived; the newest is lit. */
+  private updateCapLive(): void {
+    const tl = this.timeline;
+    if (!tl || this.capBeats.length === 0) return;
+    let newest = -1;
+    this.capBeats.forEach((b, i) => {
+      const show = this.st >= tl.segments[b.seg]!.t1;
+      const el = this.capLines[i]!;
+      if (el.hidden === show) el.hidden = !show;
+      if (show) newest = i;
+    });
+    this.capLines.forEach((el, i) => {
+      el.toggleAttribute('data-now', i === newest && this.mode === 'strike');
+    });
+  }
+
+  private showVerdict(text: string, outcome: BoltOutcome, story = ''): void {
     // The verdict sits where the subtitle is; the subtitle steps aside until the next edit.
     this.subtitle.style.display = 'none';
     this.verdict.textContent = text;
+    if (story) this.verdict.append(h('small', { class: 'lr-verdict-story' }, story));
     this.verdict.dataset.outcome = outcome;
     this.verdict.hidden = false;
     this.fitTop();
@@ -765,6 +905,9 @@ export class AltarScene implements GameScene {
     const kids: (HTMLElement | string)[] = [
       h('span', { class: 'lr-need-row' }, 'Needs ', h('b', null, String(need))),
     ];
+    // Multi-strike: each strike is read on its own; the strikes never add up at the machine.
+    if (got === null && this.puzzle.pulses > 1)
+      kids.push(h('span', { class: 'lr-need-note' }, 'in one strike'));
     if (got !== null) {
       kids.push(h('span', { class: 'lr-need-got' }, 'got ', h('b', null, String(got))));
       const rs = this.strikeReadings[i];
@@ -839,6 +982,7 @@ export class AltarScene implements GameScene {
       this.previewSim = null;
       this.updatePreviewChips();
       this.updateNoGo([], null);
+      // The strike's own read-out replaces the plan (built in `strike`).
     }
     this.updateFirstTime();
     this.liveMask = liveSockets(this.puzzle, placements, this.openEnds, this.liveMask);
@@ -923,6 +1067,7 @@ export class AltarScene implements GameScene {
     v.previewTarget = PREVIEW_PATH ? 1 : 0;
     this.previewSim = sim;
     this.updatePreviewChips();
+    this.renderCaps(capacitorBeats(this.puzzle, placements, sim), sim, false);
   }
 
   private isLive(c: Cell): boolean {
@@ -1070,7 +1215,9 @@ export class AltarScene implements GameScene {
   private infoRule(r: { gem: GemKind; how: InfoHow }): string {
     if (r.how === 'turns') return 'Yours to place now. Turn it to face the way you need.';
     const rule = this.rules[r.gem] ?? '';
-    return r.how === 'tray' || r.how === 'turnsTray' ? rule : firstSentence(rule);
+    // A Capacitor's first sentence (it stores) is only half of it: the release is the point.
+    const whole = r.how === 'tray' || r.how === 'turnsTray' || r.gem === 'capacitor';
+    return whole ? rule : firstSentence(rule);
   }
 
   /** New fixed gems have been struck through: stop pulsing them, close the arrival card. */
@@ -1474,7 +1621,9 @@ export class AltarScene implements GameScene {
     if (this.mode === 'result') this.backToEdit();
     const placements = this.board.serialise();
     const result = simulate(this.puzzle, placements);
-    const tl = buildTimeline(result, { tickSeconds: TICK, pulseGap: 0.9, verdictDelay: 0.45 });
+    // Multi-strike: a longer rest between strikes so each reads as its own beat.
+    const pulseGap = this.puzzle.pulses > 1 ? 1.4 : 0.9;
+    const tl = buildTimeline(result, { tickSeconds: TICK, pulseGap, verdictDelay: 0.45 });
     this.result = result;
     this.timeline = tl;
     this.fizzleList = fizzles(this.puzzle, placements, result, tl);
@@ -1517,6 +1666,8 @@ export class AltarScene implements GameScene {
     this.readings = this.puzzle.machines.map(() => 0);
     this.strikeReadings = this.puzzle.machines.map(() => []);
     this.buildChips(result);
+    this.capKey = '';
+    this.renderCaps(capacitorBeats(this.puzzle, placements, result), result, true);
     for (let m = 0; m < this.view.machineGlow.length; m++) this.view.machineGlow[m] = 0;
     this.learnFixed();
     this.st = 0;
@@ -1530,6 +1681,7 @@ export class AltarScene implements GameScene {
     this.strikeRevision = this.board.revision;
     this.mode = 'strike';
     this.subtitle.textContent = n > 1 ? `Strike 1 of ${n}` : 'Strike';
+    this.setStrikeRow(0);
     this.ctx.fuse.hush();
     this.refreshHud();
   }
@@ -1599,6 +1751,7 @@ export class AltarScene implements GameScene {
       if (i > 0) b.energyTarget = 0;
     }
     if (tl.pulses.length > 1) this.subtitle.textContent = `Strike ${i + 1} of ${tl.pulses.length}`;
+    this.setStrikeRow(i);
   }
 
   private onArrival(a: Arrival): void {
@@ -1731,18 +1884,13 @@ export class AltarScene implements GameScene {
     } else {
       const over = ms.findIndex((m) => m.outcome === 'over');
       const under = ms.findIndex((m) => m.outcome !== 'exact' && m.outcome !== 'over');
+      const story = strikeStory(this.puzzle.pulses, res, this.capBeats);
       if (o === 'over') {
         const m = ms[over]!;
-        this.showVerdict(
-          say(over, `Breaker tripped: needs ${m.need}, got ${this.lastReading(m)}`),
-          'over',
-        );
+        this.showVerdict(say(over, failText(m, 'over', this.puzzle.pulses)), 'over', story);
       } else if (o === 'under') {
         const m = ms[under] ?? ms[0]!;
-        this.showVerdict(
-          say(under, `Not enough: needs ${m.need}, got ${this.lastReading(m)}`),
-          'under',
-        );
+        this.showVerdict(say(under, failText(m, 'under', this.puzzle.pulses)), 'under', story);
       } else {
         this.showVerdict('No charge reached the machine', 'dead');
       }
@@ -1775,8 +1923,11 @@ export class AltarScene implements GameScene {
     }
     this.subtitle.textContent =
       o === 'exact' ? 'Restored' : `Attempt ${this.attempts} · change anything to try again`;
+    this.updateCapLive();
+    const head = this.verdict.firstChild?.textContent ?? '';
+    const told = this.verdict.querySelector('.lr-verdict-story')?.textContent;
     this.announce(
-      this.resultText(this.verdict.textContent ?? '') +
+      this.resultText(told ? `${head}. ${told}` : head) +
         (o === 'exact' ? '' : ' Change anything to try again.'),
     );
     this.refreshHud();
@@ -1800,6 +1951,7 @@ export class AltarScene implements GameScene {
     for (const b of this.view.bolts) b.fadeOut(0.35);
     for (const m of this.view.machines) m.reset();
     this.wakeTimer = -1;
+    this.setStrikeRow(-1);
     this.refreshHud();
   }
 
@@ -1832,6 +1984,7 @@ export class AltarScene implements GameScene {
       this.endPulse(++this.pulseEnded);
     }
     this.updateChips();
+    this.updateCapLive();
     if (this.st >= tl.verdictAt && !this.verdictShown) {
       this.view.boltRate = 1;
       this.showResult();
