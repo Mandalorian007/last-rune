@@ -174,3 +174,39 @@ Format: `D-NNN · date · decision · why · who`.
       - SE Codex and Journal text, arrows and ✕ are fully on screen;
       - the end card is centred and balanced, the clipboard is clear of the buttons, the subtitles have contrast, and "Back to the hall" is a clear button.
     - **Gate unchanged:** ≥8/10 average with no blocker or major issue.
+  - **Addendum 5 (gate review 4, 2026-11-03).** Blind scores were 6 / 6 / 6.5 / 7 (average 6.4), so the gate failed a fourth time. The scores moved up, and the issues have shifted from "broken" to "unclear", but every reviewer still lists majors. The PM checked each issue against `docs/design/screens/local/mobile-2/gate4/`, `pm-review-altars/` and `mobile-4-chrome/gate4-*`.
+    - **False issue.** The Android title is not clipped (`android/01-title.png` shows it whole).
+    - **Zoom stays; the PM's call.** The Last Rune has about 10 rows in 320–380 px of height, so the fitted pitch is limited by height and no layout reaches 44 px. Reviewers object to losing context, not to zoom itself. mobile-7-zoom:
+      - a minimap while zoomed shows the viewport, the source and the gauges;
+      - Needs/Gives edge chips sit in a reserved gutter and never on cells;
+      - the source and gauges are never half-cropped;
+      - the edge arrows are ≥28 px;
+      - the Holding pill never touches Menu;
+      - Zoom is offered under the same rule on every phone.
+    - **Teaching calls (mobile-7-teach).**
+      - **Blocker (D-027):** the tray tip always describes the held gem, or nothing (`se/16-the-last-rune-held`: "Holding Channel" was shown with a Capacitor tip).
+      - A teach card about a fixed board gem visibly points at that gem: a pulse on it plus a leader line or matching outline.
+      - Fixed (puzzle) gems look fixed: a riveted bezel and a no-move cue. Your own gems don't have it.
+      - Every gem rule gets a worked example in the Capacitor style ("in 4 → out 2 + 2"), and a mini diagram where it helps.
+      - The "✓ placed" circles go. A ×0 gem shows as a dimmed silhouette with "all placed".
+      - "Next ›" sits inside its card.
+      - Only one panel shows at a time while teaching: no FUSE joke and no loose "Tap a gem" tab alongside a teach card.
+    - **Strike and verdict calls (mobile-7-strike).**
+      - Multi-strike results drop the "1:0 2:0" notation. Gauge chips stay compact ("got 0 / 20"), and per-strike detail goes in the right-column verdict in plain words ("Strike 1: 0 · Strike 2: 0, needs 20 in one strike").
+      - The Strike button says clearly how many strikes are left ("Strike · 2 left" → "Strike again"). It is ≥56 px tall, inset from the edge, and gets a ready glow when every gauge is reached.
+      - Before Strike, a gauge shows only whether the charge path reaches it (a lamp on or off, no numbers), so the puzzle isn't given away.
+      - The red mark is a thick ring with a pulse.
+      - The solve card doesn't cover the gauges.
+    - **Hall calls (mobile-7-hall).**
+      - Labels never collide with pills, rings or screen edges: the first-visit "Intake Desk" label, "Start here" over The Last Rune, the Next ring through "Relay Tower".
+      - The open menu has a backing panel or scrim.
+      - The locked popover says only "Locked: solve X first", carries FUSE's reason inside it, and avoids neighbouring labels; "● Gate" goes.
+      - A "New pages" badge attaches to Menu.
+      - FUSE's bubbles have tails and don't cover playable doors.
+      - SE hall labels gain contrast and spacing.
+    - **Ending calls (mobile-7-ending).**
+      - Remove the "Plays by itself" pill or the "Tap to continue" contradiction.
+      - The hangout fills the phone height (no 40–50% blank area).
+      - The end card gets contrast and spacing.
+      - The journal arrows sit near the book.
+    - **Gate unchanged:** ≥8/10 average with no blocker or major issue.
