@@ -125,9 +125,7 @@ test.describe('verdicts', () => {
   test('fail verdict', async ({ page }) => {
     await toAltar(page, 'intake-desk', { hallIntro: true });
     await advance(page, 1500);
-    await shotTrace(page, 'pre-key');
     await key(page, 'KeyF');
-    await shotTrace(page, 'post-key');
     await until(page, () => {
       const v = document.querySelector<HTMLElement>('.lr-altar-verdict');
       return v && !v.hidden && v.dataset.outcome;
