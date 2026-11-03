@@ -362,8 +362,8 @@ const PH = {
   slotDX: 46,
   slotDY: 56,
   titleH: 22,
-  /** FUSE's bubble / the hint sit this far above the canvas bottom (clear of Strike). */
-  bubbleUp: 56,
+  /** FUSE's bubble / the hint sit this far above the canvas bottom (clear of Strike, 64 px). */
+  bubbleUp: 68,
   /** Height of a card beside a north/south gauge: one line, or two on multi-strike altars. */
   label1: 18,
   label2: 28,
