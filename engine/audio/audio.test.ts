@@ -255,6 +255,32 @@ describe('AudioEngine', () => {
     });
   });
 
+  it('prepare spreads slow synchronous render starts over several tasks', async () => {
+    const audio = new AudioEngine();
+    const busy = (ms: number) => {
+      const t = performance.now();
+      while (performance.now() - t < ms) {
+        // spin: stands in for a graph build
+      }
+    };
+    // Each start is 4 ms of synchronous work (48 ms in all).
+    let started = 0;
+    const names = Array.from({ length: 12 }, (_, i) => `s${i}`);
+    for (const n of names)
+      audio.define(n, () => {
+        busy(4);
+        started++;
+        return Promise.resolve(fakeBuffer);
+      });
+    const done = audio.prepare(names);
+    // The calling task stops after ~10 ms of starts and yields; the rest run in later tasks.
+    expect(started).toBeGreaterThan(0);
+    expect(started).toBeLessThanOrEqual(3);
+    await done;
+    expect(started).toBe(12);
+    expect(audio.buffer('s11')).toBe(fakeBuffer);
+  });
+
   it('steals the oldest voice past maxVoices and stopAll filters by bus', async () => {
     const { ctx, audio } = setup();
     audio.define('tick', async () => fakeBuffer, { maxVoices: 2 });

@@ -59,7 +59,16 @@ import {
 import { jumpCursor, stepCursor } from './cursor';
 import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
 import { setHintTarget } from './hints';
-import { anchorOf, cellAt, cellCenter, TRAY_CENTER_X, traySlotAt, trayTipX } from './layout';
+import {
+  anchorOf,
+  CAPTION_LANE,
+  cellAt,
+  cellCenter,
+  FUSE_LANE,
+  TRAY_CENTER_X,
+  traySlotAt,
+  trayTipX,
+} from './layout';
 import {
   type Arrival,
   buildTimeline,
@@ -484,6 +493,13 @@ export class AltarScene implements GameScene {
         height: 1080 - (L.trayY - 90),
       });
     }
+    // FUSE himself (bottom-left): the card may move to that corner, but never over his body.
+    regions.push({
+      x: 0,
+      y: FUSE_LANE.y - 30,
+      width: FUSE_LANE.x,
+      height: 1080 - (FUSE_LANE.y - 30),
+    });
     const hint = this.hint;
     if (hint?.isConnected && hint.offsetWidth > 0) {
       regions.push({
@@ -929,7 +945,14 @@ export class AltarScene implements GameScene {
     v.toggleAttribute('data-docked', true);
     v.removeAttribute('data-narrow');
     v.style.maxWidth = `${Math.round(Math.min(780, L.right - L.left))}px`;
-    v.style.left = `${Math.round((L.left + L.right) / 2)}px`;
+    // Centred under the board, but kept out of the caption lane, so FUSE's card keeps its
+    // bottom-right corner instead of moving over FUSE.
+    const dw = v.offsetWidth;
+    const cx = Math.max(
+      16 + dw / 2,
+      Math.min((L.left + L.right) / 2, CAPTION_LANE.x - 12 - dw / 2),
+    );
+    v.style.left = `${Math.round(cx)}px`;
     v.style.top = `${Math.round(top)}px`;
     if (top + v.offsetHeight <= floor && !covers()) return;
     // No room under the board: keep the usual place (better than covering the tray).

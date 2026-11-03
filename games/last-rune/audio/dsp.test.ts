@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { analyze, encodeWav, problems } from './analyze';
-import { applyReverb, audibleLength, edgeFade, padSeconds, reverbRt60, saturate } from './post';
+import {
+  applyReverb,
+  applyReverbSteps,
+  audibleLength,
+  edgeFade,
+  padSeconds,
+  REVERB_CHUNK,
+  reverbRt60,
+  saturate,
+} from './post';
 
 const SR = 8000;
 const sine = (hz: number, seconds: number, amp = 0.5) =>
@@ -22,6 +31,22 @@ describe('post: reverb', () => {
     const late = rms(l, SR * 2.2, SR * 2.5);
     expect(early).toBeGreaterThan(0);
     expect(late).toBeLessThan(early * 0.25);
+  });
+
+  it('the sliced reverb yields in chunks and matches the one-shot result', () => {
+    const dry = sine(330, 6, 0.4);
+    const steps = applyReverbSteps([dry], SR, { room: 0.8, wet: 0.4 }, true);
+    let yields = 0;
+    let r = steps.next();
+    while (!r.done) {
+      yields++;
+      r = steps.next();
+    }
+    // Two channels over two loop periods, a yield per chunk.
+    expect(yields).toBeGreaterThanOrEqual(Math.floor((2 * 2 * dry.length) / REVERB_CHUNK));
+    const whole = applyReverb([dry], SR, { room: 0.8, wet: 0.4 }, true);
+    expect(r.value[0]).toEqual(whole[0]);
+    expect(r.value[1]).toEqual(whole[1]);
   });
 
   it('RT60 grows with room size', () => {

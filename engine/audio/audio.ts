@@ -104,6 +104,24 @@ const NULL_VOICE: Voice = {
 
 /** One-shots requested while their buffer is still rendering are dropped after this long. */
 const MAX_LATE_START = 0.15;
+/** `prepare` yields once the synchronous render starts in one turn take this long (ms). */
+const PREPARE_SLICE_MS = 10;
+
+/** Resolve on a fresh task (not a microtask), so frames and input can run in between. */
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof MessageChannel === 'undefined') {
+      setTimeout(resolve, 0);
+      return;
+    }
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => {
+      ch.port1.close();
+      resolve();
+    };
+    ch.port2.postMessage(0);
+  });
+}
 
 class VoiceImpl implements Voice {
   private src: AudioBufferSourceNode | null = null;
@@ -696,7 +714,23 @@ export class AudioEngine {
   /** Render several (default: all) defined sounds up front. Call at boot or behind a loading screen. */
   async prepare(names: readonly string[] = [...this.sounds.keys()]): Promise<void> {
     if (this._halted) return;
-    await Promise.all(names.map((n) => this.load(n)));
+    // Starting a spec render builds its graph (and fills any noise) synchronously, a few ms
+    // each. Started all at once, a batch of them is one long main-thread task (50+ ms), so
+    // yield to the event loop whenever the builds in this turn pass `PREPARE_SLICE_MS`.
+    const pending: Promise<AudioBuffer>[] = [];
+    let t0 = performance.now();
+    for (const n of names) {
+      if (this._halted) return;
+      const p = this.load(n);
+      // Awaited below; the no-op catch keeps a rejection during a yield from being "unhandled".
+      p.catch(() => {});
+      pending.push(p);
+      if (performance.now() - t0 >= PREPARE_SLICE_MS) {
+        await yieldToEventLoop();
+        t0 = performance.now();
+      }
+    }
+    await Promise.all(pending);
   }
 
   /** Rendered buffer if ready. */

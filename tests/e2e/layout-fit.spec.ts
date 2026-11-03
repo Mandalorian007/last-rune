@@ -13,7 +13,7 @@ interface GameHandle {
   // biome-ignore lint/suspicious/noExplicitAny: seeding a save from the test side
   save: { update(fn: (d: any) => void): void };
   settings: { set(p: { textScale: number }): void };
-  fuse: { hush(): void };
+  fuse: { hush(): void; say(line: string, opts?: { hold?: number }): Promise<void> };
 }
 
 const SCALES = [100, 125, 150] as const;
@@ -313,6 +313,92 @@ for (const [width, scale] of [
     expect(r.verdict.bottom).toBeLessThanOrEqual(1080);
     for (const t of r.tags) expect(hits(t, r.verdict), `${t.text} on the verdict`).toBe(false);
     for (const t of r.tray) expect(hits(t, r.verdict), 'the verdict on the tray').toBe(false);
+    expect(problems).toEqual([]);
+  });
+}
+
+// tidy-3: FUSE's caption, FUSE's body, the verdict and the red mark are all visible together.
+// At 1280×720 and 150% text the verdict docks under the board; the caption used to flee to the
+// bottom-left corner, over FUSE. A 20-word line is the tallest card he says.
+const LONG_LINE =
+  'Set a Bend facing a wall. The bolt went in and simply stopped there. Turn it toward the rest.';
+/** FUSE's sprite on the altar (placed at x 300, feet at y 1046), in design px. */
+const FUSE_BODY = { left: 205, right: 395, top: 815, bottom: 1046 };
+for (const [width, scale] of [
+  [1280, 100],
+  [1280, 125],
+  [1280, 150],
+  [1920, 100],
+  [1920, 150],
+] as const) {
+  test(`relay at ${width}px, ${scale}%: FUSE's caption keeps off FUSE, the verdict and the red mark`, async ({
+    page,
+  }) => {
+    const problems = trackProblems(page);
+    await boot(page, scale, ['intake-desk', 'furnace', 'splitter-mill'], TOP_ROW_ROOT, width);
+    await page.evaluate(() => {
+      const g = (window as unknown as { __game: GameHandle }).__game;
+      g.flow.openPuzzle('relay-tower');
+      g.fuse.hush();
+    });
+    await expect(page.locator('.lr-altar')).toBeVisible();
+    await page.waitForTimeout(400);
+    const L = computeLayout(puzzleFor('relay-tower'));
+    const c = { x: 0, y: 0 };
+    cellCenter(L, { x: 3, y: 0 }, c);
+    const rr = L.pitch * 0.4;
+    const mark = { left: c.x - rr, right: c.x + rr, top: c.y - rr, bottom: c.y + rr };
+    const measure = async () => {
+      await page.evaluate((line) => {
+        const g = (window as unknown as { __game: GameHandle }).__game;
+        g.fuse.hush();
+        void g.fuse.say(line, { hold: 0 });
+      }, LONG_LINE);
+      await expect(page.locator('.tc-caption')).toBeVisible();
+      await waitFrames(page, 2);
+      return page.evaluate(() => {
+        const o = document.querySelector('.tc-overlay')!.getBoundingClientRect();
+        const k = o.width / 1920;
+        const box = (el: Element | null) => {
+          if (!el || (el as HTMLElement).hidden) return null;
+          const b = el.getBoundingClientRect();
+          return {
+            left: (b.left - o.left) / k,
+            right: (b.right - o.left) / k,
+            top: (b.top - o.top) / k,
+            bottom: (b.bottom - o.top) / k,
+          };
+        };
+        return {
+          caption: box(document.querySelector('.tc-caption'))!,
+          verdict: box(document.querySelector('.lr-altar-verdict')),
+          tray: [...document.querySelectorAll('.lr-altar-count')].map((e) => box(e)!),
+        };
+      });
+    };
+    // Before the strike: no verdict.
+    const before = await measure();
+    expect(hits(before.caption, FUSE_BODY), 'the caption covers FUSE').toBe(false);
+    expect(hits(before.caption, mark), 'the caption covers the red-mark socket').toBe(false);
+    // After the strike: the fail verdict (docked under the board at 1280×720, 150%).
+    await page.keyboard.press('KeyF');
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.lr-altar-verdict .lr-verdict-hint')).toBeVisible({
+      timeout: 10_000,
+    });
+    await page.waitForTimeout(400);
+    const after = await measure();
+    expect(after.verdict).not.toBeNull();
+    expect(hits(after.caption, FUSE_BODY), 'the caption covers FUSE').toBe(false);
+    expect(hits(after.caption, after.verdict!), 'the caption covers the verdict').toBe(false);
+    expect(hits(after.caption, mark), 'the caption covers the red-mark socket').toBe(false);
+    expect(hits(after.verdict!, mark), 'the verdict covers the red-mark socket').toBe(false);
+    expect(hits(after.verdict!, FUSE_BODY), 'the verdict covers FUSE').toBe(false);
+    for (const t of after.tray) {
+      expect(hits(t, after.caption), 'the caption on the tray').toBe(false);
+      expect(hits(t, after.verdict!), 'the verdict on the tray').toBe(false);
+    }
     expect(problems).toEqual([]);
   });
 }
