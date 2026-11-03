@@ -5,13 +5,14 @@
  * GPU: the hall (its own view instance) under a cool dusk; the Last Rune as a
  * room-sized gold disc at the hall centre; the storm funnelling into it; the
  * door of light it always was; FUSE; the clipboard he drops; full-screen
- * washes (white-out, the chat's dark, the gold flood).
- * DOM: the mock chat (D-005: lore, never live), title card, safety record,
- * credits, end card, and the post-credits clipboard page.
+ * washes (white-out, the warm light beyond the door, the gold flood).
+ * DOM: title card, safety record, credits, end card, and the post-credits
+ * clipboard page. FUSE's lines beyond the door are ordinary captions (D-032).
  *
  * Directed by an async script over scene-time waits. A generation token makes
  * skip / exit cancel it cleanly. Skippable only after the first viewing.
  */
+import type { Voice } from '@engine/audio';
 import type { PostSettingsPatch } from '@engine/post';
 import type { DrawParams, Frame, Material, RGBA } from '@engine/render';
 import { h } from '@engine/ui';
@@ -27,7 +28,6 @@ import { DeskArt } from '../journal/desk-art';
 import { PROP } from '../journal/desk-wgsl';
 import type { HallView, HallViewFrame } from '../views';
 import {
-  CHAT,
   CREDITS,
   type DirectionCue,
   type EndCard,
@@ -54,7 +54,7 @@ export type EndingPhase =
   | 'door'
   | 'edge'
   | 'through'
-  | 'chat'
+  | 'beyond'
   | 'flood'
   | 'credits'
   | 'end-card'
@@ -63,7 +63,9 @@ export type EndingPhase =
 const GOLD: RGBA = [1.0, 0.72, 0.3, 1];
 const STORM: RGBA = [0.45, 0.7, 1.0, 1];
 const WARM_WHITE: RGBA = [1.0, 0.95, 0.86, 1];
-const CHAT_DARK: RGBA = [0.012, 0.013, 0.016, 1];
+/** Beyond the door: the white warms to amber, with a soft warm-white light at its heart. */
+const BEYOND_AMBER: RGBA = [0.86, 0.56, 0.24, 1];
+const BEYOND_CORE: RGBA = [1.0, 0.92, 0.74, 1];
 /**
  * The ending preset, held back while the rune lights: less bloom and haze so the
  * engraving and the door read. The full preset arrives with the gold flood.
@@ -98,11 +100,11 @@ const FLOOD_POST = {
 } as const;
 /** Reduce flashes: the same flood with a softer bloom (no sudden glare). */
 const FLOOD_POST_CALM = { ...FLOOD_POST, bloom: { intensity: 0.55, threshold: 1.6 } } as const;
-/** The chat: a flat screen. Fog and rays fade to nothing, then switch off. */
-const CHAT_POST = {
-  fog: { density: 0, enabled: false },
-  godRays: { intensity: 0, enabled: false },
-  vignette: { intensity: 0.2 },
+/** Beyond the door: the light is the whole screen. Fog and rays ease to nothing under it. */
+const BEYOND_POST = {
+  fog: { density: 0 },
+  godRays: { intensity: 0 },
+  vignette: { intensity: 0.45 },
 } as const;
 
 /** `b` over `a`, section by section (built once, at load). */
@@ -199,8 +201,8 @@ export class EndingScene implements GameScene {
   private readonly fuseFade = new Tween(1);
   private readonly fuseDepth = new Tween(0);
   private readonly screen = new Tween(0);
-  /** 0 = warm white, 1 = the chat's near-black. */
-  private readonly screenDark = new Tween(0);
+  /** 0 = warm white, 1 = the amber light beyond the door. */
+  private readonly screenWarm = new Tween(0);
   private readonly flood = new Tween(0);
   /** Clipboard fall: -1 = still in his clamp, else seconds since the drop. */
   private clipT = -1;
@@ -209,18 +211,14 @@ export class EndingScene implements GameScene {
 
   // DOM.
   private root: HTMLElement | null = null;
-  private chat!: HTMLElement;
-  private chatText!: HTMLElement;
-  private caret!: HTMLElement;
-  private reacts: HTMLElement[] = [];
-  private typing!: HTMLElement;
   private titleEl!: HTMLElement;
   private safetyEl!: HTMLElement;
   private creditsEl!: HTMLElement;
   private cardEl!: HTMLElement;
   private noteEl!: HTMLElement;
   private skipBtn: HTMLButtonElement | null = null;
-  private typingLine: { el: HTMLElement; text: string; shown: number; cps: number } | null = null;
+  /** The crowd far off in the light, while FUSE speaks from beyond the door. */
+  private crowd: Voice | null = null;
 
   // Post-credits idle.
   private idleFrom = -1;
@@ -296,6 +294,7 @@ export class EndingScene implements GameScene {
     this.flushWaits();
     this.abort.abort();
     this.ctx.fuse.hush();
+    this.stopCrowd(0.4);
     this.root?.remove();
     this.root = null;
     this.view.dispose();
@@ -337,7 +336,6 @@ export class EndingScene implements GameScene {
     this.ign.set(0.3, 2.5, t());
     this.storm.set(0.35, 3, t());
     await this.wait(1.4);
-    let chatIndex = 0;
     for (const beat of this.beats) {
       if (!live()) return;
       switch (beat.kind) {
@@ -351,16 +349,12 @@ export class EndingScene implements GameScene {
             this.storm.set(0.8, 2.5, t());
             this.aperture.set(0.1, 3, t());
           }
-          await this.wait(0.7);
+          // Beyond the door, a longer breath between lines.
+          await this.wait(this._phase === 'beyond' ? 1.2 : 0.7);
           break;
         }
         case 'direction':
           await this.cue(beat.cue, g);
-          break;
-        case 'chat':
-          if (chatIndex++ === 0) await this.wait(0.9);
-          await this.type(beat.line.text, g);
-          await this.wait(1.3);
           break;
         case 'title-card':
           await this.endScreen(g);
@@ -419,34 +413,23 @@ export class EndingScene implements GameScene {
         await this.wait(2.4);
         break;
       }
-      case 'chat-open':
-        this._phase = 'chat';
-        // Behind the white the hall settles: storm spent, door closed, rune lit.
+      case 'beyond':
+        this._phase = 'beyond';
+        // Behind the light the hall settles: storm spent, door closed, rune lit.
         this.storm.snap(0);
         this.door.snap(0);
         this.aperture.snap(0.08);
         this.approach.snap(0);
-        this.screenDark.set(1, 1.6, t);
-        // A flat screen: fog, god rays and vignette ease away as the white goes dark.
-        this.ctx.post.blendTo(CHAT_POST, 1.6);
-        await this.wait(1.0);
-        this.chat.setAttribute('data-in', '');
-        await this.wait(1.6);
-        break;
-      case 'react':
-        this.caret.hidden = true;
-        await this.wait(1.4);
-        this.typing.textContent = `${CHAT.reactors[0]!.name}, ${CHAT.reactors[1]!.name} and ${CHAT.reactors.length - 2} others are typing…`;
-        for (const r of this.reacts) {
-          await this.wait(0.32);
-          r.setAttribute('data-in', '');
-        }
-        await this.wait(2.6);
+        // The white warms to amber (slower with Reduce flashes); fog and rays ease away.
+        this.screenWarm.set(1, this.calm ? 3.2 : 2.2, t);
+        this.ctx.post.blendTo(BEYOND_POST, 2.2);
+        // Somewhere in the light, a lively crowd. Quiet: FUSE stays in front.
+        this.crowd = this.ctx.sound.sfx.crowd(0.55, 3);
+        await this.wait(2.4);
         break;
       case 'flood':
         this._phase = 'flood';
-        this.typing.textContent = '';
-        this.chat.setAttribute('data-shrink', '');
+        this.stopCrowd(3.5);
         // The warmth eases in with the gold (slower with Reduce flashes).
         this.ctx.post.set(FLOOD_FROM);
         this.ctx.post.blendTo(this.calm ? FLOOD_LOOK_CALM : FLOOD_LOOK, this.calm ? 5 : 3);
@@ -460,26 +443,15 @@ export class EndingScene implements GameScene {
     }
   }
 
-  /** Type a chat line into the open message, slowly. Reduced motion: whole lines. */
-  private async type(text: string, g: number): Promise<void> {
-    if (g !== this.gen) return;
-    const p = h('p', { class: 'lr-chat-line' });
-    this.chatText.append(p);
-    p.append(this.caret);
-    if (this.ctx.settings.reducedMotion) {
-      p.prepend(text);
-      await this.wait(0.6);
-      return;
-    }
-    this.typingLine = { el: p, text, shown: 0, cps: 11 };
-    while (this.typingLine && g === this.gen) await this.wait(0.1);
+  private stopCrowd(fade: number): void {
+    this.crowd?.stop(fade);
+    this.crowd = null;
   }
 
   /** Title card, safety record, credits, then the end card. */
   private async endScreen(g: number): Promise<void> {
     if (g !== this.gen) return;
     this._phase = 'credits';
-    this.chat.hidden = true;
     this.titleEl.setAttribute('data-in', '');
     await this.wait(2.6);
     this.safetyEl.setAttribute('data-in', '');
@@ -517,7 +489,7 @@ export class EndingScene implements GameScene {
     this.gen++;
     this.flushWaits();
     this.ctx.fuse.hush();
-    this.typingLine = null;
+    this.stopCrowd(1);
     this.ctx.post.finishBlend();
     this.ctx.post.set(this.calm ? FLOOD_LOOK_CALM : FLOOD_LOOK);
     // The world as the ending leaves it: rune lit, door shut, FUSE gone, clipboard on the floor.
@@ -530,12 +502,12 @@ export class EndingScene implements GameScene {
     this.approach.snap(0);
     this.fuseFade.snap(0);
     this.screen.snap(0);
+    this.screenWarm.snap(0);
     this.flood.snap(1);
     this.fuse.clipboard = false;
     this.clipT = 99;
     this.clipFromX = ENDING_LAYOUT.clip.x;
     this.clipFromY = ENDING_LAYOUT.clip.y - 120;
-    this.chat.hidden = true;
     this.showEndCard();
   }
 
@@ -559,21 +531,6 @@ export class EndingScene implements GameScene {
       this.skip();
 
     for (const tw of this.tweenList) tw.tick(now);
-
-    // Typing.
-    const tl = this.typingLine;
-    if (tl) {
-      const before = Math.floor(tl.shown);
-      tl.shown += dt * tl.cps * (tl.text[before] === ' ' ? 1.6 : 1);
-      const n = Math.min(tl.text.length, Math.floor(tl.shown));
-      if (n !== before) {
-        // One text node, grown in place.
-        const node = tl.el.firstChild;
-        if (node && node.nodeType === 3) (node as Text).data = tl.text.slice(0, n);
-        else tl.el.prepend(tl.text.slice(0, n));
-      }
-      if (n >= tl.text.length) this.typingLine = null;
-    }
 
     // FUSE through the door: he recedes toward the door's foot.
     const f = this.fuse;
@@ -610,7 +567,7 @@ export class EndingScene implements GameScene {
     this.fuseFade,
     this.fuseDepth,
     this.screen,
-    this.screenDark,
+    this.screenWarm,
     this.flood,
   ];
 
@@ -700,15 +657,31 @@ export class EndingScene implements GameScene {
     // The clipboard: falls from his clamp, lands, stays.
     if (this.clipT >= 0) this.drawClipboard(frame);
 
-    // White-out, then the chat's dark.
+    // White-out, then the warm light beyond the door.
     const s = this.screen.v;
     if (s > 0.001) {
-      const k = this.screenDark.v;
-      const r = WARM_WHITE[0] + (CHAT_DARK[0] - WARM_WHITE[0]) * k;
-      const g = WARM_WHITE[1] + (CHAT_DARK[1] - WARM_WHITE[1]) * k;
-      const b = WARM_WHITE[2] + (CHAT_DARK[2] - WARM_WHITE[2]) * k;
-      const w = this.calm ? 0.72 + 0.28 * k : 1;
-      this.wash(frame, r * w, g * w, b * w, s, 4000, 10, (1 - k) * (this.calm ? 0.25 : 0.6));
+      const k = this.screenWarm.v;
+      const calm = this.calm;
+      // Reduce flashes: a dimmer white, and a softer glow throughout.
+      const w = calm ? 0.72 : 1;
+      const mix = (i: 0 | 1 | 2) => (WARM_WHITE[i] + (BEYOND_AMBER[i] - WARM_WHITE[i]) * k) * w;
+      const glow = (1 - k) * (calm ? 0.25 : 0.6) + k * (calm ? 0.1 : 0.2);
+      this.wash(frame, mix(0), mix(1), mix(2), s, 4000, 10, glow);
+      if (k > 0.001) {
+        // The light's heart, breathing slowly (still with reduced motion).
+        const breathe = reduced ? 0 : Math.sin(t * 0.7) * 40;
+        const c = BEYOND_CORE;
+        this.wash(
+          frame,
+          c[0] * w,
+          c[1] * w,
+          c[2] * w,
+          s * k * 0.8,
+          560 + breathe,
+          620,
+          calm ? 0.15 : 0.35,
+        );
+      }
     }
   }
 
@@ -796,53 +769,6 @@ export class EndingScene implements GameScene {
 
   private buildDom(doc: Document): void {
     void doc;
-    // Chat mock.
-    this.caret = h('span', { class: 'lr-chat-caret', 'aria-hidden': 'true' });
-    this.chatText = h('div', { class: 'lr-chat-text', 'aria-live': 'polite' });
-    this.reacts = CHAT.reactors.map((r) =>
-      h('span', null, h('i', { style: { background: `hsl(${r.hue} 55% 55%)` } }), r.name),
-    );
-    this.typing = h('div', { class: 'lr-chat-typing' });
-    const servers = h(
-      'div',
-      { class: 'lr-chat-servers', 'aria-hidden': 'true' },
-      h('i'),
-      h('i', { dataset: { on: '' } }),
-      h('i'),
-      h('i'),
-    );
-    const side = h(
-      'div',
-      { class: 'lr-chat-side' },
-      h('h3', null, CHAT.server),
-      ...CHAT.channels.map((c) => h('p', c === CHAT.channel ? { dataset: { on: '' } } : null, c)),
-    );
-    const msg = h(
-      'div',
-      { class: 'lr-chat-msg' },
-      h('div', { class: 'lr-chat-av', 'aria-hidden': 'true' }),
-      h('div', null, h('b', null, 'FUSE'), h('small', null, 'today'), this.chatText),
-    );
-    this.chat = h(
-      'div',
-      { class: 'lr-chat', role: 'img', 'aria-label': `A chat window, channel ${CHAT.channel}` },
-      servers,
-      side,
-      h(
-        'div',
-        { class: 'lr-chat-main' },
-        h('div', { class: 'lr-chat-top' }, CHAT.channel),
-        h(
-          'div',
-          { class: 'lr-chat-log' },
-          msg,
-          h('div', { class: 'lr-chat-react' }, ...this.reacts),
-          this.typing,
-        ),
-        h('div', { class: 'lr-chat-input' }, `Message ${CHAT.channel}`),
-      ),
-    );
-
     // Title card, safety record, credits.
     this.titleEl = h(
       'div',
@@ -861,7 +787,7 @@ export class EndingScene implements GameScene {
       ...CREDITS.map(([role, who]) => h('div', null, h('small', null, role), h('span', null, who))),
     );
 
-    // End card: the Discord link opens only on the player's click.
+    // End card: the ThunderClap Gaming link opens only on the player's click.
     const row = h('div', { class: 'lr-end-row' });
     for (const b of this.card.buttons) {
       row.append(
@@ -925,7 +851,6 @@ export class EndingScene implements GameScene {
     this.noteEl.hidden = true;
 
     const parts: HTMLElement[] = [
-      this.chat,
       this.titleEl,
       this.safetyEl,
       this.creditsEl,

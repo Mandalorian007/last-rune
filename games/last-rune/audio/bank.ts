@@ -1217,6 +1217,91 @@ const ambCandle: SoundDef = {
   group: 2,
 };
 
+const ambCrowd: SoundDef = (() => {
+  // The ending, beyond the door: a lively room somewhere in the light. Muffled voices
+  // (buzzy reeds through a vowel band, chopped into syllables, pitch rising and falling)
+  // over a soft din, and now and then a burst of laughter. Far away, warm, never words.
+  const D = 8;
+  const talkers: Layer[] = [
+    [118, 0.625, 120, 3.625, 620, -0.6],
+    [152, 0.875, 150, 4.375, 780, -0.2],
+    [196, 0.5, 180, 5.125, 900, 0.25],
+    [231, 1.125, 140, 3.875, 1050, 0.6],
+    [136, 0.75, 100, 4.75, 700, 0.05],
+  ].map(([f, vib, depth, syl, band, pan]) => ({
+    source: { type: 'osc', wave: 'sawtooth', freq: f!, vibrato: { rate: vib!, depth: depth! } },
+    env: HOLD,
+    filter: [
+      { type: 'bandpass', freq: band!, q: 1.2 },
+      { type: 'lowpass', freq: 1600 },
+    ],
+    tremolo: { rate: syl!, depth: 0.85 },
+    gain: 0.25,
+    pan: pan!,
+  }));
+  const laughs: Layer[] = (
+    [
+      [1.3, 262, -0.4],
+      [3.9, 300, 0.5],
+      [6.2, 220, 0.1],
+    ] as const
+  ).flatMap(([start, f, pan]): Layer[] => {
+    const env = {
+      attack: 0.04,
+      hold: 0.3,
+      decay: 0.6,
+      sustain: 0,
+      release: 0.05,
+      curve: 'exp' as const,
+    };
+    const ha = { rate: 6.5, depth: 1 };
+    return [
+      {
+        source: { type: 'osc', wave: 'sawtooth', freq: f, vibrato: { rate: 2, depth: 90 } },
+        env,
+        start,
+        filter: { type: 'bandpass', freq: 1100, q: 1.5 },
+        tremolo: ha,
+        gain: 0.35,
+        pan,
+      },
+      {
+        source: { type: 'noise', color: 'pink', seed: 331 + Math.round(start * 10) },
+        env,
+        start,
+        filter: { type: 'bandpass', freq: 1800, q: 1 },
+        tremolo: ha,
+        gain: 0.15,
+        pan,
+      },
+    ];
+  });
+  return {
+    spec: {
+      duration: D,
+      loop: { crossfade: 1 },
+      sampleRate: LOOP_SR,
+      channels: 2,
+      layers: [
+        ...talkers,
+        {
+          source: { type: 'noise', color: 'pink', seed: 330 },
+          env: HOLD,
+          filter: { type: 'bandpass', freq: 650, q: 0.7 },
+          tremolo: { rate: 2 / D, depth: 0.3 },
+          gain: 0.25,
+        },
+        ...laughs,
+      ],
+    },
+    bus: 'sfx',
+    level: 0.35,
+    reverb: { ...ROOMS.hall, wet: 0.45 },
+    maxVoices: 1,
+    group: 3,
+  };
+})();
+
 // ---------------------------------------------------------------- the bank
 
 export const FUSE_VOWEL_KEYS = Object.keys(FUSE_VOWELS) as FuseVowel[];
@@ -1275,6 +1360,7 @@ function buildBank(): Record<string, SoundDef> {
     'amb.storm': ambStorm,
     'amb.hum': ambHum,
     'amb.candle': ambCandle,
+    'amb.crowd': ambCrowd,
   };
   for (const g of GEM_KINDS) {
     bank[`gemPlace.${g}`] = gemPlace(g);

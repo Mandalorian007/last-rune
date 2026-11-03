@@ -569,22 +569,20 @@ FUSE's plate: *(blank)*
 
 *He drops the clipboard. It lands on the floor. He goes through. The screen goes white.*
 
-*White fades to a very different kind of screen: a chat window. Dark theme, familiar layout, a channel list down the side. A cursor blinks in a channel called #this-will-break. Then, slowly, typed:*
+*The white warms to gold. Somewhere in the light, a great many people are talking at once, and laughing. FUSE, from the other side:* (D-032)
 
-> hello. this unit has arrived somewhere with a great many people in it.  
-> <sub>`chat.1` · 13w</sub>
+> Hello. This unit has arrived somewhere with a great many people in it. **[NEW]**  
+> <sub>`beat.beyond-arrived` · 13w</sub>
 
-> you appear to be arguing about a game.  
-> <sub>`chat.2` · 8w</sub>
+> You appear to be arguing about a game. **[NEW]**  
+> <sub>`beat.beyond-arguing` · 8w</sub>
 
-> day 1.  
-> <sub>`chat.3` · 2w</sub>
+> Day 1.  
+> <sub>`beat.beyond-day-1` · 2w</sub>
 
-*Beat. A second line of avatars lights up as "real" members react.*
+*The light settles back over the hall. Gold floods it. Title card:*
 
-*The chat window shrinks into the ending screen. Gold floods the hall. Title card:*
-
-**Title card.** FUSE lives in the ThunderClap Discord now. / He has questions about your safety record. Buttons: Join ThunderClap · Leave a tip.
+**Title card.** FUSE went to ThunderClap Gaming. / He made friends. Loud ones. / He still has questions about your safety record. Buttons: Join ThunderClap Gaming · Leave a tip.
 
 *Idle 30 s on the ending screen: the clipboard on the hall floor, one new line.*
 

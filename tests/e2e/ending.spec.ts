@@ -20,7 +20,7 @@ interface GameHandle {
   save: { update(fn: (d: any) => void): void };
 }
 
-test('the ending plays to the end card; the Discord door opens only on a click', async ({
+test('the ending plays to the end card; the ThunderClap Gaming link opens only on a click', async ({
   page,
 }) => {
   test.setTimeout(300_000);
@@ -72,10 +72,28 @@ test('the ending plays to the end card; the Discord door opens only on a click',
   await expect(page.locator('.lr-end-card a.lr-end-join')).toBeHidden();
   await expect(page.locator('.lr-end-back')).toBeHidden();
 
-  // The chat mock, then the end card.
-  await expect(page.locator('.lr-chat')).toBeAttached({ timeout: 120_000 });
+  // Beyond the door (D-032): FUSE speaks as an ordinary caption over the light. No chat window.
+  await expect(page.locator('.tc-caption-text')).toContainText(
+    'Hello. This unit has arrived somewhere with a great many people in it.',
+    { timeout: 120_000 },
+  );
+  await expect(page.locator('.lr-ending')).toBeAttached();
+  await expect(page.locator('[class*="lr-chat"]')).toHaveCount(0);
+  await expect(page.locator('.tc-caption-text')).toContainText('Day 1.', { timeout: 60_000 });
+
+  // The title card says where he went; the credits name the author.
+  await expect(page.locator('.lr-end-title h2')).toHaveText([
+    'FUSE went to ThunderClap Gaming.',
+    'He made friends. Loud ones.',
+    'He still has questions about your safety record.',
+  ]);
+  await expect(page.locator('.lr-end-credits')).toContainText('ThunderSoap');
+  await expect(page.locator('.lr-ending')).not.toContainText(/discord|chat|channel|typing/i);
+
+  // Then the end card.
   const join = page.locator('.lr-end-card a.lr-end-join');
   await expect(join).toBeVisible({ timeout: 180_000 });
+  await expect(join).toHaveText('Join ThunderClap Gaming');
   await expect(join).toHaveAttribute('href', /^https:\/\/discord\.gg\//);
   await expect(join).toHaveAttribute('target', '_blank');
   await expect(join).toHaveAttribute('rel', 'noopener noreferrer');

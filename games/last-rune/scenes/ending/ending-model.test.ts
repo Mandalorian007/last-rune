@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DISCORD_INVITE_URL, ENDING_COPY, ENDING_SEQUENCE } from '../../content/ending';
-import { CHAT, CREDITS, endCard, endingBeats, endingSkippable } from './ending-model';
+import { CREDITS, endCard, endingBeats, endingSkippable } from './ending-model';
 
 describe('endingBeats', () => {
   const beats = endingBeats();
@@ -16,7 +16,7 @@ describe('endingBeats', () => {
 
   it('plays the lines and cues in the pitch order', () => {
     const shape = beats.map((b) =>
-      b.kind === 'line' || b.kind === 'chat'
+      b.kind === 'line'
         ? `${b.kind}:${b.line.id}`
         : b.kind === 'direction'
           ? `cue:${b.cue}`
@@ -31,8 +31,10 @@ describe('endingBeats', () => {
       'line:beat.door-list',
       'line:beat.door-key',
       'cue:through',
-      'cue:chat-open',
-      'cue:react',
+      'cue:beyond',
+      'line:beat.beyond-arrived',
+      'line:beat.beyond-arguing',
+      'line:beat.beyond-day-1',
       'cue:flood',
       'title-card',
       'idle',
@@ -43,13 +45,6 @@ describe('endingBeats', () => {
       expect(i, `${want} after index ${at} in ${shape.join(', ')}`).toBeGreaterThan(at);
       at = i;
     }
-    expect(shape.filter((s) => s.startsWith('chat:'))).toHaveLength(3);
-    // The chat lines sit between opening the chat and the reactions.
-    const open = shape.indexOf('cue:chat-open');
-    const react = shape.indexOf('cue:react');
-    for (const [i, s] of shape.entries())
-      if (s.startsWith('chat:')) expect(i).toBeGreaterThan(open);
-    expect(shape.indexOf('chat:chat.3')).toBeLessThan(react);
   });
 
   it('drops the silent arrival and every direction it has no cue for', () => {
@@ -67,7 +62,7 @@ describe('endingBeats', () => {
 describe('endCard', () => {
   const stats = { playSeconds: 5321, breakersTripped: 7 };
 
-  it('offers the Discord door and hides the tip jar while its URL is blank', () => {
+  it('offers the ThunderClap Gaming door and hides the tip jar while its URL is blank', () => {
     const c = endCard(stats);
     expect(c.join?.href).toBe(DISCORD_INVITE_URL);
     expect(c.buttons.map((b) => b.id)).toEqual(['join']);
@@ -82,11 +77,11 @@ describe('endCard', () => {
     expect(c.buttons.map((b) => b.id)).toEqual(['join', 'tip']);
   });
 
-  it('drops non-https links, and the title card loses its call to action', () => {
+  it('drops non-https links; the title card is lore and stays whole', () => {
     const c = endCard(stats, 'http://discord.gg/x', 'javascript:alert(1)');
     expect(c.join).toBeNull();
     expect(c.buttons).toEqual([]);
-    expect(c.title).toEqual([ENDING_COPY.titleCard[1]]);
+    expect(c.title).toEqual(ENDING_COPY.titleCard);
   });
 });
 
@@ -97,10 +92,19 @@ describe('endingSkippable', () => {
   });
 });
 
-describe('ending UI copy', () => {
-  it('credits and chat cast name no real people', () => {
-    expect(CREDITS.length).toBeGreaterThan(0);
-    expect(CHAT.channels).toContain(CHAT.channel);
-    expect(new Set(CHAT.reactors.map((r) => r.name)).size).toBe(CHAT.reactors.length);
+describe('ending UI copy (D-032)', () => {
+  it('says FUSE went to ThunderClap Gaming, and credits ThunderSoap', () => {
+    expect(ENDING_COPY.titleCard[0]).toBe('FUSE went to ThunderClap Gaming.');
+    expect(ENDING_COPY.joinLabel).toBe('Join ThunderClap Gaming');
+    expect(CREDITS).toContainEqual(['Made by', 'ThunderSoap']);
+  });
+
+  it('gives no chat or server details', () => {
+    const shown = [
+      ...ENDING_COPY.titleCard,
+      ...CREDITS.flat(),
+      ...ENDING_SEQUENCE.flatMap((s) => (s.type === 'direction' ? [s.text] : [])),
+    ].join(' ');
+    expect(shown).not.toMatch(/discord|chat|channel|#|\bbot\b|typing|avatar/i);
   });
 });

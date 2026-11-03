@@ -30,6 +30,9 @@ export type BeatId =
   | 'rune-not-for-you'
   | 'door-list'
   | 'door-key'
+  | 'beyond-arrived'
+  | 'beyond-arguing'
+  | 'beyond-day-1'
   | 'post-credits';
 
 interface LineBase {
@@ -60,8 +63,6 @@ export type FuseLine =
   | (LineBase & { readonly kind: 'title' })
   | (LineBase & { readonly kind: 'codex'; readonly gem: GemKind })
   | (LineBase & { readonly kind: 'beat'; readonly beat: BeatId })
-  /** FUSE typing in the mock chat window (ending beat 2). Lower case on purpose. */
-  | (LineBase & { readonly kind: 'chat'; readonly order: number })
   /** The altar verdict when a machine wakes on an exact solve (one per tier). */
   | (LineBase & { readonly kind: 'exact' })
   /** Idle nudges at the altar: 'teach' on the first puzzle, or a gem's first appearance. */
@@ -464,15 +465,23 @@ const DEFS: Def[] = [
     source: P,
     text: "You'll want the forms. They're in the drawers. Turns out I had a key the whole time.",
   },
+  // From the other side of the door (D-032): captions over the light. The pitch's chat
+  // lines in sentence case; recased lines are marked new ("Day 1." is verbatim).
   {
-    kind: 'chat',
-    order: 1,
+    kind: 'beat',
+    beat: 'beyond-arrived',
     tier: 4,
-    source: P,
-    text: 'hello. this unit has arrived somewhere with a great many people in it.',
+    source: N,
+    text: 'Hello. This unit has arrived somewhere with a great many people in it.',
   },
-  { kind: 'chat', order: 2, tier: 4, source: P, text: 'you appear to be arguing about a game.' },
-  { kind: 'chat', order: 3, tier: 4, source: P, text: 'day 1.' },
+  {
+    kind: 'beat',
+    beat: 'beyond-arguing',
+    tier: 4,
+    source: N,
+    text: 'You appear to be arguing about a game.',
+  },
+  { kind: 'beat', beat: 'beyond-day-1', tier: 4, source: P, text: 'Day 1.' },
   {
     kind: 'beat',
     beat: 'post-credits',
@@ -738,8 +747,6 @@ function idFor(d: Def): string {
       return `codex.${d.gem}`;
     case 'beat':
       return `beat.${d.beat}`;
-    case 'chat':
-      return `chat.${d.order}`;
     case 'exact':
       return `exact.t${d.tier}`;
     case 'nudge':
@@ -843,12 +850,6 @@ export function beatLine(beat: BeatId): FuseLine {
   const l = LINES.find((x) => x.kind === 'beat' && x.beat === beat);
   if (!l) throw new Error(`No beat ${beat}`);
   return l;
-}
-
-export function chatLines(): FuseLine[] {
-  return LINES.filter((l) => l.kind === 'chat').sort(
-    (a, b) => (a.kind === 'chat' ? a.order : 0) - (b.kind === 'chat' ? b.order : 0),
-  );
 }
 
 /** The altar's exact-solve line for a story tier (falls back to lower tiers). */
