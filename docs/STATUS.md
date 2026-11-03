@@ -45,6 +45,8 @@ _Last updated: 2026-11-02 by PM_
 | bug-bash | ws/bug-bash | ✅ merged | Settings two-column + sticky Done (no scroll at 100/125/150%); Codex fits at 150%; live strike chip (got N = newest chip); corrupt-save toast + backup; altar tag/storm-label/subtitle fixes; ending clears toasts; lint clean; 21 new e2e (robustness, layout-fit); full run 0 console errors. Deferred S3/S4 in its log |
 | perf-low | ws/perf-low | ✅ merged | GPU timestamp timing per pass (DynamicResolution sees real cost; the old 'gpu' column was queue latency); Low composites at scene res + upscale; ending caps at DPR 1 (High DPR 2: 21.6→12.2 ms p50, in budget); audio pre-render yields (title keeps animating); first frame 0.1–0.16 s; perf harness `ts` column, baseline + load specs |
 | finish-1 | ws/finish-1 | ✅ merged | serif on toasts, closing line, Ko-fi/Copy links, FUSE's journal plate; end-card prop is now clearly FUSE's clipboard with his form, bottom right, clear of everything at 150%; below-cell tags pop from their own cell |
+| newcomer-2 | ws/newcomer-2 | 🟡 running | fresh-eyes first session (hall + first 5 altars): fix every hesitation, wording, hierarchy |
+| tidy-2 | ws/tidy-2 | 🟡 running | device-lost pauses loop/audio; clipboard drop arc; audio synth Worker (if clean); hunt the lone flakes |
 
 ## Blocked / needs user
 - itch.io launch is manual with the user after M5 (D-012)
