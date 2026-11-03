@@ -62,13 +62,14 @@ const CSS = /* css */ `
 .tc-overlay .lr-title-coffee {
   display: inline-flex; align-items: center; gap: 10px;
   padding: 8px 18px; border-radius: 999px; text-decoration: none; pointer-events: auto;
-  font: 500 20px/1.2 var(--tc-font-ui, system-ui, sans-serif); color: #e8d6b0;
+  font: 22px/1.2 var(--tc-font-body); color: #e8d6b0;
   background: rgb(20 12 30 / 0.55); border: 1px solid rgb(232 192 106 / 0.35);
 }
 .tc-overlay .lr-title-coffee:hover { color: #fff3d6; border-color: rgb(232 192 106 / 0.8); }
 .tc-overlay .lr-title-coffee:focus-visible { outline: var(--tc-focus-ring) solid var(--tc-color-focus); outline-offset: 4px; }
 .tc-overlay .lr-title-coffee .lr-coffee-icon { width: 1.3em; height: 1.3em; flex: none; color: #e8c06a; }
-/* The engine link widget's Copy link and fallback (D-036), in the title's warm colours. */
+/* The engine link widget's Copy link and fallback (D-036), in the title's warm colours and the game serif. */
+.tc-overlay .tc-link-copy, .tc-overlay .tc-link-message, .tc-overlay .tc-link-close { font-family: var(--tc-font-body); }
 .tc-overlay .tc-link-copy { color: #e8d6b0; background: rgb(20 12 30 / 0.55); border-color: rgb(232 192 106 / 0.3); }
 .tc-overlay .tc-link-copy:hover { color: #fff3d6; border-color: rgb(232 192 106 / 0.8); }
 .tc-overlay .tc-link-copy[data-copied] { color: #c8f5cc; border-color: rgb(150 225 160 / 0.8); }
@@ -135,6 +136,9 @@ const CSS = /* css */ `
 .tc-overlay { --tc-caption-max-width: 800px; --tc-caption-margin: 24px; }
 .tc-overlay .tc-caption { gap: 16px; padding: 14px 22px; }
 .tc-overlay .tc-caption-side .tc-caption-speaker { font-size: 19px; }
+
+/* Toasts speak in the game serif like the rest of the UI chrome (finish-1). */
+.tc-overlay .tc-toast { font-family: var(--tc-font-body); font-size: 26px; }
 
 /* ── FUSE portrait placeholder (art-props replaces it) ─────────────────── */
 .tc-overlay .lr-fuse-portrait {

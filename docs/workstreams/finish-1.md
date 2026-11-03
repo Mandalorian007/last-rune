@@ -23,3 +23,14 @@ Out of scope:
 - `pnpm check`, `pnpm build` and `pnpm test:e2e` pass.
 
 ## Log
+
+### 2026-11-02: done (branch `ws/finish-1`)
+
+Screens: `docs/design/screens/local/finish-1/{before,after,after-ending}/` (gitignored). Captures: `scripts/playtest/finish-1.spec.ts` (hall toast, journal plate, replayed ending skipped to the end card, post-credits note; 1920 and 1280 at 150%), plus `ending-2.spec.ts` for the full ending.
+
+| # | What | Change |
+|---|---|---|
+| 13 | Toasts and the closing line used the sans | Toasts (`.tc-toast`, game override, 26px), the closing line (`.lr-end-footer`, 27px), the Ko-fi links (end card and title) and the engine Copy link chips/fallback text now use the game serif. **Audit:** FUSE's journal plate (story text) was sans too and is now serif. It is capped at 38px so the longest plate (page 4) still fits in three lines at 150%. Sans kept on purpose: HUD key caps, the tiny release tag, and the tracked uppercase labels ("SAFETY RECORD", credit roles, journal "NEW"/blank-slip labels, caption speaker name). |
+| 14 | Tilted brown card near "Back to the hall" | It is FUSE's clipboard, which he drops at the door. Under the gold flood it was a bare amber board with no page. At 1280/150% it also covered the end of the closing line, and the post-credits note overflowed the board and the bottom of the screen. **Fix:** the board now carries his form (a GPU parchment page while it falls, then the crisp lined DOM form from the title card on), so it reads as a clipboard. It rests bottom right at (1640, 905), larger (210×264) and less tilted, clear of the links, line and Back at every text size and wholly on screen. The post-credits flip is unchanged. The note's hand text grows with Text size only to 27px, so "Monitoring." fits. The new page's words are added only when it flips, so screen readers hear them then. |
+| 15 | Below-cell tags popped in from the above-cell offset | `lr-altar-pop` starts from `var(--lr-tag-pop-from, -80%)`; below-tags set it to `calc(7px - 20%)`, so they emerge downward from their own cell (mirror of the above pop). Reduced motion is unchanged. |
+| — | Fresh-eyes pass (ending + end card, 1920 and 1280/150%) | Nothing else blocking. Note for art: when FUSE drops the clipboard at the door, it now travels about 290px right of FUSE's clamp to its new spot; at fall speed it reads as a toss. |

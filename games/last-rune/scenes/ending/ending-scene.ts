@@ -27,7 +27,7 @@ import { coffeeLinkWidget, linkLabels } from '../../ui/coffee';
 import { menuNav } from '../../ui/menu-nav';
 import { deriveHall } from '../hall/hall-state';
 import { DeskArt } from '../journal/desk-art';
-import { PROP } from '../journal/desk-wgsl';
+import { PAPER, PROP } from '../journal/desk-wgsl';
 import type { HallView, HallViewFrame } from '../views';
 import {
   CREDITS,
@@ -46,9 +46,26 @@ export const ENDING_LAYOUT = {
   rune: { r: 290 },
   door: { w: 380, h: 620, base: 640 },
   fuse: { x: 1460, y: 968, scale: 150, edge: 1300 },
-  /** Where the clipboard comes to rest (centre), its size and angle. */
-  clip: { x: 1330, y: 968, w: 150, h: 196, rot: -0.32 },
+  /**
+   * Where the clipboard comes to rest (centre), its size and angle: bottom right, clear of the
+   * end card's links, closing line and Back button at every text size, and wholly on screen.
+   */
+  clip: { x: 1640, y: 905, w: 210, h: 264, rot: -0.22 },
+  /** His clamp's size for the clipboard (px wide), where its fall starts. */
+  clipInHand: 63,
 } as const;
+
+/** The page on the clipboard, in board space: centred 8% below the board's centre, 80% × 74%. */
+export function clipPage(): { x: number; y: number; w: number; h: number } {
+  const C = ENDING_LAYOUT.clip;
+  const dy = C.h * 0.08;
+  return {
+    x: C.x - dy * Math.sin(C.rot),
+    y: C.y + dy * Math.cos(C.rot),
+    w: Math.round(C.w * 0.8),
+    h: Math.round(C.h * 0.74),
+  };
+}
 
 /** Phases, for tests and diagnostics. */
 export type EndingPhase =
@@ -471,6 +488,7 @@ export class EndingScene implements GameScene {
     if (g !== this.gen) return;
     this._phase = 'credits';
     this.titleEl.setAttribute('data-in', '');
+    this.showForm();
     await this.wait(2.6);
     this.safetyEl.setAttribute('data-in', '');
     await this.wait(2.8);
@@ -529,6 +547,7 @@ export class EndingScene implements GameScene {
     this.safetyEl.setAttribute('data-in', '');
     this.cardEl.hidden = false;
     this.cardEl.setAttribute('data-in', '');
+    this.showForm();
     if (this.skipBtn) this.skipBtn.hidden = true;
     const back = this.cardEl.querySelector<HTMLButtonElement>('.lr-end-back');
     back?.focus({ preventScroll: true });
@@ -754,7 +773,8 @@ export class EndingScene implements GameScene {
     let y = this.clipFromY + (C.y - this.clipFromY) * fall;
     const after = this.clipT - T;
     if (after > 0 && after < 0.3) y -= Math.sin((after / 0.3) * Math.PI) * 10;
-    const scaleK = 0.42 + 0.58 * k; // from his clamp size to lying in the foreground
+    const k0 = ENDING_LAYOUT.clipInHand / C.w;
+    const scaleK = k0 + (1 - k0) * k; // from his clamp size to lying in the foreground
     const rot = 0.14 + (C.rot - 0.14) * Math.min(1, k * 1.1);
     const ign = this.ign.v;
     this.desk.extraLight.x = RUNE_CENTRE.x;
@@ -768,6 +788,18 @@ export class EndingScene implements GameScene {
     this.desk.beginLights(this.time, 2.6);
     if (k >= 1) this.desk.shadow(frame, x + 8, y + 10, C.w, C.h, 16, 0.5, rot);
     this.desk.prop(frame, PROP.clipboard, x, y, C.w * scaleK, C.h * scaleK, rot, 5.0);
+    // His form, clamped to the board, so it reads as a clipboard and not a bare plank.
+    const dy = C.h * 0.08 * scaleK;
+    this.desk.paper(
+      frame,
+      x - dy * Math.sin(rot),
+      y + dy * Math.cos(rot),
+      C.w * 0.8 * scaleK,
+      C.h * 0.74 * scaleK,
+      rot,
+      7.0,
+      PAPER.slip,
+    );
   }
 
   // ── Draw helpers (one DrawParams, reused) ───────────────────────────────
@@ -870,24 +902,23 @@ export class EndingScene implements GameScene {
     );
     this.cardEl.hidden = true;
 
-    // Post-credits: the clipboard's top sheet flips to a new page.
-    const C = ENDING_LAYOUT.clip;
-    const nw = Math.round(C.w * 0.8);
-    const nh = Math.round(C.h * 0.74);
+    // The clipboard's form, shown with the end card; post-credits, it flips to a new page.
+    // The new page's words go in only when it flips, so a screen reader hears them then.
+    const page = clipPage();
     this.noteEl = h(
       'div',
       {
         class: 'lr-clip-note',
         'aria-live': 'polite',
         style: {
-          left: `${Math.round(C.x - nw / 2)}px`,
-          top: `${Math.round(C.y - nh / 2 + C.h * 0.08)}px`,
-          width: `${nw}px`,
-          height: `${nh}px`,
-          transform: `rotate(${C.rot}rad)`,
+          left: `${Math.round(page.x - page.w / 2)}px`,
+          top: `${Math.round(page.y - page.h / 2)}px`,
+          width: `${page.w}px`,
+          height: `${page.h}px`,
+          transform: `rotate(${ENDING_LAYOUT.clip.rot}rad)`,
         },
       },
-      h('p', { class: 'lr-clip-day' }, this.postLine?.text ?? ''),
+      h('p', { class: 'lr-clip-day' }),
       h('p', { class: 'lr-clip-form', 'aria-hidden': 'true' }),
     );
     this.noteEl.hidden = true;
@@ -917,15 +948,19 @@ export class EndingScene implements GameScene {
     this.ctx.ui.layers.hud.append(this.root);
   }
 
+  /** His form on the dropped clipboard, crisp over the lit board (fades in; flips post-credits). */
+  private showForm(): void {
+    if (!this.noteEl.hidden) return;
+    this.noteEl.hidden = false;
+    requestAnimationFrame(() => this.noteEl.setAttribute('data-in', ''));
+  }
+
   private showNote(): void {
     this.noteShown = true;
     this._phase = 'post-credits';
-    this.noteEl.hidden = false;
-    // Next frame, so the fade-in transition runs.
-    requestAnimationFrame(() => {
-      this.noteEl.setAttribute('data-in', '');
-      void this.wait(1.0).then(() => this.noteEl.setAttribute('data-flip', ''));
-      this.ctx.sfx('ui.page');
-    });
+    const day = this.noteEl.querySelector('.lr-clip-day');
+    if (day) day.textContent = this.postLine?.text ?? '';
+    this.noteEl.setAttribute('data-flip', '');
+    this.ctx.sfx('ui.page');
   }
 }

@@ -240,8 +240,9 @@ const CSS = /* css */ `
   content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -6px;
   border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(255,110,80,0.7);
 }
-/* Hung below its cell (arrow up) when above would cover the verdict. */
-.tc-overlay .lr-altar-tag[data-below] { transform: translate(-50%, 7px); }
+/* Hung below its cell (arrow up) when above would cover the verdict. It pops out of the cell
+   downward, mirroring the above-cell pop, so it never jumps from the above position. */
+.tc-overlay .lr-altar-tag[data-below] { transform: translate(-50%, 7px); --lr-tag-pop-from: calc(7px - 20%); }
 .tc-overlay .lr-altar-tag[data-below]::after { bottom: auto; top: -7px; border: 6px solid transparent; border-top: 0; border-bottom-color: rgba(255,110,80,0.7); }
 .tc-overlay .lr-altar-tag[data-tone="info"] { color: #f4e6c4; background: rgba(20,16,12,0.9); border-color: rgba(232,192,106,0.6); }
 .tc-overlay .lr-altar-tag[data-tone="info"]::after { border-top-color: rgba(232,192,106,0.6); }
@@ -263,7 +264,7 @@ const CSS = /* css */ `
 /* Reduced motion: no pop or fade, but fizzle tags still step aside after a few seconds. */
 [data-reduced-motion] .tc-overlay .lr-altar-tag:not([data-tone]) { animation: lr-altar-tag-fade 1ms linear 3.6s forwards; }
 
-@keyframes lr-altar-pop { from { opacity: 0; transform: translate(-50%, -80%) scale(0.92); } to { opacity: 1; } }
+@keyframes lr-altar-pop { from { opacity: 0; transform: translate(-50%, var(--lr-tag-pop-from, -80%)) scale(0.92); } to { opacity: 1; } }
 .tc-overlay .lr-altar-verdict { animation-name: lr-altar-drop; }
 @keyframes lr-altar-drop { from { opacity: 0; transform: translate(-50%, -14px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
