@@ -122,6 +122,13 @@ These are PM decisions. Phone only: the desktop and iPad output must be pixel-id
 
 **Captures.** `MB_TAG=after pnpm exec playwright test -c scripts/playtest/playwright.config.ts mobile-3-board`. Contact sheets are `docs/design/screens/local/mobile-3-board/{before,after}-<viewport>.png`, with pitch JSON alongside.
 
+**Checks.**
+- After merging main (3cf784f), the capture helper's notch insets are fixed: the iPhone and Pro Max shots use the real 750 / 814 px usable width. Pitches still meet D-040 at those widths.
+- Other phones: Pro Max 6×4 52.1, 8×6 45.4–51, 10×8 34.8; Android 6×4 52, 8×6 42.7–48, 10×8 32.7.
+- `pnpm check` passes. `pnpm build` passes. `pnpm test:e2e` passes 88 tests.
+- Desktop sheets before and after show no visible change.
+- The bubble and the hint now sit 68 px up, clear of Strike (mobile.spec caught the overlap).
+
 **Proposals for the PM.**
 - **D-040 addendum.** On phones, Turn lives in the left bar, bottom. The right bar is for ☰, the transient cards and Strike.
 - **Shared phone-styles hygiene.** The mobile-2 info-lane rules (`--lr-info-l/-w`) are now overridden by the lane on altars. They can be deleted once mobile-3 merges.
