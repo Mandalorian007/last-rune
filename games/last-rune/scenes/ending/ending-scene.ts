@@ -68,7 +68,44 @@ export const ENDING_LAYOUT = {
  */
 export const PHONE_CLIP = { ...ENDING_LAYOUT.clip, x: 1760, y: 790 } as const;
 
-type ClipRest = typeof ENDING_LAYOUT.clip | typeof PHONE_CLIP;
+export interface ClipRest {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly rot: number;
+}
+
+/** The part of the 1920×1080 design on screen, design px (a phone's fill crops it). */
+export interface VisibleBand {
+  readonly l: number;
+  readonly t: number;
+  readonly r: number;
+  readonly b: number;
+  /** Design px per CSS px. */
+  readonly perCss: number;
+}
+
+/**
+ * Phones (mobile-7-ending): the clipboard's rest, moved in (never out) so the whole board,
+ * rotated, sits at least `marginCss` CSS px inside the visible band on every phone.
+ */
+export function phoneClipRest(
+  band: VisibleBand,
+  marginCss = 12,
+  C: ClipRest = PHONE_CLIP,
+): ClipRest {
+  const s = Math.abs(Math.sin(C.rot));
+  const c = Math.abs(Math.cos(C.rot));
+  const ex = (C.w / 2) * c + (C.h / 2) * s;
+  const ey = (C.w / 2) * s + (C.h / 2) * c;
+  const m = marginCss * band.perCss;
+  return {
+    ...C,
+    x: Math.min(C.x, band.r - ex - m),
+    y: Math.min(C.y, band.b - ey - m),
+  };
+}
 
 /** The page on the clipboard, in board space: centred 8% below the board's centre, 80% × 74%. */
 export function clipPage(C: ClipRest = ENDING_LAYOUT.clip): {
@@ -156,6 +193,20 @@ function mergePost(a: PostSettingsPatch, b: PostSettingsPatch): PostSettingsPatc
 }
 const FLOOD_LOOK = mergePost(POST_PRESETS.ending, FLOOD_POST);
 const FLOOD_LOOK_CALM = mergePost(POST_PRESETS.ending, FLOOD_POST_CALM);
+/**
+ * Phones (mobile-7-ending): the end card fills most of a phone, so the flood behind it is
+ * held lower (less bloom, a little less exposure) and the panels sit in a warm, deep gold
+ * instead of a washed-out yellow. Desktop and tablets keep FLOOD_LOOK.
+ */
+const FLOOD_PHONE = {
+  bloom: { intensity: 0.5, threshold: 1.6 },
+  godRays: { intensity: 0.25 },
+  grade: { exposure: 0.74 },
+} as const;
+const FLOOD_LOOK_PHONE = mergePost(FLOOD_LOOK, FLOOD_PHONE);
+const FLOOD_LOOK_PHONE_CALM = mergePost(FLOOD_LOOK_CALM, FLOOD_PHONE);
+/** Phones: the gold wash and glow under the end card, as a share of the desktop's. */
+const FLOOD_PHONE_GAIN = 0.45;
 /** Fog and rays come back from nothing when the gold floods in. */
 /** Phone end card (mobile-4-chrome): each Copy button names the link it copies. */
 const END_COPY_PHONE = { join: 'Copy invite link', coffee: 'Copy Ko-fi link' } as const;
@@ -288,7 +339,31 @@ export class EndingScene implements GameScene {
 
   /** Where the clipboard comes to rest (phones: PHONE_CLIP). */
   private get clip(): ClipRest {
-    return this.ctx.device.phone ? PHONE_CLIP : ENDING_LAYOUT.clip;
+    if (!this.ctx.device.phone) return ENDING_LAYOUT.clip;
+    const r = this.ctx.surface.rect;
+    const root = this.ctx.surface.root;
+    const k = r.width / 1920;
+    if (!(k > 0)) return PHONE_CLIP;
+    // The visible part of the design: the canvas may overflow the screen on a phone.
+    return phoneClipRest({
+      l: Math.max(0, -r.x / k),
+      t: Math.max(0, -r.y / k),
+      r: Math.min(1920, (root.clientWidth - r.x) / k),
+      b: Math.min(1080, (root.clientHeight - r.y) / k),
+      perCss: 1 / k,
+    });
+  }
+
+  /** The form on the clipboard follows the board's rest (phones: inside the visible band). */
+  private placeNote(): void {
+    const C = this.clip;
+    const page = clipPage(C);
+    const s = this.noteEl.style;
+    s.left = `${Math.round(page.x - page.w / 2)}px`;
+    s.top = `${Math.round(page.y - page.h / 2)}px`;
+    s.width = `${page.w}px`;
+    s.height = `${page.h}px`;
+    s.transform = `rotate(${C.rot}rad)`;
   }
 
   enter(ctx: GameCtx): void {
@@ -507,7 +582,7 @@ export class EndingScene implements GameScene {
         this.stopCrowd(3.5);
         // The warmth eases in with the gold (slower with Reduce flashes).
         this.ctx.post.set(FLOOD_FROM);
-        this.ctx.post.blendTo(this.calm ? FLOOD_LOOK_CALM : FLOOD_LOOK, this.calm ? 5 : 3);
+        this.ctx.post.blendTo(this.floodLook, this.calm ? 5 : 3);
         this.ctx.sound.sfx.play('endingSwell');
         this.screen.set(0, 2.2, t + 0.5);
         // Reduce flashes: the gold rises slowly instead of blooming at once.
@@ -648,7 +723,7 @@ export class EndingScene implements GameScene {
     this.stopCrowd(1);
     this.dropHangout();
     this.ctx.post.finishBlend();
-    this.ctx.post.set(this.calm ? FLOOD_LOOK_CALM : FLOOD_LOOK);
+    this.ctx.post.set(this.floodLook);
     // The world as the ending leaves it: rune lit, door shut, FUSE gone, clipboard on the floor.
     this.dusk.snap(1);
     this.ign.snap(1);
@@ -742,6 +817,12 @@ export class EndingScene implements GameScene {
     return this.viewFrame;
   }
 
+  /** The gold flood's post look (phones hold it lower under the end card). */
+  private get floodLook(): PostSettingsPatch {
+    if (this.ctx.device.phone) return this.calm ? FLOOD_LOOK_PHONE_CALM : FLOOD_LOOK_PHONE;
+    return this.calm ? FLOOD_LOOK_CALM : FLOOD_LOOK;
+  }
+
   /** Settings → Reduce flashes: softer white-out, door and flood; no spark twinkle. */
   private get calm(): boolean {
     return this.ctx.settings.reduceFlashes;
@@ -805,7 +886,8 @@ export class EndingScene implements GameScene {
       // The re-dressed hall is brighter than the one this was tuned on: keep the
       // gold under the card, and lower still with Reduce flashes.
       const calm = this.calm;
-      this.wash(frame, 0.62, 0.38, 0.12, calm ? 0.28 : 0.34, r, 520, calm ? 0.1 : 0.14);
+      const g = this.ctx.device.phone ? FLOOD_PHONE_GAIN : 1;
+      this.wash(frame, 0.62, 0.38, 0.12, (calm ? 0.28 : 0.34) * g, r, 520, (calm ? 0.1 : 0.14) * g);
       this.desk.glow(
         frame,
         C.x,
@@ -815,7 +897,7 @@ export class EndingScene implements GameScene {
         1.0,
         0.7,
         0.3,
-        calm ? 0.09 : 0.12,
+        (calm ? 0.09 : 0.12) * g,
       );
     }
 
@@ -989,23 +1071,13 @@ export class EndingScene implements GameScene {
 
     // The clipboard's form, shown with the end card; post-credits, it flips to a new page.
     // The new page's words go in only when it flips, so a screen reader hears them then.
-    const page = clipPage(this.clip);
     this.noteEl = h(
       'div',
-      {
-        class: 'lr-clip-note',
-        'aria-live': 'polite',
-        style: {
-          left: `${Math.round(page.x - page.w / 2)}px`,
-          top: `${Math.round(page.y - page.h / 2)}px`,
-          width: `${page.w}px`,
-          height: `${page.h}px`,
-          transform: `rotate(${this.clip.rot}rad)`,
-        },
-      },
+      { class: 'lr-clip-note', 'aria-live': 'polite' },
       h('p', { class: 'lr-clip-day' }),
       h('p', { class: 'lr-clip-form', 'aria-hidden': 'true' }),
     );
+    this.placeNote();
     this.noteEl.hidden = true;
 
     this.srEl = h('p', { class: 'tc-sr-only', 'aria-live': 'polite' });
@@ -1044,6 +1116,7 @@ export class EndingScene implements GameScene {
   /** His form on the dropped clipboard, crisp over the lit board (fades in; flips post-credits). */
   private showForm(): void {
     if (!this.noteEl.hidden) return;
+    this.placeNote();
     this.noteEl.hidden = false;
     requestAnimationFrame(() => this.noteEl.setAttribute('data-in', ''));
   }

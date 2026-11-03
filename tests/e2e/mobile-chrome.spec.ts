@@ -388,6 +388,22 @@ for (const vp of PHONES) {
       await expect(page.locator('.lr-j-more')).toHaveText(/12 more pages to find/);
       problems.push(...small(await sizes(page, '.lr-j-more'), { h: 36, font: 12 }));
       problems.push(...small(await sizes(page, '.lr-j-turn'), { w: 44, h: 44 }));
+      // mobile-7-ending: the page arrows sit on the book's outer edges (the leaves span design
+      // px 669..1835), not out at the screen edges.
+      const turns = await page.evaluate(() => {
+        const o = document.querySelector('.tc-overlay')!.getBoundingClientRect();
+        const k = o.width / 1920;
+        return [...document.querySelectorAll<HTMLElement>('.lr-j-turn')]
+          .filter((b) => !b.hidden)
+          .map((b) => {
+            const r = b.getBoundingClientRect();
+            const edge = o.left + (b.ariaLabel === 'Previous page' ? 669 : 1835) * k;
+            return { label: b.ariaLabel, off: Math.abs((r.left + r.right) / 2 - edge) };
+          });
+      });
+      for (const t of turns) {
+        if (t.off > 6) problems.push(`journal: ${t.label} ${t.off.toFixed(0)} px off the book`);
+      }
       problems.push(...small(await sizes(page, '.lr-j-x'), { w: 36, h: 36, hitW: 44, hitH: 44 }));
       problems.push(...(await offscreen(page, '.lr-journal')).map((s) => `journal: ${s}`));
 

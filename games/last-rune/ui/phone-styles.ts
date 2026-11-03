@@ -470,11 +470,16 @@ ${P} .lr-codex-more {
 }
 ${P} .lr-codex-more[hidden] { display: none; }
 
-/* Journal: ‹ mirrors › in the left lane, off the quill and the candle. */
-${P} .lr-journal .lr-j-turn[aria-label="Previous page"] {
-  left: calc(-1 * var(--lr-bar, 0px) + ${cpx(2)}) !important; right: auto; transform: translateY(${cpx(-4)});
+/* Journal (mobile-7-ending): the page arrows sit on the book's outer bottom corners, centred
+   on the leaves' outer edges (design px 669 and 1835, 44 above the leaves' foot), so they read
+   as the book's own page turns: clear of the quill and the candle, and never out at the screen
+   edges on a wide phone. */
+${P} .lr-journal .lr-j-turn[aria-label="Previous page"],
+${P} .lr-journal .lr-j-turn[aria-label="Next page"] {
+  top: 736px !important; right: auto; transform: translate(-50%, -50%);
 }
-${P} .lr-journal .lr-j-turn[aria-label="Next page"] { right: calc(-1 * var(--lr-bar, 0px) + ${cpx(2)}); }
+${P} .lr-journal .lr-j-turn[aria-label="Previous page"] { left: 669px !important; }
+${P} .lr-journal .lr-j-turn[aria-label="Next page"] { left: 1835px !important; }
 `;
 /* end mobile-6-chrome */
 
