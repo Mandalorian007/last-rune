@@ -68,7 +68,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-end-card a.lr-end-join::after { content: '\\2197'; font-size: 26px; opacity: 0.7; }
 .tc-overlay .lr-end-card a.lr-end-coffee {
   display: inline-flex; align-items: center; gap: 12px; padding: 10px 26px; border-radius: 999px; text-decoration: none;
-  font-family: var(--tc-font-ui); font-size: 22px; color: #fff1cc; border: 2px solid #ffe3a055; background: #2a1606c0;
+  font-family: var(--tc-font-body); font-size: 24px; color: #fff1cc; border: 2px solid #ffe3a055; background: #2a1606c0;
 }
 .tc-overlay .lr-end-card a.lr-end-coffee:hover { background: #3c220bd8; border-color: #ffe3a0aa; }
 .tc-overlay .lr-end-card a.lr-end-coffee:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
@@ -82,7 +82,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-end-links .tc-link-copy:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 .tc-overlay .lr-end-links .tc-link-copy[data-copied] { color: #d8ffd8; border-color: #a8e8a8cc; }
 .tc-overlay .lr-end-footer {
-  margin: 0; padding: 16px 90px; font-family: var(--tc-font-ui); font-size: 24px; color: #fff4dc;
+  margin: 0; padding: 16px 90px; font-family: var(--tc-font-body); font-size: 27px; color: #fff4dc;
   text-shadow: 0 1px 3px #2a1400, 0 2px 12px #2a1400aa;
   background: radial-gradient(closest-side, #1c0d02d8, #1c0d02a0 55%, #1c0d0200);
 }
@@ -97,8 +97,9 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-clip-note[data-in] { opacity: 1; }
 .tc-overlay .lr-clip-note p {
-  position: absolute; inset: 0; margin: 0; padding: 30px 12px 0; box-sizing: border-box;
-  font-family: var(--lr-hand); font-size: 21px; line-height: 1.3; color: #24170f;
+  position: absolute; inset: 0; margin: 0; padding: 30px 10px 0; box-sizing: border-box;
+  /* A page on a prop: it grows with Text size only as far as it still fits the clipboard. */
+  font-family: var(--lr-hand); font-size: min(calc(24px * var(--lr-text-scale, 1)), 27px); line-height: 1.3; color: #24170f;
   background: linear-gradient(#f3e4c0, #e4cd98); border-radius: 2px; box-shadow: 0 1px 2px #0006;
   backface-visibility: hidden;
 }
