@@ -8,6 +8,13 @@ Design goals: each gem fits on one codex page; the whole thing is deterministic;
 always a whole number; order matters in ways a player can be told in one sentence ("amber
 before magenta").
 
+**Words the player sees (D-040 addendum 4).** This spec says "bolt", "fizzle", "stem" and
+"arms" because they are precise for engineers. On screen the one noun is **charge**: "the
+charge", "a double charge", "Charge entering any other side is lost". Tray tips, teach cards,
+verdicts, the Codex, the journal and FUSE's lines never say bolt, fizzle, stem or arms (nor
+"joined sides") unless the screen teaches the word first. The lightning you see is still drawn
+as a bolt; only the words change.
+
 ## 1. The altar
 
 - The altar is a grid of sockets, `W × H` = `6×4`, `8×6` or `10×8`. Cell `(x, y)`, `x` grows

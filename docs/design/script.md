@@ -306,7 +306,7 @@ FUSE's plate **[NEW]**:
 
 **Capacitor Bay** (until `altar:8x6`)
 
-> Capacitor bay. Double bolt, bigger altar. Saving for later. Later is the one thing this facility has in stock. **[NEW]**  
+> Capacitor bay. Double charge, bigger altar. Saving for later. Later is the one thing this facility has in stock. **[NEW]**  
 > <sub>`capacitor-bay.locked` · 19w</sub>
 
 **Roof Array** (until `gem:capacitor`)
@@ -482,7 +482,7 @@ FUSE's plate **[NEW]**:
 
 **Journal page 13** · Day 13,512 **[NEW]**
 
-> *Cut the ice one last. It holds a bolt for later. Ran the sums on later. Later is short.*
+> *Cut the ice one last. It holds a charge for later. Ran the sums on later. Later is short.*
 
 FUSE's plate **[NEW]**:
 
@@ -663,7 +663,7 @@ post: Builder, then foreman. Hobbies: Pending.):
 
 **`storm:2`**
 
-> Two rings. Wants a double bolt. Storm Cell II makes those. Under a tarp. Someone put a tarp on it. **[NEW]**  
+> Two rings. Wants a double charge. Storm Cell II makes those. Under a tarp. Someone put a tarp on it. **[NEW]**  
 > <sub>`socket.storm:2` · 20w</sub>
 
 **`storm:4`**
@@ -696,22 +696,22 @@ A breaker trip always gets an "over" line.
 
 **Tier 1, root fizzle: any gem facing away**
 
-> Bolt knocked on the back of a gem. Nobody answered. The gem has other priorities. **[NEW]**  
+> The charge knocked on the back of a gem. Nobody answered. The gem has other priorities. **[NEW]**  
 > <sub>`reaction.facing.t1.2` · 15w</sub>
 
 **Tier 1, root fizzle: empty socket**
 
-> Empty socket. The bolt stopped to ask directions. Nobody was there. Very on-brand for this facility. **[NEW]**  
+> Empty socket. The charge stopped to ask directions. Nobody was there. Very on-brand for this facility. **[NEW]**  
 > <sub>`reaction.empty.t1.1` · 16w</sub>
 
 **Tier 1, root fizzle: ran off the altar**
 
-> Bolt left the altar and went into the floor. The floor is fully charged now. Nobody asked the floor. **[NEW]**  
+> The charge left the altar and went into the floor. The floor is fully charged now. Nobody asked the floor. **[NEW]**  
 > <sub>`reaction.ground.t1.1` · 19w</sub>
 
 **Tier 1, root fizzle: carved stone**
 
-> Bolt met carved stone. Stone won. Stone usually wins. Long career. **[NEW]**  
+> The charge met carved stone. Stone won. Stone usually wins. Long career. **[NEW]**  
 > <sub>`reaction.blocked.t1.1` · 11w</sub>
 
 **Tier 1, root fizzle: odd charge into a Split**
@@ -726,12 +726,12 @@ A breaker trip always gets an "over" line.
 
 **Tier 1, root fizzle: a gem already spent**
 
-> Two bolts, one gem. First come, first served. The second bolt has filed a complaint. **[NEW]**  
+> Two charges, one gem. First come, first served. The second charge has filed a complaint. **[NEW]**  
 > <sub>`reaction.spent.t1.1` · 15w</sub>
 
 **Tier 1, dead**
 
-> Bolt went nowhere. Very calm about it. Regulation 4: nowhere is not a destination. **[NEW]**  
+> The charge went nowhere. Very calm about it. Regulation 4: nowhere is not a destination. **[NEW]**  
 > <sub>`reaction.dead.t1.1` · 14w</sub>
 
 **Tier 1, under**
@@ -746,7 +746,7 @@ A breaker trip always gets an "over" line.
 
 **Tier 2, dead**
 
-> Dead end. The bolt knew. You'll know next time. That's how it went the first time, too. **[NEW]**  
+> Dead end. The charge knew. You'll know next time. That's how it went the first time, too. **[NEW]**  
 > <sub>`reaction.dead.t2.1` · 17w</sub>
 
 **Tier 2, under**
@@ -803,7 +803,7 @@ A breaker trip always gets an "over" line.
 
 **capacitor**
 
-> Keeps a bolt for later. Ice keeps things. That's what ice is for. **[NEW]**  
+> Keeps a charge for later. Ice keeps things. That's what ice is for. **[NEW]**  
 > <sub>`codex.capacitor` · 13w</sub>
 
 ## At the altar

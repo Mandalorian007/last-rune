@@ -1,8 +1,9 @@
 /**
- * Codex bolt diagrams (pure data): for each gem at rotation 0 (as the Codex portrait shows
- * it), where a 1× bolt (4 sparks) goes in, where it comes out and with what charge, and which
- * sides make it fizzle. Matches docs/design/rules.md §4; `codex-diagram.test.ts` checks the
- * sides against the simulator's `acceptMask`.
+ * Codex charge diagrams (pure data): for each gem at rotation 0 (as the Codex portrait shows
+ * it), where a 1× charge (4 sparks) goes in, where it comes out and with how much, and which
+ * sides lose it (the red ✕). Matches docs/design/rules.md §4 (whose "bolt" and "fizzle" the
+ * player reads as "charge" and "lost"); `codex-diagram.test.ts` checks the sides against the
+ * simulator's `acceptMask`. The `alt` text is player-facing: it says "charge", never "bolt".
  */
 import type { Dir, GemKind } from '../rules/types';
 
@@ -15,7 +16,7 @@ export interface DiagramArrow {
 export interface GemDiagram {
   readonly ins: readonly DiagramArrow[];
   readonly outs: readonly DiagramArrow[];
-  /** Sides that fizzle the bolt (drawn as a red ✕, as in the altar preview). */
+  /** Sides where the charge is lost (drawn as a red ✕, as in the altar preview). */
   readonly fizzle: readonly Dir[];
   /** The picture in words, for screen readers. */
   readonly alt: string;

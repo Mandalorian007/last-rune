@@ -38,7 +38,7 @@ export default definePuzzle({
   tray: { channel: 9, bend: 3, split: 3, amplify: 1, capacitor: 1 },
   pulses: 2,
   insight:
-    'Amplify the bolt you bank: the ice keeps the amber’s work, and the emerald adds it to the rest.',
+    'Amplify the charge you bank: the ice keeps the amber’s work, and the emerald adds it to the rest.',
   minutes: 8,
   assumes: [
     gem('bend'),

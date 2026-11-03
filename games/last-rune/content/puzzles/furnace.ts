@@ -11,7 +11,7 @@ export default definePuzzle({
   storm: stormAt('W', 0, '6x4'),
   machines: [machineAt('E', 3, '6x4', 8)],
   tray: { channel: 7, bend: 4 },
-  insight: 'Amber doubles a bolt: the short road reads half, so bend through one amber.',
+  insight: 'Amber doubles a charge: the short road reads half, so bend through one amber.',
   minutes: 2,
   assumes: [gem('bend')],
   essential: ['bend'],
