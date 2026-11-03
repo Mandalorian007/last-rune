@@ -18,6 +18,13 @@ const VIEWPORTS = (process.env.PT_VIEWPORTS ?? '1280x720,1920x1080').split(',').
   return { width, height };
 });
 
+/** The slice of the save this spec seeds (the dev handle is untyped). */
+interface SeedSave {
+  flags: { hallIntro: boolean };
+  settings: { captionSpeed: string };
+  progress: { solved: string[] };
+}
+
 /** Which gems to show on which altar (tray counts permitting). */
 const SHEETS: { machine: MachineId; gems: { gem: GemKind; rot: Rot }[] }[] = [
   {
@@ -86,10 +93,10 @@ for (const vp of VIEWPORTS) {
       (ids) => {
         // biome-ignore lint/suspicious/noExplicitAny: dev handle
         const g = (window as any).__game;
-        g.save.update((d: any) => {
+        g.save.update((d: SeedSave) => {
           d.flags.hallIntro = true;
           d.settings.captionSpeed = 'instant';
-          d.progress.solved = ids.filter((id: string) => id !== 'the-last-rune');
+          d.progress.solved = ids.filter((id) => id !== 'the-last-rune');
         });
         g.flow.continueGame();
       },
