@@ -7,6 +7,7 @@ import type { DrawParams, Frame, Material, Renderer, RGBA, Texture } from '@engi
 import {
   LIT_SURFACE_WGSL,
   SOCKET_WGSL,
+  SOLID_BITS,
   STONE_ALBEDO_WGSL,
   STONE_GEN_FLOATS,
   STONE_MODE,
@@ -130,9 +131,17 @@ export function createStoneFloor(renderer: Renderer, opts: StoneOptions = {}): S
 
 /**
  * `rim` and `plate` are the phone looks (mobile-3-board): a faint pale lip on an open socket,
- * and a blocked socket as a plain recessed plate (no carved X).
+ * and a blocked socket as a plain recessed plate (no carved X). `collar` is a fixed gem's
+ * bolted iron ring (mobile-4-board).
  */
-export type SocketState = 'empty' | 'blocked' | 'highlighted' | 'wanted' | 'rim' | 'plate';
+export type SocketState =
+  | 'empty'
+  | 'blocked'
+  | 'highlighted'
+  | 'wanted'
+  | 'rim'
+  | 'plate'
+  | 'collar';
 
 const SOCKET_STATE_ID: Record<SocketState, number> = {
   empty: 0,
@@ -141,7 +150,25 @@ const SOCKET_STATE_ID: Record<SocketState, number> = {
   wanted: 3,
   rim: 4,
   plate: 5,
+  collar: 6,
 };
+
+/**
+ * The altar bake's solid-cell mask: bit (y·cols + x) set for every cell carved with no socket,
+ * 24 cells per float (4 floats hold a 10×8 board). Pure, for tests.
+ */
+export function solidMask(
+  cols: number,
+  cells: readonly { x: number; y: number }[],
+): [number, number, number, number] {
+  const m: [number, number, number, number] = [0, 0, 0, 0];
+  for (const c of cells) {
+    const i = c.y * cols + c.x;
+    const w = Math.floor(i / SOLID_BITS);
+    if (w < 4) m[w] = m[w]! + 2 ** (i % SOLID_BITS);
+  }
+  return m;
+}
 
 export interface AltarOptions {
   cols: number;
@@ -153,6 +180,8 @@ export interface AltarOptions {
   /** Height of the front face in px. Default 0.42 × pitch. */
   front?: number;
   seed?: number;
+  /** Cells carved solid, with no socket at all (phones: blocked cells, mobile-4-board). */
+  solid?: readonly { x: number; y: number }[];
 }
 
 /**
@@ -191,6 +220,7 @@ export class AltarSlab {
     u.set([this.width, h, opts.seed ?? 3, STONE_MODE.altar]);
     u.set([this.cols, this.rows, this.pitch, this.margin], 4);
     u.set([this.frontHeight, this.socketRadius, this.topHeight, 0], 8);
+    u.set(solidMask(this.cols, opts.solid ?? []), 12);
     const t = bake(renderer, 'altar', this.width, h, u);
     this.surface = new StoneSurface(renderer, t.albedo, t.normal, this.width, h, 'altar');
     this.socketMat = renderer.createMaterial({
