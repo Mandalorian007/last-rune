@@ -210,3 +210,30 @@ Format: `D-NNN · date · decision · why · who`.
       - The end card gets contrast and spacing.
       - The journal arrows sit near the book.
     - **Gate unchanged:** ≥8/10 average with no blocker or major issue.
+
+## D-041: ThunderClap engine refactor adopted; v1.0 ships desktop and iPad first (2026-11-03, user + PM)
+- **User direction (2026-11-03):** a major vision shift. Prepare the engine we will extract from this project for high-value future work, while still optimizing Last Rune for all kinds of platforms, wrappers and screen sizes. The user's plan is the Claude Doc "ThunderClap Engine Refactor Plan", imported to [engine/refactor-plan.md](engine/refactor-plan.md). The PM still organizes the work.
+- **Agent cap raised:** up to 10 top-level agents, plus whatever each one spawns (user).
+- **Phases** run in order, each ending at a gate the PM logs in STATUS.md:
+  - 0: ship v1.0 and freeze;
+  - 1: workspace, host layer and promotions;
+  - 2: gestures, layout regions and phones (Last Rune 1.1);
+  - 3: a 3D-ready render core with a 2D preset;
+  - 4: Electron host (may run alongside 3);
+  - 5: extraction.
+  - The 3D and XR seams are built; 3D and XR content are out of scope until after Gate 5.
+- **Phase 0, PM calls:**
+  - mobile-7 lands where it stands: ending, strike, zoom and hall are merged. teach merges if green, otherwise its branch is parked.
+  - **Gate review 5 is cancelled.** The D-040 phone gate moves to Gate 2 and judges the new layout model, not more patches on the scaled overlay.
+  - v1.0 is for desktop and iPad. The current phone build stays reachable as it is and is not advertised.
+  - v1.0 is released per shipping-itch.md: GitHub Release, tags `v1.0.0` and `engine-v0.1` on the same commit, and Pages.
+  - **The itch upload stays manual, with the user (D-012).** It does not block Phase 1. Phase 1 starts once the tags and baselines are on main.
+  - **Committed baselines:** the regression baselines in `docs/design/screens/v1.0/` are an exception to "don't commit images". They cover every scene at 1280×720, 1920×1080 and iPad, with e2e timings and perf numbers. They are kept small, and nothing else in screens/ is committed.
+- **Defaults for the plan's open questions** (the user can override any of them):
+  - package scope `@thunderclap/engine`;
+  - the registry is decided at Phase 5;
+  - Electron ships unsigned until the user has certificates;
+  - portrait phones are a Phase 2 `LayoutSpec` form factor:
+    - the chrome must work in portrait;
+    - the altar in portrait is best effort and does not gate 1.1;
+    - landscape stays the must (D-039).

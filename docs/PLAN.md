@@ -30,13 +30,36 @@
 | M3 | Content complete (wave 3) | ✅ done | All 16 machines playable at the altar; dressed hall with distinct machine silhouettes; Journal, FUSE lines, Ending and Discord door; audio; storm/mist/candles |
 | M3α | **Alpha release: GitHub Pages** | ✅ alpha-1 (2026-11-02) | Pages already deploys on every push (D-023). Alpha = labelled run (`alpha-1`), `VITE_RELEASE_LABEL` on the title, GitHub pre-release, playtest link to the user |
 | M4 | Polish + playtest | ⏳ | Solver-driven full-run playtest, perf pass (incl. integrated GPU), a11y pass, difficulty-fun phase 2, bug bash, user feedback items closed |
-| M5 | **Release: GitHub Pages v1.0** (PM's finish line) | ⏳ | Polished build live on Pages, GitHub Release + `v1.0.0` and `engine-v0.1` tags, itch zip + page copy + devlog draft prepared for the user |
+| M5 | **Release: GitHub Pages v1.0** (PM's finish line; desktop + iPad per D-041) | 🟡 Phase 0 | Polished build live on Pages, GitHub Release + `v1.0.0` and `engine-v0.1` tags, itch zip + page copy + devlog draft prepared for the user |
 | — | itch.io launch (manual, with user) | ⏳ | User uploads with PM's runbook; not an agent task (D-012) |
 
 ## Fun and difficulty (continuous, D-021)
 A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 through M4: a difficulty model and novice bot, a target curve, puzzle retunes, a dev puzzle viewer, then a playtest loop (local-only metrics, FUSE hint ladder) after the alpha. Exit criteria for M4 include: user playtest confirms the curve feels right, no puzzle is an outlier against its target, and the finale is the hardest and most satisfying.
 
-## Waves (max 5 parallel top-level agents)
+## ThunderClap engine roadmap (D-041)
+Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up to 10 top-level agents. Phases run in order, each with a gate; Phase 4 may run alongside 3.
+
+| # | Workstream | Branch | Phase | Depends on | State |
+|---|---|---|---|---|---|
+| 1 | Ship v1.0 (desktop + iPad), tags `v1.0.0` + `engine-v0.1`, baselines | main / ws/v1-baselines | 0 | mobile-7 landed | 🟡 |
+| 2 | Workspace + `@thunderclap/engine` package + ARCHITECTURE.md | ws/workspace | 1 | 1 | ⏳ |
+| 3 | Host layer (web) | ws/host | 1 | 2 | ⏳ |
+| 4 | Promote menu-nav, text-scale, device-mode, rotate card, camera2d | ws/promote-ui | 1 | 2 | ⏳ |
+| 5 | `createGame()` from game/ctx.ts | ws/create-game | 1 | 3, 4 | ⏳ |
+| 6 | Gestures | ws/gestures | 2 | 5 | ⏳ |
+| 7 | Layout regions + overlay in CSS px | ws/layout | 2 | 5 | ⏳ |
+| 8 | Port title, hall, settings, journal, codex, ending | ws/port-chrome | 2 | 6, 7 | ⏳ |
+| 9 | Port altar; delete phone-styles.ts (→ Last Rune 1.1, phones; D-040 gate) | ws/port-altar | 2 | 8 | ⏳ |
+| 10 | Camera + math | ws/camera | 3 | 9 | ⏳ |
+| 11 | Transforms + layer/depth sort | ws/transforms | 3 | 9 | ⏳ |
+| 12 | `render(camera, target)` | ws/render-call | 3 | 10, 11 | ⏳ |
+| 13 | Port game shaders to camera block | ws/port-shaders | 3 | 12 | ⏳ |
+| 14 | `?demo=mesh` | ws/demo-3d | 3 | 13 | ⏳ |
+| 15 | host-electron package + builds | ws/host-electron | 4 | 3 | ⏳ |
+| 16 | Last Rune desktop boot + e2e | ws/last-rune-desktop | 4 | 15 | ⏳ |
+| 17 | Extract engine repo, publish engine-v1.0.0 | engine repo | 5 | 13, 16, Forgewilds ws 1 | ⏳ |
+
+## Waves (Last Rune waves 1–5; up to 10 top-level agents from D-041)
 
 | Wave | Workstreams | State |
 |---|---|---|
@@ -44,7 +67,7 @@ A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 t
 | 2 Playable vertical | game-shell, art-materials, audio-design, difficulty-fun (phase 1), art-props | ✅ merged |
 | 3 Content complete | altar-scene, hall-art, story-scenes | ✅ merged |
 | 4 Alpha + verify | hall-floor ✅, altar-clarity ✅, full-run ✅ (keyboard e2e through all 16 + playtest report), engine-cleanup ✅, engine-adoption ✅, then the playtest fixes before alpha: caption-layout ✅, altar-polish ✅; release label on title ✅; then the M3α pre-release | ✅ merged |
-| 5 Polish | perf-tiers ✅, a11y ✅, polish-1 ✅, first-altar ✅, onboarding-2 ✅, title-fuse ✅, split-rotate ✅, turn-2 ✅, turn-clarity ✅, capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅, link-copy ✅, candle-light ✅, difficulty-2 ✅ (D-037), bug-bash ✅, perf-low ✅, finish-1 ✅, screens pruned ✅; remaining: user playtest check, minor backlog | ✅ polish round 2: tidy-2, newcomer-2, newcomer-3; ✅ ending-3 (D-038); ✅ tidy-3 (last minor items); ✅ lore-1 (make the twist land); 🟡 phones (D-039): mobile-perf ✅, mobile-ui ✅ but unplayable on a real phone → mobile-2 ✅ (PM blind review 6/10) → mobile-3 ✅ board / chrome ✅ / ending ✅ → gate review 1 6.25/10 ✗ → mobile-4 ✅ board / ✅ chrome → gate review 2 6.25/10 ✗ → mobile-5 ✅ board / ✅ moments / ✅ chrome → gate review 3 6.1/10 ✗ → mobile-6 ✅ zoom / ✅ board / ✅ moments / ✅ chrome → integration ✅ → gate review 4 ❌ 6.4 → mobile-7 🟡 (zoom / teach / strike / hall / ✅ ending) → gate review 5 (D-040; gate ≥8/10 blind review, then user retest); user playtest when ready |
+| 5 Polish | perf-tiers ✅, a11y ✅, polish-1 ✅, first-altar ✅, onboarding-2 ✅, title-fuse ✅, split-rotate ✅, turn-2 ✅, turn-clarity ✅, capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅, link-copy ✅, candle-light ✅, difficulty-2 ✅ (D-037), bug-bash ✅, perf-low ✅, finish-1 ✅, screens pruned ✅; remaining: user playtest check, minor backlog | ✅ polish round 2: tidy-2, newcomer-2, newcomer-3; ✅ ending-3 (D-038); ✅ tidy-3 (last minor items); ✅ lore-1 (make the twist land); 🟡 phones (D-039): mobile-perf ✅, mobile-ui ✅ but unplayable on a real phone → mobile-2 ✅ (PM blind review 6/10) → mobile-3 ✅ board / chrome ✅ / ending ✅ → gate review 1 6.25/10 ✗ → mobile-4 ✅ board / ✅ chrome → gate review 2 6.25/10 ✗ → mobile-5 ✅ board / ✅ moments / ✅ chrome → gate review 3 6.1/10 ✗ → mobile-6 ✅ zoom / ✅ board / ✅ moments / ✅ chrome → integration ✅ → gate review 4 ❌ 6.4 → mobile-7 ✅ zoom / 🟡 teach / ✅ strike / ✅ hall / ✅ ending → D-041: gate review 5 cancelled; phones move to Last Rune 1.1 on the engine layout model (Phase 2, D-040 gate there); user playtest when ready |
 | 6 Ship | v1.0.0 release, tags, itch kit | ⏳ |
 
 ## User feedback backlog
@@ -65,7 +88,7 @@ Each item stays here until it is verified in a merged build. The owning workstre
 | 2026-11-02 | Candles overwhelm the selectable-item highlight: tone down, or make them a warm flicker | candle-light (PM judgement: both; selection always brightest) | ✅ merged; awaiting user check |
 | 2026-11-02 | The FUSE-is-the-Builder twist isn't obvious: "I didn't even pick up on that twist" | User: keep the lore, make it easier to catch. PM: lore-1 (FUSE says it once plainly, page 16 signature reads as his, clues ramp through tiers 2–3) | ✅ |
 | 2026-11-03 | Support phones: "it's fine if it's horizontal only, but both would be cool" | D-039: landscape is a must, portrait where clear. mobile-ui (layout + touch) and mobile-perf (GPU/memory/audio/lifecycle) | ✅ merged; real-device check pending |
-| 2026-11-03 | Real phone: "absolutely unplayable… help menus cover the full screen… bottom buttons go almost to the center… text boxes are huge wrapping messes" | mobile-2: a phone layout designed for phones (not inflated desktop), hard space budgets, realistic Safari viewports; PM reviews contact sheets, not rules | ✅ merged. PM blind review 6/10 → mobile-3 (D-040) ✅ merged; gate review 1 6.25/10 → mobile-4 ✅ merged; gate review 2 6.25/10 → mobile-5 ✅ merged; gate review 3 6.1/10 → gate 4 ❌ 6.4; mobile-7 running (ending ✅), then gate review 5 |
+| 2026-11-03 | Real phone: "absolutely unplayable… help menus cover the full screen… bottom buttons go almost to the center… text boxes are huge wrapping messes" | mobile-2: a phone layout designed for phones (not inflated desktop), hard space budgets, realistic Safari viewports; PM reviews contact sheets, not rules | ✅ merged. PM blind review 6/10 → mobile-3 (D-040) ✅ merged; gate review 1 6.25/10 → mobile-4 ✅ merged; gate review 2 6.25/10 → mobile-5 ✅ merged; gate review 3 6.1/10 → gate 4 ❌ 6.4; mobile-7 landed (teach pending); D-041 moves phones to 1.1 on the engine layout model |
 
 ## Playtest findings (full-run report, docs/design/playtest-report.md)
 | Sev | Finding | Owner |
