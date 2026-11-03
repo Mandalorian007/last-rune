@@ -114,3 +114,4 @@ Format: `D-NNN · date · decision · why · who`.
     - **Hangout.** It has no inert input on phones.
     - **Hall.** The hall's welcome line must agree with the Start here marker.
     - **Next.** mobile-4-board and mobile-4-chrome, then gate review 2.
+    - mobile-4-board result: the fixed-gem treatment is a dark iron collar with four rivets (overlay state `collar`) on all platforms; dashed brackets are retired. The unused phone `plate` socket state may be deleted in a later tidy.
