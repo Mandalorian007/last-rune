@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-02 by PM_
 
-**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 PM-judgement polish round ✅ (candle-light, difficulty-2/D-037, bug-bash, perf-low, finish-1); waiting on user playtest, then wave 6 ship. Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅ (D-032–D-035). All polish merged (ending-3, tidy-3, lore-1); user playtesting. Phone support (D-039): mobile-2 phone layout merged; waiting on user's real-phone retest. v1.0 waits on it. Then wave 6 ship. Firefox not a target. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
+**Current milestone:** M3α ✅ alpha-1 live (pre-release `alpha-1`). Wave 5 PM-judgement polish round ✅ (candle-light, difficulty-2/D-037, bug-bash, perf-low, finish-1); waiting on user playtest, then wave 6 ship. Wave 5 polish: perf-tiers ✅, a11y ✅, polish-1 ✅, altar input/Split rework ✅ (D-029–D-031), zoom fix ✅; capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅ (D-032–D-035). All polish merged (ending-3, tidy-3, lore-1); user playtesting. Phone support (D-039): mobile-2 phone layout merged. PM screenshot review (4 independent reviewers, all 16 altars, 4 phone viewports) scored it 6/10, acceptable but not polished; findings with user for review before a mobile-3 pass. v1.0 waits on it. Then wave 6 ship. Firefox not a target. Roadmap, wave plan and user feedback backlog: [PLAN.md](PLAN.md).
 
 | Workstream | Branch | State | Notes |
 |---|---|---|---|
