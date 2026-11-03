@@ -291,6 +291,12 @@ const CSS = /* css */ `
   background: radial-gradient(closest-side, #05060ab0, #05060a70 70%, #05060a00);
 }
 .tc-overlay .lr-altar-hint b { color: #e8c06a; font-weight: 600; }
+/* The phone loupe (engine Loupe, fixed, outside the scaled overlay; CSS px). */
+.lr-loupe {
+  z-index: 30; border-radius: 50%; overflow: hidden; border: 3px solid #e8c06a; box-sizing: border-box;
+  background: #000; box-shadow: 0 6px 22px rgba(0,0,0,0.7), 0 0 0 1px #000; transition: opacity 0.15s ease-out;
+}
+[data-reduced-motion] .lr-loupe { transition: none; }
 [data-reduced-motion] .tc-overlay .lr-altar-verdict,
 [data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-turn-arrow,
 [data-reduced-motion] .tc-overlay .lr-altar-cap,

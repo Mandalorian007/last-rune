@@ -173,7 +173,7 @@ test('a gem in hand turns by ↻ before it is placed; dragging a placed gem off 
   const L = computeLayout(p);
   const slot = L.tray.find((s) => s.gem === 'bend')!;
   await tapAt(page, slot.x, slot.y);
-  await expect(page.locator('.lr-altar-turnmark')).toBeVisible();
+  await expect(page.locator('.lr-altar-turnbtn')).toBeVisible();
   await page.locator('.lr-altar-turnbtn').tap();
   await page.locator('.lr-altar-turnbtn').tap();
   const cell = { x: 1, y: 3 };
@@ -205,6 +205,78 @@ test('a gem in hand turns by ↻ before it is placed; dragging a placed gem off 
   await expect.poll(async () => (await readSave(page))?.puzzles.furnace?.placements.length).toBe(0);
 });
 
+/**
+ * Altar collisions: any two of the HUD and altar texts and controls (HUD and action buttons,
+ * title, hint, need labels, tray counts, ↻ Turn, verdict, gem card, FUSE's caption) whose boxes
+ * overlap, or any of them on a tray gem. Text boxes are the text itself (a Range), not padding.
+ * A tray count sits on its own gem by design.
+ */
+async function overlapProblems(page: Page, id: MachineId): Promise<string[]> {
+  const L = computeLayout(puzzleFor(id));
+  const tray = L.tray.map((t) => ({ name: `tray gem ${t.gem}`, x: t.x, y: L.trayY }));
+  return page.evaluate((tray) => {
+    type B = { name: string; l: number; t: number; r: number; b: number; el?: Element };
+    const out: string[] = [];
+    const ov = document.querySelector<HTMLElement>('.tc-overlay')!;
+    const o = ov.getBoundingClientRect();
+    const k = o.width / 1920;
+    const shown = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && Number(cs.opacity) > 0.05;
+    };
+    const textBox = (el: Element) => {
+      const rg = document.createRange();
+      rg.selectNodeContents(el);
+      return rg.getBoundingClientRect();
+    };
+    const boxes: B[] = [];
+    const add = (sel: string, name: string, text: boolean) => {
+      for (const el of document.querySelectorAll(sel)) {
+        if (!shown(el) || el.closest('[hidden]')) continue;
+        // Text: the glyphs themselves, but a box that clips its text still shows only the box.
+        const e = el.getBoundingClientRect();
+        const r = text && getComputedStyle(el).overflow === 'visible' ? textBox(el) : e;
+        if (r.width === 0) continue;
+        const label = `${name} "${(el.textContent ?? '').trim().slice(0, 18)}"`;
+        boxes.push({ name: label, l: r.left, t: r.top, r: r.right, b: r.bottom, el });
+      }
+    };
+    add('.lr-hud button', 'hud', false);
+    add('.lr-altar-actions button', 'action', false);
+    add('.lr-altar-title h2', 'title', true);
+    add('.lr-altar-hint', 'hint', true);
+    add('.lr-altar-need', 'label', false);
+    add('.lr-altar-count', 'count', false);
+    add('.lr-altar-turnbtn', 'turn', false);
+    add('.lr-altar-verdict', 'verdict', false);
+    add('.lr-altar-tip', 'card', false);
+    add('.tc-caption', 'caption', false);
+    const gems: B[] = tray.map((g) => ({
+      name: g.name,
+      l: o.left + (g.x - 40) * k,
+      r: o.left + (g.x + 40) * k,
+      t: o.top + (g.y - 44) * k,
+      b: o.top + (g.y + 40) * k,
+    }));
+    const hit = (a: B, b: B) =>
+      Math.min(a.r, b.r) - Math.max(a.l, b.l) > 1 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 1;
+    for (let i = 0; i < boxes.length; i++) {
+      const a = boxes[i]!;
+      if (a.l < o.left - 1 || a.r > o.right + 1 || a.t < o.top - 1 || a.b > o.bottom + 1)
+        out.push(`${a.name} off screen`);
+      for (let j = i + 1; j < boxes.length; j++) {
+        const b = boxes[j]!;
+        if (a.el?.contains(b.el ?? null) || b.el?.contains(a.el ?? null)) continue;
+        if (hit(a, b)) out.push(`${a.name} × ${b.name}`);
+      }
+      if (a.name.startsWith('count')) continue;
+      for (const g of gems) if (hit(a, g)) out.push(`${a.name} × ${g.name}`);
+    }
+    return out;
+  }, tray);
+}
+
 /** Text under 14 CSS px, and buttons whose finger target is under 44 CSS px, in view now. */
 async function fitProblems(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -215,10 +287,13 @@ async function fitProblems(page: Page): Promise<string[]> {
       const cs = getComputedStyle(el);
       return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && Number(cs.opacity) > 0;
     };
+    // Overlay font sizes are design px; the overlay is scaled to the screen.
+    const ov = document.querySelector<HTMLElement>('.tc-overlay')!;
+    const k = ov.getBoundingClientRect().width / ov.offsetWidth;
     for (const el of document.querySelectorAll<HTMLElement>('.tc-overlay *')) {
       if (!visible(el) || el.closest('.tc-sr-only,[aria-hidden="true"]')) continue;
       const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim());
-      const fs = Number.parseFloat(getComputedStyle(el).fontSize);
+      const fs = Number.parseFloat(getComputedStyle(el).fontSize) * k;
       if (own && fs < 13.5)
         out.push(`text ${fs.toFixed(1)}px: ${el.textContent?.trim().slice(0, 30)}`);
     }
@@ -285,6 +360,8 @@ for (const vp of [
       }, id);
       await expect(page.locator('.lr-altar')).toBeVisible();
       await check(id);
+      const o = await overlapProblems(page, id);
+      if (o.length) found[`${id} overlaps`] = o;
       await page.evaluate(() =>
         (window as unknown as { __game: GameHandle }).__game.flow.closePuzzle(),
       );
@@ -305,4 +382,80 @@ test('upright, the phone shows the turn-sideways card; turning it back hides it'
   await expect(card).toContainText('Turn your phone sideways');
   await page.setViewportSize(PHONE);
   await expect(card).toBeHidden();
+});
+
+test('the Last Rune at 667×375: a finger drag from the tray shows the loupe and lands on the meant socket', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 667, height: 375 });
+  await boot(
+    page,
+    MACHINE_IDS.filter((m) => m !== 'the-last-rune'),
+  );
+  await openAltar(page, 'the-last-rune');
+  const p = puzzleFor('the-last-rune');
+  const L = computeLayout(p);
+  const box = (await page.locator('.tc-overlay').boundingBox())!;
+  const k = box.width / 1920;
+  // Sockets here are under 44 CSS px apart: the loupe's whole reason.
+  expect(L.pitch * k).toBeLessThan(44);
+  // A gem the design puts high enough on the board that the finger, 56 CSS px under the aim,
+  // is still on the screen.
+  const g = p.design.intended.find((q) => q.cell.y <= 3)!;
+  const slot = L.tray.find((s) => s.gem === g.gem)!;
+  const target = { x: 0, y: 0 };
+  cellCenter(L, g.cell as Cell, target);
+  const client = (x: number, y: number) => ({ x: box.x + x * k, y: box.y + y * k });
+  const from = client(slot.x, slot.y);
+  // The finger ends 56 CSS px below the socket, a third of a pitch off to the side.
+  const aim = client(target.x + L.pitch * 0.3, target.y);
+  const end = { x: aim.x, y: aim.y + 56 };
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: type === 'touchEnd' ? [] : [{ x, y }],
+    });
+  const loupe = page.locator('.lr-loupe');
+  await touch('touchStart', from.x, from.y);
+  await waitFrames(page, 3);
+  for (let i = 1; i <= 10; i++) {
+    await touch(
+      'touchMove',
+      from.x + (end.x - from.x) * (i / 10),
+      from.y + (end.y - from.y) * (i / 10),
+    );
+    await waitFrames(page, 1);
+  }
+  await waitFrames(page, 3);
+  await expect(loupe).toHaveAttribute('data-on', '');
+  await expect(loupe).toHaveCSS('opacity', '1');
+  await expect(page.locator('.lr-altar')).toHaveAttribute('data-loupe', `${g.cell.x},${g.cell.y}`);
+  // The loupe sits beside the finger, not under it, and stays on screen.
+  const lb = (await loupe.boundingBox())!;
+  expect(
+    end.x >= lb.x && end.x <= lb.x + lb.width && end.y >= lb.y && end.y <= lb.y + lb.height,
+  ).toBe(false);
+  expect(lb.x).toBeGreaterThanOrEqual(0);
+  expect(lb.y).toBeGreaterThanOrEqual(0);
+  expect(lb.x + lb.width).toBeLessThanOrEqual(667);
+  // It shows the board, not a dark disc (a WebGPU canvas copied at the wrong moment is blank).
+  const lit = await loupe.evaluate((el) => {
+    const cv = el.querySelector('canvas')!;
+    const d = cv.getContext('2d')!.getImageData(0, 0, cv.width, cv.height).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i]! + d[i + 1]! + d[i + 2]! > 120) n++;
+    return n / (d.length / 4);
+  });
+  expect(lit).toBeGreaterThan(0.05);
+  await page.screenshot({
+    path: 'docs/design/screens/local/mobile-ui/667x375/13-altar-the-last-rune-loupe.png',
+  });
+  await touch('touchEnd');
+  await waitFrames(page, 3);
+  await expect(loupe).not.toHaveAttribute('data-on', '');
+  await expect(loupe).toHaveCSS('opacity', '0');
+  await expect
+    .poll(async () => (await readSave(page))?.puzzles['the-last-rune']?.placements ?? [])
+    .toContainEqual({ gem: g.gem, cell: g.cell, rot: 0 });
 });

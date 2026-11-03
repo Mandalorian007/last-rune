@@ -89,7 +89,7 @@ All phone CSS is in `ui/phone-styles.ts`, scoped to those flags. Desktop is unch
 |---|---|
 | A1 | Every scaled font size floors at `--lr-text-min` (text-scale.ts), so overlay text is never under 14 CSS px on a phone. |
 | A2, A3, A8–A14 | Phone sizes for HUD, altar actions, Settings, Codex, journal, title links, solve card and end card. Every button and link gets an invisible hit area of at least 44 CSS px (a `::before`). The journal slips are the exception: they keep their exact 16 px rows so neighbours don't steal taps, and the big page arrows turn pages instead. In the hall, the HUD moves to the bare floor bottom-left; on the solve card it hides. |
-| A4 | Board zoom was not built (open item). Instead, a finger drag aims 56 CSS px above the fingertip, so you can see the socket you're aiming at, and the gem places on release (lift your finger anywhere else and it stays in hand). Tray slots and 6×4 boards are tappable; 8×6 boards are tight; the Last Rune is fiddly. |
+| A4 | Small boards are handled by the loupe and snap (see the review fixes below). Also, a finger drag aims 56 CSS px above the fingertip, so you can see the socket you're aiming at, and the gem places on release (lift your finger anywhere else and it stays in hand). Tray slots and 6×4 boards are tappable; 8×6 boards are tight; the Last Rune is fiddly. |
 | A5 | **Turning by touch:** a docked **↻ Turn** button sits right of the tray, with a small ↻ mark on the gem it will turn. Its target is the turning gem you last placed, or one you long-pressed; otherwise the turning gem in your hand. The mark doesn't take taps, and tapping a gem only ever picks it up (D-029). **Removing:** drag a placed gem off the altar, or use Undo or Clear. **Info card:** a long press (0.45 s) on a placed gem shows its card and selects it for ↻. The held gem's card shows for 2.5 s after you pick it up, then steps aside. |
 | A6 | With touch on, key caps hide and the wording changes. Hint: "Tap a gem, then a socket · ↻ turns it". Card tags: "tap ↻ to turn" / "drag off the altar to remove". FUSE and verdict lines say "the ↻ button" instead of "R or Q". The old R/Scroll badge hides. |
 | A7 | A finger that has lifted no longer counts as hovering: no ghost or route preview stays behind. |
@@ -108,6 +108,22 @@ Tests: `tests/e2e/mobile.spec.ts` runs at 844×390 with `isMobile`, `hasTouch` a
 
 Screens (local, not committed): `docs/design/screens/local/mobile-ui/{844x390,667x375,390x844}/`. Touch states: `12-altar-relay-tower-touch-held.png` and `12-altar-relay-tower-touch-placed.png`.
 
+### 2026-11-03 · PM review fixes
+
+| Item | What changed |
+|---|---|
+| Big boards (archive, control booth, Last Rune) at 844×390 and 667×375 | On phones the altar title moves to the right, under the button row, on one line (its desktop `max-width` is lifted, which had clipped "The Last Rune"). The tray hint sits above the tray, not over the gems, and hides while a gem card is up. FUSE's caption was choosing its corner from where the HUD stood in the hall, before the altar moved it. It now re-measures for a few frames after entering, and measures the hint by its real box, so it no longer lands on the HUD or the need labels. |
+| Gem card against FUSE's caption | A phone's caption is wider than the lane the layout keeps for it. The tray card now stops at the caption's measured left edge, narrows (and wraps) to fit the gap, and re-fits when FUSE starts talking. The ↻ mark on the gem in hand waits until the card has gone, because the card covers it. Desktop is unchanged: there the gap (720) is wider than the card (600). |
+| Fit test | The text-size rule now applies the overlay's scale, as it should have done before. It still passes. A new overlap rule, per altar at both sizes, checks that no HUD text (title, hint, need labels, counts, buttons, verdict, gem card, caption) overlaps another or a tray gem, and that none runs off screen. |
+| Loupe (PM decision; altar layout unchanged) | `engine/ui/loupe.ts` (`Loupe`, no game nouns) is a round 2.5× magnifier. It copies a patch of the WebGPU canvas into a 2D canvas in a microtask after the frame renders; copied any earlier, the frame comes out blank. On phones, when socket pitch is under 44 CSS px, it shows while a finger drags a gem or holds one to aim. It sits above and beside the finger, toward the screen's middle, rings the target socket, and fades out on lift (0.15 s; instant with reduced motion). It is styled by `.lr-loupe`. |
+| Snap | While aiming with a gem in hand by touch, the aim snaps to the nearest open socket (not blocked, not fixed) within half a pitch (`snapCell` in layout.ts, with unit tests in `snap.test.ts`). |
+| Captures | Every altar shot is now taken after a touch input (`data-touch` on), as on a real phone. A real phone is touch from boot (`isTouchOnly`), so no pre-touch shot is kept. |
+| FUSE lines | Unchanged (PM: keep the text). |
+
+New e2e: on the Last Rune at 667×375, a finger drag from the tray shows the loupe (on, lit, beside the finger, on screen), lands on the intended socket, and the loupe hides on lift.
+
+Screens: `{844x390,667x375}/10-altar-*.png`, `11-altar-relay-tower-verdict.png`, `12-altar-relay-tower-touch-{held,placed}.png`, `667x375/13-altar-the-last-rune-loupe.png`.
+
 ### Real-device checklist (for the user)
 
 **iPhone Safari** (landscape, and once from the itch page):
@@ -118,13 +134,13 @@ Screens (local, not committed): `docs/design/screens/local/mobile-ui/{844x390,66
 5. Furnace: place a Bend, tap ↻ Turn, and watch it turn. Long-press a placed gem to see its card. Drag a gem off the altar to remove it.
 6. Double-tap and pinch don't zoom. Pull-down doesn't reload. A long press doesn't select text or open a callout.
 7. Codex: tabs and Close work. Journal: the arrows turn pages. Settings: the sliders drag.
-8. Archive (8×6): you can land a gem on the socket you mean. Note how the Last Rune feels.
+8. Archive (8×6) and the Last Rune: drag a gem slowly over the board. A round magnifier appears beside your finger with the target socket ringed, and the gem lands on that socket when you lift. Check the magnifier shows the board and not a black disc.
 
 **Android Chrome**: all of the above, plus:
 9. The Full screen button shows on the title. Tapping it fills the screen and stays landscape. Back exits it.
 10. Rotate while in an altar: the layout re-fits with nothing lost.
 
 ### Open items
-- **Board zoom** for 8×6 boards (25–27 CSS px pitch) and the Last Rune (18 CSS px). Aim-with-lift helps, but a pinch or tap-to-zoom board would be the real fix. This touches altar layout and needs a PM call.
-- Text exactly 14 px passes the fit check. Some FUSE captions in the altar are long, so a shorter phone line set could help.
+- Board zoom: replaced by the loupe and snap (PM decision). Real-device feel is still to be confirmed (checklist item 8).
+- The held gem's card covers the gem in the tray for its first 2.5 s. That is accepted; the card says what the gem does.
 - Nothing is needed from mobile-perf. Their `handheld` trait is reused for the rotate card.

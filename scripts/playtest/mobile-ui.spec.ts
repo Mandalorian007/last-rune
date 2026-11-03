@@ -102,6 +102,14 @@ for (const vp of SIZES) {
       await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
         timeout: 30_000,
       });
+      // A real phone is touch from boot (isTouchOnly); emulation keeps a fine pointer, so say so.
+      const touchOn = () =>
+        page.evaluate(() =>
+          document.dispatchEvent(
+            new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }),
+          ),
+        );
+      await touchOn();
       await page.waitForTimeout(1500);
       if (want('title')) await shot('01-title');
 
@@ -181,9 +189,10 @@ for (const vp of SIZES) {
             await page.evaluate((id) => (window as G).__game.flow.openPuzzle(id), id);
             await page.waitForTimeout(800);
             // A failed strike: verdict + tags.
-            await page.keyboard.press('KeyF');
+            await page.locator('.lr-altar-actions .lr-gold-button').tap();
             await page.waitForTimeout(300);
-            await page.keyboard.press('Enter');
+            const sure = page.locator('.lr-confirm .lr-gold-button, .lr-confirm button').first();
+            if (await sure.isVisible()) await sure.tap();
             await page.waitForTimeout(1500);
             await shot(`11-altar-${id}-verdict`);
           }

@@ -91,10 +91,18 @@ ${P} .lr-j-plate { font-size: var(--lr-text-min); padding: 0 ${cpx(14)}; }
 ${P} .lr-altar-actions { right: ${cpx(8)}; top: ${cpx(6)}; gap: ${cpx(6)}; }
 ${P} .lr-altar-actions .lr-stone-button { min-height: ${cpx(38)}; padding: 0 ${cpx(10)}; }
 ${P} .lr-altar-actions .lr-gold-button { min-height: ${cpx(44)}; min-width: 0; padding: 0 ${cpx(16)}; }
-${P} .lr-altar-title { top: ${cpx(4)}; }
+/* The title sits right-aligned under the action row: over the board it lands on top gauges. */
+${P} .lr-altar-title { left: auto !important; max-width: none !important; right: ${cpx(10)}; top: ${cpx(54)}; transform: none; text-align: right; }
+${P} .lr-altar-title h2 { white-space: nowrap; }
 /* The storm's Gives card already says what the subtitle says; the title gets the room. */
 ${P} .lr-altar-title small { display: none; }
-${P} .lr-altar-hint { left: 770px; transform: translateX(-50%); min-width: 0; max-width: 760px; white-space: normal; padding: 0 ${cpx(8)}; bottom: ${cpx(2)}; }
+/* The hint sits in the free strip above the tray (the band under the board is kept clear of
+   props), not under it where the count chips are. A gem's card shows in the same strip, and
+   while it does the hint steps aside. */
+${P} .lr-altar-hint { left: 770px; transform: translateX(-50%); min-width: 0; max-width: 700px; white-space: normal; padding: 0 ${cpx(8)}; bottom: 164px; }
+${P} .lr-altar:has(.lr-altar-tip:not([hidden])) .lr-altar-hint { visibility: hidden; }
+/* The tray card covers the gem in hand for its first moments; its ↻ mark waits too. */
+${T} .lr-altar:has(.lr-altar-tip[data-source="tray"]:not([hidden])) .lr-altar-turnmark { visibility: hidden; }
 ${P} .lr-altar-count { padding: 0 ${cpx(6)}; margin-top: calc(${cpx(-14)}); }
 ${P} .lr-altar-verdict { padding: ${cpx(4)} ${cpx(10)}; }
 ${P} .lr-altar-tip { max-width: 1000px; padding: ${cpx(3)} ${cpx(8)}; }
