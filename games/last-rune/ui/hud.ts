@@ -78,8 +78,12 @@ export class Hud {
     }
     this.plateName.textContent = at.name;
     this.plateNote.textContent = at.note;
-    this.nameplate.style.left = `${at.x}px`;
     this.nameplate.style.top = `${at.y}px`;
     this.nameplate.hidden = false;
+    // Keep the whole plate on screen: doors at the wall's ends would push it off the edge.
+    const half = this.nameplate.offsetWidth / 2;
+    const room = (this.nameplate.parentElement?.clientWidth ?? 0) || 1920;
+    const x = half > 0 ? Math.min(Math.max(at.x, half + 12), room - half - 12) : at.x;
+    this.nameplate.style.left = `${Math.round(x)}px`;
   }
 }

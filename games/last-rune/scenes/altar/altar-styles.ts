@@ -99,6 +99,10 @@ const CSS = /* css */ `
   0%, 100% { box-shadow: 0 0 10px rgba(255,214,120,0.35); }
   50% { box-shadow: 0 0 34px 6px rgba(255,214,120,0.85); }
 }
+/* Until the route reaches a machine, Strike steps back so the tray and board lead the eye. */
+.tc-overlay .lr-altar-actions .lr-gold-button:not([data-ready]):not(:hover):not(:focus-visible):not(:disabled) {
+  filter: saturate(0.55) brightness(0.8);
+}
 [data-reduced-motion] .tc-overlay .lr-altar-actions .lr-gold-button[data-ready] {
   animation: none; box-shadow: 0 0 28px 4px rgba(255,214,120,0.75);
 }
@@ -219,6 +223,10 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-verdict .lr-verdict-story {
   display: block; max-width: 640px; margin: 4px auto 0; white-space: normal; font-family: var(--tc-font-body, serif);
   font-size: 20px; line-height: 1.3; letter-spacing: 0; color: #e8dcc0;
+}
+.tc-overlay .lr-altar-verdict .lr-verdict-hint {
+  display: block; max-width: 640px; margin: 4px auto 0; white-space: normal; font-family: var(--tc-font-body, serif);
+  font-size: 20px; line-height: 1.3; letter-spacing: 0; color: #ffd98a;
 }
 .tc-overlay .lr-altar-verdict[data-narrow] { font-size: 24px; letter-spacing: 0; padding: 8px 18px; }
 .tc-overlay .lr-altar-verdict[data-outcome="over"] { border-color: #ff5a3c; }

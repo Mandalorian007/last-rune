@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { GEM_KINDS, MACHINE_IDS } from '../../games/last-rune/rules/types';
-import { computeLayout } from '../../games/last-rune/scenes/altar/layout';
+import { cellCenter, computeLayout } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, trackProblems, waitFrames } from './helpers';
 
 // bug-bash: what must fit on a 1280×720 screen at every text size (D-027: a first-time
@@ -19,8 +19,14 @@ interface GameHandle {
 const SCALES = [100, 125, 150] as const;
 
 /** Dev build at 1280×720, with a seeded save and text scale, in the hall. */
-async function boot(page: Page, scale: number, solved: readonly string[] = []) {
-  await page.setViewportSize({ width: 1280, height: 720 });
+async function boot(
+  page: Page,
+  scale: number,
+  solved: readonly string[] = [],
+  puzzles: Record<string, unknown> = {},
+  width = 1280,
+) {
+  await page.setViewportSize({ width, height: Math.round((width * 9) / 16) });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(DEV_URL);
   await page.waitForFunction(
@@ -29,18 +35,19 @@ async function boot(page: Page, scale: number, solved: readonly string[] = []) {
     { timeout: 30_000 },
   );
   await page.evaluate(
-    ({ scale, solved, met }) => {
+    ({ scale, solved, met, puzzles }) => {
       const g = (window as unknown as { __game: GameHandle }).__game;
       g.save.update((d) => {
         d.flags.hallIntro = true;
         d.settings.captionSpeed = 'instant';
         d.progress.solved = solved;
         d.codex.met = met;
+        Object.assign(d.puzzles, puzzles);
       });
       g.settings.set({ textScale: scale });
       g.flow.continueGame();
     },
-    { scale, solved: [...solved], met: [...GEM_KINDS] },
+    { scale, solved: [...solved], met: [...GEM_KINDS], puzzles },
   );
   await page.waitForTimeout(600);
 }
@@ -142,6 +149,93 @@ for (const id of ['archive', 'intake-desk'] as const) {
     for (const t of r.tags) expect(hits(t, r.verdict)).toBe(false);
     expect(problems).toEqual([]);
   });
+}
+
+// newcomer-2: Relay Tower with one arm built (the split's lower arm empty). The verdict box,
+// headline and gold "Try:" line, must be whole (wrapped, never clipped) and no fizzle tag or
+// idle hint may sit on it, on either screen size and at the biggest text.
+const ONE_ARM = {
+  'relay-tower': {
+    attempts: 0,
+    placements: [
+      { gem: 'channel', cell: { x: 0, y: 1 }, rot: 0 },
+      { gem: 'channel', cell: { x: 1, y: 1 }, rot: 0 },
+      { gem: 'channel', cell: { x: 2, y: 1 }, rot: 0 },
+      { gem: 'bend', cell: { x: 3, y: 0 }, rot: 1 },
+      { gem: 'channel', cell: { x: 4, y: 0 }, rot: 0 },
+      { gem: 'bend', cell: { x: 5, y: 0 }, rot: 2 },
+    ],
+  },
+};
+for (const width of [1280, 1920] as const) {
+  for (const scale of [100, 150] as const) {
+    test(`relay one-arm at ${width}px, ${scale}%: verdict and Try line whole, no tag on them`, async ({
+      page,
+    }) => {
+      const problems = trackProblems(page);
+      await boot(page, scale, ['intake-desk', 'furnace', 'splitter-mill'], ONE_ARM, width);
+      await page.evaluate(() => {
+        const g = (window as unknown as { __game: GameHandle }).__game;
+        g.flow.openPuzzle('relay-tower');
+        g.fuse.hush();
+      });
+      await expect(page.locator('.lr-altar')).toBeVisible();
+      await page.waitForTimeout(400);
+      // Provoke the idle "Bend already here" hint (a Bend onto the Bend), then strike at once.
+      const L = computeLayout(puzzleFor('relay-tower'));
+      const o = await page.locator('.tc-overlay').boundingBox();
+      const k = o!.width / 1920;
+      const at = (x: number, y: number) => page.mouse.click(o!.x + x * k, o!.y + y * k);
+      const slot = L.tray.find((t) => t.gem === 'bend')!;
+      const c = { x: 0, y: 0 };
+      cellCenter(L, { x: 3, y: 0 }, c);
+      await at(slot.x, slot.y);
+      await page.waitForTimeout(200);
+      await at(c.x, c.y);
+      await expect(page.locator('.lr-altar-tag', { hasText: 'already here' })).toBeVisible();
+      await page.keyboard.press('KeyF');
+      await page.waitForTimeout(300);
+      await page.keyboard.press('Enter');
+      const hint = page.locator('.lr-altar-verdict .lr-verdict-hint');
+      await expect(hint).toBeVisible({ timeout: 10_000 });
+      // The empty lower arm outranks the lonely Gate it causes.
+      await expect(hint).toHaveText('Try: put a gem in the socket at the red mark.');
+      await expect(page.locator('.lr-altar-tag').first()).toBeVisible();
+      await page.waitForTimeout(400);
+      const r = await page.evaluate(() => {
+        const box = (el: Element) => {
+          const b = el.getBoundingClientRect();
+          return { left: b.left, right: b.right, top: b.top, bottom: b.bottom };
+        };
+        const v = document.querySelector<HTMLElement>('.lr-altar-verdict')!;
+        const h = v.querySelector<HTMLElement>('.lr-verdict-hint')!;
+        return {
+          verdict: box(v),
+          hint: box(h),
+          clipped: h.scrollWidth - h.clientWidth,
+          vClipped: v.scrollWidth - v.clientWidth,
+          tags: [...document.querySelectorAll('.lr-altar-tag')].map((t) => ({
+            text: t.textContent ?? '',
+            ...box(t),
+          })),
+          vw: innerWidth,
+        };
+      });
+      expect(r.clipped).toBeLessThanOrEqual(0);
+      expect(r.vClipped).toBeLessThanOrEqual(0);
+      expect(r.hint.left).toBeGreaterThanOrEqual(r.verdict.left);
+      expect(r.hint.right).toBeLessThanOrEqual(r.verdict.right);
+      expect(r.hint.bottom).toBeLessThanOrEqual(r.verdict.bottom);
+      expect(r.verdict.left).toBeGreaterThanOrEqual(0);
+      expect(r.verdict.right).toBeLessThanOrEqual(r.vw);
+      expect(r.tags.some((t) => t.text.includes('already here'))).toBe(false);
+      for (const t of r.tags) expect(hits(t, r.verdict), `${t.text} on the verdict`).toBe(false);
+      for (let i = 0; i < r.tags.length; i++)
+        for (let j = i + 1; j < r.tags.length; j++)
+          expect(hits(r.tags[i]!, r.tags[j]!), 'two tags overlap').toBe(false);
+      expect(problems).toEqual([]);
+    });
+  }
 }
 
 test('the-last-rune at 150%: the storm card stays off the board', async ({ page }) => {

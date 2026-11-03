@@ -3,7 +3,7 @@ import { PUZZLES, puzzleFor } from '../../content/puzzles';
 import { type PuzzleDef, simulate } from '../../rules';
 import { altarDims } from '../../rules/model';
 import { anchorOf, cellAt, computeLayout, DESIGN_H, DESIGN_W } from './layout';
-import { buildTimeline, fizzles } from './strike';
+import { buildTimeline, failText, fizzles, nextStep } from './strike';
 
 function bench(over: Partial<PuzzleDef> = {}): PuzzleDef {
   return {
@@ -126,5 +126,31 @@ describe('layout', () => {
         expect(m.port.y).toBeLessThan(DESIGN_H);
       }
     }
+  });
+});
+
+describe('failed-verdict guidance', () => {
+  it('a machine that got nothing is a broken path, not "not enough"', () => {
+    const m = { at: { x: 0, y: 0 }, need: 2, outcome: 'dead' as const, readings: [0], wokeOn: -1 };
+    expect(failText(m, 'under', 1)).toBe('No charge reached this machine: needs 2, got 0');
+  });
+
+  it('names one next step: the root fizzle first, else the outcome', () => {
+    // The relay with one arm missing: the empty socket is the cause, the lone Gate the effect.
+    expect(nextStep('dead', ['gate-alone', 'empty'])).toMatch(/put a gem in the socket/);
+    expect(nextStep('dead', ['facing'])).toMatch(/turn the gem/);
+    expect(nextStep('over', ['ground'])).toMatch(/less charge/);
+    expect(nextStep('under', [])).toMatch(/Amplify/);
+    expect(nextStep('exact', [])).toBe('');
+    const all = [
+      'empty',
+      'blocked',
+      'ground',
+      'facing',
+      'odd-split',
+      'gate-alone',
+      'spent',
+    ] as const;
+    for (const c of all) expect(nextStep('dead', [c])).toMatch(/^Try: /);
   });
 });

@@ -191,7 +191,7 @@ ending. They stop the moment the player starts.
 
 *Arrive*
 
-> Day 14,610. A visitor. There's a form for that. Step one: rune from the tray, onto a lit socket. **[NEW]**  
+> Day 14,610. A visitor. There's a form for that. Step one: gem from the tray, onto a lit socket. **[NEW]**  
 > <sub>`intake-desk.arrive` · 19w</sub>
 
 *Solve*

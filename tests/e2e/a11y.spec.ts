@@ -121,9 +121,13 @@ test('keyboard path title → settings → hall → altar, with axe and the stri
   await pressKey(page, 'KeyF');
   const verdict = page.locator('.lr-altar-verdict');
   await expect(verdict).toBeVisible({ timeout: 20_000 });
-  const said = (await verdict.textContent())!.trim();
+  // The headline (first text node) and the visible next step are both spoken.
+  const said = (await verdict.evaluate((el) => el.firstChild?.textContent ?? '')).trim();
   expect(said.length).toBeGreaterThan(0);
   await expect(announce).toContainText(said);
+  const hint = (await verdict.locator('.lr-verdict-hint').textContent())!.trim();
+  expect(hint).toMatch(/^Try: /);
+  await expect(announce).toContainText(hint);
   await expect(announce).toContainText('Change anything to try again.');
   await expectNoAxeViolations(page, 'altar result');
 
