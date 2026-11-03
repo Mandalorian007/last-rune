@@ -13,6 +13,7 @@
 import type { EmitParams } from '@engine/fx';
 import type { Frame, RGBA } from '@engine/render';
 import { button, h } from '@engine/ui';
+import { createGemPortraits, type GemPortraits } from '../../art/gem-portraits';
 import type { GemInstance } from '../../art/materials/gems';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
@@ -51,6 +52,10 @@ export class SolveScene implements GameScene {
   private showcase: GemInstance | null = null;
   private showcaseY = 0;
   private finished = false;
+  /** Phones: the granted gem's picture on the card (it does not rise over the board there). */
+  private pictures: GemPortraits | null = null;
+  /** Phones: FUSE's bubble steps aside while the card would reach it. */
+  private crowd = false;
   private readonly mote: EmitParams = {
     x: 0,
     y: 0,
@@ -77,6 +82,7 @@ export class SolveScene implements GameScene {
     board.restore(ctx.flow.placementsFor(m.machine) as Placement[]);
     const view = new AltarView(ctx, puzzle);
     this.view = view;
+    if (import.meta.env.DEV) Object.assign(window, { __altarView: view });
     view.reducedMotion = ctx.settings.reducedMotion;
     view.reduceFlashes = ctx.settings.reduceFlashes;
     view.tray.length = 0; // the tray steps aside for the moment
@@ -90,6 +96,8 @@ export class SolveScene implements GameScene {
 
     this.postSnapshot = structuredClone(ctx.post.settings);
     ctx.post.set(POST_PRESETS.altar);
+    // Phones light the altar evenly (as the altar scene does): no mist or vignette.
+    if (view.layout.phone) ctx.post.set({ fog: { enabled: false }, vignette: { enabled: false } });
     this.bloomBase = ctx.post.settings.bloom.intensity;
     this.raysBase = ctx.post.settings.godRays.intensity;
     ctx.setMood(m.machine === 'the-last-rune' ? 'last-rune' : 'altar');
@@ -108,8 +116,9 @@ export class SolveScene implements GameScene {
     }
 
     // Granted gem rises from the machine side of the altar.
+    // Phones: the gem shows on the card instead, so the lit circuit stays readable.
     const grant = m.grants;
-    if (m.firstTime && grant?.type === 'gem') {
+    if (m.firstTime && grant?.type === 'gem' && !view.layout.phone) {
       const L = view.layout;
       // Hang just above the slab, but never past the top edge of the screen.
       this.showcaseY = Math.max(L.top - 10, Math.round(L.pitch * 0.85) + 16);
@@ -144,8 +153,10 @@ export class SolveScene implements GameScene {
     this.hum = null;
     this.view.dispose();
     this.dom.remove();
+    this.pictures?.destroy();
     this.ctx.ui.root.style.removeProperty('--lr-scap-l');
     this.ctx.ui.root.style.removeProperty('--lr-scap-w');
+    this.ctx.ui.root.style.removeProperty('--lr-scap-face');
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
     this.ctx.particles.clear();
   }
@@ -153,6 +164,7 @@ export class SolveScene implements GameScene {
   private buildDom(): void {
     const m = this.moment;
     const def = getMachine(m.machine);
+    const band = this.view.layout.phone;
     const kids: (HTMLElement | string)[] = [
       h('h2', null, `${def.name} restored`),
       h(
@@ -165,13 +177,19 @@ export class SolveScene implements GameScene {
       const g = m.grants;
       const what =
         g.type === 'gem' ? `New gem: ${capabilityLabel(g)}` : `New: ${capabilityLabel(g)}`;
+      // Phones: the real gem in a socket-dark disc, where desktop lifts it over the altar.
+      if (band && g.type === 'gem') this.pictures = createGemPortraits(this.ctx.renderer);
+      const pic = this.pictures && g.type === 'gem' ? this.pictures.canvas(g.gem, 40) : null;
+      pic?.classList.add('lr-solve-gem');
+      pic?.setAttribute('aria-hidden', 'true');
       this.grantEl = h(
         'div',
         { class: 'lr-solve-grant', hidden: true },
-        h('span', {
-          class: 'lr-gem-dot',
-          style: { color: CSS_PALETTE[socketColour(g) as keyof typeof CSS_PALETTE] },
-        }),
+        pic ??
+          h('span', {
+            class: 'lr-gem-dot',
+            style: { color: CSS_PALETTE[socketColour(g) as keyof typeof CSS_PALETTE] },
+          }),
         what,
       );
       kids.push(this.grantEl);
@@ -189,11 +207,6 @@ export class SolveScene implements GameScene {
       );
       kids.push(this.opensEl);
     }
-    const card = h(
-      'div',
-      { class: 'lr-solve-card', role: 'status', 'aria-live': 'polite' },
-      ...kids,
-    );
     const page = m.firstTime ? m.pages[0] : undefined;
     if (page) {
       const more = m.pages.length > 1 ? ` (+${m.pages.length - 1} more)` : '';
@@ -209,18 +222,29 @@ export class SolveScene implements GameScene {
     });
     this.contEl.dataset.action = 'continue';
     this.contEl.hidden = true;
-    this.dom = h('div', { class: 'lr-solve' }, card, this.pageEl, this.contEl);
-    // Phones: the card stack takes the altar's right-hand column (and the free right bar), so
-    // the board on the left stays in view; FUSE's caption sits beside him under it.
-    const band = this.view.layout.phone;
+    // Phones: one card holds it all (title, line, new gem, journal page, Continue), in the
+    // altar's right-hand column and the free right bar, so the lit board on the left stays in
+    // view; FUSE speaks beside himself under it. Desktop keeps the card, the page and Continue.
+    const card = h(
+      'div',
+      { class: 'lr-solve-card', role: 'status', 'aria-live': 'polite' },
+      ...kids,
+      ...(band ? [this.pageEl, this.contEl] : []),
+    );
+    this.dom = band
+      ? h('div', { class: 'lr-solve' }, card)
+      : h('div', { class: 'lr-solve' }, card, this.pageEl, this.contEl);
     if (band) {
       this.dom.dataset.phone = '';
       this.dom.style.setProperty('--lr-col-l', `${band.colL}px`);
       this.dom.style.setProperty('--lr-col-w', `${band.colR - band.colL}px`);
       const st = this.ctx.ui.root.style;
-      const capL = Math.round(band.colL + 46 * band.cssPx);
+      const capL = Math.round(band.colL + 50 * band.cssPx);
       st.setProperty('--lr-scap-l', `${capL}px`);
       st.setProperty('--lr-scap-w', `${1920 - capL}px`);
+      // The bubble's tail points at FUSE's face (altar-view lifts him clear of the edge).
+      const f = this.view.fuse;
+      st.setProperty('--lr-scap-face', `${Math.round(1080 - f.y + 1.5 * f.scale)}px`);
     }
     this.ctx.ui.layers.hud.append(this.dom);
   }
@@ -273,8 +297,15 @@ export class SolveScene implements GameScene {
     const swell = rm
       ? 0.3
       : Math.max(0, Math.min(1, t / 0.6)) * Math.exp(-Math.max(0, t - 1.2) * 0.9);
-    ctx.post.settings.bloom.intensity = this.bloomBase * (1 + 0.9 * swell + 0.25);
-    ctx.post.settings.godRays.intensity = this.raysBase * (1.6 + 1.2 * swell);
+    if (this.view.layout.phone) {
+      // Phones: a small swell, so the lit route still reads on a small screen.
+      ctx.post.settings.bloom.intensity = this.bloomBase * (0.7 + 0.25 * swell);
+      ctx.post.settings.godRays.intensity = this.raysBase * (0.6 + 0.4 * swell);
+      this.updateCrowd();
+    } else {
+      ctx.post.settings.bloom.intensity = this.bloomBase * (1 + 0.9 * swell + 0.25);
+      ctx.post.settings.godRays.intensity = this.raysBase * (1.6 + 1.2 * swell);
+    }
 
     // Granted gem rises out of the altar and hangs there, glowing.
     const s = this.showcase;
@@ -313,6 +344,22 @@ export class SolveScene implements GameScene {
     if (s && t > 0.4) f.lookAt(s.x, s.y);
     else if (mm) f.lookAt(mm.x, mm.y);
     this.view.update(dt);
+  }
+
+  /** Phones: FUSE's bubble steps out while the card would touch it (big text, long lines). */
+  private updateCrowd(): void {
+    const cap = this.ctx.ui.root.querySelector<HTMLElement>('.tc-caption');
+    const card = this.dom.firstElementChild;
+    let crowd = false;
+    if (cap && !cap.hidden && card) {
+      const a = card.getBoundingClientRect();
+      const b = cap.getBoundingClientRect();
+      crowd = b.height > 0 && b.top < a.bottom + 4 && b.left < a.right && b.right > a.left;
+    }
+    if (crowd !== this.crowd) {
+      this.crowd = crowd;
+      this.dom.toggleAttribute('data-crowd', crowd);
+    }
   }
 
   render(frame: Frame): void {

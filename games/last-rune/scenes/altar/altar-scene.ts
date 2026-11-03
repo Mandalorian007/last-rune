@@ -76,6 +76,7 @@ import {
   traySlotAt,
   trayTipX,
 } from './layout';
+import { hintRetired, phoneHint } from './moments';
 import { socketLooks } from './socket-looks';
 import {
   type Arrival,
@@ -366,6 +367,9 @@ export class AltarScene implements GameScene {
   private pendingNudges: GemKind[] = [];
   /** Seconds left on the arrival card for this altar's new gems (0 = gone). */
   private introLeft = 0;
+  /** Phones: the how-to line has retired (moments.ts), and FUSE's fail quip waits its turn. */
+  private hintRetired = false;
+  private pendingQuip: ReturnType<typeof reactionLine> | null = null;
   /** Phones: a long press opened this gem's full card; the next tap closes it. */
   private infoPin: { gem: GemKind; how: InfoHow } | null = null;
   /** Phones: the frame the layout was built for, and a rebuild waiting for edit mode. */
@@ -434,6 +438,7 @@ export class AltarScene implements GameScene {
     this.hum = ctx.sound.sfx.stormCell(this.puzzle.storm.strength, 0.8);
 
     const save = ctx.save.get();
+    this.hintRetired = hintRetired(save.progress.solved);
     for (const page of codexPages(progressOf(save), [])) this.rules[page.gem] = page.rule;
     if (this.machine === TEACH_MACHINE && !save.progress.solved.includes(this.machine)) {
       this.teachCell = this.firstSocket();
@@ -669,7 +674,7 @@ export class AltarScene implements GameScene {
    * once the player uses keys, or fast-forward while the bolt runs.
    */
   private updateHint(): void {
-    const mode: HintMode =
+    let mode: HintMode =
       this.mode === 'strike'
         ? this.touch
           ? 'touchStrike'
@@ -679,6 +684,9 @@ export class AltarScene implements GameScene {
           : this.touch
             ? 'touch'
             : 'mouse';
+    // Phones: the line says the next tap, and retires once the tap is known (moments.ts).
+    if (mode === 'touch' && this.view.layout.phone)
+      mode = phoneHint(this.hintRetired, !!this.hand && !this.hand.from);
     // Only mention ↻ where a gem can turn (the Turn button shows only then). Phones say it
     // only while the Turn button is up, so the line stays one short line.
     const turns = this.view.layout.phone
@@ -884,7 +892,8 @@ export class AltarScene implements GameScene {
       this.verdict.style.left = '';
       this.verdict.style.maxWidth = '';
       delete this.verdict.dataset.narrow;
-      this.lane = h('div', { class: 'lr-altar-lane' }, this.tip, this.verdict);
+      // The how-to line heads the lane, under the tray: its own slot, apart from FUSE's bubble.
+      this.lane = h('div', { class: 'lr-altar-lane' }, this.hint, this.tip, this.verdict);
       this.dom.append(this.lane);
       this.slotEls = L.tray.map((t) =>
         h('div', {
@@ -912,11 +921,16 @@ export class AltarScene implements GameScene {
       st.setProperty('--lr-cap-l', `${band.bubbleL}px`);
       // From the column's left edge on into the right bar (CSS adds the bar).
       st.setProperty('--lr-cap-w', `${1920 - band.bubbleL}px`);
-      st.setProperty('--lr-cap-b', `${1080 - band.bubbleB}px`);
+      // Over FUSE's head, its tail pointing down at him (mobile-5-moments).
+      const f = this.view.fuse;
+      const head = 1080 - f.y + 2.3 * f.scale + 6 * band.cssPx;
+      st.setProperty('--lr-cap-b', `${Math.round(Math.max(1080 - band.bubbleB, head))}px`);
+      st.setProperty('--lr-cap-tail', `${Math.round(f.x - band.bubbleL)}px`);
     } else {
       st.removeProperty('--lr-cap-l');
       st.removeProperty('--lr-cap-w');
       st.removeProperty('--lr-cap-b');
+      st.removeProperty('--lr-cap-tail');
     }
   }
 
@@ -1740,6 +1754,16 @@ export class AltarScene implements GameScene {
     if (line) void this.ctx.fuse.say(line);
   }
 
+  /** Phones: FUSE's fail quip, once the verdict has gone (dropped if the player strikes again). */
+  private updateQuip(): void {
+    if (!this.pendingQuip) return;
+    if (this.mode === 'strike') this.pendingQuip = null;
+    else if (this.mode === 'edit' && this.verdict.hidden) {
+      void this.ctx.fuse.say(this.pendingQuip, { interrupt: true });
+      this.pendingQuip = null;
+    }
+  }
+
   /** Seconds FUSE has been quiet in edit mode (so a nudge never lands on another line). */
   private quiet = 0;
 
@@ -2549,7 +2573,11 @@ export class AltarScene implements GameScene {
         rootFizzle(o, this.fizzleList),
         this.attempts - 1,
       );
-      if (line) void this.ctx.fuse.say(line, { interrupt: true });
+      // Phones: one message at a time. The quip waits until the player acts on the verdict.
+      if (line && this.view.layout.phone) {
+        this.ctx.fuse.hush();
+        this.pendingQuip = line;
+      } else if (line) void this.ctx.fuse.say(line, { interrupt: true });
     }
     this.subtitle.textContent =
       o === 'exact' ? 'Restored' : `Attempt ${this.attempts} · change anything to try again`;
@@ -2680,6 +2708,7 @@ export class AltarScene implements GameScene {
     this.updateCircuit();
     this.updateTeach(dt);
     this.updateNudges(dt);
+    this.updateQuip();
     this.updateFuse();
     this.updateHint();
     this.updateTray();
@@ -3643,7 +3672,7 @@ export class AltarScene implements GameScene {
   }
 }
 
-type HintMode = 'mouse' | 'keys' | 'strike' | 'touch' | 'touchStrike';
+type HintMode = 'mouse' | 'keys' | 'strike' | 'touch' | 'touchHeld' | 'touchStrike' | 'off';
 
 /** The key-hint line for each mode. Short enough to sit under the tray at 150% text. */
 function hintLine(mode: HintMode, turns = true): (Node | string)[] {
@@ -3683,6 +3712,17 @@ function hintLine(mode: HintMode, turns = true): (Node | string)[] {
             h('span', { class: 'lr-nowrap' }, b('\u21bb'), ' turns it'),
           ]
         : [b('Tap'), ' a gem, then a socket'];
+    case 'touchHeld':
+      return turns
+        ? [
+            'Now ',
+            b('tap'),
+            ' a socket · ',
+            h('span', { class: 'lr-nowrap' }, b('\u21bb Turn'), ' spins it'),
+          ]
+        : ['Now ', b('tap'), ' a socket'];
+    case 'off':
+      return [];
     case 'touchStrike':
       return [b('Tap'), ' to skip'];
   }

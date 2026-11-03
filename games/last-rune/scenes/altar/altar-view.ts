@@ -207,7 +207,8 @@ export class AltarView {
     const fuse = this.assets.fuse;
     if (L.phone) {
       fuse.scale = L.phone.fuseScale;
-      fuse.place(L.phone.fuseX, L.phone.fuseY);
+      // Lifted clear of the screen's edge, so his treads read as standing, not cut off.
+      fuse.place(L.phone.fuseX, L.phone.fuseY - phoneFuseLift(L.phone.cssPx));
     } else {
       fuse.scale = 112;
       fuse.place(300, 1046);
@@ -698,4 +699,12 @@ function inside(L: AltarLayout, c: Cell): boolean {
 function sameHop(p: PathHop, h: PathHop): boolean {
   const eq = (a: Cell, b: Cell) => a.x === b.x && a.y === b.y;
   return (eq(p.from, h.from) && eq(p.to, h.to)) || (eq(p.from, h.to) && eq(p.to, h.from));
+}
+
+/**
+ * Phones (mobile-5-moments): FUSE stands this far (design px) above the layout's floor line, so
+ * his dark treads sit fully on screen above the bottom edge; his bubble's tail meets his head.
+ */
+export function phoneFuseLift(cssPx: number): number {
+  return Math.round(5 * cssPx);
 }

@@ -181,6 +181,34 @@ for (const vp of PHONES) {
         await page.waitForTimeout(300);
       }
 
+      // Fresh progress: a new piece's first appearance, as a first-time player meets it
+      // (mobile-5-moments). Relay Tower right after the Intake Desk (Split and Gate, pre-set);
+      // the Capacitor Bay with everything before it restored.
+      const teach = [
+        ['14-relay-tower-teach', 'relay-tower', ['intake-desk']],
+        [
+          '15-capacitor-teach',
+          'capacitor-bay',
+          all.filter(
+            (m) => !['capacitor-bay', 'lift-shaft', 'roof-array', 'control-booth'].includes(m),
+          ),
+        ],
+      ] as const;
+      for (const [name, id, solved] of teach) {
+        await seed([...solved]);
+        await page.evaluate((id) => {
+          const g = (window as G).__game;
+          if (g.flow.state !== 'hall') g.flow.continueGame();
+          g.flow.openPuzzle(id);
+          g.fuse.hush();
+        }, id);
+        await expect(page.locator('.lr-altar')).toBeVisible();
+        await page.waitForTimeout(1500);
+        await shot(name);
+        await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+        await page.waitForTimeout(300);
+      }
+
       // A really solved board under the solve card: the intended gems, placed (mobile-3-board).
       await seed(['intake-desk'], {
         puzzles: { furnace: { placements: puzzleFor('furnace').design.intended, attempts: 0 } },

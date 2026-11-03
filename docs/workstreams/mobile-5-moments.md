@@ -54,3 +54,15 @@ Gate review 2 (2026-11-03) scored 6 / 6 / 6.5 / 6.5, a fail. These points were c
 - The log in this file is updated.
 
 ## Log
+- 2026-11-03: branch `ws/mobile-5-moments` (from main fe462ce). Phones only; desktop and iPad unchanged.
+  - **Hint vs FUSE.** The how-to line heads the lane under the tray (its own slot); FUSE's bubble keeps the bubble slot over his head, with a tail pointing at him (`--lr-cap-tail`), and is lifted to clear his head. The line says the next tap ("Tap a gem, then a socket"; "Now tap a socket" while a gem is held) and retires after 3 restored machines (`scenes/altar/moments.ts`, unit-tested).
+  - **Fail.** The socket's red tag plus one verdict card: "No charge reached the machine", then "Try: …" on a line of its own (no " · "). On phones FUSE's quip waits until the verdict is gone (the player acts) and is dropped on a new Strike.
+  - **Solve.** One card in the right column: title, line, the new gem's real portrait (`createGemPortraits`; no showcase gem over the board), codex note, an untilted journal page and a full-width 44 px Continue; ≥12 CSS px inside the play area. Bloom and rays toned down, fog and vignette off (as on the altar). FUSE's line sits beside him at the bottom with a tail at his face, and steps out if the card would reach it (`data-crowd`).
+  - **FUSE.** Lifted 5 CSS px on phones (`altar-view.ts phoneFuseLift`), so his treads are fully on screen.
+  - **Tests.** New `tests/e2e/mobile-moments.spec.ts` (four phones: hint not under FUSE's bubble, held line, no bubble with the verdict, verdict not run on, solve card ≥12 px in with Continue ≥44 px and card-wide, the gem on the card, FUSE's line on screen and off the card, FUSE's figure inside the viewport). `mobile-2.spec.ts` adds `14-relay-tower-teach` and `15-capacitor-teach` (fresh progress); the existing names are kept.
+  - **Sheets.** `docs/design/screens/local/mobile-5-moments/m5moments-{se,iphone,promax,android}.png` (per-shot in `m5moments/<phone>/`).
+  - **Soft spots.**
+    - On fresh intake-desk the intro card (Bend/Channel/Gold ring) fills the lane on iPhone and SE, so FUSE's arrival bubble is crowd-hidden until the first gem is placed; the hint stays visible.
+    - The phone styles still fight older blocks with `!important`.
+    - The FUSE lift lives in altar-view, not in layout.ts (mobile-5-board's file).
+    - The portrait sheet is baked once per solve.
