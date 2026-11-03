@@ -78,6 +78,7 @@ export class SolveScene implements GameScene {
     const view = new AltarView(ctx, puzzle);
     this.view = view;
     view.reducedMotion = ctx.settings.reducedMotion;
+    view.reduceFlashes = ctx.settings.reduceFlashes;
     view.tray.length = 0; // the tray steps aside for the moment
     view.syncBoard(board);
     for (const b of view.board) {

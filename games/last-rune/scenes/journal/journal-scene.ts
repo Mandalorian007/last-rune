@@ -88,7 +88,7 @@ export class JournalScene implements GameScene {
     this.model = journalModel(j.found, j.read);
     this.art = new DeskArt(ctx.renderer);
     this.art.placeCandle(DESK_LAYOUT.candle.x, DESK_LAYOUT.candle.y, DESK_LAYOUT.candle.height);
-    this.art.reducedMotion = ctx.settings.reducedMotion;
+    this.art.reducedMotion = ctx.settings.reducedMotion || ctx.settings.reduceFlashes;
     this.buildDom(doc);
     ctx.post.set(POST_PRESETS.journal);
     ctx.setMood('journal');

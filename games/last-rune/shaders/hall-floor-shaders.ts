@@ -356,12 +356,16 @@ fn k_puddle(q: vec2f, seed: f32) {
     let sig = 3.0 + dy * 0.035;
     let streak = exp(-dx * dx / (2.0 * sig * sig));
     let fall = 1.0 / (1.0 + dy * dy / 160000.0);
-    refl += U.L.col[i].rgb * (streak * 0.6 + exp(-abs(dx) / 120.0) * 0.02) * fall;
+    refl += U.L.col[i].rgb * (streak * 0.85 + exp(-abs(dx) / 120.0) * 0.03) * fall;
   }
   let edge = smoothstep(0.55, 1.0, r / wob);
-  let sky = U.L.ambient.rgb * 0.12 + vec3f(0.002, 0.003, 0.006);
-  var c = sky + refl * (1.0 - 0.6 * edge);
-  c += vec3f(0.02, 0.025, 0.035) * ring;
+  // Cool sheen of the sky on the water, brighter toward the far (upper) edge, and a thin wet
+  // rim, so a puddle reads as water even with no light above it.
+  let far = smoothstep(-0.4, 0.9, p.y);
+  let sky = U.L.ambient.rgb * (0.3 + 0.35 * far) + vec3f(0.006, 0.009, 0.016);
+  var c = sky + refl * (1.0 - 0.5 * edge);
+  c += vec3f(0.05, 0.065, 0.09) * exp(-abs(d) / 1.6);
+  c += vec3f(0.03, 0.04, 0.055) * ring;
   S.alb = vec3f(0.0);
   S.cov = cov * (0.92 - 0.35 * edge);
   S.emi = c;
