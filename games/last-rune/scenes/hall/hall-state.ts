@@ -206,6 +206,25 @@ export function alcoveNote(a: AlcoveModel, touch = false): string {
   return needs.length ? `Locked · needs ${needs.join(', ')}` : 'Locked';
 }
 
+/**
+ * Phones (mobile-6-chrome): a locked door's card in plain words, naming the doors to solve
+ * first ("Locked: solve Relay Tower first"); the gems themselves show as named icons beside
+ * it. A name never breaks across lines (its spaces are non-breaking). Other doors: `alcoveNote`.
+ */
+export function lockedNote(a: AlcoveModel): string {
+  if (a.status !== 'locked') return alcoveNote(a, true);
+  const keep = (s: string) => s.replace(/ /g, '\u00a0');
+  const doors = [...new Set(a.missing.map((m) => m.from).filter((f): f is string => !!f))];
+  // The machines a door waits on include the ones that grant its gems.
+  const n = a.missingMachines;
+  if (n > 0) return `Locked: solve ${n}\u00a0more machine${n === 1 ? '' : 's'} first`;
+  // Many sources (the Last Rune): the gem icons beside the words say which.
+  if (doors.length > 2) return 'Locked: earn these gems first';
+  if (doors.length === 0) return 'Locked';
+  const list = doors.map(keep).join(' and ');
+  return `Locked: solve ${list} first`;
+}
+
 /** Keyboard focus order: front of the hall to the back, then left to right. */
 export function focusOrder(model: HallModel): MachineId[] {
   return [...model.alcoves].sort((a, b) => b.y - a.y || a.x - b.x).map((a) => a.id);

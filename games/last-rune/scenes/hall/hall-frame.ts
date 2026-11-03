@@ -29,8 +29,11 @@ export interface HallFrame {
 
 export const IDENTITY_FRAME: HallFrame = { zoom: 1, camX: 0, camY: 0, spread: 1 };
 
-/** World band that must stay on screen: the top row's arches to the Intake Desk's sill. */
-export const HALL_BAND = { top: 37, bottom: 1037 } as const;
+/**
+ * World band that must stay on screen: just above the top row's arches (their stone frames and
+ * the phone "Next" tag over them, mobile-6-chrome) to the Intake Desk's sill.
+ */
+export const HALL_BAND = { top: -24, bottom: 1037 } as const;
 /** The widest the camera zooms out (the phone hall's wall and floor are baked this wide). */
 export const HALL_MIN_ZOOM = 2 / 3;
 /** The baked width of the phone hall's wall and floor, world px. */

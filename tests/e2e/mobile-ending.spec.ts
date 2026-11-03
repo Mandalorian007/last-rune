@@ -346,7 +346,8 @@ for (const vp of PHONES) {
           return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
         };
         const [tr, tg, tb] = rgba(cs.color);
-        const [br, bg, bb, ba] = rgba(cs.backgroundColor);
+        // mobile-6-chrome: the line is plain text on the card's dark plate.
+        const [br, bg, bb, ba] = rgba(getComputedStyle(f.parentElement!).backgroundColor);
         // The plate over the brightest gold behind it (worst case).
         const gold = [255, 214, 120];
         const mix = (v: number, i: number) => v * ba + gold[i]! * (1 - ba);
@@ -355,6 +356,26 @@ for (const vp of PHONES) {
         return (Math.max(lt, lb) + 0.05) / (Math.min(lt, lb) + 0.05);
       });
       expect(contrast, 'end card closing line contrast').toBeGreaterThanOrEqual(4.5);
+      // mobile-6-chrome: the card is centred on the screen, Join first in a two-column grid
+      // (each link's Copy beside it), the closing line and Back across both columns.
+      const card = (await boxOf(page, '.lr-end-card'))!;
+      expect(
+        Math.abs((card.l + card.r) / 2 - (app.l + app.r) / 2),
+        'end card off centre',
+      ).toBeLessThanOrEqual(2);
+      const [joinB, coffeeB, inviteB, kofiB, backB] = boxes;
+      expect(joinB!.l).toBeLessThan(inviteB!.l);
+      expect(Math.abs(joinB!.t - inviteB!.t)).toBeLessThanOrEqual(1);
+      expect(Math.abs(joinB!.l - coffeeB!.l)).toBeLessThanOrEqual(1);
+      expect(Math.abs(inviteB!.l - kofiB!.l)).toBeLessThanOrEqual(1);
+      expect(coffeeB!.t).toBeGreaterThan(joinB!.b);
+      expect(Math.abs((backB!.l + backB!.r) / 2 - (card.l + card.r) / 2)).toBeLessThanOrEqual(2);
+      // The title's lines sit on their dark band (no gold showing between the lines).
+      const band = await page.evaluate(
+        () =>
+          getComputedStyle(document.querySelector('.lr-end-title')!, '::before').backgroundColor,
+      );
+      expect(band).toMatch(/rgba?\(24, 12, 3/);
       // The clipboard stays a prop: clear of every control, with room to spare.
       const clip = (await boxOf(page, '.lr-clip-note'))!;
       for (const b of boxes) {

@@ -61,6 +61,7 @@ export class TitleScene implements GameScene {
     this.view.dispose();
     this.ctx.fuse.hush();
     this.ctx.fuse.avoid(null);
+    this.ctx.ui.root.style.removeProperty('--lr-title-cap-top');
   }
 
   update(dt: number): void {
@@ -118,14 +119,18 @@ export class TitleScene implements GameScene {
     void this.ctx.fuse.say(line);
   }
 
-  /** The menu, release label and Ko-fi link, measured (text size moves them), in design px. */
+  /**
+   * The logo, menu, release label and Ko-fi link, measured (text size moves them), in design px.
+   * Phones (mobile-6-chrome): the card's top corners drop to just under the subtitle, so with
+   * the logo kept clear there is always a free spot beside the menu.
+   */
   private menuRegions(): Rect[] {
     const ui = this.ctx.ui;
     if (!this.dom?.isConnected) return [];
     const o = ui.root.getBoundingClientRect();
     const out: Rect[] = [];
     for (const el of this.dom.querySelectorAll<HTMLElement>(
-      '.lr-title-menu, .lr-release, .lr-title-links',
+      '.lr-title, .lr-title-menu, .lr-release, .lr-title-links',
     )) {
       const r = el.getBoundingClientRect();
       if (r.width === 0) continue;
@@ -137,7 +142,14 @@ export class TitleScene implements GameScene {
       });
     }
     // Phones (mobile-5-chrome): FUSE himself, wherever he potters, so his card never covers him.
-    if (this.ctx.device.phone) out.push(FUSE_ZONE);
+    if (this.ctx.device.phone) {
+      out.push(FUSE_ZONE);
+      const logo = this.dom.querySelector<HTMLElement>('.lr-title')?.getBoundingClientRect();
+      if (logo && logo.height > 0) {
+        const top = (logo.bottom - o.top) / ui.scale + AVOID_PAD + 4;
+        ui.root.style.setProperty('--lr-title-cap-top', `${Math.round(top)}px`);
+      }
+    }
     return out;
   }
 

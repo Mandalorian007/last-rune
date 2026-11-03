@@ -204,84 +204,108 @@ export function openSettings(deps: SettingsPanelDeps): void {
     className: 'lr-panel-x',
     ariaLabel: 'Close settings',
   });
-  // Phones: the body scrolls natively, with a visible thumb; "Graphics & Save ▾" jumps to the
-  // lower sections while they are still below (it reads as "scroll down", not a dropdown).
-  const lower: HTMLElement[] = [];
-  const jump = phone
-    ? button('Graphics & Save ▾', () => cols.scrollTo({ top: lowerTop(), behavior: 'smooth' }), {
-        className: 'lr-settings-more',
-      })
-    : null;
-  const track = (e: HTMLElement) => {
-    lower.push(e);
-    return e;
-  };
-  const lowerTop = () => Math.max(0, Math.min(...lower.map((e) => e.offsetTop)) - 4);
-  const cols = h(
-    'div',
-    { class: 'lr-settings-cols' },
-    h(
-      'div',
-      { class: 'lr-settings-col' },
-      h('section', null, h('h3', null, 'Sound'), ...volumes),
-      track(h('section', null, h('h3', null, 'Graphics'), graphics)),
-    ),
-    h(
-      'div',
-      { class: 'lr-settings-col' },
-      h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed),
-      track(
-        h(
-          'section',
-          null,
-          h('h3', null, 'Save'),
-          persistent,
-          saveBox,
-          h('div', { class: 'lr-row' }, exportBtn, importBtn, phone ? null : resetBtn),
-          note,
-          // Phones: Reset gets a group of its own, away from Import (D-040, mobile-5-chrome).
-          phone
-            ? h(
-                'div',
-                { class: 'lr-settings-danger', role: 'group', 'aria-label': 'Start over' },
-                h('h4', null, 'Start over'),
-                h('p', null, 'Erases machines and journal pages. Settings stay.'),
-                resetBtn,
-              )
-            : null,
-        ),
-      ),
-    ),
+  const sound = h('section', null, h('h3', null, 'Sound'), ...volumes);
+  const comfort = h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed);
+  const gfx = h('section', null, h('h3', null, 'Graphics'), graphics);
+  const saveSection = h(
+    'section',
+    null,
+    h('h3', null, 'Save'),
+    persistent,
+    saveBox,
+    h('div', { class: 'lr-row' }, exportBtn, importBtn, phone ? null : resetBtn),
+    note,
   );
-  // Phones: a drawn scroll thumb (iOS hides its own until you scroll) beside the columns.
-  const thumb = phone ? h('div', { class: 'lr-settings-thumb' }) : null;
-  const rail = thumb ? h('div', { class: 'lr-settings-rail', 'aria-hidden': 'true' }, thumb) : null;
-  if (jump && thumb && rail) {
-    const sync = () => {
-      const max = cols.scrollHeight - cols.clientHeight;
-      const below = max - cols.scrollTop > 4;
-      cols.toggleAttribute('data-more', below);
-      jump.hidden = !below || cols.scrollTop >= lowerTop() - 4;
-      rail.hidden = max <= 4;
-      if (max > 4) {
-        const frac = cols.clientHeight / cols.scrollHeight;
-        thumb.style.height = `${frac * 100}%`;
-        thumb.style.top = `${(cols.scrollTop / max) * (1 - frac) * 100}%`;
-      }
-    };
-    cols.addEventListener('scroll', sync, { passive: true });
-    requestAnimationFrame(sync);
-    new ResizeObserver(sync).observe(cols);
-    // mobile-5-chrome: the fold falls on a whole row, so no header or control is cut in half
-    // under the footer; the thumb and "Graphics & Save ▾" say there is more.
-    const fold = () => {
-      if (!cols.isConnected) {
-        refold.disconnect();
-        return;
-      }
-      cols.style.maxHeight = '';
-      const avail = cols.clientHeight;
-      if (cols.scrollHeight - avail <= 4) return;
+  const col = (...kids: HTMLElement[]) => h('div', { class: 'lr-settings-col' }, ...kids);
+  const done = button('Done', () => ui.stack.pop('programmatic'), { variant: 'primary' });
+
+  if (!phone) {
+    // Two columns so the whole panel, Done included, fits a 720p screen at 100% text.
+    const cols = h(
+      'div',
+      { class: 'lr-settings-cols' },
+      col(sound, gfx),
+      col(comfort, saveSection),
+    );
+    const content = h(
+      'div',
+      { class: 'lr-settings' },
+      cols,
+      h('div', { class: 'lr-row lr-settings-done' }, done),
+    );
+    ui.stack.push({
+      content,
+      title: 'Settings',
+      modal: true,
+      dismissible: true,
+      className: 'lr-settings-host',
+    });
+    return;
+  }
+
+  // Phones (mobile-6-chrome): two tabs, "Sound & Comfort" and "Graphics & Save", each a whole
+  // view of two columns, so no header is orphaned and nothing hides below a fold. Reset keeps a
+  // group of its own, away from Import (D-040, mobile-5-chrome). At 150% text a tab may still
+  // run long: it scrolls beside a drawn thumb, its fold on a whole row.
+  const danger = h(
+    'div',
+    { class: 'lr-settings-danger', role: 'group', 'aria-label': 'Start over' },
+    h('h4', null, 'Start over'),
+    h('p', null, 'Erases machines and journal pages. Settings stay.'),
+    resetBtn,
+  );
+  const pages = [
+    { label: 'Sound & Comfort', cols: [col(sound), col(comfort)] },
+    { label: 'Graphics & Save', cols: [col(gfx, danger), col(saveSection)] },
+  ].map((p, i) => {
+    const body = h(
+      'div',
+      {
+        class: 'lr-settings-cols',
+        id: `lr-settings-page-${i}`,
+        role: 'tabpanel',
+        'aria-label': p.label,
+        hidden: i > 0,
+      },
+      ...p.cols,
+    );
+    const tab = h(
+      'button',
+      {
+        type: 'button',
+        class: 'lr-settings-tab',
+        role: 'tab',
+        'aria-selected': String(i === 0),
+        'aria-controls': body.id,
+        on: { click: () => show(i) },
+      },
+      p.label,
+    );
+    return { body, tab };
+  });
+  let cols = pages[0]!.body;
+  const thumb = h('div', { class: 'lr-settings-thumb' });
+  const rail = h('div', { class: 'lr-settings-rail', 'aria-hidden': 'true' }, thumb);
+  const sync = () => {
+    const max = cols.scrollHeight - cols.clientHeight;
+    cols.toggleAttribute('data-more', max - cols.scrollTop > 4);
+    rail.hidden = max <= 4;
+    if (max > 4) {
+      const frac = cols.clientHeight / cols.scrollHeight;
+      thumb.style.height = `${frac * 100}%`;
+      thumb.style.top = `${(cols.scrollTop / max) * (1 - frac) * 100}%`;
+    }
+  };
+  // mobile-5-chrome: the fold falls on a whole row, so no header or control is cut in half
+  // under the footer; the thumb says there is more.
+  const fold = () => {
+    if (!cols.isConnected) {
+      refold.disconnect();
+      return;
+    }
+    cols.style.maxHeight = '';
+    const avail = cols.clientHeight;
+    if (cols.scrollHeight - avail > 4) {
       // The lowest row end that fits and that no row in either column straddles.
       const rows = [...cols.querySelectorAll<HTMLElement>(ROWS)].map((e) => ({
         top: e.offsetTop,
@@ -295,27 +319,36 @@ export function openSettings(deps: SettingsPanelDeps): void {
       }
       // Exactly at the row end: any more shows a sliver of the next row's frame.
       if (end > 0) cols.style.maxHeight = `${Math.ceil(end)}px`;
-      sync();
-    };
-    const refold = new ResizeObserver(fold);
-    requestAnimationFrame(() => {
-      fold();
-      refold.observe(ui.root);
+    }
+    sync();
+  };
+  const refold = new ResizeObserver(fold);
+  function show(i: number): void {
+    pages.forEach((p, j) => {
+      p.body.hidden = j !== i;
+      p.tab.setAttribute('aria-selected', String(j === i));
     });
+    cols = pages[i]!.body;
+    cols.scrollTop = 0;
+    fold();
   }
+  for (const p of pages) p.body.addEventListener('scroll', sync, { passive: true });
+  requestAnimationFrame(() => {
+    fold();
+    refold.observe(ui.root);
+  });
   const content = h(
     'div',
-    // Phones: the panel itself takes focus, so no focus ring sits on the first slider.
-    { class: 'lr-settings', tabindex: phone ? '-1' : null },
-    phone ? close : null,
-    // Two columns so the whole panel, Done included, fits a 720p screen at 100% text.
-    rail ? h('div', { class: 'lr-settings-scroll' }, cols, rail) : cols,
+    // The panel itself takes focus, so no focus ring sits on the first slider.
+    { class: 'lr-settings', tabindex: '-1' },
+    close,
     h(
       'div',
-      { class: 'lr-row lr-settings-done' },
-      jump,
-      button('Done', () => ui.stack.pop('programmatic'), { variant: 'primary' }),
+      { class: 'lr-settings-tabs', role: 'tablist', 'aria-label': 'Settings pages' },
+      ...pages.map((p) => p.tab),
     ),
+    h('div', { class: 'lr-settings-scroll' }, ...pages.map((p) => p.body), rail),
+    h('div', { class: 'lr-row lr-settings-done' }, done),
   );
   ui.stack.push({
     content,
@@ -323,7 +356,7 @@ export function openSettings(deps: SettingsPanelDeps): void {
     modal: true,
     dismissible: true,
     className: 'lr-settings-host',
-    ...(phone ? { initialFocus: content } : {}),
+    initialFocus: content,
   });
 }
 

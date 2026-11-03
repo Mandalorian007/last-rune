@@ -20,13 +20,13 @@ describe('hallFrame (mobile-5-chrome phone camera)', () => {
   });
 
   it('zooms out to fit the doorway band in a short view, but no further than the floor', () => {
-    const f = hallFrame({ top: 200, height: 667 });
-    expect(f.zoom).toBeCloseTo(667 / (HALL_BAND.bottom - HALL_BAND.top));
+    const f = hallFrame({ top: 200, height: 720 });
+    expect(f.zoom).toBeCloseTo(720 / (HALL_BAND.bottom - HALL_BAND.top));
     expect(hallFrame({ top: 300, height: 400 }).zoom).toBe(HALL_MIN_ZOOM);
   });
 
   it('puts the doorway band inside the visible view', () => {
-    const view = { top: 206, height: 667 };
+    const view = { top: 180, height: 720 };
     const f = hallFrame(view);
     const top = toScreen(f, 960, HALL_BAND.top).y;
     const bottom = toScreen(f, 960, HALL_BAND.bottom).y;

@@ -389,14 +389,94 @@ ${P} .lr-journal .lr-j-turn[aria-label="Next page"] { left: auto !important; rig
 ${P} .lr-j-head p { font-size: ${tpx(12)}; }
 /* Hangout: no "unread" count; nothing there is for the player to open (D-027). */
 ${P} .lr-hg-badge-count { display: none !important; }
-/* End card on the narrowest phones (SE): the column moves further left, so the dropped
-   clipboard on the right stays clear of "Copy Ko-fi link". Order unchanged (D-034). */
-@media (max-width: 700px) {
-  ${P} :is(.lr-end-title, .lr-end-credits, .lr-end-card):not(#lr-none) { right: 600px; }
-  ${P} .lr-end-safety:not(#lr-none) { left: calc(50% - 300px); }
-}
+/* (mobile-6-chrome: the end card is centred on every phone, the clipboard to its right.) */
 `;
 /* end mobile-5-chrome */
+
+/* mobile-6-chrome */
+const CHROME6_CSS = /* css */ `
+/* ── mobile-6-chrome: gate review 3 (D-040 addendum 4) ─────────────────────────────────── */
+/* Title: FUSE's card keeps off the logo; its top corners sit under the subtitle
+   (title-scene sets --lr-title-cap-top). Ko-fi and Copy link sit on a dark band of their own. */
+${P} .tc-caption[data-corner^="top"]:not(#lr-none) { top: var(--lr-title-cap-top, calc(${CT} + var(--tc-caption-margin))); }
+${P} .lr-title-links .tc-link-row {
+  padding: ${cpx(4)}; border-radius: ${cpx(24)}; background: rgb(8 6 4 / 0.86);
+  box-shadow: 0 0 ${cpx(10)} ${cpx(4)} rgb(8 6 4 / 0.7);
+}
+${P} .lr-title-links :is(.lr-title-coffee, .tc-link-copy) { background: rgb(28 18 12 / 0.95); }
+
+/* Hall: one plate family. Open: gold name; restored: ✓ and name inside the plate; locked: a
+   padlock and the name, dimmed. No gem pips or "+N" on the map; the tap card names them. */
+${P} .lr-door[data-status="locked"] {
+  gap: ${cpx(3)}; padding: ${cpx(1)} ${cpx(4)}; color: #b4a990; background: rgb(10 8 6 / 0.82);
+  border-color: rgb(200 190 170 / 0.28); box-shadow: 0 ${cpx(1)} ${cpx(3)} rgb(0 0 0 / 0.6);
+}
+${P} .lr-door-lock { width: ${cpx(9)}; height: ${cpx(11)}; opacity: 0.9; }
+${P} .lr-door-tick { margin-right: ${cpx(1)}; }
+/* The "Start here" / "Next" tag stands wholly above the door's outline, clear of its frame
+   (the band leaves room above the top row: hall-frame HALL_BAND). */
+${P} .lr-hall-next-tag { top: max(calc(var(--lr-next-top, 0px) - ${cpx(23)}), calc(${CT} + ${cpx(3)})); }
+/* The tapped door's card: name, plain words, the gems it needs by name; never over its plate. */
+${P} .lr-nameplate[data-above] { transform: translate(-50%, -100%); }
+${P} .lr-nameplate > span { display: block; white-space: nowrap; font-weight: 600; }
+${P} .lr-nameplate small { display: block; text-wrap: balance; }
+${P} .lr-card-gems {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: ${cpx(2)} ${cpx(8)}; margin-top: ${cpx(3)};
+}
+${P} .lr-card-gems[hidden] { display: none; }
+${P} .lr-card-gem {
+  display: inline-flex; align-items: center; gap: ${cpx(4)}; white-space: nowrap;
+  font: 600 ${tpx(12)}/1.2 var(--tc-font-body, serif); color: #f4e6c4;
+}
+${P} .lr-card-gem .lr-door-gem { width: ${cpx(10)}; height: ${cpx(10)}; }
+
+/* Settings: two tabs in the title row ("Sound & Comfort", "Graphics & Save"), each a whole
+   view; no "Graphics & Save ▾" jump. */
+${P} .tc-panel.lr-settings-host { position: relative; }
+${P} .lr-settings-tabs {
+  position: absolute; top: ${cpx(5)}; left: 50%; transform: translateX(-50%); display: flex;
+  border: 1px solid rgb(232 192 106 / 0.5); border-radius: ${cpx(18)}; overflow: hidden;
+  background: rgb(255 255 255 / 0.06);
+}
+${P} .lr-settings-tab {
+  min-height: ${cpx(34)}; padding: 0 ${cpx(14)}; margin: 0; border: 0; cursor: pointer; white-space: nowrap;
+  font: 600 ${tpx(12.5)}/1 var(--tc-font-body, serif); color: #f2d89a; background: transparent;
+}
+${P} .lr-settings-tab + .lr-settings-tab { border-left: 1px solid rgb(232 192 106 / 0.5); }
+${P} .lr-settings-tab[aria-selected="true"] { color: #2a1906; background: linear-gradient(180deg, #f3d488, #c99a45); }
+${P} .lr-settings-scroll > .lr-settings-cols[hidden] { display: none; }
+/* A whole tab has no fade gap at its foot; at large text the fold still lands on a row. */
+${P} .lr-settings-scroll > .lr-settings-cols[role="tabpanel"] { padding-bottom: 0; }
+
+/* Codex on the shortest phones (SE): tighter spacing and FUSE's label inline with his note, so
+   every page fits whole at 100% text. A page that still runs long (larger text) fades out at
+   its foot over a ⌄ cue, never a line cut in half. */
+@media (max-height: 330px) {
+  ${P} .lr-codex-page { padding-top: ${cpx(4)}; }
+  ${P} .lr-codex-page h3 { font-size: ${tpx(16)}; padding-bottom: ${cpx(1)}; }
+  ${P} .lr-codex-status { margin: ${cpx(1)} 0 ${cpx(3)}; }
+  ${P} .lr-codex-rule, ${P} .lr-margin { line-height: 1.25; }
+  ${P} .lr-codex-maths { margin-top: ${cpx(2)}; }
+  ${P} .lr-margin { margin-top: ${cpx(3)}; }
+  ${P} .lr-margin b { display: inline; margin: 0 ${cpx(6)} 0 0; }
+}
+${P} .lr-codex-page[data-more] {
+  mask-image: linear-gradient(#000 calc(100% - ${cpx(34)}), transparent calc(100% - ${cpx(6)}));
+}
+.tc-overlay:not([data-phone]) .lr-codex-more { display: none; }
+${P} .lr-codex-more {
+  position: absolute; bottom: ${cpx(1)}; transform: translateX(-50%); z-index: 1; pointer-events: none;
+  font: 700 ${cpx(18)}/0.6 var(--tc-font-ui, system-ui, sans-serif); color: #6a3a0c;
+}
+${P} .lr-codex-more[hidden] { display: none; }
+
+/* Journal: ‹ mirrors › in the left lane, off the quill and the candle. */
+${P} .lr-journal .lr-j-turn[aria-label="Previous page"] {
+  left: calc(-1 * var(--lr-bar, 0px) + ${cpx(2)}) !important; right: auto; transform: translateY(${cpx(-4)});
+}
+${P} .lr-journal .lr-j-turn[aria-label="Next page"] { right: calc(-1 * var(--lr-bar, 0px) + ${cpx(2)}); }
+`;
+/* end mobile-6-chrome */
 
 export const PHONE_CSS = /* css */ `
 /* The edge columns live in the letterbox bars, outside the 16:9 box (#app still clips). */
@@ -838,4 +918,4 @@ ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cp
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }
 ${P} .lr-title-coffee { min-height: ${cpx(24)}; padding: 0 ${cpx(8)}; font-size: ${tpx(11)}; }
 ${P} .lr-release { font-size: ${tpx(11)}; }
-${CHROME_CSS}${CHROME4_CSS}${CHROME5_CSS}`;
+${CHROME_CSS}${CHROME4_CSS}${CHROME5_CSS}${CHROME6_CSS}`;

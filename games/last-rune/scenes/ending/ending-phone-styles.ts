@@ -24,6 +24,9 @@ const LANE = cpx(44);
 const HEAD = cpx(44);
 /** The end card's stack is centred this far left of the screen's centre (design px). */
 const SHIFT = '260px';
+/** Design px cropped off the top and bottom while the ending fills the width (mobile-6-chrome). */
+const CT = 'var(--lr-crop-t, 0px)';
+const CB = 'var(--lr-crop-b, 0px)';
 
 export const ENDING_PHONE_CSS = /* css */ `
 /* ── Skip: its own lane, top right, in the bar ───────────────────────────── */
@@ -184,4 +187,68 @@ ${P} .lr-end-footer {
   background: rgb(28 13 2 / 0.9); box-shadow: 0 0 ${cpx(10)} rgb(28 13 2 / 0.6);
 }
 /* end mobile-4-chrome */
+
+/* mobile-6-chrome */
+/* The whole ending fills the width like the hangout (ctx FILL_BANDS.ending), so everything
+   anchored to the top or the bottom moves in by the crop. */
+${P} .lr-end-skip { top: calc(${CT} + ${cpx(4)}); }
+${P}:has(.lr-ending) .tc-caption { bottom: calc(${CB} + ${cpx(8)}) !important; }
+${P} .lr-hg { top: ${CT}; height: calc(1080px - ${CT} - ${CB}); }
+/* "Plays by itself" beside Skip (or alone in its place on a first ending): a newcomer knows to
+   watch, and that Skip is there. Desktop keeps its Skip · Esc. */
+.tc-overlay:not([data-phone]) .lr-end-cue { display: none; }
+${P} .lr-end-cue {
+  position: absolute; z-index: 3; top: calc(${CT} + ${cpx(4)}); right: calc(${BAR_IN} + ${LANE} + ${cpx(6)});
+  height: ${cpx(36)}; margin: 0; padding: 0 ${cpx(10)}; display: flex; align-items: center; box-sizing: border-box;
+  font: italic ${tpx(12)}/1 var(--tc-font-body, serif); color: #efe2c4; white-space: nowrap;
+  border-radius: ${cpx(18)}; background: rgb(14 10 6 / 0.72); pointer-events: none;
+}
+${P} .lr-end-cue[data-alone] { right: ${BAR_IN}; }
+${P} .lr-hg-top { padding-right: calc(${LANE} + ${cpx(130)}); }
+/* The hangout opens with its messages under the header, not under an empty band; once they
+   overflow, the newest stay at the foot and the oldest fade under the header. */
+${P} .lr-hg-log {
+  padding-top: ${cpx(8)};
+  -webkit-mask-image: linear-gradient(#0000 0, #000 ${cpx(8)}); mask-image: linear-gradient(#0000 0, #000 ${cpx(8)});
+}
+${P} .lr-hg-log::after { content: ''; flex: 1 1 auto; }
+
+/* Title, safety record, credits and the end card: one centred column. The title's lines sit
+   on a dark band (cream on near-black, well over 4.5:1, never white on the gold). */
+${P} .lr-end-title { top: calc(${CT} + ${cpx(8)}); left: 50%; right: auto; width: ${cpx(470)}; margin-left: ${cpx(-235)}; }
+${P} .lr-end-title::before {
+  left: 0; right: 0; top: ${cpx(-5)}; bottom: ${cpx(-5)}; border-radius: ${cpx(12)};
+  background: rgb(24 12 3 / 0.84); box-shadow: 0 0 ${cpx(10)} rgb(24 12 3 / 0.5);
+}
+${P} .lr-end-safety { top: calc(${CT} + ${cpx(80)}); left: 50%; }
+${P} .lr-end-credits { top: calc(${CT} + ${cpx(160)}); right: 0; }
+/* The card: a dark plate, centred; Join and Ko-fi in the left column (Join first, D-034),
+   each link's Copy beside it, so the four buttons form a tidy grid. The closing line is plain
+   text on the plate, and Back is an outlined secondary button under it. */
+${P} .lr-end-card {
+  top: calc(${CT} + ${cpx(146)}); left: 50%; right: auto; transform: translateX(-50%);
+  display: grid; grid-template-columns: auto auto; align-items: stretch; justify-items: stretch;
+  gap: ${cpx(6)} ${cpx(8)}; padding: ${cpx(8)} ${cpx(10)} ${cpx(8)}; border-radius: ${cpx(14)};
+  background: rgb(24 12 3 / 0.8); box-shadow: 0 0 ${cpx(14)} rgb(24 12 3 / 0.45);
+}
+${P} .lr-end-card .lr-end-links, ${P} .lr-end-card .lr-end-links > .tc-link-row { display: contents; }
+${P} .lr-end-card :is(a.lr-end-join, a.lr-end-coffee) { justify-content: center; white-space: nowrap; }
+/* Short phones (SE, 320 px tall): the column tightens so Back to the hall stays whole. */
+@media (max-height: 330px) {
+  ${P} .lr-end-safety { top: calc(${CT} + ${cpx(74)}); padding-top: ${cpx(3)}; padding-bottom: ${cpx(4)}; }
+  ${P} .lr-end-card { top: calc(${CT} + ${cpx(136)}); gap: ${cpx(5)} ${cpx(8)}; padding-top: ${cpx(6)}; padding-bottom: ${cpx(6)}; }
+}
+${P} .lr-end-links .tc-link-copy { position: static; margin: 0; justify-content: center; }
+${P} .lr-end-card a.lr-end-coffee { border-radius: ${cpx(10)}; }
+${P} .lr-end-card .tc-link-fallback { grid-column: 1 / -1; }
+${P} .lr-end-footer {
+  grid-column: 1 / -1; justify-self: center; margin: ${cpx(2)} 0 0; padding: 0; border-radius: 0;
+  background: none; box-shadow: none; text-shadow: none; color: #f4e6c4; font-size: ${tpx(12.5)}; text-align: center;
+}
+${P} .lr-end-card .lr-end-back {
+  grid-column: 1 / -1; justify-self: center; min-width: ${cpx(180)}; margin: 0;
+  color: #fff1cc; background: rgb(255 240 200 / 0.08); border: 1px solid rgb(255 227 160 / 0.6);
+  border-radius: ${cpx(10)}; box-shadow: none; font-family: var(--tc-font-body, serif);
+}
+/* end mobile-6-chrome */
 `;

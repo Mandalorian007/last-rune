@@ -230,6 +230,29 @@ for (const vp of PHONES) {
       const tb = await bars(page);
       if (tb.l > 4 || tb.r > 4)
         problems.push(`title art bars ${tb.l.toFixed(0)}/${tb.r.toFixed(0)} px`);
+      // mobile-6-chrome: FUSE's card never covers the logo, nor the menu.
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.save.update((d: G) => {
+          d.settings.captionSpeed = 'instant';
+        });
+        g.fuse.hush();
+        g.stack.top.chat?.();
+      });
+      await expect(page.locator('.tc-caption')).toBeVisible();
+      await page.waitForTimeout(400);
+      const cover = await page.evaluate(() => {
+        const c = document.querySelector('.tc-caption')!.getBoundingClientRect();
+        const out: string[] = [];
+        for (const sel of ['.lr-title', '.lr-title-menu']) {
+          const r = document.querySelector(sel)!.getBoundingClientRect();
+          if (c.left < r.right && r.left < c.right && c.top < r.bottom && r.top < c.bottom)
+            out.push(`FUSE's card covers ${sel}`);
+        }
+        return out;
+      });
+      problems.push(...cover.map((s) => `title: ${s}`));
+      await page.evaluate(() => (window as G).__game.fuse.hush());
 
       // Hall, first entry: a new game, nothing solved. The Intake Desk (the floor doorway) and its
       // "Start here" tag are whole on screen and FUSE points at it.
@@ -456,24 +479,18 @@ for (const vp of PHONES) {
         problems.push('hall: the welcome played on a save with progress');
       await page.evaluate(() => (window as G).__game.fuse.hush());
 
-      // Settings: the thumb shows, "Graphics & Save" scrolls, and Reset ends up in view.
+      // Settings (mobile-6-chrome): two tabs, each a whole view; Reset is on "Graphics & Save".
       await page.evaluate(() => (window as G).__game.openSettings());
       await expect(page.locator('.lr-settings')).toBeVisible();
       await waitFrames(page, 4);
-      const jump = page.locator('.lr-settings-more');
-      const scrolls = await page.evaluate(() => {
-        const c = document.querySelector('.lr-settings-cols')!;
-        return c.scrollHeight - c.clientHeight > 4;
-      });
-      if (scrolls) {
-        await expect(page.locator('.lr-settings-thumb')).toBeVisible();
-        await expect(jump).toBeVisible();
-        await expect(jump).toHaveText(/Graphics & Save/);
-        await jump.click();
-        await page.waitForTimeout(700);
-      }
+      const tabs6 = page.locator('.lr-settings-tab');
+      await expect(tabs6).toHaveText(['Sound & Comfort', 'Graphics & Save']);
+      await expect(tabs6.nth(0)).toHaveAttribute('aria-selected', 'true');
+      await tabs6.nth(1).click();
+      await expect(tabs6.nth(1)).toHaveAttribute('aria-selected', 'true');
+      await waitFrames(page, 3);
       const save = await page.evaluate(() => {
-        const cols = document.querySelector('.lr-settings-cols')!;
+        const cols = document.querySelector('.lr-settings-cols:not([hidden])')!;
         // Scroll the rest of the way by hand, as a thumb would.
         cols.scrollTop = cols.scrollHeight;
         const view = cols.getBoundingClientRect();
@@ -653,7 +670,7 @@ for (const vp of PHONES) {
       await waitFrames(page, 6);
 
       // Every door has a plate: solved ones ✓ and named, open ones named, locked ones a lock and
-      // what they need. On screen 4 px in (doorsOff), none overlapping, need pips ≥10 px.
+      // their name. On screen 4 px in (doorsOff), none overlapping, and no pips (mobile-6-chrome).
       const plates = await page.evaluate(() => {
         const st = (window as G).__game.stack.top.state;
         const out: string[] = [];
@@ -668,8 +685,11 @@ for (const vp of PHONES) {
           const text = el.textContent ?? '';
           if (a.status === 'locked') {
             if (!el.querySelector('svg')) out.push(`${a.id}: locked with no lock`);
-            if (!el.querySelector('.lr-door-gem') && !a.missingMachines)
-              out.push(`${a.id}: locked with no requirement`);
+            // mobile-6-chrome: a phone plate is the lock and the name; the tap card says
+            // in plain words what opens it (no pips, no "+N").
+            if (!text.includes(a.name)) out.push(`${a.id}: plate "${text}" lacks "${a.name}"`);
+            if (el.querySelector('.lr-door-gem') || /\+\d/.test(text))
+              out.push(`${a.id}: locked plate shows pips or a "+N"`);
           } else {
             if (!text.includes(a.name)) out.push(`${a.id}: plate "${text}" lacks "${a.name}"`);
             if (a.status === 'solved' && !el.querySelector('.lr-door-tick'))
@@ -721,6 +741,28 @@ for (const vp of PHONES) {
       await expect(page.locator('.lr-nameplate')).toBeVisible();
       await expect(page.locator('.lr-nameplate')).toContainText(locked.name);
       await expect(page.locator('.lr-nameplate')).toContainText(/Locked/);
+      // The card never covers its own plate, and it closes when the Menu opens.
+      const overPlate = await page.evaluate((name) => {
+        const card = document.querySelector('.lr-nameplate')!.getBoundingClientRect();
+        const plate = [...document.querySelectorAll<HTMLElement>('.lr-door')].find((d) =>
+          (d.textContent ?? '').includes(name),
+        );
+        const r = plate?.getBoundingClientRect();
+        return (
+          !!r &&
+          card.left < r.right &&
+          r.left < card.right &&
+          card.top < r.bottom &&
+          r.top < card.bottom
+        );
+      }, locked.name);
+      if (overPlate) problems.push('hall: the tap card covers its own plate');
+      await page.locator('.lr-hud-menu').click();
+      await expect(page.locator('.lr-nameplate')).toBeHidden();
+      await page.locator('.lr-hud-menu').click();
+      // A touch is a hover only when it moves, so tap a few px off the first spot.
+      await page.touchscreen.tap(locked.x + 3, locked.y + 3);
+      await expect(page.locator('.lr-nameplate')).toBeVisible();
 
       // Settings: no header or control is cut by the fold; the save box and Start over group.
       await page.evaluate(() => (window as G).__game.openSettings());
@@ -728,17 +770,22 @@ for (const vp of PHONES) {
       await expect(page.locator('.lr-nameplate')).toBeHidden();
       await page.waitForTimeout(300);
       await waitFrames(page, 4);
-      const cut = await page.evaluate(() => {
-        const cols = document.querySelector<HTMLElement>('.lr-settings-cols')!;
-        const v = cols.getBoundingClientRect();
-        const out: string[] = [];
-        for (const e of cols.querySelectorAll<HTMLElement>('h3, .tc-field, .lr-choice')) {
-          const r = e.getBoundingClientRect();
-          if (r.top < v.bottom - 1 && r.bottom > v.bottom + 1)
-            out.push(`"${(e.textContent ?? '').trim().slice(0, 20)}" is cut by the fold`);
-        }
-        return out;
-      });
+      const cutAt = () =>
+        page.evaluate(() => {
+          const cols = document.querySelector<HTMLElement>('.lr-settings-cols:not([hidden])')!;
+          const v = cols.getBoundingClientRect();
+          const out: string[] = [];
+          for (const e of cols.querySelectorAll<HTMLElement>('h3, .tc-field, .lr-choice')) {
+            const r = e.getBoundingClientRect();
+            if (r.top < v.bottom - 1 && r.bottom > v.bottom + 1)
+              out.push(`"${(e.textContent ?? '').trim().slice(0, 20)}" is cut by the fold`);
+          }
+          return out;
+        });
+      const cut = await cutAt();
+      await page.locator('.lr-settings-tab').nth(1).click();
+      await waitFrames(page, 3);
+      cut.push(...(await cutAt()));
       problems.push(...cut.map((s) => `settings: ${s}`));
       await expect(page.locator('.lr-save-box')).toContainText('Save code');
       await expect(page.locator('.lr-settings-danger')).toContainText('Start over');

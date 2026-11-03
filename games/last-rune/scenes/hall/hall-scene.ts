@@ -38,6 +38,7 @@ import {
   focusOrder,
   type HallModel,
   lineForAlcove,
+  lockedNote,
   newlyUnlocked,
 } from './hall-state';
 
@@ -156,7 +157,7 @@ export class HallScene implements GameScene {
 
     // A panel (Settings, Codex) is over the hall: no door card shows on top of it. A touch's
     // pointer stays where it was tapped, so the card would otherwise outlive the tap.
-    if (this.ctx.ui.stack.size > 0 && this.hover) {
+    if ((this.ctx.ui.stack.size > 0 || this.ctx.hud.menuOpen) && this.hover) {
       this.setHover(null, true);
       this.focus = null;
     }
@@ -168,7 +169,8 @@ export class HallScene implements GameScene {
     if (moved) {
       this.lastPointer = { x: p.x, y: p.y };
       this.focus = null;
-      const hit = p.inside && !this.ctx.ui.stack.size ? alcoveAt(this.model, at.x, at.y) : null;
+      const free = !this.ctx.ui.stack.size && !this.ctx.hud.menuOpen;
+      const hit = p.inside && free ? alcoveAt(this.model, at.x, at.y) : null;
       this.setHover(hit?.id ?? null);
     }
 
@@ -338,8 +340,6 @@ export class HallScene implements GameScene {
         maxWidth: gap * k - 6,
         name: a.name,
         status: a.status,
-        needs: a.missing.map((m) => CSS_PALETTE[m.colour === 'slate' ? 'parchment' : m.colour]),
-        more: a.missingMachines,
       };
     });
   }
@@ -360,6 +360,24 @@ export class HallScene implements GameScene {
     if (!quiet) this.ctx.sfx('ui.hover');
     const top = a.y < 320;
     const half = a.floor ? ALCOVE_HIT.h * 0.6 : ALCOVE_HIT.h / 2;
+    if (this.ctx.device.phone) {
+      // Phones (mobile-6-chrome): plain words and the needed gems by name. A top-row door's
+      // card hangs under the door's own plate; any other's stands on the arch, clear of it.
+      const at = toScreen(this.frame, a.x, top ? a.y + half : a.y - half - 6);
+      this.ctx.hud.plate({
+        x: at.x,
+        y: at.y,
+        name: a.name,
+        note: lockedNote(a),
+        gems: a.missing.map((m) => ({
+          label: m.label,
+          colour: CSS_PALETTE[m.colour === 'slate' ? 'parchment' : m.colour],
+        })),
+        above: !top,
+        door: a.id,
+      });
+      return;
+    }
     const at = toScreen(this.frame, a.x, top ? a.y + half + 14 : a.y - half);
     this.ctx.hud.plate({
       x: at.x,
