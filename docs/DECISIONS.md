@@ -280,3 +280,7 @@ Format: `D-NNN · date · decision · why · who`.
 - **Signing.** Builds are unsigned (user-confirmed under D-041).
 - **Still open:** notarisation, the Linux AppImage sandbox under AppArmor, running the Electron e2e on Linux CI, and test runs of the Windows and Linux builds on real machines.
 - Source: docs/workstreams/host-electron.md.
+
+### D-041 addendum 4: Gate 2 does not wait on the altar line count (PM, 2026-11-04)
+Two altar ports (port-altar, port-altar-2) moved input, magnify and rails onto the engine with no phone regression, but stopped short of the tray/gem-card/lane column: it is drawn and hit-tested on the canvas in design px and needs its own canvas↔region hand-off. The phone experience is what the user tests, and it is unchanged or better. So Gate 2 (D-040 blind review, real-phone retest, Last Rune 1.1, engine 0.2.0) proceeds now; deleting `phone-styles.ts` and getting `altar-scene.ts` under 2,000 lines move to ws/port-altar-3, scheduled after Gate 2 as refactor debt. Phase 3 (second game) must not start until port-altar-3 lands, so the second game never copies the phone special-cases.
+

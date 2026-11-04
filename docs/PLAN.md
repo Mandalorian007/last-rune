@@ -50,7 +50,9 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 7 | Layout regions + overlay in CSS px | ws/layout | 2 | 5 | ✅ merged |
 | 8 | Port title, hall, settings, journal, codex, ending | ws/port-chrome | 2 | 6, 7 | ✅ merged |
 | 9 | Port altar part 1: magnify, altar input on Gestures, chrome polish | ws/port-altar | 2 | 8 | ✅ merged |
-| 9b | Port altar part 2: phone altar as a LayoutSpec + camera fit; delete phone-styles.ts (→ Last Rune 1.1, phones; D-040 gate) | ws/port-altar-2 | 2 | 9 | 🟡 running |
+| 9b | Port altar part 2: altar rails on ctx.chrome, phoneFrameFor deleted, review fixes | ws/port-altar-2 | 2 | 9 | ✅ merged |
+| 9c | Port altar part 3: tray/gem card/lane column as a module on regions (canvas↔region hand-off); delete phone-styles.ts; altar-scene.ts < 2,000. Refactor debt, does NOT block Gate 2 / Last Rune 1.1 | ws/port-altar-3 | 2 | 9b | ⏳ after Gate 2 |
+| G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | 🟡 PM review next |
 | 10 | Camera + math | ws/camera | 3 | 9 | ⏳ |
 | 11 | Transforms + layer/depth sort | ws/transforms | 3 | 9 | ⏳ |
 | 12 | `render(camera, target)` | ws/render-call | 3 | 10, 11 | ⏳ |
