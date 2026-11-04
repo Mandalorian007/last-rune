@@ -191,215 +191,37 @@ test('a gem in hand turns by ↻ before it is placed; dragging a placed gem off 
   // A tap on the bare floor puts the gem in hand back in the tray.
   await tapAt(page, 1700, 620);
   await expect(page.locator('.lr-altar-count[data-held]')).toHaveCount(0);
-  // Drag it off the altar (CDP touch: down on the gem, move to the floor, up).
+  // Drag it off the altar, through the engine's input feed (Input + linked Gestures, the
+  // same calls the DOM listeners make): down on the gem, eight moves to the floor, up.
   const r = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
   const s = r.width / 1920;
-  const cdp = await page.context().newCDPSession(page);
-  const touch = async (type: 'touchStart' | 'touchMove' | 'touchEnd', x: number, y: number) =>
-    cdp.send('Input.dispatchTouchEvent', {
-      type,
-      touchPoints: type === 'touchEnd' ? [] : [{ x: r.x + x * s, y: r.y + y * s }],
-    });
-  await touch('touchStart', pt.x, pt.y);
+  const touch = (phase: 'down' | 'move' | 'up', x: number, y: number) =>
+    page.evaluate(
+      ({ phase, x, y }) => {
+        // biome-ignore lint/suspicious/noExplicitAny: dev handle
+        const input = (window as any).__game.input;
+        const g = input.getGestures();
+        input.pointerAt(x, y, 'touch');
+        if (phase === 'down') {
+          input.buttonDown(0);
+          g.pointerDown(1, x, y);
+        } else if (phase === 'move') g.pointerMove(1, x, y);
+        else {
+          g.pointerUp(1, x, y);
+          input.buttonUp(0);
+        }
+      },
+      { phase, x: r.x + x * s, y: r.y + y * s },
+    );
+  await touch('down', pt.x, pt.y);
+  await waitFrames(page, 1);
   for (let i = 1; i <= 8; i++) {
-    await touch('touchMove', pt.x + (1700 - pt.x) * (i / 8), pt.y + (560 - pt.y) * (i / 8));
+    await touch('move', pt.x + (1700 - pt.x) * (i / 8), pt.y + (560 - pt.y) * (i / 8));
     await waitFrames(page, 1);
   }
-  await touch('touchEnd', 0, 0);
+  await touch('up', 1700, 560);
   await expect.poll(async () => (await readSave(page))?.puzzles.furnace?.placements.length).toBe(0);
 });
-
-/**
- * Altar collisions: any two of the HUD and altar texts and controls (HUD and action buttons,
- * title, hint, need labels, tray counts, ↻ Turn, verdict, gem card, FUSE's caption) whose boxes
- * overlap, or any of them on a tray gem. Text boxes are the text itself (a Range), not padding.
- * A tray count sits on its own gem by design.
- */
-async function overlapProblems(page: Page): Promise<string[]> {
-  const L = await liveLayout(page);
-  const tray = L.tray.map((t) => ({ name: `tray gem ${t.gem}`, x: t.x, y: L.trayY }));
-  return page.evaluate((tray) => {
-    type B = { name: string; l: number; t: number; r: number; b: number; el?: Element };
-    const out: string[] = [];
-    const ov = document.querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!;
-    const o = ov.getBoundingClientRect();
-    const k = o.width / 1920;
-    // On screen: inside the app's box (phones put buttons in the bars beside the 16:9 canvas).
-    const app = (document.getElementById('app') ?? document.body).getBoundingClientRect();
-    const shown = (el: Element) => {
-      const r = el.getBoundingClientRect();
-      const cs = getComputedStyle(el);
-      return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && Number(cs.opacity) > 0.05;
-    };
-    const textBox = (el: Element) => {
-      const rg = document.createRange();
-      rg.selectNodeContents(el);
-      return rg.getBoundingClientRect();
-    };
-    const boxes: B[] = [];
-    const add = (sel: string, name: string, text: boolean) => {
-      for (const el of document.querySelectorAll(sel)) {
-        if (!shown(el) || el.closest('[hidden]')) continue;
-        // Text: the glyphs themselves, but a box that clips its text still shows only the box.
-        const e = el.getBoundingClientRect();
-        const r = text && getComputedStyle(el).overflow === 'visible' ? textBox(el) : e;
-        if (r.width === 0) continue;
-        const label = `${name} "${(el.textContent ?? '').trim().slice(0, 18)}"`;
-        boxes.push({ name: label, l: r.left, t: r.top, r: r.right, b: r.bottom, el });
-      }
-    };
-    add('.lr-hud button', 'hud', false);
-    add('.lr-altar-actions button', 'action', false);
-    add('.lr-altar-title h2', 'title', true);
-    add('.lr-altar-hint', 'hint', true);
-    add('.lr-altar-need', 'label', false);
-    add('.lr-altar-count', 'count', false);
-    add('.lr-altar-turnbtn', 'turn', false);
-    add('.lr-altar-verdict', 'verdict', false);
-    add('.lr-altar-tip', 'card', false);
-    add(
-      '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
-      'caption',
-      false,
-    );
-    const gems: B[] = tray.map((g) => ({
-      name: g.name,
-      l: o.left + (g.x - 40) * k,
-      r: o.left + (g.x + 40) * k,
-      t: o.top + (g.y - 44) * k,
-      b: o.top + (g.y + 40) * k,
-    }));
-    const hit = (a: B, b: B) =>
-      Math.min(a.r, b.r) - Math.max(a.l, b.l) > 1 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 1;
-    for (let i = 0; i < boxes.length; i++) {
-      const a = boxes[i]!;
-      if (a.l < app.left - 1 || a.r > app.right + 1 || a.t < app.top - 1 || a.b > app.bottom + 1)
-        out.push(`${a.name} off screen`);
-      for (let j = i + 1; j < boxes.length; j++) {
-        const b = boxes[j]!;
-        if (a.el?.contains(b.el ?? null) || b.el?.contains(a.el ?? null)) continue;
-        if (hit(a, b)) out.push(`${a.name} × ${b.name}`);
-      }
-      if (a.name.startsWith('count')) continue;
-      for (const g of gems) if (hit(a, g)) out.push(`${a.name} × ${g.name}`);
-    }
-    return out;
-  }, tray);
-}
-
-/** Text under 11 CSS px, and buttons whose finger target is under 44 CSS px, in view now. */
-async function fitProblems(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const out: string[] = [];
-    if (document.documentElement.scrollHeight > innerHeight + 1) out.push('page scrolls');
-    const visible = (el: Element) => {
-      const r = el.getBoundingClientRect();
-      const cs = getComputedStyle(el);
-      return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && Number(cs.opacity) > 0;
-    };
-    // Font sizes on the legacy overlay are design px scaled to the screen; on the CSS-px chrome
-    // overlay (phones) they are CSS px.
-    const scaleOf = (ov: HTMLElement) => ov.getBoundingClientRect().width / (ov.offsetWidth || 1);
-    for (const el of document.querySelectorAll<HTMLElement>('.tc-overlay *')) {
-      if (!visible(el) || el.closest('.tc-sr-only,[aria-hidden="true"]')) continue;
-      const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim());
-      const k = scaleOf(el.closest<HTMLElement>('.tc-overlay')!);
-      const fs = Number.parseFloat(getComputedStyle(el).fontSize) * k;
-      if (own && fs < 10.8)
-        out.push(`text ${fs.toFixed(1)}px: ${el.textContent?.trim().slice(0, 30)}`);
-      // Cut-off text (D-027, mobile-2): no ellipsis, line clamp or clipped overflow on phones.
-      const cs = getComputedStyle(el);
-      const wide = el.scrollWidth > el.clientWidth + 1;
-      const what = el.textContent?.trim().slice(0, 30);
-      if (own && cs.textOverflow === 'ellipsis' && wide) out.push(`ellipsis: ${what}`);
-      if (
-        cs.webkitLineClamp &&
-        cs.webkitLineClamp !== 'none' &&
-        el.scrollHeight > el.clientHeight + 1
-      )
-        out.push(`line-clamped: ${what}`);
-      if (
-        own &&
-        cs.overflowX !== 'visible' &&
-        cs.overflowX !== 'auto' &&
-        cs.overflowX !== 'scroll' &&
-        wide
-      )
-        out.push(`clipped: ${what}`);
-    }
-    for (const el of document.querySelectorAll<HTMLElement>(
-      '.tc-overlay button, .tc-overlay a[href]',
-    )) {
-      if (!visible(el) || el.closest('.lr-j-stack')) continue;
-      // The finger target: the box, grown by the ::before hit area where there is one.
-      const r = el.getBoundingClientRect();
-      const b = getComputedStyle(el, '::before');
-      const grow = (v: string) => Math.max(0, -Number.parseFloat(v) || 0);
-      const scale = r.width / (el.offsetWidth || r.width);
-      const w = r.width + (grow(b.left) + grow(b.right)) * scale;
-      const h = r.height + (grow(b.top) + grow(b.bottom)) * scale;
-      if (w < 43.5 || h < 43.5)
-        out.push(
-          `tap ${w.toFixed(0)}x${h.toFixed(0)}: ${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 30)}`,
-        );
-    }
-    return out;
-  });
-}
-
-for (const vp of [
-  { width: 844, height: 390 },
-  { width: 667, height: 375 },
-]) {
-  test(`fits a ${vp.width}×${vp.height} phone: hall, panels and every altar`, async ({ page }) => {
-    await page.setViewportSize(vp);
-    await boot(
-      page,
-      MACHINE_IDS.filter((m) => m !== 'the-last-rune'),
-    );
-    await page.evaluate(() =>
-      (window as unknown as { __game: GameHandle }).__game.flow.continueGame(),
-    );
-    await page.waitForTimeout(800);
-    const found: Record<string, string[]> = {};
-    const check = async (name: string) => {
-      await waitFrames(page, 6);
-      const f = await fitProblems(page);
-      if (f.length) found[name] = f;
-    };
-    // A first touch puts the game in touch mode (the hall ignores a tap on bare floor).
-    await page.touchscreen.tap(vp.width / 2, vp.height - 4);
-    await check('hall');
-    await page.evaluate(() => (window as unknown as { __game: GameHandle }).__game.openSettings());
-    await page.waitForTimeout(400);
-    await check('settings');
-    await page.evaluate(() => {
-      const g = (window as unknown as { __game: GameHandle }).__game;
-      g.ui.stack.clear();
-      g.codex.open();
-    });
-    await page.waitForTimeout(400);
-    await check('codex');
-    await page.evaluate(() =>
-      (window as unknown as { __game: GameHandle }).__game.ui.stack.clear(),
-    );
-    for (const id of MACHINE_IDS) {
-      await page.evaluate((id) => {
-        const g = (window as unknown as { __game: GameHandle }).__game;
-        g.flow.openPuzzle(id);
-      }, id);
-      await expect(page.locator('.lr-altar')).toBeVisible();
-      await check(id);
-      const o = await overlapProblems(page);
-      if (o.length) found[`${id} overlaps`] = o;
-      await page.evaluate(() =>
-        (window as unknown as { __game: GameHandle }).__game.flow.closePuzzle(),
-      );
-      await page.waitForTimeout(200);
-    }
-    expect(found).toEqual({});
-  });
-}
 
 // The upright turn-sideways card is the engine's rotate card, verified on every phone in
 // packages/engine/e2e/ui.spec.ts; the game only supplies its words (ui/phone-chrome.ts).

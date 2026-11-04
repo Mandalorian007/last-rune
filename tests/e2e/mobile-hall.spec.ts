@@ -69,7 +69,6 @@ function clashes(boxes: Box[]): string[] {
     for (let j = i + 1; j < boxes.length; j++) {
       const a = boxes[i]!;
       const b = boxes[j]!;
-      if (a.n === 'lr-hud-menu' && b.n === 'lr-hud-menu-new') continue; // the badge is on it
       if (a.n === 'lr-hall-next' || b.n === 'lr-hall-next') {
         // The ring: no plate's text is cut by its outline (a plate wholly inside is fine).
         const ring = a.n === 'lr-hall-next' ? a : b;
@@ -208,22 +207,28 @@ for (const vp of PHONES) {
       });
       if (tagTop < 4)
         problems.push(`mid-game: the Next tag is ${tagTop.toFixed(1)} px from the top`);
-      // New pages: one badge on the Menu button, no separate dot.
-      await expect(page.locator('.lr-hud-menu-new')).toHaveText('New page');
+      // New pages: one badge just under the Menu button, saying it is a journal page, in the
+      // ☰ rail (never over the Menu label or the hall), and no separate dot.
+      await expect(page.locator('.lr-hud-menu-new')).toHaveText('New page in journal');
       const badge = await page.evaluate(() => {
         const m = document.querySelector('.lr-hud-menu')!;
         const dot = getComputedStyle(m, '::after');
         const a = m.getBoundingClientRect();
         const b = document.querySelector('.lr-hud-menu-new')!.getBoundingClientRect();
+        const rail = document
+          .querySelector('.tc-region[data-region="right"]')!
+          .getBoundingClientRect();
         return {
           dot: dot.content !== 'none' && dot.display !== 'none',
-          touches: b.top <= a.bottom + 0.5 && b.bottom >= a.bottom,
-          oneLine: b.height < 22,
+          under: b.top >= a.bottom - 0.5 && b.top <= a.bottom + 8,
+          inRail: b.left >= rail.left - 0.5 && b.right <= rail.right + 0.5,
+          twoLines: b.height < 34,
         };
       });
       if (badge.dot) problems.push('Menu has a dot as well as the badge');
-      if (!badge.touches) problems.push('the New page badge is not on the Menu button');
-      if (!badge.oneLine) problems.push('the New page badge wraps');
+      if (!badge.under) problems.push('the New page badge is not just under the Menu button');
+      if (!badge.inRail) problems.push('the New page badge leaves the ☰ rail');
+      if (!badge.twoLines) problems.push('the New page badge runs past two lines');
 
       // FUSE speaking in the hall: a tail; never over an open door or its plate.
       // An ambient line, as the hall says one when idle (the scene's own placement).

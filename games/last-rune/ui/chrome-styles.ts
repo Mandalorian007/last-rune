@@ -349,9 +349,9 @@ ${C} .lr-hud-note { font-size: 12px; line-height: 1.15; }
 /* New journal pages: one badge on the Menu button's lower edge (no separate dot). */
 ${C} .lr-hud .lr-hud-menu[data-unread]::after { display: none; }
 ${C} .lr-hud-menu-new {
-  top: calc(100% - 6px); right: -2px; width: auto; white-space: nowrap;
-  padding: 1px 6px; border-radius: 8px; border: 1px solid #5a2a0c;
-  font: 700 12px/1.1 var(--tc-font-body, serif); font-style: normal;
+  top: calc(100% + 4px); left: auto; right: -4px; width: auto; min-width: calc(100% + 8px);
+  white-space: nowrap; padding: 2px 1px; border-radius: 7px; border: 1px solid #5a2a0c;
+  font: 700 12px/1.1 var(--tc-font-body, serif); font-style: normal; letter-spacing: -0.2px;
 }
 /* Title: Play and Settings lead; the coffee and Copy link are quiet text links (still a
    36 px tap each). */
@@ -388,6 +388,8 @@ ${C} .lr-title-links .tc-link-row { gap: 8px; }
 ${C} .lr-title-menu { position: relative; inset: auto; transform: none; gap: 8px; }
 ${C} .tc-region[data-region="bottom"] .lr-title-menu { flex-direction: row; margin: 0 auto; }
 ${C} .tc-region[data-region="cardLane"] { justify-content: center; }
+/* Upright: the menu right under the picture (its row takes the slack below it). */
+${CP} .tc-region[data-region="cardLane"]:has(.lr-title-menu) { justify-content: flex-start; padding-top: 14px; }
 ${C} .tc-region[data-region="cardLane"] .lr-title-menu { align-self: center; }
 ${C} .lr-title-menu .lr-gold-button {
   min-width: 150px; min-height: 48px; padding: 0 20px; border-radius: 9px;
@@ -429,7 +431,9 @@ ${CP} .lr-settings-host { padding: 6px 6px 0 12px; }
 ${CP} .lr-settings-tabs { position: static; transform: none; align-self: center; margin: 2px 0 6px; }
 ${CP} .lr-settings-tab { padding: 0 12px; }
 ${CP} .lr-settings-cols { grid-template-columns: 1fr; }
-${CP} .lr-settings .tc-field > span { flex: 1 1 auto; }
+/* One label column, so every slider track starts at the same x. */
+${CP} .lr-settings .tc-field > span { flex: 0 0 8.5em; }
+${CP} .lr-settings .tc-field input[type="range"] { flex: 1 1 auto; min-width: 0; }
 ${CP} .lr-choice { flex-wrap: wrap; padding-bottom: 6px; }
 ${CP} .lr-choice > .lr-seg { margin-left: auto; }
 `;
