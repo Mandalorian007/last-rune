@@ -191,6 +191,7 @@ export class BoltRibbon {
   private flashK = 0;
   private fade = 1;
   private fadeRate = 0;
+  private fadeFloor = 0;
   private tailDone = false;
   private endFired = false;
   private readonly width: number;
@@ -234,6 +235,7 @@ export class BoltRibbon {
     this.flashK = 0;
     this.fade = 1;
     this.fadeRate = 0;
+    this.fadeFloor = 0;
     this.tailDone = false;
     this.endFired = false;
   }
@@ -245,7 +247,17 @@ export class BoltRibbon {
 
   /** Fade the ribbon out over `seconds` (e.g. leaving the puzzle). */
   fadeOut(seconds = 0.6): void {
+    this.fadeFloor = 0;
     this.fadeRate = 1 / Math.max(seconds, 1e-3);
+  }
+
+  /**
+   * Ease the ribbon down to `level` over `seconds` and hold it there (the verdict: the route
+   * stays traced, but the gems under it read; solve-truth).
+   */
+  dimTo(level: number, seconds = 0.4): void {
+    this.fadeFloor = Math.max(0, Math.min(this.fade, level));
+    this.fadeRate = (this.fade - this.fadeFloor) / Math.max(seconds, 1e-3);
   }
 
   clear(): void {
@@ -268,7 +280,7 @@ export class BoltRibbon {
     if (this.segs.length === 0) return;
     this.time += dt;
     this.flashK *= Math.exp(-2.5 * dt);
-    this.fade = Math.max(0, this.fade - this.fadeRate * dt);
+    this.fade = Math.max(this.fadeFloor, this.fade - this.fadeRate * dt);
     const T = this.time;
     const after = T - this.tEnd;
     const ps = this.particles;

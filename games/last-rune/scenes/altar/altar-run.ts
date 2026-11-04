@@ -278,6 +278,9 @@ export const runMethods = {
     this.verdictShown = true;
     this.mode = 'result';
     this.resultAge = 0;
+    // solve-truth: the ribbon settles to a trace so the gems under it (glyph and direction)
+    // read while the player studies the verdict.
+    for (const b of this.view.bolts) b.dimTo(res.outcome === 'exact' ? 0.5 : 0.25, 0.15);
     const L = this.view.layout;
     const o = res.outcome;
     const ms = res.machines;

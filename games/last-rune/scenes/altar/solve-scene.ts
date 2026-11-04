@@ -26,12 +26,19 @@ import type { Placement } from '../../rules';
 import { capabilityLabel, getMachine, socketColour } from '../../rules/progression';
 import { CSS_PALETTE } from '../../ui/styles';
 import { ensureAltarStyles } from './altar-styles';
-import { AltarView } from './altar-view';
+import { AltarView, GOLD } from './altar-view';
 import { BoardState } from './board';
+import { socketLooks } from './socket-looks';
+import { solvedLook } from './solved-board';
 
 /** Beats (seconds) for the first-time sequence. */
 const BEAT = { grant: 0.9, opens: 1.7, page: 2.4, cont: 1.6, end: 4.6 } as const;
 const REPLAY_END = 2.6;
+/**
+ * Lit gems' extra glow on the solve board (the altar's own strike uses 0.6). Kept low with the
+ * bloom below so every glyph and its direction still reads under the celebration.
+ */
+const SOLVE_GEM_GLOW = 0.25;
 
 export class SolveScene implements GameScene {
   readonly name = 'solve';
@@ -87,9 +94,21 @@ export class SolveScene implements GameScene {
     view.reduceFlashes = ctx.settings.reduceFlashes;
     view.tray.length = 0; // the tray steps aside for the moment
     view.syncBoard(board);
+    // solve-truth (D-027): the board exactly as the player built it. Straight-through gems
+    // face the way the bolt came in (as in play), only the gems the bolt reached glow, and
+    // fixed gems keep their collar and padlock (plus the phone's open-socket rims).
+    const look = solvedLook(puzzle, board.serialise(), board.lockedPlacements);
+    view.faceAlong(look.hops, true);
     for (const b of view.board) {
-      b.energy = 1;
-      b.energyTarget = 1;
+      b.g.rot = b.rotTarget;
+      const on = look.lit.some((c) => c.x === b.cell.x && c.y === b.cell.y);
+      b.energy = on ? 1 : 0;
+      b.energyTarget = on ? 1 : 0;
+    }
+    view.energyGlow = SOLVE_GEM_GLOW;
+    const L0 = view.layout;
+    for (const s of socketLooks(!!L0.phone, L0.cols, L0.rows, puzzle.blocked, look.collars)) {
+      view.mark(s.x, s.y, s.state, GOLD, 1);
     }
     for (const mm of view.machines) mm.solve();
     view.wake = 1;
@@ -298,12 +317,14 @@ export class SolveScene implements GameScene {
       ? 0.3
       : Math.max(0, Math.min(1, t / 0.6)) * Math.exp(-Math.max(0, t - 1.2) * 0.9);
     if (this.view.layout.phone) {
-      // Phones: a small swell, so the lit route still reads on a small screen.
-      ctx.post.settings.bloom.intensity = this.bloomBase * (0.7 + 0.25 * swell);
+      // Phones: a small swell, so the lit route still reads on a small screen. solve-truth:
+      // the rest level sits under the altar's own, so every glyph and its direction reads.
+      ctx.post.settings.bloom.intensity = this.bloomBase * (0.55 + 0.35 * swell);
       ctx.post.settings.godRays.intensity = this.raysBase * (0.6 + 0.4 * swell);
       this.updateCrowd();
     } else {
-      ctx.post.settings.bloom.intensity = this.bloomBase * (1 + 0.9 * swell + 0.25);
+      // The swell is the celebration; it settles at the altar's own bloom (solve-truth).
+      ctx.post.settings.bloom.intensity = this.bloomBase * (1 + 0.9 * swell);
       ctx.post.settings.godRays.intensity = this.raysBase * (1.6 + 1.2 * swell);
     }
 
