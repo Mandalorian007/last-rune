@@ -106,15 +106,17 @@ async function solveAndCompare(page: Page, id: MachineId): Promise<string[]> {
   return problems;
 }
 
-test('every altar, solved: same turns, only the powered gems lit, fixed gems keep the collar', async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1600, height: 900 });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  const problems: string[] = [];
-  for (const id of ORDER) problems.push(...(await solveAndCompare(page, id)));
-  expect(problems).toEqual([]);
-});
+// One test per altar: each gets its own time budget and they spread across workers, so a
+// loaded machine can't push a single 16-altar walk past the timeout.
+for (const id of ORDER) {
+  test(`${id}, solved: same turns, only the powered gems lit, fixed gems keep the collar`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    expect(await solveAndCompare(page, id)).toEqual([]);
+  });
+}
 
 test.describe('phone', () => {
   test.use({ viewport: { width: 915, height: 360 }, isMobile: true, hasTouch: true });
