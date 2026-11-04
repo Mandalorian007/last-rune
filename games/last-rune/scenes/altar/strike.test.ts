@@ -7,16 +7,20 @@ import type { GemKind } from '../../rules/types';
 import { capacitorBeats, capBeatText, planOver } from './circuit-model';
 import { anchorOf, cellAt, computeLayout, DESIGN_H, DESIGN_W } from './layout';
 import {
+  alsoMissed,
   buildTimeline,
   causeHeadline,
   causeText,
   failText,
   fizzles,
   hintRoom,
+  needNote,
   nextStep,
+  readingsText,
   roomGems,
   rootCell,
   rootFizzle,
+  strikeLabel,
   strikeStory,
   strikesLine,
   verdictParts,
@@ -335,7 +339,31 @@ describe('hints come from the room (altar-truth)', () => {
       readings: [0, 16],
       wokeOn: 1,
     };
-    expect(strikesLine(m, 2)).toBe('Got 0, then 16; needs 8 in either strike.');
+    expect(strikesLine(m, 2)).toBe('Got 0, then 16; needs 8 on strike 1 or 2.');
+    // teach-7: every other gauge that missed is named by its numbers.
+    const top = {
+      at: { x: 1, y: 0 },
+      need: 2,
+      outcome: 'under' as const,
+      readings: [0, 0],
+      wokeOn: -1,
+    };
+    const woke = {
+      at: { x: 2, y: 0 },
+      need: 4,
+      outcome: 'exact' as const,
+      readings: [4],
+      wokeOn: 0,
+    };
+    expect(alsoMissed([m, top, woke], 0)).toBe('Also missed: Needs 2, got nothing.');
+    expect(alsoMissed([m, woke], 0)).toBe('');
+    expect(readingsText([3])).toBe('3');
+    expect(readingsText([1, 2, 3])).toBe('1, 2, then 3');
+    // Nothing is lost by a miss, so Strike never reads "Try again".
+    expect(strikeLabel(1)).toBe('Strike');
+    expect(strikeLabel(2)).toBe('Strike ×2');
+    expect(needNote(2)).toBe('on strike 1 or 2');
+    expect(needNote(3)).toBe('on any strike');
     expect(verdictParts('Exactly right. Look at it go.')).toEqual([
       'Exactly right.',
       'Look at it go.',

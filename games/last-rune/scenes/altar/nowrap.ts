@@ -19,6 +19,8 @@ export function keepTogether(text: string): string {
       // "in one strike", "per strike".
       .replace(/\bin one strike\b/g, `in${NB}one${NB}strike`)
       .replace(/\bin (either|any one) strike\b/g, (m) => m.replace(/ /g, NB))
+      // teach-7: the gauge's note, "on strike 1 or 2", "on any strike".
+      .replace(/\bon (strike \d+ or \d+|any strike)\b/g, (m) => m.replace(/ /g, NB))
       .replace(/(\d) per strike\b/g, `$1${NB}per${NB}strike`)
       // "Strike ×2".
       .replace(/(\S) (×\d)/g, `$1${NB}$2`)

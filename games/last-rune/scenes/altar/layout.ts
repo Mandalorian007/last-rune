@@ -419,9 +419,10 @@ const PH = {
    */
   sideCardW: 84,
   /**
-   * fit-9: on a multi-strike altar the widest is the note, "Needs 20 / in either strike"
-   * (93.8 CSS px; teach-6). Taken at 84, the gutter was too narrow for it and the card dropped
-   * under the edge column's rings.
+   * fit-9: on a multi-strike altar the widest is the note, "Needs 20 / on strike 1 or 2"
+   * (teach-7: "in either strike" was 93.8 CSS px; the new note is set a little tighter to keep it under 95).
+   * Taken at 84, the gutter was too narrow for it and the card dropped under the edge column's
+   * rings.
    */
   sideCardW2: 95,
   /** The source's card ("Gives 16 per strike") never shows a "got". */

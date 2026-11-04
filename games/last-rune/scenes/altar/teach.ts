@@ -10,6 +10,7 @@
  * A turning gem (Bend, Gate, Split) first met fixed in place is **new to the hand** on the first
  * altar that puts one in the tray: the player can now turn it, so that altar says so.
  */
+import { GATE_RULE } from '../../content/codex';
 import { gemNudge } from '../../content/lines';
 import { isRotational, type PuzzleDef } from '../../rules';
 import type { Cell, Dir, GemKind } from '../../rules/types';
@@ -106,7 +107,7 @@ export function teachPages(
 ): TeachPage[] {
   return [
     ...(at.first ? [{ kind: 'goal' } as const] : []),
-    // teach-6: what "in either strike" on the gauges means gets a page of its own.
+    // teach-6: what the gauges' "on strike 1 or 2" means gets a page of its own (teach-7 wording).
     ...(at.firstMulti ? [{ kind: 'strikes' } as const, { kind: 'either' } as const] : []),
     ...rows.map((r) => ({ kind: 'gem' as const, gem: r.gem, how: r.how })),
     ...(at.first ? [{ kind: 'ring' } as const] : []),
@@ -132,26 +133,18 @@ export const PICTURED: ReadonlySet<GemKind> = new Set<GemKind>([
 ]);
 
 const TURN: readonly Dir[] = ['N', 'E', 'S', 'W'];
-const FROM: Record<Dir, string> = { N: 'above', E: 'the right', S: 'below', W: 'the left' };
-const OUT: Record<Dir, string> = {
-  N: 'at the top',
-  E: 'to the right',
-  S: 'at the bottom',
-  W: 'to the left',
-};
 
 /**
- * teach-6: a fixed Gate's rule with its sides named as its picture shows them (rules.md: rot 0
- * takes charge from the west and east and sends the sum north; charge from the south is lost).
- * Turned once: "Feed it from above and below in the same strike; the sum leaves to the right.
- * From the left: lost."
+ * A fixed Gate's card: the codex's one-sentence `GATE_RULE` (teach-7), then where its ports are
+ * as its (turned) picture shows them (rules.md: rot 0 takes charge from the west and east and
+ * sends the sum north). The arrow is in the picture and the sentence; naming its side too made
+ * the SE's card clip. Turned once: "... Ports: above and below."
  */
 export function gateSides(rot: number): string {
   const side = (d: Dir) => TURN[(((TURN.indexOf(d) + rot) % 4) + 4) % 4]!;
   const out = side('N');
   const ins = out === 'N' || out === 'S' ? 'left and right' : 'above and below';
-  const back = FROM[side('S')];
-  return `Feed it from ${ins} in the same strike; the sum leaves ${OUT[out]}. From ${back}: lost.`;
+  return `${GATE_RULE} Ports: ${ins}.`;
 }
 
 export function hasPicture(page: TeachPage): boolean {

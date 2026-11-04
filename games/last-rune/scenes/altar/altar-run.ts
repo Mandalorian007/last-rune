@@ -13,6 +13,7 @@ import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events'
 import { anchorOf } from './layout';
 import {
   type Arrival,
+  alsoMissed,
   buildTimeline,
   causeHeadline,
   causeText,
@@ -335,11 +336,13 @@ export const runMethods = {
       if (o === 'over') {
         const m = ms[over]!;
         const text = say(over, head(m, 'over'));
-        this.showVerdict(text, 'over', story, hint, story ? '' : cause, each(m));
+        const also = alsoMissed(ms, over);
+        this.showVerdict(text, 'over', story, hint, story ? '' : cause, each(m), also);
       } else if (o === 'under') {
         const m = ms[under] ?? ms[0]!;
         const text = say(under, head(m, 'under'));
-        this.showVerdict(text, 'under', story, hint, story ? '' : cause, each(m));
+        const also = alsoMissed(ms, Math.max(0, under));
+        this.showVerdict(text, 'under', story, hint, story ? '' : cause, each(m), also);
       } else {
         // A title and the fix. On a phone the cause is the title ("The charge hit an empty
         // socket"); a separate title line would push the card past its line budget.
@@ -388,7 +391,7 @@ export const runMethods = {
       } else if (line) void this.ctx.fuse.say(line, { interrupt: true });
     }
     // No attempt count anywhere (D-043): a strike is a free test, not a scored try.
-    this.subtitle.textContent = o === 'exact' ? 'Restored' : 'Change anything and try again';
+    this.subtitle.textContent = o === 'exact' ? 'Restored' : 'Change anything and strike again';
     this.updateCapLive();
     const head = this.verdict.firstChild?.textContent ?? '';
     const told = this.verdict.querySelector('.lr-verdict-story')?.textContent;
@@ -398,7 +401,7 @@ export const runMethods = {
         (next ? ` ${next}` : '') +
         (o === 'exact'
           ? ''
-          : `${free ? ` ${FIRST_MISS_LINE}` : ''} Change anything and try again.`),
+          : `${free ? ` ${FIRST_MISS_LINE}` : ''} Change anything and strike again.`),
     );
     this.refreshHud();
   },
