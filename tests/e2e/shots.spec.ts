@@ -429,3 +429,71 @@ test.describe('portrait', () => {
     await shot('41-rotate-altar');
   });
 });
+
+/**
+ * Desktop (1280×720, mouse): the altars whose text and visuals altar-truth checked against the
+ * rules. Only when SHOTS_ONLY names `desktop`, so the phone gate set is unchanged.
+ *   SHOTS=altar-truth/after SHOTS_ONLY=desktop pnpm exec playwright test tests/e2e/shots.spec.ts
+ */
+test.describe('desktop', () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+  test('desktop: altars', async ({ page }) => {
+    test.skip(!ONLY.includes('desktop'), 'SHOTS_ONLY=desktop');
+    const shot = (name: string) => snap(page, 'desktop', name);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(DEV_URL);
+    await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+      timeout: 30_000,
+    });
+    const quiet = async () => {
+      await page.evaluate(() => (window as G).__game.fuse.hush());
+      await waitFrames(page, 4);
+    };
+    const ids: MachineId[] = [
+      'intake-desk',
+      'furnace',
+      'storm-cell-2',
+      'control-booth',
+      'lift-shaft',
+      'the-last-rune',
+    ];
+    for (const id of ids) {
+      await meet(page, id);
+      await quiet();
+      await shot(`10-${id}`);
+      const half = puzzleFor(id).design.intended.slice(
+        0,
+        Math.floor(puzzleFor(id).design.intended.length / 2),
+      );
+      await meet(page, id, half);
+      await quiet();
+      const L = await page.evaluate(
+        () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+      );
+      const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+      const k = ob.width / 1920;
+      const slot = L.tray.find((s) => trayRemaining(puzzleFor(id), half as never, s.gem) > 0);
+      if (slot) {
+        await page.mouse.click(ob.x + slot.x * k, ob.y + slot.y * k);
+        await page.mouse.move(ob.x + 960 * k, ob.y + 1000 * k);
+      }
+      await shot(`12-${id}-held`);
+    }
+    const tries = [
+      ['relay-tower', '13-relay-tower-fail', puzzleFor('relay-tower').design.intended.slice(0, 2)],
+      ['capacitor-bay', '13-capacitor-bay-multi', BAY_FIRST_TRY],
+    ] as const;
+    for (const [id, name, place] of tries) {
+      await meet(page, id, [...place]);
+      await quiet();
+      if (id === 'capacitor-bay') await shot('13-capacitor-bay-before');
+      await page.keyboard.press('f');
+      await waitFrames(page, 4);
+      const sure = page.locator('.lr-confirm .lr-gold-button');
+      if (await sure.isVisible()) await sure.click();
+      await expect(page.locator('.lr-altar-verdict')).toBeVisible({ timeout: 30_000 });
+      await quiet();
+      await shot(name);
+    }
+  });
+});

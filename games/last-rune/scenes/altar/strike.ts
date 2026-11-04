@@ -236,7 +236,7 @@ const CAUSE_HINT: Record<FizzleCause, string> = {
   ground: 'Try: lead the charge to the machine before it runs off the altar.',
   blocked: 'Try: route around the carved stone.',
   'odd-split': 'Try: feed the Split an even charge.',
-  'gate-alone': "Try: bring charge into the Gate's other side line too.",
+  'gate-alone': "Try: power the Gate's other side input on the same strike.",
   spent: 'Try: give each path its own gems. A gem carries charge once per strike.',
 };
 
@@ -270,22 +270,118 @@ export function rootCell(list: readonly Fizzle[]): Cell | undefined {
 }
 
 /**
+ * What a hint may name (altar-truth, D-027): the gems this altar has, the gems the charge went
+ * through, what each Capacitor kept and let out, and the machine the verdict is about. A hint
+ * built from this never names a gem the room doesn't have.
+ */
+export interface HintRoom {
+  /** Gem kinds on this altar: fixed in place, or in the tray at the start. */
+  readonly gems: ReadonlySet<GemKind>;
+  /** Gem kinds the charge went into on this attempt. */
+  readonly path: ReadonlySet<GemKind>;
+  /** What each Capacitor kept and let out on this attempt. */
+  readonly beats: readonly CapBeat[];
+  /** The machine the verdict is about, if any. */
+  readonly machine?: MachineResult;
+}
+
+/** Gem kinds on this altar: fixed in place, or in the tray at the start. */
+export function roomGems(p: PuzzleDef): Set<GemKind> {
+  const s = new Set<GemKind>();
+  for (const f of p.fixed) s.add(f.gem);
+  for (const [k, n] of Object.entries(p.tray)) if ((n ?? 0) > 0) s.add(k as GemKind);
+  return s;
+}
+
+/** Gem kinds the charge went into and was carried on by (passed, kept or held), this attempt. */
+export function pathGems(
+  p: PuzzleDef,
+  placements: readonly Placement[],
+  result: SimResult,
+): Set<GemKind> {
+  const s = new Set<GemKind>();
+  for (const seg of result.trace) {
+    if (seg.end !== 'gem' && seg.end !== 'store' && seg.end !== 'wait') continue;
+    const g = gemOn(p, placements, seg.to);
+    if (g) s.add(g.gem);
+  }
+  return s;
+}
+
+/** The `HintRoom` for an attempt. */
+export function hintRoom(
+  p: PuzzleDef,
+  placements: readonly Placement[],
+  result: SimResult,
+  beats: readonly CapBeat[],
+  machine?: MachineResult,
+): HintRoom {
+  return {
+    gems: roomGems(p),
+    path: pathGems(p, placements, result),
+    beats,
+    ...(machine ? { machine } : {}),
+  };
+}
+
+/** Too much charge: name the real cause where the rules know it, and only gems in the room. */
+function overStep(room: HintRoom | undefined): string {
+  if (!room) return 'Try: less charge.';
+  const halve = room.gems.has('split') ? ' A Split halves the charge.' : '';
+  // A Capacitor let out more than the machine takes: what it kept plus the new charge.
+  const m = room.machine;
+  const k = m ? m.readings.findIndex((r) => r > m.need) : -1;
+  const out = room.beats
+    .filter((b) => b.kind === 'release' && (k < 0 || b.pulse === k) && (!m || b.out > m.need))
+    .sort((a, b) => b.out - a.out)[0];
+  if (out)
+    return `Try: feed the Capacitor less. It let out ${out.stored} + ${out.incoming} = ${out.out}.${halve}`;
+  if (room.path.has('amplify'))
+    return room.gems.has('split')
+      ? 'Try: less charge. Skip an Amplify, or halve the charge with a Split.'
+      : 'Try: less charge. Skip an Amplify.';
+  if (room.path.has('gate')) return `Try: less charge. A Gate adds its two sides together.${halve}`;
+  return `Try: less charge.${halve}`;
+}
+
+/** Not enough charge: what in this room makes more, or what took it away. */
+function underStep(room: HintRoom | undefined): string {
+  if (!room) return 'Try: more charge.';
+  const m = room.machine;
+  // Nothing reached this machine (another one was fed): the path, not the amount.
+  if (m?.readings.every((r) => r === 0)) return 'Try: lead a path of gems to this machine too.';
+  const amp = room.gems.has('amplify');
+  if (room.path.has('split'))
+    return amp
+      ? 'Try: more charge. A Split halves it; an Amplify doubles it.'
+      : 'Try: more charge. A Split halves it.';
+  if (amp) return 'Try: more charge. An Amplify doubles it.';
+  if (room.gems.has('gate')) return 'Try: more charge. A Gate adds its two sides together.';
+  if (room.gems.has('capacitor'))
+    return 'Try: more charge. A Capacitor adds what it kept to the next strike.';
+  return 'Try: more charge.';
+}
+
+/**
  * One short, visible next step under a failed verdict, so a first-timer is never left with
  * only "needs 4, got 0". Fizzles name a concrete fix; otherwise the outcome does. Too much
- * charge is about the amount, so it wins over a stray fizzle.
+ * charge is about the amount, so it wins over a stray fizzle. Built from `room` (the gems this
+ * altar has and what the charge did), so it never names a gem the room lacks; without a room
+ * it names no gem at all.
  */
 export function nextStep(
   outcome: SimResult['outcome'],
   causes: readonly FizzleCause[],
   touch = false,
+  room?: HintRoom,
 ): string {
   if (outcome === 'exact') return '';
-  if (outcome === 'over') return 'Try: less charge. Skip an Amplify, or halve it with a Split.';
+  if (outcome === 'over') return overStep(room);
   const first = rootCause(causes);
   // A finger has no R key or wheel: name the on-screen Turn control instead.
   if (first === 'facing' && touch) return 'Try: turn the gem at the red mark (↻ Turn).';
   if (first) return CAUSE_HINT[first];
-  if (outcome === 'under') return 'Try: more charge. An Amplify doubles it.';
+  if (outcome === 'under') return underStep(room);
   return 'Try: lay gems from the storm to the machine.';
 }
 
@@ -318,13 +414,13 @@ export function strikeStory(pulses: number, result: SimResult, beats: readonly C
  * `causeText` stays for the tags over the board on big screens.
  */
 const CAUSE_HEAD: Record<FizzleCause, string> = {
-  empty: 'The charge hit an empty socket',
-  blocked: 'The charge hit carved stone',
-  ground: 'The charge ran off the altar',
-  facing: 'The charge hit a gem turned the wrong way',
-  'odd-split': "A Split can't halve an odd charge",
-  'gate-alone': 'The Gate got charge on one side only',
-  spent: 'The charge met a gem already used this strike',
+  empty: 'The charge hit an empty socket.',
+  blocked: 'The charge hit carved stone.',
+  ground: 'The charge ran off the altar.',
+  facing: 'The charge hit a gem turned the wrong way.',
+  'odd-split': "A Split can't halve an odd charge.",
+  'gate-alone': 'The Gate got charge on one side only.',
+  spent: 'The charge met a gem already used this strike.',
 };
 
 export function causeHeadline(c: FizzleCause): string {
@@ -342,13 +438,22 @@ export function failHead(m: MachineResult, outcome: 'over' | 'under'): string {
 
 /**
  * Phones, multi-strike altars: what each strike gave the machine the verdict is about, and
- * what it needs, in plain words: "Strike 1: 0 · Strike 2: 8. Needs 20 in one strike." Empty on
- * a one-strike altar (the gauge's "got" says it all).
+ * what it needs, in full sentences: "Strike 1 gave it 0. Strike 2 gave it 8. It needs 20 in one
+ * strike." Empty on a one-strike altar (the gauge's "got" says it all).
  */
 export function strikesLine(m: MachineResult, pulses: number): string {
   if (pulses < 2 || m.readings.length === 0) return '';
-  const each = m.readings.map((r, i) => `Strike ${i + 1}: ${r}`).join(' · ');
-  return `${each}. Needs ${m.need} in one strike.`;
+  const each = m.readings.map((r, i) => `Strike ${i + 1} gave it ${r}.`).join(' ');
+  return `${each} It needs ${m.need} in one strike.`;
+}
+
+/**
+ * A verdict is a title line plus a body (altar-truth): split a one-piece line at its first
+ * sentence, "Exactly right." / "Look at it go. Paperwork can wait."
+ */
+export function verdictParts(text: string): [string, string] {
+  const m = /^(.+?[.!?])\s+(.+)$/s.exec(text);
+  return m ? [m[1]!, m[2]!] : [text, ''];
 }
 
 /**

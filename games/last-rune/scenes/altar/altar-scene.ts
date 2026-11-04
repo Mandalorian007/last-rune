@@ -26,7 +26,7 @@ import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
 import type { BoltHandle, StormCellHandle } from '../../audio';
-import { codexEntry } from '../../content/codex';
+import { codexEntry, FIXED_NOTE, FIXED_NOTE_FULL, YOURS_NOTE } from '../../content/codex';
 import { exactLine, gemNudge, machineLine, reactionLine, TEACH_NUDGE } from '../../content/lines';
 import { puzzleFor } from '../../content/puzzles';
 import type { GameCtx, GameScene } from '../../game/ctx';
@@ -57,6 +57,7 @@ import {
   guideHops,
   liveSockets,
   type PathHop,
+  planOver,
   previewPath,
 } from './circuit-model';
 import { jumpCursor, stepCursor } from './cursor';
@@ -86,6 +87,7 @@ import {
   phoneHint,
   pickHint,
   pickInfo,
+  turnTeachLine,
   type VoiceAsk,
 } from './moments';
 import { allReached, gaugeReach } from './reach';
@@ -99,6 +101,7 @@ import {
   failHead,
   failText,
   fizzles,
+  hintRoom,
   nextStep,
   rootCell,
   rootFizzle,
@@ -106,8 +109,9 @@ import {
   strikeLabel,
   strikeStory,
   strikesLine,
+  verdictParts,
 } from './strike';
-import { arrivalNudges, firstSentence, type NewGems, newGems } from './teach';
+import { arrivalNudges, firstSentence, type NewGems, newGems, turnTeaches } from './teach';
 
 type Mode = 'edit' | 'strike' | 'result';
 
@@ -220,10 +224,6 @@ const TEACH_MACHINE: MachineId = 'intake-desk';
  * The first altar's arrival card also says what the gold socket rings mean: the teach socket,
  * the machine's exit and, once building, the open ends of the route all ring gold.
  */
-/** A fixed gem's card on a phone opens with this (mobile-7-teach). */
-const FIXED_LINE = 'Fixed: part of the machine.';
-/** A tray gem on the arrival card: the player's to place. */
-const YOURS_LINE = 'Yours to place.';
 const RING_NAME = 'Gold ring';
 const RING_RULE = 'A socket the charge must reach. Set a gem there.';
 
@@ -410,16 +410,12 @@ export class AltarScene implements GameScene {
   private frame = '';
   private relayoutPending = false;
   private offDevice: (() => void) | null = null;
-  /** Charge read-outs on the route preview through a new fixed gem (see `updatePreviewChips`). */
-  private previewChipEls: HTMLElement[] = [];
-  private previewChipKey = '';
-  /** Charge read-outs on the preview through new gems, until the first strike here. */
-  private teachChips = false;
+  // altar-truth: no charge numbers on the route before Strike, on any altar (one rule, D-040
+  // addendum 5). The plan's numbers live on the Capacitor read-out; chips come with Strike.
   /** Turning kinds this altar teaches to turn (show the turn arrow when held). */
   private turnTeach = new Set<GemKind>();
   /** The route preview with the held gem tried where it would land (cell, rot, kind). */
   private ghostKey = '';
-  private previewSim: SimResult | null = null;
   /** Where the preview's first strike meets a gem from a side it doesn't take: a small ✕. */
   private noGoEls: HTMLElement[] = [];
   private noGoKey = '';
@@ -492,8 +488,7 @@ export class AltarScene implements GameScene {
       this.news = newGems(this.puzzle, solved);
       this.teachFixed = this.news.fixed.map((f) => ({ gem: f.gem, cell: f.cell }));
       this.teachTray = new Set(this.news.tray);
-      this.teachChips = this.news.fixed.length + this.news.tray.length > 0;
-      this.turnTeach = new Set([...this.news.turns, ...this.news.tray.filter(isRotational)]);
+      this.turnTeach = turnTeaches(this.news);
       this.guide = guideHops(
         this.puzzle,
         this.teachFixed.map((f) => f.cell),
@@ -580,7 +575,6 @@ export class AltarScene implements GameScene {
     this.view.dispose();
     this.dom.remove();
     this.chipEls.length = 0;
-    this.previewChipEls.length = 0;
     this.noGoEls.length = 0;
     this.capEls.length = 0;
     this.capLines.length = 0;
@@ -636,7 +630,6 @@ export class AltarScene implements GameScene {
     this.validRev = -1;
     this.tipKey = '';
     this.focusKey = '';
-    this.previewChipKey = '';
     this.ghostKey = '';
     this.noGoKey = '';
     this.buildDom();
@@ -879,9 +872,14 @@ export class AltarScene implements GameScene {
       this.turnBtn.style.left = `${trayRight + 80}px`;
       this.turnBtn.style.top = `${L.trayY}px`;
     }
+    // altar-truth: phones mark Turn's target too (its own class: a small \u21bb on the gem's corner).
     this.turnMark = h(
       'div',
-      { class: 'lr-altar-turnmark lr-touch-only', 'aria-hidden': 'true', hidden: true },
+      {
+        class: `${L.phone ? 'lr-turn-target' : 'lr-altar-turnmark'} lr-touch-only`,
+        'aria-hidden': 'true',
+        hidden: true,
+      },
       '\u21bb',
     );
     this.counts = L.tray.map((s) =>
@@ -1359,10 +1357,19 @@ export class AltarScene implements GameScene {
    * otherwise it is the plan for the board as built, shown before Strike.
    */
   private renderCaps(beats: readonly CapBeat[], sim: SimResult | null, live: boolean): void {
+    // altar-truth: in the plan, a release over a machine's need reads as a warning, and so
+    // does that gauge (the plan already shows the number).
+    const over = !live && sim ? planOver(beats, sim) : null;
+    this.needs.forEach((n, i) => {
+      n?.toggleAttribute('data-warn', !!over?.machines.has(i));
+    });
     const key =
       (live ? 'L' : 'P') +
       beats
-        .map((b) => `${b.cell.x},${b.cell.y}:${b.pulse}${b.kind}${b.stored}+${b.incoming}`)
+        .map(
+          (b, i) =>
+            `${b.cell.x},${b.cell.y}:${b.pulse}${b.kind}${b.stored}+${b.incoming}${over?.beats.get(i) ?? ''}`,
+        )
         .join(';');
     if (key === this.capKey) return;
     this.capKey = key;
@@ -1397,10 +1404,15 @@ export class AltarScene implements GameScene {
       const x = side === 'left' ? pt.x - off : side === 'right' ? pt.x + off : pt.x;
       const y = side === 'above' ? pt.y - off : side === 'below' ? pt.y + off : pt.y;
       const lines = list.map((b) => {
+        const need = over?.beats.get(beats.indexOf(b));
         const el = h(
           'span',
-          { class: 'lr-cap-line', 'data-kind': b.kind },
-          capBeatText(b, this.puzzle.pulses),
+          {
+            class: 'lr-cap-line',
+            'data-kind': b.kind,
+            ...(need === undefined ? {} : { 'data-warn': '' }),
+          },
+          capBeatText(b, this.puzzle.pulses, need),
         );
         if (live) el.hidden = true;
         this.capLines.push(el);
@@ -1771,8 +1783,6 @@ export class AltarScene implements GameScene {
       v.previewTarget = 0;
       this.ghostKey = '';
       this.realPreview = null;
-      this.previewSim = null;
-      this.updatePreviewChips();
       this.updateNoGo([], null);
       // The strike's own read-out replaces the plan (built in `strike`).
     }
@@ -1861,8 +1871,6 @@ export class AltarScene implements GameScene {
     v.faceAlong(hops, true);
     v.preview = hops;
     v.previewTarget = PREVIEW_PATH ? 1 : 0;
-    this.previewSim = sim;
-    this.updatePreviewChips();
     this.renderCaps(capacitorBeats(this.puzzle, placements, sim), sim, false);
   }
 
@@ -2049,12 +2057,12 @@ export class AltarScene implements GameScene {
   private chipRule(r: { gem: GemKind; how: InfoHow }, intro = false): string {
     const line = codexEntry(r.gem).chip;
     if (r.how === 'turns') return `${line} Turn it to fit.`;
-    // The arrival card's gold line already shows which gem; it says just "Fixed." so the card
+    // The arrival card's gold line already shows which gem; it says just "Built in." so the card
     // fits an SE. A tap on the gem says the whole line.
-    if (r.how === 'fixed') return `${intro ? 'Fixed.' : FIXED_LINE} ${line}`;
+    if (r.how === 'fixed') return `${intro ? FIXED_NOTE : FIXED_NOTE_FULL} ${line}`;
     // Only where the same card also teaches a fixed gem (the contrast is the lesson); elsewhere
     // the lit tray tile says it, and an SE has no room for the extra line.
-    if (intro && r.how === 'tray' && this.news.fixed.length > 0) return `${YOURS_LINE} ${line}`;
+    if (intro && r.how === 'tray' && this.news.fixed.length > 0) return `${YOURS_NOTE} ${line}`;
     return line;
   }
 
@@ -2062,7 +2070,6 @@ export class AltarScene implements GameScene {
   private learnFixed(): void {
     this.teachFixed = [];
     this.introLeft = 0;
-    this.teachChips = false;
   }
 
   // ── Edits ───────────────────────────────────────────────────────────────
@@ -2830,7 +2837,10 @@ export class AltarScene implements GameScene {
     const say = (_i: number, text: string) => text;
     if (o === 'exact') {
       // The solve moment's FUSE line follows at once, so the exact line rides in the verdict.
-      this.showVerdict(exactLine(Math.min(4, this.ctx.tier()) as 1 | 2 | 3 | 4).text, 'exact');
+      const [title, body] = verdictParts(
+        exactLine(Math.min(4, this.ctx.tier()) as 1 | 2 | 3 | 4).text,
+      );
+      this.showVerdict(title, 'exact', body);
       this.wakeTimer = this.ctx.settings.reducedMotion ? 0.9 : 1.5;
       this.solved = true;
       this.ctx.sound.music.duck(0.5, 1.6);
@@ -2843,10 +2853,14 @@ export class AltarScene implements GameScene {
         L.phone && this.puzzle.pulses > 1
           ? ''
           : strikeStory(this.puzzle.pulses, res, this.capBeats);
+      // altar-truth: the hint names only gems this altar has, and the real cause.
+      const about = o === 'over' ? ms[over] : ms[under];
+      const room = hintRoom(this.puzzle, this.board.placements, res, this.capBeats, about);
       const hint = nextStep(
         o,
         this.fizzleList.map((f) => f.cause),
         this.touch && !this.keyboard,
+        room,
       );
       // Phones: the root cause is in the verdict (the headline when nothing arrived, else a line
       // unless the strike's story already fills it); the red mark on the socket says where.
@@ -2871,8 +2885,14 @@ export class AltarScene implements GameScene {
         const text = say(under, head(m, 'under'));
         this.showVerdict(text, 'under', story, hint, story ? '' : cause, each(m));
       } else {
-        // On a phone the cause is the headline ("The charge hit an empty socket").
-        this.showVerdict(cause || 'No charge reached the machine', 'dead', '', hint);
+        // A title and the fix. On a phone the cause is the title ("The charge hit an empty
+        // socket"); a separate title line would push the card past its line budget.
+        this.showVerdict(
+          cause.replace(/\.$/, '') || 'No charge reached the machine',
+          'dead',
+          '',
+          hint,
+        );
       }
       this.setStrikeWord('fail');
       // Idle hints ("Bend already here") give way to the verdict and its fizzle tags.
@@ -3817,11 +3837,20 @@ export class AltarScene implements GameScene {
       this.turnBtn.hidden = !show && !phone;
       this.turnBtn.disabled = phone && !show;
       this.turnBtn.toggleAttribute('data-active', show);
-      this.turnMark.hidden = !show || phone;
+      this.turnMark.hidden = !show;
       if (phone) this.updateHint();
       this.avoidTray();
     }
-    if (!show || phone) return;
+    // altar-truth: the first time a turnable gem is in hand (or just placed), a line names Turn
+    // and what it turns, until the player turns one here.
+    const kind =
+      target === 'hand' ? this.hand?.kind : target ? this.board.at(target)?.gem : undefined;
+    if (phone)
+      this.setHintLine(
+        'holding',
+        turnTeachLine(kind, target === 'hand' ? 'hand' : 'placed', this.turnTeach, this.turned),
+      );
+    if (!show) return;
     const r = L.gemSize * 0.5;
     this.turnMark.style.left = `${Math.round(pt.x + r)}px`;
     this.turnMark.style.top = `${Math.round(pt.y - r)}px`;
@@ -3831,63 +3860,6 @@ export class AltarScene implements GameScene {
     const t = this.turnTarget;
     if (t === 'hand') this.turnAt(null, 1);
     else if (t) this.turnAt(t, 1);
-  }
-
-  /**
-   * Until the first strike on an altar that introduces a gem, the route preview carries the
-   * charge into and out of each new gem on it, so its effect reads before anything fires.
-   */
-  private updatePreviewChips(): void {
-    const sim = this.teachChips && this.mode === 'edit' ? this.previewSim : null;
-    const L = this.view.layout;
-    const kinds = new Set<GemKind>([...this.news.fixed.map((f) => f.gem), ...this.news.tray]);
-    const chips: { from: Cell; to: Cell; charge: number }[] = [];
-    if (sim) {
-      const ghost = this.ghost();
-      const kindAt = (c: Cell): GemKind | undefined =>
-        ghost && ghost.cell.x === c.x && ghost.cell.y === c.y
-          ? ghost.gem
-          : (this.board.at(c) ?? this.board.fixedAt(c))?.gem;
-      const touches = (c: Cell): boolean => {
-        const k = kindAt(c);
-        return !!k && kinds.has(k);
-      };
-      for (const seg of sim.trace) {
-        if (seg.pulse !== 0) continue;
-        if (touches(seg.from) || touches(seg.to)) chips.push(seg);
-      }
-    }
-    const key = chips
-      .map((c) => `${c.from.x},${c.from.y}>${c.to.x},${c.to.y}=${c.charge}`)
-      .join(';');
-    if (key === this.previewChipKey) return;
-    this.previewChipKey = key;
-    for (const el of this.previewChipEls) el.remove();
-    this.previewChipEls.length = 0;
-    const a = { x: 0, y: 0 };
-    const b = { x: 0, y: 0 };
-    const chipPx = Math.max(16, Math.min(24, Math.round(L.pitch * 0.3)));
-    for (const c of chips) {
-      anchorOf(L, c.from, a);
-      anchorOf(L, c.to, b);
-      const el = h(
-        'div',
-        {
-          class: 'lr-altar-chip',
-          'data-preview': '',
-          'aria-hidden': 'true',
-          style: {
-            left: `${(a.x + b.x) / 2}px`,
-            top: `${(a.y + b.y) / 2}px`,
-            fontSize: scalePxCss(chipPx),
-            lineHeight: `calc(${scalePxCss(chipPx)} + 6px)`,
-          },
-        },
-        String(c.charge),
-      );
-      this.dom.insertBefore(el, this.lane ?? this.tip);
-      this.previewChipEls.push(el);
-    }
   }
 
   /**
