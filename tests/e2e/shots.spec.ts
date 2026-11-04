@@ -1,6 +1,6 @@
 /**
  * Phone screenshots for D-027 reviews (ws/port-altar): every altar on every phone row as a
- * first-time player sees it, plus a held gem, the hall, settings and the title upright. Off
+ * first-time player sees it, plus the empty hand (altars open holding the first gem on touch), the hall, settings and the title upright. Off
  * unless SHOTS=<dir name> is set; images go to docs/design/screens/local/<dir>/ (git-ignored).
  *
  *   SHOTS=port-altar pnpm exec playwright test tests/e2e/shots.spec.ts
@@ -108,7 +108,7 @@ for (const vp of PHONES) {
         if (s0) {
           await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);
           await waitFrames(page, 10);
-          await page.screenshot({ path: out(`${vp.name}-${id}-held`) });
+          await page.screenshot({ path: out(`${vp.name}-${id}-empty-hand`) });
           await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);
         }
       }
