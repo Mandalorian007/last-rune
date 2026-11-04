@@ -103,7 +103,9 @@ async function insets(page: Page, px: number) {
 async function measure(page: Page) {
   return page.evaluate(() => {
     const L = (window as unknown as { __altarLayout: AltarLayout }).__altarLayout;
-    const ov = document.querySelector<HTMLElement>('.tc-overlay')!.getBoundingClientRect();
+    const ov = document
+      .querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!
+      .getBoundingClientRect();
     const app = document.getElementById('app')!.getBoundingClientRect();
     const k = ov.width / 1920;
     const X = (x: number) => ov.left + x * k;
@@ -175,7 +177,7 @@ async function measure(page: Page) {
       ['.lr-altar-hint', 'hint'],
       ['.lr-altar-tip', 'chip'],
       ['.lr-altar-verdict', 'verdict'],
-      ['.tc-caption', 'caption'],
+      ['.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]', 'caption'],
     ] as const) {
       for (const el of document.querySelectorAll(sel)) {
         if (!shown(el) || !el.textContent?.trim()) continue;
@@ -273,7 +275,7 @@ async function measure(page: Page) {
           }
         : null;
     // Rendered text sizes (CSS px): the computed size times the overlay's scale.
-    const ovEl = document.querySelector<HTMLElement>('.tc-overlay')!;
+    const ovEl = document.querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!;
     const ovScale = ov.width / (ovEl.offsetWidth || ov.width);
     const textMin: { sel: string; px: number; text: string }[] = [];
     for (const [sel, kind] of [
@@ -449,7 +451,10 @@ for (const vp of PHONES) {
         });
         g.flow.continueGame();
       });
-      await expect(page.locator('.tc-overlay')).toHaveAttribute('data-phone', '');
+      await expect(page.locator('.tc-overlay:not([data-units="css"])')).toHaveAttribute(
+        'data-phone',
+        '',
+      );
       const problems: string[] = [];
       const table: string[] = [];
       for (const id of MACHINE_IDS) {
@@ -504,7 +509,7 @@ for (const vp of PHONES) {
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
-        const ob = (await page.locator('.tc-overlay').boundingBox())!;
+        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
         const k = ob.width / 1920;
         // Every gem in the tray: its chip.
         for (const s0 of L.tray) {

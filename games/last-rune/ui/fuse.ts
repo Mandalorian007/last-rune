@@ -116,7 +116,8 @@ export class Fuse {
    */
   pointAt(spot: { x: number; y: number; h: number } | null, inset = 18): void {
     const el = this.caption.element;
-    if (!spot || el.hidden || !this.caption.busy) {
+    // Docked in its lane (phones, ui/chrome.ts) the card sits under the world: no tail.
+    if (!spot || el.hidden || !this.caption.busy || this.caption.docked) {
       if (el.hasAttribute('data-tail')) el.removeAttribute('data-tail');
       return;
     }

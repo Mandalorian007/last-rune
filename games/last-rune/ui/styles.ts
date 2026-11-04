@@ -4,6 +4,7 @@
  */
 
 import { scaleFontSizes } from '@thunderclap/engine/ui';
+import { CHROME_CSS } from './chrome-styles';
 import { PHONE_CSS } from './phone-styles';
 
 /** Palette names from the pitch, as CSS colours for DOM UI. */
@@ -384,5 +385,9 @@ export function ensureGameStyles(doc: Document = document): void {
   const phone = doc.createElement('style');
   phone.dataset.lr = 'phone';
   phone.textContent = scaleFontSizes(PHONE_CSS);
-  doc.head.append(el, phone);
+  // Phone chrome on the CSS-px overlay (ui/chrome.ts): menus, panels, HUD, FUSE's lane.
+  const chrome = doc.createElement('style');
+  chrome.dataset.lr = 'chrome';
+  chrome.textContent = scaleFontSizes(CHROME_CSS);
+  doc.head.append(el, phone, chrome);
 }

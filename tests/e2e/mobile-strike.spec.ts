@@ -142,7 +142,10 @@ for (const vp of PHONES) {
 
       // 1–2. Capacitor Bay, half a route: Strike says two strikes; lamps agree with the path.
       await open(page, 'capacitor-bay', ROW.slice(0, 3));
-      await expect(page.locator('.tc-overlay')).toHaveAttribute('data-phone', '');
+      await expect(page.locator('.tc-overlay:not([data-units="css"])')).toHaveAttribute(
+        'data-phone',
+        '',
+      );
       problems.push(...strikeProblems('bay, before', await strikeRead(page), 'Strike (2 left)'));
       const lamps = async () =>
         page.evaluate(() => ({
@@ -237,7 +240,9 @@ for (const vp of PHONES) {
         await waitFrames(page, 8);
         const r = await page.evaluate(() => {
           const v = (window as G).__altarView;
-          const ov = document.querySelector<HTMLElement>('.tc-overlay')!.getBoundingClientRect();
+          const ov = document
+            .querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!
+            .getBoundingClientRect();
           const k = ov.width / 1920;
           const L = v.layout;
           const box = (x: number, y: number, h: number) => ({
@@ -252,7 +257,9 @@ for (const vp of PHONES) {
           for (const s of v.board as G[])
             things.push({ name: 'gem', b: box(s.x, s.y, L.pitch * 0.4) });
           const c = document.querySelector('.lr-solve-card')!.getBoundingClientRect();
-          const cap = document.querySelector<HTMLElement>('.tc-caption');
+          const cap = document.querySelector<HTMLElement>(
+            '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
+          );
           const cr = cap?.getBoundingClientRect();
           const shown = !!cap && !cap.hidden && getComputedStyle(cap).visibility !== 'hidden';
           return {

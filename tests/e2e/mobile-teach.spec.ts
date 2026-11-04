@@ -129,7 +129,7 @@ for (const vp of PHONES) {
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
-        const ob = (await page.locator('.tc-overlay').boundingBox())!;
+        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
         const k = ob.width / 1920;
         const pz = puzzleFor(id);
         const half = pz.design.intended.slice(0, Math.floor(pz.design.intended.length / 2));
@@ -169,7 +169,7 @@ for (const vp of PHONES) {
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
-        const ob = (await page.locator('.tc-overlay').boundingBox())!;
+        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
         const k = ob.width / 1920;
         const pz = puzzleFor(id);
         const half = pz.design.intended.slice(0, Math.floor(pz.design.intended.length / 2));
@@ -193,7 +193,9 @@ for (const vp of PHONES) {
                 text: el.textContent ?? '',
               };
             };
-            const app = document.querySelector('.tc-overlay')!.getBoundingClientRect();
+            const app = document
+              .querySelector('.tc-overlay:not([data-units="css"])')!
+              .getBoundingClientRect();
             const others = [
               ...document.querySelectorAll<HTMLElement>(
                 '.lr-altar-slot, .lr-altar-count, .lr-altar-actions button, .tc-hud-menu, .lr-altar-tip:not([hidden])',
@@ -312,7 +314,11 @@ for (const vp of PHONES) {
               card: seen(tip),
               next: seen(document.querySelector('.lr-altar-tip .lr-info-next')),
               hint: seen(document.querySelector('.lr-altar-hint')),
-              fuse: seen(document.querySelector('.tc-caption')),
+              fuse: seen(
+                document.querySelector(
+                  '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
+                ),
+              ),
               label: document.querySelector('.lr-altar-tip .lr-info-next')?.textContent ?? '',
               page: document.querySelector('.lr-altar-tip .lr-info-page')?.textContent ?? '',
               how:
@@ -371,7 +377,7 @@ for (const vp of PHONES) {
             const L = await page.evaluate(
               () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
             );
-            const ob = (await page.locator('.tc-overlay').boundingBox())!;
+            const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
             const k = ob.width / 1920;
             const x = L.left + L.margin + L.pitch * (f.cell.x + 0.5);
             const y = L.top + L.margin + L.pitch * (f.cell.y + 0.5);

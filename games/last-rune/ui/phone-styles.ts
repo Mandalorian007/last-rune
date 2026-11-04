@@ -14,7 +14,6 @@
  * outranks any scene stylesheet whatever the load order.
  */
 
-import { hall7Css } from './phone-hall-styles';
 import { teach7Css } from './teach-styles';
 
 /** n CSS px, as a design-px length (phones only; the variable is unset elsewhere). */
@@ -36,6 +35,8 @@ const A = `${P} .lr-altar[data-phone]`;
 
 /* mobile-3-chrome */
 /** The visible band's top and bottom edges when the art fills the width (D-040; 0 otherwise). */
+/** Not at an altar or a solve card: those draw FUSE's card and its tail their own way. */
+const HALL = `${P}:not(:has(.lr-altar[data-phone])):not(:has(.lr-solve[data-phone]))`;
 const CT = 'var(--tc-crop-t, 0px)';
 const CB = 'var(--tc-crop-b, 0px)';
 const CHROME_CSS = /* css */ `
@@ -45,25 +46,12 @@ const CHROME_CSS = /* css */ `
 ${P} .lr-hud { top: calc(${CT} + ${cpx(4)}); }
 ${P} .tc-caption[data-corner^="bottom"] { bottom: calc(${CB} + var(--tc-caption-margin)); }
 ${P} .tc-caption[data-corner^="top"] { top: calc(${CT} + var(--tc-caption-margin)); }
-${P} .tc-layer[data-layer="panels"], ${P} .tc-layer[data-layer="toasts"] { top: ${CT}; bottom: ${CB}; }
 /* FUSE's lines break evenly, never one word alone on the last line. */
 ${P} .tc-caption-text { text-wrap: balance; }
 
-/* Title: Play is the one big gold button; the rest are a full thumb tall. The menu sits just
-   under the subtitle so three buttons fit above the bottom edge on every phone. */
-${P} .lr-title-menu { top: 450px; gap: ${cpx(8)}; }
-${P} .lr-title-menu .lr-gold-button {
-  min-width: ${cpx(150)}; min-height: ${cpx(48)}; padding: 0 ${cpx(20)}; border-radius: ${cpx(9)};
-  font-size: ${tpx(19)}; letter-spacing: 1px; border-width: 2px;
-}
-${P} .lr-title-menu .lr-stone-button { min-width: ${cpx(150)}; min-height: ${cpx(44)}; font-size: ${tpx(15)}; border-radius: ${cpx(8)}; }
-${P} .lr-fullscreen { left: ${cpx(8)}; top: calc(${CT} + ${cpx(6)}); min-height: ${cpx(36)}; padding: 0 ${cpx(12)}; font-size: ${tpx(13)}; }
-${P} .lr-release { top: calc(${CT} + ${cpx(8)}); right: ${cpx(10)}; }
-${P} .tc-link.lr-title-links { right: ${cpx(8)}; bottom: calc(${CB} + ${cpx(6)}); }
-${P} .lr-title-links .tc-link-row { gap: ${cpx(8)}; }
 /* Hall: the suggested door, unmistakable at phone size: a pulsing gold outline and a tag on
    its top edge (kept inside the visible band). Off phones neither shows. */
-.tc-overlay:not([data-phone]) :is(.lr-hall-next, .lr-hall-next-tag, .lr-hud-note) { display: none !important; }
+.tc-overlay:not([data-phone]):not([data-form-factor^="phone"]) :is(.lr-hall-next, .lr-hall-next-tag, .lr-hud-note) { display: none !important; }
 ${P} .lr-hall-next {
   position: absolute; box-sizing: border-box; pointer-events: none;
   border: ${cpx(2)} solid #ffd77a; border-radius: 46% 46% ${cpx(8)} ${cpx(8)} / 30% 30% ${cpx(8)} ${cpx(8)};
@@ -82,63 +70,9 @@ ${P} .lr-hall-next-tag::after { content: ' ▾'; }
 @keyframes lr-next-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { ${P} .lr-hall-next { animation: none; } }
 [data-reduced-motion] ${P} .lr-hall-next { animation: none; }
-/* The ☰ list says what its dot means. */
-${P} .lr-hud[data-open] > button[data-action="journal"] { flex-direction: column; align-items: flex-end; justify-content: center; line-height: 1.15; }
-${P} .lr-hud-note { display: block; font: italic ${tpx(11)}/1.1 var(--tc-font-body, serif); color: #ffb27a; letter-spacing: 0; }
-${P} .lr-hud-note[hidden] { display: none; }
-/* Nothing of the hall's chrome shows through an open panel (Settings, Codex). */
-${P}:has(.tc-panel-host[data-modal="true"]) :is(.lr-hud, .lr-hall-next, .lr-hall-next-tag) { visibility: hidden; }
-
-/* Codex: the book fits the visible band; a readable header; tabs a thumb tall (the strip
-   scrolls sideways if every gem is met); bigger text that uses the whole page; FUSE's note in
-   dark ink; the × matches the other panels' ✕. */
-${P} .lr-codex {
-  height: calc(1080px - ${CT} - ${CB} - ${cpx(6)}); padding: ${cpx(22)} ${cpx(6)} ${cpx(46)};
-}
-${P} .lr-codex-head { top: ${cpx(3)}; font-size: ${tpx(13)}; letter-spacing: 0.5px; color: #f8e6b8; }
-${P} .lr-codex-nav {
-  bottom: ${cpx(5)}; gap: ${cpx(5)}; justify-content: safe center; overflow-x: auto; scrollbar-width: none;
-  padding: 0 ${cpx(10)};
-}
-${P} .lr-codex-nav button {
-  flex: none; min-height: ${cpx(36)}; height: ${cpx(36)}; padding: 0 ${cpx(11)}; border-radius: ${cpx(18)};
-  font-size: ${tpx(13)};
-}
-${P} .lr-codex-nav .lr-dot { width: ${cpx(9)}; height: ${cpx(9)}; margin-right: ${cpx(4)}; }
-${P} .lr-codex-page {
-  padding: ${cpx(8)} ${cpx(14)} ${cpx(4)}; grid-template-columns: ${cpx(88)} 1fr; column-gap: ${cpx(12)};
-  font-size: ${tpx(14)}; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
-}
-/* The shortest phones (SE, 320 tall): a touch smaller so a page's rule and maths fit above the tabs. */
-@media (max-height: 330px) {
-  ${P} .lr-codex-page { font-size: ${tpx(13)}; grid-template-columns: ${cpx(76)} 1fr; }
-  ${P} .lr-plate { width: ${cpx(76)}; height: ${cpx(76)}; }
-  ${P} .lr-niche { width: ${cpx(72)}; height: ${cpx(72)}; }
-  ${P} .lr-margin { font-size: ${tpx(12)}; line-height: 1.3; }
-  ${P} .lr-codex-rule { margin-top: ${cpx(5)}; font-size: ${tpx(13)}; line-height: 1.3; }
-  ${P} .lr-codex-maths { margin-top: ${cpx(4)}; padding: ${cpx(2)} ${cpx(6)}; font-size: ${tpx(12)}; }
-}
-${P} .lr-codex-page h3 { font-size: ${tpx(18)}; padding-bottom: ${cpx(3)}; padding-right: ${cpx(40)}; gap: ${cpx(3)} ${cpx(6)}; }
-${P} .lr-codex-page .lr-status, ${P} .lr-codex-page .lr-new { font-size: ${tpx(11)}; padding: 0 ${cpx(6)}; letter-spacing: 1px; vertical-align: 0; margin: 0; }
-${P} .lr-codex-status { font-size: ${tpx(12)}; margin: ${cpx(3)} 0 ${cpx(6)}; }
-${P} .lr-plate { width: ${cpx(88)}; height: ${cpx(88)}; }
-${P} .lr-niche { width: ${cpx(84)}; height: ${cpx(84)}; }
-${P} .lr-margin {
-  align-self: center; padding: ${cpx(2)} 0 ${cpx(2)} ${cpx(8)}; font-size: ${tpx(13)}; line-height: 1.35;
-  color: #3e2208; border-left: ${cpx(2)} dashed rgb(110 60 15 / 0.6);
-}
-${P} .lr-margin b { font-size: ${tpx(11)}; letter-spacing: 1px; margin-bottom: ${cpx(2)}; color: #6a3a0c; }
-${P} .lr-codex-rule { margin-top: ${cpx(8)}; font-size: ${tpx(14)}; line-height: 1.35; }
-${P} .lr-codex-maths { margin-top: ${cpx(6)}; padding: ${cpx(4)} ${cpx(8)}; font-size: ${tpx(13)}; }
-${P} .lr-codex-folio { font-size: ${tpx(12)}; }
-${P} .lr-codex-close {
-  top: ${cpx(28)}; right: ${cpx(14)}; width: ${cpx(36)}; height: ${cpx(36)}; font-size: ${tpx(18)};
-  border-width: 1px; color: #3b2414; background: rgb(255 255 255 / 0.4);
-}
-
 /* Journal: the found pages as paper rows a thumb tall, one row for the rest ("12 more pages to
    find"), scrolling if there are many; solid page arrows; ✕ in the right bar. */
-.tc-overlay:not([data-phone]) .lr-j-more { display: none; }
+.tc-overlay:not([data-phone]):not([data-form-factor^="phone"]) .lr-j-more { display: none; }
 ${P} .lr-j-stack {
   position: absolute; left: 28px; top: 150px; width: 470px; height: 800px; box-sizing: border-box;
   display: flex; flex-direction: column; gap: ${cpx(4)}; overflow-y: auto; overscroll-behavior: contain;
@@ -167,115 +101,13 @@ ${P} .lr-journal .lr-j-turn {
   box-shadow: 0 ${cpx(2)} ${cpx(6)} rgb(0 0 0 / 0.7); transform: translate(${cpx(-6)}, ${cpx(-4)});
 }
 ${P} .lr-journal .lr-j-back { top: auto; bottom: calc(${CB} + ${cpx(6)}); }
-${P} .lr-journal .lr-j-x { position: absolute; top: ${cpx(6)}; left: auto; right: calc(-1 * var(--tc-bar, 0px) + ${cpx(4)}); pointer-events: auto; }
-${P} .lr-journal .lr-panel-x { display: grid; background: rgb(255 255 255 / 0.1); border: 1px solid rgb(232 192 106 / 0.5); border-radius: 50%; }
 
-/* Close ✕ (D-040: Settings, Codex and Journal all close from the top-right corner, plus Esc/Back).
-   Phones only; desktop keeps its Done / × / Back. */
-.tc-overlay:not([data-phone]) :is(.lr-seg, .lr-panel-x) { display: none !important; }
-${P} .lr-panel-x {
-  position: absolute; top: ${cpx(4)}; right: ${cpx(4)}; z-index: 2; display: grid; place-items: center;
-  width: ${cpx(36)}; height: ${cpx(36)}; min-height: 0; padding: 0; border-radius: 50%; cursor: pointer;
-  font: 600 ${tpx(16)}/1 var(--tc-font-ui, system-ui, sans-serif); color: #f3e6c8;
-  background: rgb(255 255 255 / 0.1); border: 1px solid rgb(232 192 106 / 0.5);
-}
-${P} .lr-panel-x:active { background: rgb(232 192 106 / 0.3); }
-
-/* Settings: a fixed header (title, ✕) and footer (Done) with the two columns scrolling between,
-   so nothing is ever cut off; every row is a thumb tall; choices are segmented toggles. */
-${P} .tc-panel.lr-settings-host {
-  display: flex; flex-direction: column; overflow: hidden; width: 1840px; max-height: 98%;
-  padding: ${cpx(6)} ${cpx(6)} 0 ${cpx(14)}; box-sizing: border-box;
-}
-${P} .lr-settings-host .tc-panel-title { flex: none; margin: 0; font-size: ${tpx(16)}; line-height: ${cpx(36)}; }
-${P} .lr-settings { width: auto; flex: 1 1 auto; min-height: 0; gap: 0; outline: none; }
-${P} .lr-settings-cols {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: ${cpx(8)};
-  gap: 0 ${cpx(22)}; scrollbar-width: thin; padding-bottom: ${cpx(14)};
-  /* A soft bottom edge says "more below" instead of a half-cut row. */
-}
-${P} .lr-settings-cols[data-more] { mask-image: linear-gradient(#000 calc(100% - ${cpx(22)}), transparent); }
-.tc-overlay:not([data-phone]) .lr-settings-more { display: none; }
-${P} .lr-settings-more {
-  margin-right: auto; min-height: ${cpx(32)}; padding: 0 ${cpx(12)}; font-size: ${tpx(13)};
-  color: #f2d89a; background: rgb(232 192 106 / 0.12); border: 1px solid rgb(232 192 106 / 0.45);
-  border-radius: ${cpx(16)};
-}
-${P} .lr-settings-more[hidden] { display: none; }
-${P} .lr-settings-col, ${P} .lr-settings section { gap: 0; }
-${P} .lr-settings h3 { margin: ${cpx(6)} 0 0; font-size: ${tpx(12)}; line-height: 1.4; }
-${P} .lr-settings .tc-field, ${P} .lr-choice { min-height: ${cpx(44)}; }
-${P} .lr-choice { display: flex; align-items: center; justify-content: space-between; gap: ${cpx(8)}; }
-${P} .lr-choice label.lr-field { flex: 0 1 auto; min-width: 0; font-size: ${tpx(12.5)}; }
-${P} .lr-choice select { display: none; }
-${P} .lr-seg {
-  display: inline-flex; flex: none; border: 1px solid var(--tc-color-border); border-radius: ${cpx(8)};
-  overflow: hidden; background: var(--tc-color-surface-alt);
-}
-${P} .lr-seg button {
-  min-height: ${cpx(34)}; padding: 0 ${cpx(9)}; border: 0; margin: 0; cursor: pointer;
-  font: ${tpx(12)}/1.1 var(--tc-font-body, serif); color: var(--tc-color-text); background: transparent;
-}
-${P} .lr-seg button + button { border-left: 1px solid var(--tc-color-border); }
-${P} .lr-seg button[aria-checked="true"] { color: #2a1906; background: linear-gradient(180deg, #f3d488, #c99a45); font-weight: 600; }
-${P} .lr-settings .tc-field { font-size: ${tpx(12.5)}; }
-${P} .lr-settings .tc-field > span { flex: 0 0 7.5em; }
-${P} .lr-settings input[type="range"] {
-  -webkit-appearance: none; appearance: none; height: ${cpx(44)}; min-height: 0; margin: 0; background: transparent;
-}
-${P} .lr-settings input[type="range"]::-webkit-slider-runnable-track { height: ${cpx(6)}; border-radius: ${cpx(3)}; background: rgb(232 192 106 / 0.35); }
-${P} .lr-settings input[type="range"]::-moz-range-track { height: ${cpx(6)}; border-radius: ${cpx(3)}; background: rgb(232 192 106 / 0.35); }
-${P} .lr-settings input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; width: ${cpx(22)}; height: ${cpx(22)}; margin-top: ${cpx(-8)}; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff1b5, #e8c06a 55%, #9a6d2a); border: 1px solid #5a3d12;
-}
-${P} .lr-settings input[type="range"]::-moz-range-thumb {
-  width: ${cpx(22)}; height: ${cpx(22)}; border-radius: 50%; background: #e8c06a; border: 1px solid #5a3d12;
-}
-${P} .lr-settings textarea { height: ${cpx(40)}; margin: ${cpx(4)} 0; }
-${P} .lr-settings .lr-row { gap: ${cpx(8)}; }
-${P} .lr-settings .lr-row .tc-button { min-height: ${cpx(36)}; margin: ${cpx(4)} 0; }
-${P} .lr-settings-danger { margin-top: ${cpx(6)}; padding-top: ${cpx(4)}; border-top: 1px solid rgb(255 120 100 / 0.25); }
-${P} .lr-settings .lr-danger { color: #ffe3dc; background: linear-gradient(180deg, #a3341f, #6e1d12); border-color: #e0664c; }
-${P} .lr-settings .lr-settings-done { flex: none; position: static; padding: ${cpx(4)} ${cpx(8)} ${cpx(6)} 0; margin: 0; }
-${P} .lr-settings .lr-settings-done .tc-button { min-height: ${cpx(40)}; min-width: ${cpx(88)}; }
-
-${P} .lr-title-coffee, ${P} .lr-title-links .tc-link-copy {
-  min-height: ${cpx(36)}; padding: 0 ${cpx(12)}; font-size: ${tpx(12.5)}; box-sizing: border-box;
-}
 `;
 /* end mobile-3-chrome */
 
 /* mobile-4-chrome */
 const CHROME4_CSS = /* css */ `
 /* ── mobile-4-chrome: the last clarity gaps in the menus (D-040 addendum 2) ───────────── */
-/* Settings: the columns scroll natively beside a drawn thumb (iOS hides its own until you
-   scroll); the bottom fade shows only while there is more below; "Graphics & Save ▾" jumps. */
-${P} .lr-settings-scroll { position: relative; display: flex; flex: 1 1 auto; min-height: 0; }
-${P} .lr-settings-scroll > .lr-settings-cols {
-  position: relative; flex: 1 1 auto; min-width: 0; scrollbar-width: none; padding-right: ${cpx(16)};
-}
-${P} .lr-settings-scroll > .lr-settings-cols::-webkit-scrollbar { display: none; }
-${P} .lr-settings-rail {
-  position: absolute; right: ${cpx(3)}; top: ${cpx(4)}; bottom: ${cpx(8)}; width: ${cpx(5)};
-  border-radius: ${cpx(3)}; background: rgb(232 192 106 / 0.16); pointer-events: none;
-}
-${P} .lr-settings-rail[hidden] { display: none; }
-${P} .lr-settings-thumb {
-  position: absolute; left: 0; right: 0; min-height: ${cpx(24)}; border-radius: ${cpx(3)};
-  background: rgb(240 205 125 / 0.85);
-}
-${P} .lr-settings-more { min-height: ${cpx(40)}; padding: 0 ${cpx(14)}; border-radius: ${cpx(20)}; }
-
-/* Codex: the ✕ gets a gutter of its own in the leather, right of the pages, so it never
-   touches a header; the page number goes (it cost a line on the shortest phones); a page that
-   still runs long scrolls with a fade at its foot while more is below. */
-${P} .lr-codex { padding-right: ${cpx(50)}; }
-${P} .lr-codex-close { top: ${cpx(32)}; right: ${cpx(7)}; background: rgb(255 240 200 / 0.14); color: #f8e6b8; border-color: rgb(232 192 106 / 0.6); }
-${P} .lr-codex-page h3 { padding-right: 0; }
-${P} .lr-codex-folio { display: none; }
-${P} .lr-codex-page[data-more] { mask-image: linear-gradient(#000 calc(100% - ${cpx(20)}), rgb(0 0 0 / 0.15)); }
-
 /* Journal: the handwriting at a readable size in dark ink; the Day list in larger print with a
    quiet "new" marker so the dates scan; one exit, the ✕ (D-040). */
 ${P} .lr-j-body, ${P} .lr-j-body[data-long] {
@@ -303,7 +135,7 @@ const CHROME5_CSS = /* css */ `
 /* ── mobile-5-chrome: the hall explains itself; menus fold cleanly (D-040 addendum 3) ───── */
 /* Every door wears a plate (hall-scene doorPlates): an open door's name in gold, a restored
    one's with a ✓, a locked one's padlock and the gem colours it still needs. Phones only. */
-.tc-overlay:not([data-phone]) :is(.lr-doors, .lr-hud-menu-label, .lr-hud-menu-new) { display: none !important; }
+.tc-overlay:not([data-phone]):not([data-form-factor^="phone"]) :is(.lr-doors, .lr-hud-menu-label, .lr-hud-menu-new) { display: none !important; }
 ${P} .lr-doors { position: absolute; inset: 0; pointer-events: none; }
 ${P} .lr-doors[hidden] { display: none; }
 ${P} .lr-door {
@@ -332,57 +164,6 @@ ${P} .lr-nameplate {
   padding: ${cpx(4)} ${cpx(10)}; font-size: ${tpx(13)}; line-height: 1.2; border-radius: ${cpx(8)}; border-width: 1px;
 }
 ${P} .lr-nameplate small { font-size: ${tpx(12)}; line-height: 1.25; margin-top: ${cpx(1)}; color: #d9c9a4; }
-/* The ☰ says "Menu" under it; when the journal has new pages, a tag under it says so. */
-${P} .lr-hud .lr-hud-menu { position: relative; flex-direction: column; gap: 0; height: ${cpx(44)}; }
-${P} .lr-hud .lr-hud-menu > span { font-size: ${cpx(18)}; line-height: 1; }
-${P} .lr-hud-menu-label { display: block; font: 600 ${tpx(12)}/1 var(--tc-font-display, serif); letter-spacing: 0.3px; margin-top: ${cpx(1)}; }
-${P} .lr-hud-menu-new {
-  position: absolute; top: calc(100% + ${cpx(3)}); right: 0; width: ${cpx(44)}; box-sizing: border-box;
-  padding: ${cpx(2)} 0; border-radius: ${cpx(6)}; text-align: center;
-  font: italic 700 ${tpx(12)}/1.05 var(--tc-font-body, serif); color: #2a1206; background: #ffb27a;
-  box-shadow: 0 ${cpx(1)} ${cpx(4)} rgb(0 0 0 / 0.7);
-}
-${P} .lr-hud-menu-new[hidden], ${P} .lr-hud[data-open] .lr-hud-menu-new { display: none; }
-/* FUSE's card carries his name (his portrait is hidden on phones), except at an altar, where
-   he sits right beside it. */
-${P}:not(:has(.lr-altar[data-phone])) .tc-caption-text::before {
-  content: 'FUSE '; font: 700 ${tpx(12)}/1 var(--tc-font-display, serif); letter-spacing: 0.6px; color: #e8c06a;
-}
-/* Settings: the fold ends on a whole row (settings-panel fold()), so no fade is needed; the
-   save code sits in a labelled box; Start over is a group of its own, ruled off in red. */
-${P} .lr-settings-scroll > .lr-settings-cols { box-sizing: border-box; mask-image: none; }
-${P} .lr-save-box {
-  display: flex; flex-direction: column; gap: ${cpx(2)}; margin: ${cpx(4)} 0 0; padding: ${cpx(4)} ${cpx(8)} ${cpx(6)};
-  border: 1px solid rgb(232 192 106 / 0.45); border-radius: ${cpx(8)}; background: rgb(232 192 106 / 0.06);
-}
-${P} .lr-save-box > span { font: 600 ${tpx(12)}/1.2 var(--tc-font-display, serif); color: #e8c06a; letter-spacing: 0.3px; }
-${P} .lr-settings .lr-save-box textarea {
-  height: ${cpx(38)}; margin: 0; padding: ${cpx(4)} ${cpx(6)}; resize: none; box-sizing: border-box;
-  font: ${tpx(12)}/1.3 var(--tc-font-body, serif); color: #f4e6c4; background: rgb(10 7 4 / 0.55);
-  border: 1px solid rgb(232 192 106 / 0.25); border-radius: ${cpx(5)};
-}
-${P} .lr-settings .lr-save-box textarea::placeholder { color: rgb(244 230 196 / 0.6); font-style: italic; }
-${P} .lr-settings-danger {
-  margin: ${cpx(10)} 0 ${cpx(4)}; padding: ${cpx(4)} ${cpx(8)} ${cpx(2)}; border: 1px solid rgb(224 102 76 / 0.45);
-  border-radius: ${cpx(8)}; background: rgb(110 29 18 / 0.18);
-}
-${P} .lr-settings-danger h4 { margin: 0; font: 600 ${tpx(12)}/1.3 var(--tc-font-display, serif); letter-spacing: 1px; text-transform: uppercase; color: #ff9c86; }
-${P} .lr-settings-danger p { margin: ${cpx(1)} 0 0; font-size: ${tpx(12)}; line-height: 1.3; color: #e7d3c8; }
-${P} .lr-settings-danger .tc-button { min-height: ${cpx(36)}; margin: ${cpx(4)} 0; }
-${P} .lr-settings h3 { font-size: ${tpx(12.5)}; }
-/* Codex on the shortest phones: the rule and its formula sit beside the gem, FUSE's note
-   under them, so the whole rule shows without scrolling. */
-@media (max-height: 330px) {
-  ${P} .lr-plate, ${P} .lr-niche { grid-row: 3 / span 2; align-self: start; }
-  ${P} .lr-codex-rule { grid-column: 2; grid-row: 3; margin-top: 0; }
-  ${P} .lr-codex-maths { grid-column: 2; grid-row: 4; align-self: start; }
-  ${P} .lr-margin { grid-column: 1 / -1; grid-row: 5; align-self: start; margin-top: ${cpx(6)}; }
-}
-${P} .lr-codex-status { font-size: ${tpx(12)}; }
-/* Chrome text floor 12 px: the Yours / Not met yet / NEW tags and FUSE's margin label. */
-${P} .lr-codex-page .lr-status, ${P} .lr-codex-page .lr-new, ${P} .lr-margin b {
-  font-size: ${tpx(12)}; letter-spacing: 0.6px;
-}
 /* Journal: the page number at 13 px ink, and the page arrows beside the book, not over its
    edges: ‹ left of the book, › in the right lane under the ✕. */
 ${P} .lr-j-folio { display: flex; justify-content: center; white-space: nowrap; font-size: ${tpx(13)}; font-weight: 700; color: #3d2818; }
@@ -399,15 +180,6 @@ ${P} .lr-hg-badge-count { display: none !important; }
 /* mobile-6-chrome */
 const CHROME6_CSS = /* css */ `
 /* ── mobile-6-chrome: gate review 3 (D-040 addendum 4) ─────────────────────────────────── */
-/* Title: FUSE's card keeps off the logo; its top corners sit under the subtitle
-   (title-scene sets --lr-title-cap-top). Ko-fi and Copy link sit on a dark band of their own. */
-${P} .tc-caption[data-corner^="top"]:not(#lr-none) { top: var(--lr-title-cap-top, calc(${CT} + var(--tc-caption-margin))); }
-${P} .lr-title-links .tc-link-row {
-  padding: ${cpx(4)}; border-radius: ${cpx(24)}; background: rgb(8 6 4 / 0.86);
-  box-shadow: 0 0 ${cpx(10)} ${cpx(4)} rgb(8 6 4 / 0.7);
-}
-${P} .lr-title-links :is(.lr-title-coffee, .tc-link-copy) { background: rgb(28 18 12 / 0.95); }
-
 /* Hall: one plate family. Open: gold name; restored: ✓ and name inside the plate; locked: a
    padlock and the name, dimmed. No gem pips or "+N" on the map; the tap card names them. */
 ${P} .lr-door[data-status="locked"] {
@@ -433,46 +205,6 @@ ${P} .lr-card-gem {
 }
 ${P} .lr-card-gem .lr-door-gem { width: ${cpx(10)}; height: ${cpx(10)}; }
 
-/* Settings: two tabs in the title row ("Sound & Comfort", "Graphics & Save"), each a whole
-   view; no "Graphics & Save ▾" jump. */
-${P} .tc-panel.lr-settings-host { position: relative; }
-${P} .lr-settings-tabs {
-  position: absolute; top: ${cpx(5)}; left: 50%; transform: translateX(-50%); display: flex;
-  border: 1px solid rgb(232 192 106 / 0.5); border-radius: ${cpx(18)}; overflow: hidden;
-  background: rgb(255 255 255 / 0.06);
-}
-${P} .lr-settings-tab {
-  min-height: ${cpx(34)}; padding: 0 ${cpx(14)}; margin: 0; border: 0; cursor: pointer; white-space: nowrap;
-  font: 600 ${tpx(12.5)}/1 var(--tc-font-body, serif); color: #f2d89a; background: transparent;
-}
-${P} .lr-settings-tab + .lr-settings-tab { border-left: 1px solid rgb(232 192 106 / 0.5); }
-${P} .lr-settings-tab[aria-selected="true"] { color: #2a1906; background: linear-gradient(180deg, #f3d488, #c99a45); }
-${P} .lr-settings-scroll > .lr-settings-cols[hidden] { display: none; }
-/* A whole tab has no fade gap at its foot; at large text the fold still lands on a row. */
-${P} .lr-settings-scroll > .lr-settings-cols[role="tabpanel"] { padding-bottom: 0; }
-
-/* Codex on the shortest phones (SE): tighter spacing and FUSE's label inline with his note, so
-   every page fits whole at 100% text. A page that still runs long (larger text) fades out at
-   its foot over a ⌄ cue, never a line cut in half. */
-@media (max-height: 330px) {
-  ${P} .lr-codex-page { padding-top: ${cpx(4)}; }
-  ${P} .lr-codex-page h3 { font-size: ${tpx(16)}; padding-bottom: ${cpx(1)}; }
-  ${P} .lr-codex-status { margin: ${cpx(1)} 0 ${cpx(3)}; }
-  ${P} .lr-codex-rule, ${P} .lr-margin { line-height: 1.25; }
-  ${P} .lr-codex-maths { margin-top: ${cpx(2)}; }
-  ${P} .lr-margin { margin-top: ${cpx(3)}; }
-  ${P} .lr-margin b { display: inline; margin: 0 ${cpx(6)} 0 0; }
-}
-${P} .lr-codex-page[data-more] {
-  mask-image: linear-gradient(#000 calc(100% - ${cpx(34)}), transparent calc(100% - ${cpx(6)}));
-}
-.tc-overlay:not([data-phone]) .lr-codex-more { display: none; }
-${P} .lr-codex-more {
-  position: absolute; bottom: ${cpx(1)}; transform: translateX(-50%); z-index: 1; pointer-events: none;
-  font: 700 ${cpx(18)}/0.6 var(--tc-font-ui, system-ui, sans-serif); color: #6a3a0c;
-}
-${P} .lr-codex-more[hidden] { display: none; }
-
 /* Journal (mobile-7-ending): the page arrows sit on the book's outer bottom corners, centred
    on the leaves' outer edges (design px 669 and 1835, 44 above the leaves' foot), so they read
    as the book's own page turns: clear of the quill and the candle, and never out at the screen
@@ -492,7 +224,7 @@ ${P} { overflow: visible; }
 /* ── Touch: no key caps anywhere ────────────────────────────────────────── */
 ${T} kbd, ${T} .lr-keys-only { display: none !important; }
 .tc-overlay:not([data-touch]) .lr-touch-only { display: none !important; }
-.tc-overlay:not([data-phone]) .lr-ph-ico, .tc-overlay:not([data-phone]) .lr-hud-menu { display: none !important; }
+.tc-overlay:not([data-phone]):not([data-form-factor^="phone"]) .lr-ph-ico, .tc-overlay:not([data-phone]):not([data-form-factor^="phone"]) .lr-hud-menu { display: none !important; }
 ${P} kbd { display: none !important; }
 
 /* ── Phone hit areas ───────────────────────────────────────────────────────
@@ -513,23 +245,6 @@ ${P} .tc-button, ${P} .lr-stone-button, ${P} .lr-gold-button {
 }
 ${P} .lr-gold-button { padding: 0 ${cpx(14)}; }
 
-/* ── HUD: one ☰ in the top-right corner of the right bar ──────────────────
-   Tapped, it lists Journal, Codex and Settings below it; the ☰ carries the journal's dot. */
-${P} .lr-hud { left: auto; right: ${BAR_IN}; top: ${cpx(4)}; gap: ${cpx(4)}; align-items: flex-end; }
-${P} .lr-hud > button:not(.lr-hud-menu) { display: none; }
-${P} .lr-hud[data-open] > button:not(.lr-hud-menu):not([hidden]) {
-  display: inline-flex; align-items: center; min-height: ${cpx(32)}; padding: 0 ${cpx(12)}; font-size: ${tpx(13)};
-  box-shadow: 0 ${cpx(2)} ${cpx(8)} rgba(0,0,0,0.7);
-}
-${P} .lr-hud .lr-hud-menu {
-  display: flex; align-items: center; justify-content: center; width: ${COL}; height: ${cpx(36)}; min-height: 0;
-  padding: 0; font-size: ${cpx(20)}; line-height: 1;
-}
-${P} .lr-hud .lr-hud-menu[data-unread]::after {
-  content: ''; position: absolute; right: ${cpx(4)}; top: ${cpx(4)}; width: ${cpx(8)}; height: ${cpx(8)};
-  border-radius: 50%; background: #ff8a3c; box-shadow: 0 0 ${cpx(4)} #ff8a3c;
-}
-${P} .lr-hud[data-scene="solve"] { display: none; }
 ${P} .lr-nameplate { padding: ${cpx(2)} ${cpx(8)}; font-size: ${tpx(12)}; border-radius: ${cpx(6)}; }
 
 /* ── FUSE's caption: a slim bubble, paged by tap (ui/fuse.ts pages it at 12 words) ───────── */
@@ -544,43 +259,6 @@ ${P}:has(.lr-altar[data-phone]) .tc-caption {
   left: var(--lr-cap-l) !important; right: auto !important; top: auto !important;
   bottom: ${cpx(3)} !important; max-width: min(var(--lr-cap-w), var(--tc-third)) !important;
 }
-
-/* ── Panels ─────────────────────────────────────────────────────────────── */
-${P} .tc-panel { max-width: 99%; max-height: 98%; }
-${P} .tc-card { padding: ${cpx(8)} ${cpx(12)}; border-radius: ${cpx(10)}; }
-
-/* Settings: two columns, nearly full width; Done stays pinned while it scrolls. */
-${P} .lr-settings { width: 1820px; gap: ${cpx(2)}; font-size: ${tpx(12)}; }
-${P} .lr-settings h2 { font-size: ${tpx(14)}; margin: 0; }
-${P} .lr-settings h3 { font-size: ${tpx(12)}; margin: ${cpx(4)} 0 0; }
-${P} .lr-settings-cols { gap: 0 ${cpx(20)}; }
-${P} .lr-settings-col, ${P} .lr-settings section { gap: ${cpx(2)}; }
-${P} .lr-settings .tc-field { min-height: ${cpx(28)}; font-size: ${tpx(12)}; }
-${P} .lr-settings .tc-field > span { flex: 0 0 8em; }
-${P} .lr-settings select { min-height: ${cpx(26)}; padding: 0 ${cpx(6)}; font-size: ${tpx(12)}; }
-${P} .lr-settings input[type="range"] { min-height: ${cpx(24)}; }
-${P} .lr-settings textarea { height: ${cpx(34)}; font-size: ${tpx(11)}; }
-${P} .lr-settings .lr-row { gap: ${cpx(6)}; }
-${P} .lr-settings .lr-settings-done { padding: ${cpx(4)} 0 0; }
-${P} .lr-confirm { width: 1300px; }
-
-/* Codex: the tome fills the screen; each page keeps its plate with FUSE's note beside it and
-   scrolls if it has to; the tabs sit in a strip under the pages. */
-${P} .lr-codex { width: 1900px; height: 1056px; padding: ${cpx(15)} ${cpx(6)} ${cpx(38)}; border-radius: ${cpx(10)}; }
-${P} .lr-codex-page { padding: ${cpx(8)} ${cpx(12)} ${cpx(6)}; grid-template-columns: ${cpx(76)} 1fr; column-gap: ${cpx(10)}; font-size: ${tpx(12)}; }
-${P} .lr-codex-page h3 { padding-bottom: ${cpx(2)}; font-size: ${tpx(15)}; }
-${P} .lr-codex-status { margin: ${cpx(2)} 0 ${cpx(4)}; font-size: ${tpx(11)}; }
-${P} .lr-plate { width: ${cpx(76)}; height: ${cpx(76)}; border-radius: ${cpx(8)}; }
-${P} .lr-niche { width: ${cpx(64)}; height: ${cpx(64)}; }
-${P} .lr-niche--locked::before, ${P} .lr-niche--locked::after { width: ${cpx(76)}; left: ${cpx(-6)}; }
-${P} .lr-margin { grid-column: 2; transform: none; padding: ${cpx(2)} ${cpx(6)}; align-self: start; font-size: ${tpx(11.5)}; line-height: 1.3; }
-${P} .lr-codex-rule { margin-top: ${cpx(6)}; line-height: 1.3; font-size: ${tpx(12)}; }
-${P} .lr-codex-maths { margin-top: ${cpx(4)}; padding: ${cpx(3)} ${cpx(6)}; font-size: ${tpx(11)}; }
-${P} .lr-codex-head { top: ${cpx(1)}; font-size: ${tpx(11)}; letter-spacing: 1px; }
-${P} .lr-codex-nav { bottom: ${cpx(5)}; gap: ${cpx(4)}; }
-${P} .lr-codex-nav button { min-height: ${cpx(26)}; height: auto; padding: 0 ${cpx(8)}; border-radius: ${cpx(13)}; font-size: ${tpx(12)}; }
-${P} .lr-codex-nav .lr-dot { width: ${cpx(7)}; height: ${cpx(7)}; margin-right: ${cpx(3)}; }
-${P} .lr-codex-close { width: ${cpx(30)}; height: ${cpx(30)}; right: ${cpx(10)}; top: ${cpx(10)}; font-size: ${tpx(16)}; }
 
 /* Journal: the slips are an index 16 CSS px apart, so they keep their exact size (no grown hit
    area to steal the neighbour's tap); the page arrows and a swipe on the book turn pages. */
@@ -1019,4 +697,76 @@ ${P} .tc-link-copy, ${P} .tc-link-message { font-size: ${tpx(11)}; padding: ${cp
 ${P} .lr-title-links { right: ${cpx(6)}; bottom: ${cpx(4)}; gap: ${cpx(6)}; }
 ${P} .lr-title-coffee { min-height: ${cpx(24)}; padding: 0 ${cpx(8)}; font-size: ${tpx(11)}; }
 ${P} .lr-release { font-size: ${tpx(11)}; }
-${CHROME_CSS}${CHROME4_CSS}${CHROME5_CSS}${CHROME6_CSS}${hall7Css()}${teach7Css({ P, cpx, tpx })}`;
+${CHROME_CSS}${CHROME4_CSS}${CHROME5_CSS}${CHROME6_CSS}/* ── mobile-7-hall ─────────────────────────────────────────────────────────────────────── */
+/* The Next ring goes round the door's art and stops above its plate (hall-scene placeChrome);
+   the plates are drawn over it, so a name is never cut by the outline. */
+${P} .lr-doors { z-index: 1; }
+${P} .lr-hall-next { z-index: 0; }
+${P} .lr-hall-next-tag { z-index: 2; }
+/* The tag is placed by the HUD (hud placeTag): above the ring if that is clear, else beside it,
+   pointing at it. Its position is set inline; these give its arrow. */
+${P} .lr-hall-next-tag[data-side] { transform: none; }
+${P} .lr-hall-next-tag[data-side="left"]::after { content: ' ▸'; }
+${P} .lr-hall-next-tag[data-side="right"]::after { content: none; }
+${P} .lr-hall-next-tag[data-side="right"]::before { content: '◂ '; }
+
+/* Door plates: open and restored names a size up and brighter; locked ones quieter, still
+   readable (contrast ≥ 7:1 on their dark plate). */
+${P} .lr-door { padding: ${cpx(1)} ${cpx(5)}; }
+${P} .lr-door[data-status="unlocked"] { font-size: ${tpx(13)}; color: #ffe08f; background: rgb(20 13 6 / 0.92); }
+${P} .lr-door[data-status="solved"] { font-size: ${tpx(13)}; color: #f2faee; background: rgb(12 16 12 / 0.9); }
+${P} .lr-door[data-status="locked"] { color: #c4b99f; background: rgb(10 8 6 / 0.8); border-color: rgb(200 190 170 / 0.22); }
+${P} .lr-door[data-status="locked"] .lr-door-lock { opacity: 0.75; }
+/* The tapped door's plate lights up, so its card reads as its own wherever the card stands. */
+${P} .lr-door[data-tapped] { color: #fff1c4; border-color: #ffd77a; box-shadow: 0 0 ${cpx(5)} rgb(255 205 110 / 0.75); }
+
+/* A tapped door's card: beside the door, clear of every other plate (hud placeCard). The words
+   are "Locked: solve Relay Tower first"; FUSE's word on it joins the same card. */
+${P} .lr-nameplate[data-placed] { transform: none; z-index: 3; max-width: min(${cpx(400)}, 60%); padding: ${cpx(3)} ${cpx(10)}; line-height: 1.2; }
+/* Wide and short, so it fits in a strip between plate rows: the name and its note run on. */
+${P} .lr-nameplate[data-placed] > span { display: inline; }
+${P} .lr-nameplate[data-placed] > small { display: inline; margin: 0; }
+${P} .lr-nameplate[data-placed] > small::before { content: ' · '; color: #e8c06a; }
+${P} .lr-card-fuse {
+  margin: ${cpx(2)} 0 0; padding-top: ${cpx(2)}; border-top: 1px solid rgb(232 192 106 / 0.3);
+  font: italic ${tpx(12)}/1.22 var(--tc-font-body, serif); letter-spacing: 0; white-space: normal;
+  text-wrap: balance; color: #f4e6c4; text-align: center;
+}
+${P} .lr-card-fuse[hidden] { display: none; }
+${P} .lr-card-fuse b { font: 700 ${tpx(12)}/1 var(--tc-font-display, serif); font-style: normal; letter-spacing: 0.6px; color: #e8c06a; }
+
+/* The open ☰ list stands on a panel of its own over a dimmed hall: no door name shows
+   through it. */
+${P} .lr-hud-scrim {
+  position: absolute; inset: 0 calc(-1 * var(--tc-bar, 0px)); z-index: 4; pointer-events: none;
+  background: rgb(4 3 2 / 0.6);
+}
+${P} .lr-hud-scrim[hidden] { display: none; }
+.tc-overlay:not([data-phone]):not([data-form-factor^="phone"]) .lr-hud-scrim { display: none !important; }
+
+/* Journal: the red dot beside a page is keyed in the head ("· ● 1 new"). */
+${P} .lr-j-key i {
+  display: inline-block; width: ${cpx(8)}; height: ${cpx(8)}; margin: 0 ${cpx(3)} 0 0; border-radius: 50%;
+  vertical-align: 0.05em; background: radial-gradient(circle at 40% 35%, #d2463c, #8a1a14);
+}
+/* Keep the tag off the band's very top even before the HUD places it. */
+${P} .lr-hall-next-tag:not([data-side]) { top: max(calc(var(--lr-next-top, 0px) - ${cpx(23)}), calc(var(--tc-crop-t, 0px) + ${cpx(5)})); }
+
+/* FUSE's card in the hall stays on this overlay (it steers clear of the doors; ui/chrome.ts
+   docks it only on the title and journal). It carries his name, and a tail toward him
+   (ui/fuse.ts pointAt sets the side and where along it). An altar or a solve card draws its
+   own. */
+${HALL} .tc-caption-text::before {
+  content: 'FUSE '; font: 700 ${tpx(12)}/1 var(--tc-font-display, serif); letter-spacing: 0.6px; color: #e8c06a;
+}
+${HALL} .tc-caption[data-tail] { overflow: visible; }
+${HALL} .tc-caption[data-tail]::after {
+  content: ''; position: absolute; width: ${cpx(9)}; height: ${cpx(9)}; box-sizing: border-box;
+  background: var(--tc-color-surface); border: 0 solid var(--tc-color-border);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+${HALL} .tc-caption[data-tail="bottom"]::after { left: var(--lr-tail-at); top: 100%; border-width: 0 1px 1px 0; }
+${HALL} .tc-caption[data-tail="top"]::after { left: var(--lr-tail-at); top: 0; border-width: 1px 0 0 1px; }
+${HALL} .tc-caption[data-tail="left"]::after { top: var(--lr-tail-at); left: 0; border-width: 0 0 1px 1px; }
+${HALL} .tc-caption[data-tail="right"]::after { top: var(--lr-tail-at); left: 100%; border-width: 1px 1px 0 0; }
+${teach7Css({ P, cpx, tpx })}`;

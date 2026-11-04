@@ -93,7 +93,9 @@ function control(page: Page, sel: string) {
   return page.evaluate((sel) => {
     const el = document.querySelector<HTMLElement>(sel)!;
     const r = el.getBoundingClientRect();
-    const k = document.querySelector('.tc-overlay')!.getBoundingClientRect().width / 1920;
+    const k =
+      document.querySelector('.tc-overlay:not([data-units="css"])')!.getBoundingClientRect().width /
+      1920;
     const b = getComputedStyle(el, '::before');
     const hit =
       b.content && b.content !== 'none'
@@ -164,10 +166,17 @@ for (const vp of PHONES) {
       expect(sk.box.t).toBeGreaterThanOrEqual(app.t - 0.5);
       await insideSafeArea(
         page,
-        ['.lr-end-skip', '.tc-caption', '.tc-caption-text'],
+        [
+          '.lr-end-skip',
+          '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
+          '.tc-caption-text',
+        ],
         'ending caption and Skip',
       );
-      const cap = (await boxOf(page, '.tc-caption'))!;
+      const cap = (await boxOf(
+        page,
+        '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
+      ))!;
       expect(meets(cap, sk.box), 'the caption covers Skip').toBe(false);
       expect(cap.r, 'the caption ends before the Skip lane').toBeLessThanOrEqual(sk.box.l);
       const capText = await page.evaluate(() => {
@@ -415,7 +424,9 @@ for (const vp of PHONES) {
       const col = await page.evaluate(() => {
         const t = document.querySelector<HTMLElement>('.lr-end-title')!;
         const r = t.getBoundingClientRect();
-        const k = document.querySelector('.tc-overlay')!.getBoundingClientRect().width / 1920;
+        const k =
+          document.querySelector('.tc-overlay:not([data-units="css"])')!.getBoundingClientRect()
+            .width / 1920;
         const cs = getComputedStyle(t, '::before');
         const s = document.querySelector('.lr-end-safety')!.getBoundingClientRect();
         return {

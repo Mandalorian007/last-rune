@@ -54,7 +54,7 @@ async function boot(page: Page, solved: readonly string[]) {
 
 /** Tap a design-space (1920×1080) point. */
 async function tapAt(page: Page, x: number, y: number) {
-  const r = (await page.locator('.tc-overlay').boundingBox())!;
+  const r = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
   const s = r.width / 1920;
   await page.touchscreen.tap(r.x + x * s, r.y + y * s);
   await waitFrames(page, 4);
@@ -192,7 +192,7 @@ test('a gem in hand turns by ↻ before it is placed; dragging a placed gem off 
   await tapAt(page, 1700, 620);
   await expect(page.locator('.lr-altar-count[data-held]')).toHaveCount(0);
   // Drag it off the altar (CDP touch: down on the gem, move to the floor, up).
-  const r = (await page.locator('.tc-overlay').boundingBox())!;
+  const r = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
   const s = r.width / 1920;
   const cdp = await page.context().newCDPSession(page);
   const touch = async (type: 'touchStart' | 'touchMove' | 'touchEnd', x: number, y: number) =>
@@ -221,7 +221,7 @@ async function overlapProblems(page: Page): Promise<string[]> {
   return page.evaluate((tray) => {
     type B = { name: string; l: number; t: number; r: number; b: number; el?: Element };
     const out: string[] = [];
-    const ov = document.querySelector<HTMLElement>('.tc-overlay')!;
+    const ov = document.querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!;
     const o = ov.getBoundingClientRect();
     const k = o.width / 1920;
     // On screen: inside the app's box (phones put buttons in the bars beside the 16:9 canvas).
@@ -257,7 +257,11 @@ async function overlapProblems(page: Page): Promise<string[]> {
     add('.lr-altar-turnbtn', 'turn', false);
     add('.lr-altar-verdict', 'verdict', false);
     add('.lr-altar-tip', 'card', false);
-    add('.tc-caption', 'caption', false);
+    add(
+      '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
+      'caption',
+      false,
+    );
     const gems: B[] = tray.map((g) => ({
       name: g.name,
       l: o.left + (g.x - 40) * k,
@@ -293,12 +297,13 @@ async function fitProblems(page: Page): Promise<string[]> {
       const cs = getComputedStyle(el);
       return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && Number(cs.opacity) > 0;
     };
-    // Overlay font sizes are design px; the overlay is scaled to the screen.
-    const ov = document.querySelector<HTMLElement>('.tc-overlay')!;
-    const k = ov.getBoundingClientRect().width / ov.offsetWidth;
+    // Font sizes on the legacy overlay are design px scaled to the screen; on the CSS-px chrome
+    // overlay (phones) they are CSS px.
+    const scaleOf = (ov: HTMLElement) => ov.getBoundingClientRect().width / (ov.offsetWidth || 1);
     for (const el of document.querySelectorAll<HTMLElement>('.tc-overlay *')) {
       if (!visible(el) || el.closest('.tc-sr-only,[aria-hidden="true"]')) continue;
       const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim());
+      const k = scaleOf(el.closest<HTMLElement>('.tc-overlay')!);
       const fs = Number.parseFloat(getComputedStyle(el).fontSize) * k;
       if (own && fs < 10.8)
         out.push(`text ${fs.toFixed(1)}px: ${el.textContent?.trim().slice(0, 30)}`);
@@ -410,7 +415,7 @@ test('the Last Rune at 667×375: a finger drag from the tray shows the loupe and
   await openAltar(page, 'the-last-rune');
   const p = puzzleFor('the-last-rune');
   const L = await liveLayout(page);
-  const box = (await page.locator('.tc-overlay').boundingBox())!;
+  const box = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
   const k = box.width / 1920;
   // Sockets here are under 44 CSS px apart: the loupe's whole reason.
   expect(L.pitch * k).toBeLessThan(44);

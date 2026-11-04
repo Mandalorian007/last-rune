@@ -16,6 +16,7 @@ import type { Frame } from '@thunderclap/engine/render';
 import { h } from '@thunderclap/engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { GameCtx, GameScene } from '../../game/ctx';
+import { placeWidgets } from '../../ui/chrome';
 import { DeskArt } from './desk-art';
 import { PAPER, PROP, RULE_PITCH, RULE_TOP } from './desk-wgsl';
 import {
@@ -69,6 +70,8 @@ export class JournalScene implements GameScene {
   private current: number | null = null;
   private slips: SlipView[] = [];
   private root: HTMLElement | null = null;
+  /** Phones: the ✕ at the top of the right rail, like the ☰ (ui/chrome.ts). */
+  private unplace: () => void = () => {};
   private spread!: HTMLElement;
   private date!: HTMLElement;
   private body!: HTMLElement;
@@ -105,6 +108,8 @@ export class JournalScene implements GameScene {
   }
 
   exit(): void {
+    this.unplace();
+    this.unplace = () => {};
     this.root?.remove();
     this.root = null;
     this.art.destroy();
@@ -567,5 +572,8 @@ export class JournalScene implements GameScene {
       x,
     );
     this.ctx.ui.layers.hud.append(this.root);
+    this.unplace = placeWidgets(this.ctx.chrome, [
+      { el: x, place: { default: 'right' }, id: 'lr-journal-close' },
+    ]);
   }
 }
