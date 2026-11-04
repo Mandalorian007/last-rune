@@ -201,6 +201,21 @@ export class GameFlow<S> {
   }
 
   /**
+   * The verdict says once per game that a miss costs nothing (D-043): true until
+   * `tellFirstMiss` records that it was shown.
+   */
+  firstMissDue(): boolean {
+    return !this.save.get().flags.missTold;
+  }
+
+  /** The first-miss line was shown; never again this game. */
+  tellFirstMiss(): void {
+    this.save.update((d) => {
+      d.flags.missTold = true;
+    });
+  }
+
+  /**
    * The bolt landed at exactly full charge: restore the machine, file the
    * journal pages, and swap the puzzle for the solve moment.
    */

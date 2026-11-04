@@ -43,7 +43,8 @@ describe('arrival card pages (teach-4)', () => {
   });
 
   it("says what Strike does before the pieces, and the Capacitor's two strikes in numbers", () => {
-    expect(GOAL_RULE).toMatch(/Strike sends the charge/);
+    expect(GOAL_RULE).toMatch(/Strike any time/);
+    expect(GOAL_RULE).toMatch(/a miss costs nothing/);
     expect(GOAL_RULE).toMatch(/exactly/);
     expect(capacitorStrip(8)).toEqual(['Strike 1: stores 8 →', 'Strike 2: lets out 8 + 8']);
     // The strip agrees with the codex: it holds the first charge and lets out both.

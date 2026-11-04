@@ -192,6 +192,33 @@ export const readoutMethods = {
   },
 
   /**
+   * One more line under the verdict: the first miss's "a miss costs nothing" (D-043). Only if
+   * the verdict still fits with it: on a phone, whole inside the lane; on a big screen, in its
+   * usual place under the title, clear of the red mark (not docked under the board, where
+   * room is tight). Otherwise the line is taken back and this returns false.
+   */
+  verdictNote(this: AltarScene, text: string): boolean {
+    const note = h('small', { class: 'lr-verdict-free' }, keepTogether(text));
+    this.verdict.append(note);
+    this.fitTop();
+    const v = this.verdict;
+    let fits: boolean;
+    if (this.view.layout.phone) {
+      const box = v.getBoundingClientRect();
+      const lane = this.lane?.getBoundingClientRect();
+      fits =
+        v.scrollHeight <= v.clientHeight + 1 &&
+        (!lane || (box.top >= lane.top - 0.5 && box.bottom <= lane.bottom + 0.5));
+    } else {
+      fits = !v.hasAttribute('data-docked') && !this.verdictCoversRoot();
+    }
+    if (fits) return true;
+    note.remove();
+    this.fitTop();
+    return false;
+  },
+
+  /**
    * Say `text` through the sr-only live region. It is set a beat after clearing, so a repeat
    * of the same line (the same miss twice) is announced again.
    */

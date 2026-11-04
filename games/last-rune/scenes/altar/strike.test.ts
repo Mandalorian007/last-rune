@@ -163,7 +163,7 @@ describe('layout', () => {
 describe('failed-verdict guidance', () => {
   it('a machine that got nothing is a broken path, not "not enough"', () => {
     const m = { at: { x: 0, y: 0 }, need: 2, outcome: 'dead' as const, readings: [0], wokeOn: -1 };
-    expect(failText(m, 'under', 1)).toBe('No charge reached this machine: needs 2, got 0');
+    expect(failText(m, 'under', 1)).toBe('Got 0, needs 2: no charge reached this machine');
   });
 
   it('names one next step: the root fizzle first, else the outcome', () => {

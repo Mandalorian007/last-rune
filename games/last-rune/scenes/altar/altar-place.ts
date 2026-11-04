@@ -330,6 +330,18 @@ export const placeMethods = {
    * box reaches the board's top row). Slide it sideways within the title band if that clears
    * the socket; otherwise dock it under the altar, between the board and the tray.
    */
+  /** Big screens: whether the verdict covers the socket where the strike went wrong. */
+  verdictCoversRoot(this: AltarScene): boolean {
+    const cell = this.verdictAvoid;
+    if (!cell || this.verdict.hidden) return false;
+    const L = this.view.layout;
+    const c = { x: 0, y: 0 };
+    anchorOf(L, cell, c);
+    const r = L.pitch * 0.5;
+    const b = designBox(this.verdict);
+    return b.l < c.x + r && b.r > c.x - r && b.t < c.y + r && b.b > c.y - r;
+  },
+
   clearRootMark(this: AltarScene, lo: number, hi: number): void {
     const cell = this.verdictAvoid;
     if (!cell) return;

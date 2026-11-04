@@ -31,7 +31,7 @@ describe('capacitor read-out', () => {
       'Strike 2: 8 + 8 → 16',
     ]);
     const m = r.machines.find((q) => q.outcome === 'over')!;
-    expect(failText(m, 'over', p.pulses)).toBe('Breaker tripped on strike 2: needs 8, got 16');
+    expect(failText(m, 'over', p.pulses)).toBe('Got 16 on strike 2, needs 8: breaker tripped');
     expect(strikeStory(p.pulses, r, beats)).toBe(
       'Strike 1: the Capacitor kept 8. Strike 2: the Capacitor let out 8 + 8 = 16.',
     );
@@ -75,7 +75,7 @@ describe('capacitor read-out', () => {
     const p = puzzleFor('lift-shaft');
     const r = simulate(p, noIce('lift-shaft'));
     const m = r.machines[0]!;
-    expect(failText(m, 'under', p.pulses)).toBe('Not enough: needs 12, got 8 each strike');
+    expect(failText(m, 'under', p.pulses)).toBe('Got 8 each strike, needs 12: 4 short');
   });
 
   it('a bolt kept on the last strike says it never comes out', () => {
@@ -93,9 +93,9 @@ describe('capacitor read-out', () => {
 
   it('single-strike altars keep the old wording', () => {
     const m = { at: { x: 0, y: 0 }, need: 4, outcome: 'over' as const, readings: [8], wokeOn: -1 };
-    expect(failText(m, 'over', 1)).toBe('Breaker tripped: needs 4, got 8');
+    expect(failText(m, 'over', 1)).toBe('Got 8, needs 4: breaker tripped');
     expect(failText({ ...m, outcome: 'under', readings: [2] }, 'under', 1)).toBe(
-      'Not enough: needs 4, got 2',
+      'Got 2, needs 4: 2 short',
     );
   });
 });

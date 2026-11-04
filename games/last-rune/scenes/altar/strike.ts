@@ -196,8 +196,9 @@ export function fizzles(
 }
 
 /**
- * The verdict's headline for a failed attempt, naming the strike on a multi-strike altar:
- * "Breaker tripped on strike 2: needs 8, got 16", "Not enough: needs 12, got 8 each strike".
+ * The verdict's headline for a failed attempt, naming the strike on a multi-strike altar. It
+ * leads with what happened, as information (D-043: a strike is a free test): "Got 16 on strike
+ * 2, needs 8: breaker tripped", "Got 8 each strike, needs 12: 4 short".
  */
 export function failText(m: MachineResult, outcome: 'over' | 'under', pulses: number): string {
   const rs = m.readings;
@@ -212,11 +213,11 @@ export function failText(m: MachineResult, outcome: 'over' | 'under', pulses: nu
       : outcome === 'under' && lit.length > 1 && lit.every((r) => r === got)
         ? ' each strike'
         : ` on strike ${k + 1}`;
-  if (outcome === 'over') return `Breaker tripped${when}: needs ${m.need}, got ${got}`;
+  if (outcome === 'over') return `Got ${got}${when}, needs ${m.need}: breaker tripped`;
   // Nothing at all arrived (another machine on the altar was fed): a broken path, not a small
-  // charge, so don't say "not enough".
-  if (got === 0) return `No charge reached this machine: needs ${m.need}, got 0`;
-  return `Not enough: needs ${m.need}, got ${got}${when}`;
+  // charge, so don't say "short".
+  if (got === 0) return `Got 0, needs ${m.need}: no charge reached this machine`;
+  return `Got ${got}${when}, needs ${m.need}: ${m.need - got} short`;
 }
 
 /** Which fizzle to explain first: the root cause before its knock-on effects. */

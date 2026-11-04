@@ -377,7 +377,6 @@ export const domMethods = {
       // Each part keeps its words together, so a wrap never strands "strikes" on its own.
       const parts = [`Storm ×${s} gives ${stormCharge(s)}`];
       if (p > 1) parts.push(`· ${p} strikes`);
-      if (this.attempts > 0) parts.push(`· try ${this.attempts + 1}`);
       this.subtitle.replaceChildren(
         ...parts.flatMap((t, i) => [...(i ? [' '] : []), h('span', { class: 'lr-nowrap' }, t)]),
       );
