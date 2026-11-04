@@ -41,3 +41,56 @@ Decisions:
 - Before reporting, run `pnpm check`, `pnpm build`, `pnpm baseline`, `pnpm test:e2e` (full-run 16/16) and `pnpm test:e2e:engine`.
 
 ## Log
+
+### 2026-11-03: port done (ready for PM merge)
+
+**Design: two overlays.** `createGame({ overlay })` with a layout spec builds the CSS-px overlay
+(`createCssChrome`, `ctx.chrome`; `data-units="css"`, `data-form-factor`) next to the legacy
+scaled 1920×1080 overlay (`ctx.ui`). `chrome.active` is true only for phone forms. The game's
+`CHROME_LAYOUT.classify` calls it a phone exactly where `device.phone` does
+(`min(w/1920, h/1080) < PHONE_SCALE`), so desktop and iPad never see it and stay byte-identical
+to v1.0. While it is active, the engine moves the legacy panels and toasts layers into it, so
+settings, the codex, pause and toasts lay out in CSS px. World-anchored pieces (door plates, the
+Next ring, the altar, the journal spread, the ending stage) stay on the scaled overlay.
+`Surface.setFrame(rect|null)` frames the canvas in `fill` for the upright title.
+`WidgetHandle.remove()` returns an element to its old home.
+
+**Region map (phones).**
+- Title: Full screen and the release label in `top`. Landscape: Play, Settings, Ko-fi and Copy
+  link in one centred `bottom` row. Portrait: the menu in `cardLane`, the links in `bottom`.
+  FUSE is docked in `captionLane`; the picture is framed in `fill`.
+- Hall, altar (puzzle) and solve card: the HUD ☰ at the top of the `right` rail. The caption is
+  the legacy card (avoid(), tail, FUSE prefix; the rules come back from the deleted
+  phone-hall-styles into phone-styles `HALL`). Portrait shows the rotate card.
+- Journal: ✕ in the `right` rail, the caption docked in `captionLane`, the rotate card in portrait.
+- Ending: legacy (the caption bottom left, Skip top right), the rotate card in portrait.
+- Settings, codex, pause and toasts: in the CSS overlay. Portrait settings are one column, with
+  the tabs inline (the `CP` rules in chrome-styles).
+
+**Deleted.**
+- `games/last-rune/ui/phone-chrome.ts` (107 lines)
+- `games/last-rune/ui/phone-hall-styles.ts` (106 lines)
+- The chrome half of `phone-styles.ts` (1022 → 772 lines, including the restored hall tail rules)
+- The game's device-mode and token copies (it uses the engine's `PHONE_SCALE` and `createRotateCard`)
+
+**Tests.**
+- Engine: added "panel-stack spam leaves at most one panel" (`e2e/layout.spec.ts`; real taps or
+  clicks assert ≤1 after every tap, then `spamOptions(20)` leaves exactly one, then Escape
+  leaves none). Added harness `spamOptions`/`panels`.
+- Game: overlay and caption selectors scoped to the legacy overlay or the docked caption in 12
+  specs. mobile.spec `fitProblems` and the mobile-hall menu note measure each element at its own
+  overlay's scale.
+- Trimmed: nothing (no duplicates found worth removing; the phone-chrome checks already lived in
+  mobile-chrome).
+
+**Gates (after `git merge main`).**
+- `pnpm check`: green (563 unit tests).
+- `pnpm build`: green.
+- `pnpm baseline`: 129/129, every scene 0.0000% (no intended desktop diffs).
+- `pnpm test:e2e:engine`: 261 passed, 27 skipped.
+- `pnpm test:e2e`: 118 passed, 12 skipped, no reruns needed. This covers full-run (16 machines),
+  a11y axe plus the keyboard path, mobile-chrome and mobile-ending on all devices.
+- `pnpm test:e2e:desktop`: 5 + 2 passed.
+
+**Screenshots** are in `docs/design/screens/local/port-chrome/` (not committed): every scene for
+SE, iPhone, Android and a fourth phone in landscape and portrait, plus desktop and iPad.

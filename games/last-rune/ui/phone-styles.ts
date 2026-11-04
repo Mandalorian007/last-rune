@@ -35,6 +35,8 @@ const A = `${P} .lr-altar[data-phone]`;
 
 /* mobile-3-chrome */
 /** The visible band's top and bottom edges when the art fills the width (D-040; 0 otherwise). */
+/** Not at an altar or a solve card: those draw FUSE's card and its tail their own way. */
+const HALL = `${P}:not(:has(.lr-altar[data-phone])):not(:has(.lr-solve[data-phone]))`;
 const CT = 'var(--tc-crop-t, 0px)';
 const CB = 'var(--tc-crop-b, 0px)';
 const CHROME_CSS = /* css */ `
@@ -749,4 +751,22 @@ ${P} .lr-j-key i {
 }
 /* Keep the tag off the band's very top even before the HUD places it. */
 ${P} .lr-hall-next-tag:not([data-side]) { top: max(calc(var(--lr-next-top, 0px) - ${cpx(23)}), calc(var(--tc-crop-t, 0px) + ${cpx(5)})); }
+
+/* FUSE's card in the hall stays on this overlay (it steers clear of the doors; ui/chrome.ts
+   docks it only on the title and journal). It carries his name, and a tail toward him
+   (ui/fuse.ts pointAt sets the side and where along it). An altar or a solve card draws its
+   own. */
+${HALL} .tc-caption-text::before {
+  content: 'FUSE '; font: 700 ${tpx(12)}/1 var(--tc-font-display, serif); letter-spacing: 0.6px; color: #e8c06a;
+}
+${HALL} .tc-caption[data-tail] { overflow: visible; }
+${HALL} .tc-caption[data-tail]::after {
+  content: ''; position: absolute; width: ${cpx(9)}; height: ${cpx(9)}; box-sizing: border-box;
+  background: var(--tc-color-surface); border: 0 solid var(--tc-color-border);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+${HALL} .tc-caption[data-tail="bottom"]::after { left: var(--lr-tail-at); top: 100%; border-width: 0 1px 1px 0; }
+${HALL} .tc-caption[data-tail="top"]::after { left: var(--lr-tail-at); top: 0; border-width: 1px 0 0 1px; }
+${HALL} .tc-caption[data-tail="left"]::after { top: var(--lr-tail-at); left: 0; border-width: 0 0 1px 1px; }
+${HALL} .tc-caption[data-tail="right"]::after { top: var(--lr-tail-at); left: 100%; border-width: 1px 1px 0 0; }
 ${teach7Css({ P, cpx, tpx })}`;

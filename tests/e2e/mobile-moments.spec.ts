@@ -137,7 +137,7 @@ async function columnProblems(page: Page, at: string): Promise<string[]> {
   return page.evaluate((at) => {
     const parts: [string, string][] = [
       ['tip', '.lr-altar-tip'],
-      ['bubble', '.tc-caption'],
+      ['bubble', '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]'],
       ['hint', '.lr-altar-hint'],
       ['verdict', '.lr-altar-verdict'],
       ['cap', '.lr-altar-lane .lr-altar-cap'],
@@ -184,7 +184,9 @@ async function playArea(page: Page): Promise<Box> {
 async function fuseBox(page: Page): Promise<Box> {
   return page.evaluate(() => {
     const f = (window as G).__altarView.fuse;
-    const ov = document.querySelector<HTMLElement>('.tc-overlay')!.getBoundingClientRect();
+    const ov = document
+      .querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!
+      .getBoundingClientRect();
     const k = ov.width / 1920;
     return {
       l: ov.left + (f.x - 0.7 * f.scale) * k,
@@ -233,7 +235,10 @@ for (const vp of PHONES) {
         ),
       );
       await seed(page, []);
-      await expect(page.locator('.tc-overlay')).toHaveAttribute('data-phone', '');
+      await expect(page.locator('.tc-overlay:not([data-units="css"])')).toHaveAttribute(
+        'data-phone',
+        '',
+      );
       const problems: string[] = [];
       const area = await playArea(page);
 
@@ -249,14 +254,17 @@ for (const vp of PHONES) {
       });
       await waitFrames(page, 8);
       const hint = await shownBox(page, '.lr-altar-hint');
-      const cap = await shownBox(page, '.tc-caption');
+      const cap = await shownBox(
+        page,
+        '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
+      );
       if (!hint) problems.push('intake-desk: no how-to line while FUSE talks');
       if (hint && cap && hit(hint, cap)) problems.push('intake-desk: FUSE covers the how-to line');
       // Holding a gem: the line says the next tap.
       const L = await page.evaluate(
         () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
       );
-      const ob = (await page.locator('.tc-overlay').boundingBox())!;
+      const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
       const k = ob.width / 1920;
       await page.touchscreen.tap(ob.x + L.tray[0]!.x * k, ob.y + L.tray[0]!.y * k);
       await waitFrames(page, 6);
@@ -310,7 +318,10 @@ for (const vp of PHONES) {
       for (let i = 0; i < 12; i++) {
         await page.waitForTimeout(150);
         const v = await shownBox(page, '.lr-altar-verdict');
-        const c = await shownBox(page, '.tc-caption');
+        const c = await shownBox(
+          page,
+          '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
+        );
         if (v && c) {
           problems.push('relay-tower fail: FUSE talks over the verdict card');
           break;
@@ -374,7 +385,10 @@ for (const vp of PHONES) {
         }
         const gem = await shownBox(page, '.lr-solve-grant');
         if (!gem) problems.push('solve: the new gem is not on the card');
-        const scap = await shownBox(page, '.tc-caption');
+        const scap = await shownBox(
+          page,
+          '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
+        );
         if (scap) {
           if (hit(scap, card)) problems.push('solve: FUSE covers the card');
           if (scap.l < area.l || scap.r > area.r || scap.t < area.t || scap.b > area.b)
@@ -428,7 +442,7 @@ for (const vp of PHONES) {
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
-        const ob = (await page.locator('.tc-overlay').boundingBox())!;
+        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
         const k = ob.width / 1920;
         await page.touchscreen.tap(ob.x + L.tray[0]!.x * k, ob.y + L.tray[0]!.y * k);
         await talk(LINE);
@@ -469,7 +483,7 @@ for (const vp of PHONES) {
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
         const tap = async (x: number, y: number) => {
-          const ob = (await page.locator('.tc-overlay').boundingBox())!;
+          const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
           const k = ob.width / 1920;
           await page.touchscreen.tap(ob.x + x * k, ob.y + y * k);
           await waitFrames(page, 6);

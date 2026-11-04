@@ -12,6 +12,7 @@
 export const C = '.tc-overlay[data-units="css"][data-form-factor^="phone"]:not(#lr-none)';
 /** Either overlay off phones: phone-only controls (✕, segmented toggles) hide there. */
 const CP = '.tc-overlay[data-units="css"][data-form-factor="phone-portrait"]:not(#lr-none)';
+const CL = '.tc-overlay[data-units="css"][data-form-factor="phone-landscape"]:not(#lr-none)';
 const OFF = '.tc-overlay:not([data-phone]):not([data-form-factor^="phone"])';
 
 export const CHROME_CSS = /* css */ `
@@ -393,7 +394,11 @@ ${C} .lr-title-menu .lr-gold-button {
   font-size: 19px; letter-spacing: 1px; border-width: 2px;
 }
 ${C} .lr-title-menu .lr-stone-button { min-width: 150px; min-height: 44px; font-size: 15px; border-radius: 8px; }
-${C} .tc-region[data-region="bottom"] .lr-title-menu :is(.lr-gold-button, .lr-stone-button) { min-width: 120px; min-height: 44px; }
+${C} .tc-region[data-region="bottom"] .lr-title-menu :is(.lr-gold-button, .lr-stone-button) { min-width: 140px; min-height: 44px; }
+${C} .tc-region[data-region="bottom"] .lr-title-menu .lr-gold-button { min-height: 48px; }
+/* Landscape: Play, Settings, then the Ko-fi and Copy links, one centred row along the bottom. */
+${CL} .tc-region[data-region="bottom"]:has(.lr-title-menu) { justify-content: center; gap: 12px; }
+${CL} .tc-region[data-region="bottom"] :is(.lr-title-menu, .tc-link.lr-title-links) { margin: 0; }
 
 /* ── FUSE's caption, docked in its lane: his name leads the line. ─────────── */
 ${C} .tc-caption[data-docked] { box-sizing: border-box; }

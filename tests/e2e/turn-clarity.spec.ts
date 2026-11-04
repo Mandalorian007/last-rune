@@ -46,7 +46,7 @@ async function open(page: Page, placements: unknown[]) {
 
 /** Move the mouse to a design-space (1920×1080) point. */
 async function moveTo(page: Page, x: number, y: number) {
-  const r = (await page.locator('.tc-overlay').boundingBox())!;
+  const r = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
   const s = r.width / 1920;
   await page.mouse.move(r.x + x * s, r.y + y * s, { steps: 3 });
   await waitFrames(page, 4);
