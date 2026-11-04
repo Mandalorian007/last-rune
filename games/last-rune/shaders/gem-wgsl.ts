@@ -41,6 +41,17 @@ fn g_ring(p: vec2f, c: vec2f, r: f32) -> f32 {
   return abs(length(p - c) - r);
 }
 
+// glyph-truth-2: an inlet, a side the bolt may only come IN by: a solid half-disc on the rim,
+// its flat side on the rim and its dome toward the centre, like a port the wire plugs into.
+// Solid where every outlet is an open arrowhead, so "in" and "out" differ in kind; a filled
+// shape survives the glow at a 26 px pitch where the old thin door bar did not; and it is no
+// arrow, so the Codex's "the end with no arrow" stays true. \`at\` is the rim point, \`dir\`
+// points into the gem.
+fn g_inlet(p: vec2f, at: vec2f, dir: vec2f) -> f32 {
+  let v = p - at;
+  return max(length(v) - 0.3, -dot(v, dir));
+}
+
 /**
  * Glyph distance (gem space, -1..1, y down; flow enters at +y, leaves at -y).
  * Every glyph is drawn edge to edge so it reads at 1280x720: the stroke reaches the sides the
@@ -72,12 +83,12 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     // straight on. A bold T: the stem runs from the input rim to the centre, the crossbar runs
     // rim to rim, and each arm ends in a wide arrowhead pointing out (D-031). Drawn heavier
     // than the other glyphs so it, not the cut, is what reads; nothing points at the input.
-    // glyph-truth: the input is a heavy stem capped by a wide door bar at the rim (the
-    // Channel's "a side the bolt uses" mark), so the no-arrow end reads at ~30 CSS px, lit or not.
+    // glyph-truth-2: the input is a solid inlet wedge on the rim (\`g_inlet\`) feeding a heavy
+    // stem, so the one way in reads at a 26 px pitch, lit or not, and never as an outlet.
     let e = 0.7;
     let h = 0.24;
-    d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.0)) - 0.035;
-    d = min(d, g_seg(p, vec2f(-0.27, 0.72), vec2f(0.27, 0.72)) - 0.03);
+    d = g_seg(p, vec2f(0.0, 0.5), vec2f(0.0, 0.0)) - 0.035;
+    d = min(d, g_inlet(p, vec2f(0.0, 0.8), vec2f(0.0, -1.0)) + 0.035);
     d = min(d, g_seg(p, vec2f(-e, 0.0), vec2f(e, 0.0)));
     d = min(d, g_seg(p, vec2f(-e + h, -h), vec2f(-e, 0.0)));
     d = min(d, g_seg(p, vec2f(-e + h, h), vec2f(-e, 0.0)));
@@ -98,13 +109,13 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     d += 0.022;
   } else if (kind == 4) {
     // Gate: inputs from west and east meet in a ring; one output leaves north (rules rot 0).
-    // glyph-truth: each input is a heavy lead capped by a wide door bar at the rim (as the
-    // Split's input and the Channel's ends), and the output a bold arrow, so both input sides
-    // read at ~30 CSS px, lit or not.
-    d = g_seg(p, vec2f(-0.66, 0.0), vec2f(-0.2, 0.0)) - 0.03;
-    d = min(d, g_seg(p, vec2f(0.66, 0.0), vec2f(0.2, 0.0)) - 0.03);
-    d = min(d, g_seg(p, vec2f(-0.66, -0.25), vec2f(-0.66, 0.25)) - 0.03);
-    d = min(d, g_seg(p, vec2f(0.66, -0.25), vec2f(0.66, 0.25)) - 0.03);
+    // glyph-truth-2: each input is a solid inlet wedge on the rim (\`g_inlet\`, as the Split's)
+    // with a heavy lead to the ring, and the output an open arrow, so both ways in read at a
+    // 26 px pitch, lit or not: two wedges and one arrow, where the Split has one and two.
+    d = g_seg(p, vec2f(-0.45, 0.0), vec2f(-0.2, 0.0)) - 0.03;
+    d = min(d, g_seg(p, vec2f(0.45, 0.0), vec2f(0.2, 0.0)) - 0.03);
+    d = min(d, g_inlet(p, vec2f(-0.8, 0.0), vec2f(1.0, 0.0)) + 0.035);
+    d = min(d, g_inlet(p, vec2f(0.8, 0.0), vec2f(-1.0, 0.0)) + 0.035);
     d = min(d, g_ring(p, vec2f(0.0, 0.0), 0.2));
     d = min(d, g_seg(p, vec2f(0.0, -0.2), vec2f(0.0, -0.68)));
     d = min(d, g_seg(p, vec2f(-0.21, -0.47), vec2f(0.0, -0.68)));

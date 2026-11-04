@@ -406,9 +406,11 @@ export const infoMethods = {
   gemFigure(this: AltarScene, gem: GemKind, fixed: boolean): HTMLElement {
     const d = GEM_DIAGRAMS[gem];
     const cell = fixed ? this.news.fixed.find((f) => f.gem === gem)?.cell : undefined;
-    const rot = cell
-      ? (this.puzzle.fixed.find((f) => f.cell.x === cell.x && f.cell.y === cell.y)?.rot ?? 0)
-      : 0;
+    // A built-in gem's picture is turned as that gem shows on this altar: its rule turn, or for
+    // a straight gem the run it lies along (glyph-truth-2: the Capacitor card ran upright while
+    // the board's ice lay across). Tray gems are drawn upright, as in the tray and the Codex.
+    const shown = cell ? this.view.gemAt(cell) : undefined;
+    const rot = shown ? ((Math.round(shown.rotTarget) % 4) + 4) % 4 : 0;
     const small = gem === 'capacitor';
     this.pictures ??= createGemPortraits(this.ctx.renderer);
     const pic = this.pictures.canvas(gem, small ? CAP_FIG_PX : FIG_PX);

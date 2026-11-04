@@ -11,7 +11,7 @@
 import { h } from '@thunderclap/engine/ui';
 import { isRotational } from '../../rules';
 import type { Cell } from '../../rules/types';
-import { SVG_NS } from './altar-defs';
+import { GEM_NAME, SVG_NS } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import {
   type AltarLayout,
@@ -49,25 +49,51 @@ export function segmentHits(
  * The teach card's leader to a socket, design px: out of the card level with its anchor to the
  * gap between the slab's last column and its rim, along that gap to the grid line between two
  * rows, along the line to the socket's column, then half a cell in to the ring. It runs between
- * sockets, never over one. `null` when the board is laid out without room for it.
+ * sockets, never over one. The grid line nearer the card's anchor is tried first; when a leg of
+ * that route would cross a box in `avoid` (glyph-truth-2: a fixed gem's lock pip, which sits on
+ * the grid line below its socket, so a line through it read as a "no entry" sign), the other
+ * grid line is used. `null` when neither route is clear.
  */
 export function leaderPath(
   L: Pick<AltarLayout, 'left' | 'right' | 'top' | 'margin' | 'pitch' | 'rows'>,
   from: { x: number; y: number },
   cell: { x: number; y: number },
   ring: number,
-): { x: number; y: number }[] {
+  avoid: readonly Box[] = [],
+): { x: number; y: number }[] | null {
   const x0 = L.left + L.margin;
   const y0 = L.top + L.margin;
   const cx = x0 + L.pitch * (cell.x + 0.5);
   const cy = y0 + L.pitch * (cell.y + 0.5);
-  // The grid line above or below the socket's row, whichever is nearer the card's anchor.
   const above = y0 + L.pitch * cell.y;
   const below = above + L.pitch;
-  const gy = Math.abs(from.y - above) <= Math.abs(from.y - below) ? above : below;
+  const lines =
+    Math.abs(from.y - above) <= Math.abs(from.y - below) ? [above, below] : [below, above];
   const rim = L.right - L.margin / 2;
-  const end = { x: cx, y: gy < cy ? cy - ring : cy + ring };
-  return [from, { x: rim, y: from.y }, { x: rim, y: gy }, { x: cx, y: gy }, end];
+  for (const gy of lines) {
+    const end = { x: cx, y: gy < cy ? cy - ring : cy + ring };
+    const path = [from, { x: rim, y: from.y }, { x: rim, y: gy }, { x: cx, y: gy }, end];
+    const clear = path.every(
+      (pt, i) => i === 0 || !avoid.some((q) => segmentHits(path[i - 1]!, pt, q, 2)),
+    );
+    if (clear) return path;
+  }
+  return null;
+}
+
+/**
+ * The lock pip a fixed gem's collar wears (stone-wgsl state 6: centred one socket radius right
+ * and down of the socket's centre, 0.42 radii across), as a box in design px.
+ */
+export function lockPipBox(
+  L: Pick<AltarLayout, 'left' | 'top' | 'margin' | 'pitch'>,
+  cell: { x: number; y: number },
+): Box {
+  const sr = Math.round(L.pitch * 0.36);
+  const x = L.left + L.margin + L.pitch * (cell.x + 0.5) + sr;
+  const y = L.top + L.margin + L.pitch * (cell.y + 0.5) + sr;
+  const h = sr * 0.45;
+  return { l: x - h, r: x + h, t: y - h, b: y + h };
 }
 
 export const columnMethods = {
@@ -153,7 +179,7 @@ export const columnMethods = {
     const key = `${from.x},${from.y},${ring.toFixed(1)}:${cells.map((f) => `${f.cell.x},${f.cell.y}`).join(';')}`;
     if (key === this.leaderKey) return;
     this.leaderKey = key;
-    // What the line must not cross: every gauge and every Gives/Needs card.
+    // What the line must not cross: every gauge and every Gives/Needs card...
     const keep: Box[] = [L.storm, ...L.machines].map((sp) => {
       const half = sp === L.storm ? sp.size * 0.26 : sp.size * 0.46;
       return { l: sp.x - half, r: sp.x + half, t: sp.y - half, b: sp.y + half };
@@ -168,6 +194,10 @@ export const columnMethods = {
         b: (q.bottom - box.top) * k,
       });
     }
+    // ...nor any fixed gem's lock pip (glyph-truth-2: a line through it read as ⊘).
+    const pips = [...this.puzzle.fixed, ...this.board.lockedPlacements].map((f) =>
+      lockPipBox(L, f.cell),
+    );
     const w = Math.round(2 * (L.phone.cssPx || 1) * 10) / 10;
     const el = (tag: string, a: Record<string, string | number>) => {
       const e = document.createElementNS(SVG_NS, tag);
@@ -178,18 +208,18 @@ export const columnMethods = {
     svg.replaceChildren(
       ...cells.flatMap((f) => {
         cellCenter(L, f.cell, pt);
-        const ringEl = el('circle', {
-          cx: pt.x,
-          cy: pt.y,
-          r: ring,
+        // The ring stops short of the lock pip on the lower-right (glyph-truth-2: a ring drawn
+        // through the padlock read as ⊘), so it is an arc the long way round from 70° to 20°.
+        const a0 = (70 * Math.PI) / 180;
+        const a1 = (20 * Math.PI) / 180;
+        const ringEl = el('path', {
+          d: `M ${(pt.x + ring * Math.cos(a0)).toFixed(1)} ${(pt.y + ring * Math.sin(a0)).toFixed(1)} A ${ring.toFixed(1)} ${ring.toFixed(1)} 0 1 1 ${(pt.x + ring * Math.cos(a1)).toFixed(1)} ${(pt.y + ring * Math.sin(a1)).toFixed(1)}`,
           class: 'lr-leader-ring',
           'stroke-width': w,
+          'stroke-linecap': 'round',
         });
-        const path = leaderPath(L, from, f.cell, ring);
-        const clear = path.every(
-          (p, i) => i === 0 || !keep.some((q) => segmentHits(path[i - 1]!, p, q, 2)),
-        );
-        if (!clear) return [ringEl];
+        const path = leaderPath(L, from, f.cell, ring, [...keep, ...pips]);
+        if (!path) return [ringEl];
         const points = path.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(' ');
         return [
           el('polyline', {
@@ -368,6 +398,13 @@ export const columnMethods = {
     // and what it turns, until the player turns one here.
     const kind =
       target === 'hand' ? this.hand?.kind : target ? this.board.at(target)?.gem : undefined;
+    // glyph-truth-2: Turn names its gem under the word, so it is plain what a tap turns.
+    const what = this.turnBtn.querySelector<HTMLElement>('.lr-turn-what');
+    const name = kind ? GEM_NAME[kind] : '';
+    if (what && what.textContent !== name) {
+      what.textContent = name;
+      this.turnBtn.setAttribute('aria-label', name ? `Turn the ${name} (R)` : 'Turn the gem (R)');
+    }
     // teach-4: on that altar, a gem that never turns says why Turn stays dim while it is held.
     const straight =
       this.straightTeach &&

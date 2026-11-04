@@ -148,7 +148,14 @@ export const domMethods = {
       h('span', { class: 'lr-turn-arrow' }, '\u21bb'),
     );
     this.turnBtn = button(
-      h('span', null, h('b', { 'aria-hidden': 'true' }, '\u21bb'), ' Turn'),
+      h(
+        'span',
+        null,
+        h('b', { 'aria-hidden': 'true' }, '\u21bb'),
+        ' Turn',
+        // glyph-truth-2: what Turn acts on, named under the word ("Bend"), set while it is lit.
+        h('small', { class: 'lr-turn-what', 'aria-hidden': 'true' }),
+      ),
       (e) => {
         (e.currentTarget as HTMLElement).blur();
         this.turnTapped();

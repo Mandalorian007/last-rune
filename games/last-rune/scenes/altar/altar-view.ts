@@ -26,6 +26,7 @@ import { type AltarAssets, altarAssets, ensureBolts } from './assets';
 import type { BoardState } from './board';
 import type { PathHop } from './circuit-model';
 import { type AltarLayout, anchorOf, cellCenter, computeLayout, DESIGN_W } from './layout';
+import { hopTurn, restTurn } from './rest-turn';
 import type { StrikeTimeline } from './strike';
 
 const W = DESIGN_W;
@@ -107,6 +108,11 @@ export class AltarView {
   /** Extra glow a fully energised gem gets (the solve moment turns it down; solve-truth). */
   energyGlow = 0.6;
   held: HeldGem | null = null;
+  /**
+   * The turn a held straight gem shows while it is snapped over a socket: the way it would sit
+   * there (set by the scene with the ghost preview). Off the board it shows the tray's turn.
+   */
+  heldFace: number | null = null;
   /** A gem shown large in front of everything (the solve moment's granted gem). */
   showcase: GemInstance | null = null;
   private readonly showcaseList: GemInstance[] = [];
@@ -199,8 +205,9 @@ export class AltarView {
       size: s.size,
       state: 'idle' as GemState,
       lift: 0,
-      // As it will sit on the board: straight gems face the bolt; Bend, Gate, Split as held.
-      rot: this.restRot({ gem: s.gem, cell: { x: 0, y: 0 }, rot: 0 }),
+      // One turn on every altar (glyph-truth-2): straight gems upright, as the Codex draws
+      // them; Bend, Gate and Split at rot 0, as they come out of the tray.
+      rot: 0,
       seed: 40 + i,
     }));
     this.trayLift = L.tray.map(() => 0);
@@ -290,6 +297,7 @@ export class AltarView {
       ...state.placements.map((p) => ({ p, fixed: state.lockedPlacements.includes(p) })),
     ];
     const old = this.board.splice(0, this.board.length);
+    const gems = want.map((w) => w.p);
     for (const { p, fixed } of want) {
       const prev = old.find(
         (b) => b.cell.x === p.cell.x && b.cell.y === p.cell.y && b.g.kind === p.gem,
@@ -312,7 +320,7 @@ export class AltarView {
         y: this.pt.y,
         size: L.gemSize,
         state: 'placed',
-        rot: this.restRot(p),
+        rot: this.restRot(p, gems),
         lift: 0,
         glow: 1,
         seed: p.cell.x * 7 + p.cell.y * 13 + (fixed ? 100 : 0),
@@ -334,11 +342,22 @@ export class AltarView {
     }
   }
 
-  /** Rest rotation: Bend/Gate/Split as set; other gems face the bolt (storm direction). */
-  private restRot(p: Placement): number {
+  /**
+   * Rest rotation: Bend/Gate/Split as set; straight gems lie along the run their socket is part
+   * of (`restTurn`, glyph-truth-2), never across it.
+   */
+  private restRot(p: Placement, gems: readonly Placement[]): number {
     if (isRotational(p.gem)) return p.rot;
-    const d = this.puzzle.storm.dir;
-    return d === 'N' ? 0 : d === 'E' ? 1 : d === 'S' ? 2 : 3;
+    return restTurn(this.puzzle, gems, p.cell);
+  }
+
+  /** The gems on the board now, as placements (turned gems at the turn they show). */
+  placedGems(): Placement[] {
+    return this.board.map((b) => ({
+      gem: b.g.kind,
+      cell: b.cell,
+      rot: (((Math.round(b.rotTarget) % 4) + 4) % 4) as Placement['rot'],
+    }));
   }
 
   gemAt(c: Cell): BoardGem | undefined {
@@ -352,20 +371,23 @@ export class AltarView {
 
   /**
    * Turn each straight-through gem so its glyph's input faces where the bolt comes in: the hop
-   * that ends on the gem. With `rest`, gems no hop reaches go back to facing the storm.
-   * Bend, Gate and Split never move: their turn is part of the rules.
+   * that ends on the gem. With `rest`, gems no hop reaches lie along their run (`restTurn`, from
+   * `gems`, by default the board as it is); one already on that axis keeps its turn, so it
+   * never spins end for end. Bend, Gate and Split never move: their turn is part of the rules.
    */
-  faceAlong(hops: readonly { from: Cell; to: Cell }[], rest = false): void {
+  faceAlong(
+    hops: readonly { from: Cell; to: Cell }[],
+    rest = false,
+    gems: readonly Placement[] = this.placedGems(),
+  ): void {
     for (const b of this.board) {
       if (isRotational(b.g.kind)) continue;
       const h = hops.find((s) => s.to.x === b.cell.x && s.to.y === b.cell.y);
       let q: number;
-      if (h) {
-        const dx = h.to.x - h.from.x;
-        const dy = h.to.y - h.from.y;
-        q = dy < 0 ? 0 : dx > 0 ? 1 : dy > 0 ? 2 : 3;
-      } else if (rest) {
-        q = this.restRot({ gem: b.g.kind, cell: b.cell, rot: 0 });
+      if (h) q = hopTurn(h);
+      else if (rest) {
+        q = restTurn(this.puzzle, gems, b.cell);
+        if (((Math.round(b.rotTarget) - q) & 1) === 0) continue;
       } else continue;
       const cur = Math.round(b.rotTarget);
       const fwd = (((q - cur) % 4) + 4) % 4;
@@ -671,8 +693,9 @@ export class AltarView {
       const h = this.held;
       const g = this.heldInst;
       g.kind = h.kind;
-      // Non-rotational gems in hand look as they will once set down (facing the storm).
-      g.rot = this.restRot({ gem: h.kind, cell: { x: 0, y: 0 }, rot: h.rot as Placement['rot'] });
+      // Turned gems show their turn. A straight gem shows the tray's upright turn, and over a
+      // socket the way it would sit there (`heldFace`), so it never lands crosswise.
+      g.rot = isRotational(h.kind) ? h.rot : h.snapped ? (this.heldFace ?? 0) : 0;
       g.x = h.x;
       g.y = h.y;
       g.lift = h.lift ?? (h.snapped ? 0.6 : 1);
