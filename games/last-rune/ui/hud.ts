@@ -394,6 +394,21 @@ export class Hud {
   menu(open: boolean): void {
     this.root.toggleAttribute('data-open', open);
     this.scrim.hidden = !open;
+    // polish-10: a door plate the open list would cut mid-word ("Lift S…") steps out while
+    // the list is open, so the dimmed hall shows only whole names. The sheet is the list's
+    // panel (chrome-styles.ts `.lr-hud[data-open]::before`, 6 px past it), plus its shadow.
+    const sheet = open ? this.root.getBoundingClientRect() : null;
+    for (const el of this.doorLayer.querySelectorAll<HTMLElement>('.lr-door')) {
+      const r = sheet ? el.getBoundingClientRect() : null;
+      const under =
+        !!sheet &&
+        !!r &&
+        r.left < sheet.right + 8 &&
+        sheet.left - 8 < r.right &&
+        r.top < sheet.bottom + 8 &&
+        sheet.top - 8 < r.bottom;
+      el.toggleAttribute('data-under-menu', under);
+    }
     // The list and a door's card never show together (mobile-6-chrome).
     if (open) this.plate(null);
     this.menuBtn.setAttribute('aria-expanded', String(open));
