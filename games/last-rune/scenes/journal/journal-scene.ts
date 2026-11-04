@@ -162,9 +162,10 @@ export class JournalScene implements GameScene {
     this.frames++;
     this.glowIn = Math.min(1, this.glowIn + dt * 1.5);
     const input = this.ctx.input;
-    // Skip the first tick: the J that opened the desk is still "pressed".
-    if (this.frames > 1 && !this.ctx.ui.stack.hasModal) {
-      if (input.pressed('cancel') || input.pressed('journal')) {
+    // On the first tick the J that opened the desk is still "pressed", so ignore J then; Esc
+    // counts from the first tick so a quick Esc is never dropped.
+    if (!this.ctx.ui.stack.hasModal) {
+      if (input.pressed('cancel') || (this.frames > 1 && input.pressed('journal'))) {
         this.close();
         return;
       }
