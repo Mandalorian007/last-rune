@@ -416,17 +416,31 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32, soft: f32) -> f32 {
 
   // Spent (a tray gem with none left): the same gem, dimmed and a little greyed, its glyph
   // still drawn, so every kind keeps its own cut, colour and wiring.
-  let spentK = select(1.0, 0.16, spent);
+  // polish-10: dimmed only slightly and barely greyed. At 0.42 and 35% grey a gold Amplify
+  // went brown and read as another gem (blind review 10); the struck "×0" badge says spent.
+  let spentK = select(1.0, 0.35, spent);
   if (spent) {
-    col = mix(col, vec3f(engine_luma(col)), 0.35) * 0.42;
+    col = mix(col, vec3f(engine_luma(col)), 0.12) * 0.68;
   }
 
   // Ghost (held-gem): the stone shows through the body, the glyph stays near solid, so the
   // preview reads as "this gem, this turn, not here yet".
+  // polish-10: it still read as placed (blind review 10), so the whole gem is see-through
+  // (body ~36%, glyph ~58%) and a dashed light rim runs round the cut's outline, turned with
+  // it: a placed gem never has dashes. Static, so reduced motion needs nothing.
   var a = alpha;
   if (ghost) {
     let gm = clamp(max(max(gl.r, gl.g), gl.b), 0.0, 1.0);
-    a = alpha * mix(0.38, 0.95, smoothstep(0.15, 0.7, gm));
+    a = alpha * mix(0.36, 0.58, smoothstep(0.15, 0.7, gm));
+    let rimD = abs(f.sdf / pxUnit + 2.8);
+    let rimW = max(1.4, 0.035 / pxUnit);
+    let rimLine = 1.0 - smoothstep(rimW - 0.6, rimW + 0.6, rimD);
+    let ang = atan2(q0.y, q0.x) / TAU + 0.5;
+    let dk = fract(ang * 10.0);
+    let dash = smoothstep(0.02, 0.1, dk) * (1.0 - smoothstep(0.5, 0.58, dk));
+    let rim = rimLine * dash;
+    col = mix(col, vec3f(1.0, 0.93, 0.74), rim);
+    a = max(a, rim * alpha);
   }
 
   var o: FragOut;
