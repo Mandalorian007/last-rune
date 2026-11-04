@@ -369,3 +369,4 @@ Blind review 7 on `gate7` (main after glyph-truth, teach-4, chrome-polish-4, men
 
   → ws/teach-5.
 - **Gate unchanged:** an average of at least 8 with no blocker or major issue, then the real-phone retest. ws/one-overlay stays held until these three workstreams have merged and blind review 8 is compiled.
+- **Addendum 8a (PM, on the teach-5 merge):** the ending can be skipped on every viewing, the first included (Skip button and Esc). The rule against skipping the first viewing came from the design doc, not from a user decision. Blind review 7 flagged the missing skip as a phone issue, and a player who can't skip is worse off than one who skips the twist. `docs/design/ending.md` is updated to match.
