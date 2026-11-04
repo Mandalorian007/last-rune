@@ -3,6 +3,7 @@
  * reduced motion, reduce flashes, caption speed, save export/import, reset progress (confirm).
  */
 import type { AudioEngine, BusName } from '@thunderclap/engine/audio';
+import type { Host } from '@thunderclap/engine/host';
 import { button, h, type Overlay, slider } from '@thunderclap/engine/ui';
 import type { GameSave } from '../game/save';
 import type {
@@ -18,6 +19,8 @@ export interface SettingsPanelDeps {
   readonly audio: AudioEngine;
   readonly save: GameSave;
   readonly settings: SettingsController;
+  /** Copies the exported save code (Clipboard API, `execCommand`, or the selected field). */
+  readonly host: Pick<Host, 'copyText'>;
   /** Progress was replaced (import) or wiped (reset): rebuild scenes from the save. */
   readonly onProgressReplaced: (why: 'import' | 'reset') => void;
 }
@@ -148,14 +151,12 @@ export function openSettings(deps: SettingsPanelDeps): void {
     save.flush();
     area.value = save.exportString();
     area.select();
-    void navigator.clipboard?.writeText(area.value).then(
-      () => {
-        note.textContent = 'Copied to clipboard.';
-      },
-      () => {
-        note.textContent = 'Select the code and copy it.';
-      },
-    );
+    // Through the host (D-036): the Clipboard API where allowed, else `execCommand` (itch's
+    // frame), else the code stays selected in the field for copying by hand.
+    void deps.host.copyText(area.value).then((r) => {
+      area.select();
+      note.textContent = r === 'copied' ? 'Copied to clipboard.' : 'Select the code and copy it.';
+    });
   });
   const importBtn = button('Import save', () => {
     const code = area.value.trim();

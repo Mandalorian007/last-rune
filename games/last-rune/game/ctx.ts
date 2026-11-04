@@ -1,30 +1,26 @@
 /**
  * GameCtx (C7): every system a scene may use, built once at boot.
  *
+ * The engine's `createGame` (D-041) builds the noun-free half: surface, renderer, post,
+ * particles, input, audio, overlay, host, device mode, fill bands, scene stack, loop and the
+ * lifecycle. `createGameCtx` adds Last Rune's nouns to that same object: the sound bank, the
+ * save, settings, graphics, FUSE, codex, HUD, the flow and the views.
+ *
  * Scenes are `Scene<GameCtx, Frame>` on `ctx.stack` and get the ctx in `enter`.
  * Scene factories come in from main.ts (`SceneFactories`) so the ctx module
  * doesn't import scenes, and so rules-puzzles' altar scene can replace the
  * puzzle stub by swapping one factory.
  */
-import { AudioEngine, persistMixer, recipes } from '@thunderclap/engine/audio';
-import { GameLoop, type Scene, SceneStack, type Time } from '@thunderclap/engine/core';
-import { ParticleSystem } from '@thunderclap/engine/fx';
-import { createWebHost, type Host } from '@thunderclap/engine/host';
-import { Input } from '@thunderclap/engine/input';
+import type { CreateGameOptions, EngineCtx } from '@thunderclap/engine';
+import { type AudioEngine, recipes } from '@thunderclap/engine/audio';
+import type { Scene } from '@thunderclap/engine/core';
 import {
-  createDeviceMode,
-  type DeviceMode,
   deviceTraits,
-  type GpuContext,
-  PHONE_SCALE,
   prefersReducedMotion,
-  type Surface,
-  watchLifecycle,
   watchReducedMotion,
 } from '@thunderclap/engine/platform';
-import { PostStack } from '@thunderclap/engine/post';
-import { type Frame, Renderer } from '@thunderclap/engine/render';
-import { applyTextScale, createOverlay, type Overlay, PadNav } from '@thunderclap/engine/ui';
+import type { Frame } from '@thunderclap/engine/render';
+import { applyTextScale } from '@thunderclap/engine/ui';
 import { createGemPortraits } from '../art/gem-portraits';
 import { cathedralHallView } from '../art/hall/hall-view';
 import { stormTitleView } from '../art/hall/title-view';
@@ -94,40 +90,62 @@ export interface SceneFactories {
   ending(moment: SolveMoment): GameScene;
 }
 
-export interface GameCtx {
-  readonly surface: Surface;
-  readonly renderer: Renderer;
-  readonly post: PostStack;
-  /** Shared GPU particle pool; updated by the loop, drawn by views. */
-  readonly particles: ParticleSystem;
-  readonly input: Input<Action>;
-  readonly audio: AudioEngine;
+/** The engine ctx Last Rune boots: its actions, its save, scenes typed against `GameCtx`. */
+export type LastRuneEngine = EngineCtx<Action, GameSave, GameCtx>;
+
+/** The engine ctx (`surface`, `renderer`, `ui`, `host`, `loop`, …) plus Last Rune's nouns. */
+export interface GameCtx extends LastRuneEngine {
   /** Game sound bank, music moods and FUSE's voice (games/last-rune/audio). */
   readonly sound: GameAudio;
-  readonly ui: Overlay;
-  /** The page the game runs in (engine/host): links, copying, fullscreen and save storage. */
-  readonly host: Host;
-  /** Phone-sized screen and touch input flags (engine platform/device-mode.ts, D-039). */
-  readonly device: DeviceMode;
-  readonly save: GameSave;
   readonly settings: SettingsController;
   /** Quality tier and resolution control (game/graphics.ts). */
   readonly graphics: GraphicsController;
   readonly fuse: Fuse;
   readonly codex: Codex;
   readonly hud: Hud;
-  readonly stack: SceneStack<GameCtx, Frame>;
   readonly flow: GameFlow<GameScene>;
   /** Art swap-in points (see scenes/views.ts). */
   readonly views: ViewFactories;
   readonly viewContext: ViewContext;
-  readonly loop: GameLoop;
   sfx(name: UiSound, gain?: number): void;
   /** Story tier from the save (1..4, see rules/progression `storyTier`). */
   tier(): number;
   /** Crossfade music to a scene's mood at the current story tier. */
   setMood(scene: SceneName | MoodId): void;
   openSettings(): void;
+}
+
+/** What Last Rune asks of `createGame` (main.ts). */
+export function engineOptions(
+  root: HTMLElement,
+  opts: { title: string; forceUnsupported?: boolean },
+): CreateGameOptions<Action, GameSave> {
+  return {
+    root,
+    title: opts.title,
+    forceUnsupported: opts.forceUnsupported,
+    design: { width: DESIGN_W, height: DESIGN_H },
+    post: {
+      godRays: { x: DESIGN_W / 2, y: -60, bloomSource: 0.12, intensity: 0.3 },
+      fog: { density: 0.45 },
+    },
+    particles: { capacity: 32768, floorY: 1040 },
+    // The browser tab or itch's frame; saves live in its localStorage (v1.0 keys unchanged).
+    save: (host) => createGameSave({ host }),
+    mixerKey: SAVE_GAME_ID,
+    styles: ensureGameStyles,
+    // The HUD shortcuts (Codex, Settings, Journal) also work while a button or link has focus,
+    // e.g. the ending's "Back to the hall". Back (Esc) and the arrows work on a focused button
+    // too, so a clicked or Tabbed-to button never strands a keyboard player.
+    input: {
+      bindings: BINDINGS,
+      globalKeys: ['KeyC', 'KeyO', 'KeyJ'],
+      buttonKeys: ['Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'],
+    },
+    fillBands: FILL_BANDS,
+    // Load timing (User Timing marks; read by scripts/perf/load.spec.ts, free at runtime).
+    onGpuReady: () => performance.mark('lr:gpu-ready'),
+  };
 }
 
 function defineUiSounds(audio: AudioEngine): void {
@@ -156,15 +174,10 @@ function isFallbackAdapter(adapter: GPUAdapter): boolean {
   return !!(a.info?.isFallbackAdapter ?? a.isFallbackAdapter);
 }
 
-export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFactories): GameCtx {
-  // ── GPU ────────────────────────────────────────────────────────────────
-  const renderer = new Renderer(gpu, { logicalWidth: DESIGN_W, logicalHeight: DESIGN_H });
-  const post = new PostStack(renderer, {
-    godRays: { x: DESIGN_W / 2, y: -60, bloomSource: 0.12, intensity: 0.3 },
-    fog: { density: 0.45 },
-  });
-  renderer.post = post;
-  const particles = new ParticleSystem(renderer, { capacity: 32768, floorY: 1040 });
+/** Adds Last Rune's nouns to the engine ctx (the same object, so scenes see them). */
+export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): GameCtx {
+  const { surface, gpu, renderer, post, particles, input, audio, ui, host, device, save } = engine;
+  const { stack, loop, hooks } = engine;
 
   // ── Graphics quality (Settings → Graphics; see game/graphics.ts) ───────
   let reducedMotion = prefersReducedMotion();
@@ -195,51 +208,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   );
   renderer.onGpuTime((ms) => graphics.sample(ms, performance.now()));
 
-  // ── Host, save + overlay ───────────────────────────────────────────────
-  // The browser tab or itch's frame; saves live in its localStorage (v1.0 keys unchanged).
-  const host = createWebHost();
-  const save = createGameSave({ host });
-  ensureGameStyles(surface.root.ownerDocument);
-  // When a panel closes and its opener can't (or, for the HUD's shortcut buttons, shouldn't)
-  // take focus back, focus returns to the canvas so keys keep reaching the game.
-  const ui = createOverlay({ parent: surface.root, focusHome: () => surface.canvas });
-  // Input is blocked while a modal panel is up, so the pad drives panels through this:
-  // d-pad moves focus, A activates, B closes (as Tab, Enter and Esc do).
-  const padNav = new PadNav(ui.stack);
-  const device = createDeviceMode(ui.root);
-  // Title and hall on a phone (D-040): the art fills the width up to the safe areas and the
-  // top and bottom crop instead. `fillScene` is set from the flow below.
-  let fillScene: string = 'boot';
-  const applyFill = () => {
-    const band = FILL_BANDS[fillScene];
-    surface.setFill(band && surface.fitRect.scale < PHONE_SCALE ? band : null);
-  };
-  const applyScale = () => {
-    const r = surface.rect;
-    const ch = surface.root.clientHeight;
-    device.setScale(ui.scale, r.x, {
-      fitScale: surface.fitRect.scale,
-      top: Math.max(0, -r.y),
-      bottom: Math.max(0, r.y + r.height - ch),
-    });
-    // A filled scene that still leaves slim bars (very wide phones) fades its side edges into
-    // them, so the art ends softly instead of at a hard letterbox line.
-    const soft = r.height > ch + 1 && r.x > 0;
-    surface.canvas.style.maskImage = soft
-      ? 'linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent)'
-      : '';
-  };
-  surface.onResize(({ rect, backbuffer }) => {
-    renderer.resize(backbuffer.width, backbuffer.height);
-    ui.setRect(rect);
-    applyScale();
-    applyFill();
-  });
-
   // ── Audio ──────────────────────────────────────────────────────────────
-  const audio = new AudioEngine();
-  audio.attach();
-  persistMixer(audio, { game: SAVE_GAME_ID, host });
   defineUiSounds(audio);
   // Load timing: the audio pre-render runs after the first gesture (scripts/perf/load.spec.ts).
   const sound = createGameAudio(audio, {
@@ -271,18 +240,6 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
       scene === 'hall' || scene === 'altar' ? moodFor(scene, Math.min(3, t)) : (scene as MoodId),
     );
   };
-
-  // ── Input (blocked under modal panels) ─────────────────────────────────
-  // The HUD shortcuts (Codex, Settings, Journal) also work while a button or link has focus,
-  // e.g. the ending's "Back to the hall". Back (Esc) and the arrows work on a focused button
-  // too, so a clicked or Tabbed-to button never strands a keyboard player.
-  const input = new Input<Action>(BINDINGS, {
-    blocked: () => ui.stack.hasModal,
-    globalKeys: ['KeyC', 'KeyO', 'KeyJ'],
-    buttonKeys: ['Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'],
-  });
-  input.attach({ pointerTarget: surface.canvas });
-  input.setPointerTransform((x, y) => surface.clientToLogical(x, y));
 
   // ── Settings, FUSE, codex, HUD ─────────────────────────────────────────
   const settings = new SettingsController(
@@ -320,16 +277,12 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     pictures: createGemPortraits(renderer),
   });
 
-  // The stack hands scenes this object on enter; it is filled in below, before the first scene.
-  const ctx = {} as GameCtx;
-  const stack = new SceneStack<GameCtx, Frame>(ctx);
-  // A scene is built and entered before the flow announces its state, so the fill (above) is
+  // A scene is built and entered before the flow announces its state, so the fill band is
   // set for it first: the altar lays out against its own band, never the hall's fill.
   const entering =
     <A extends unknown[]>(state: string, make: (...a: A) => GameScene) =>
     (...a: A) => {
-      fillScene = state;
-      applyFill();
+      engine.setFill(state);
       return make(...a);
     };
   const flow = new GameFlow<GameScene>(stack, save, {
@@ -347,6 +300,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
       audio,
       save,
       settings,
+      host,
       onProgressReplaced: (why) => {
         fuse.hush();
         if (why === 'import') {
@@ -382,11 +336,9 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   // Phones: the upright "turn sideways" card, and Full screen on the title (D-039).
   const phoneChrome = createPhoneChrome(ui.layers.hud, device, host.fullscreen);
   phoneChrome.showFullscreen(flow.state === 'title' || flow.state === 'boot');
-  fillScene = flow.state;
-  applyFill();
+  engine.setFill(flow.state);
   flow.onChange((state) => {
-    fillScene = state;
-    applyFill();
+    engine.setFill(state);
     phoneChrome.showFullscreen(state === 'title');
     // Scenes own their caption avoid regions; leaving the altar must never strand one.
     if (state !== 'puzzle') fuse.avoid(null);
@@ -410,84 +362,81 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     phone: () => device.phone,
   };
 
-  // ── Loop ───────────────────────────────────────────────────────────────
+  // ── Frame and lifecycle hooks ──────────────────────────────────────────
+  hooks.update = (dt) => {
+    if (!ui.stack.hasModal && flow.state !== 'ending') {
+      if (input.pressed('journal') && flow.state === 'hall') {
+        sfx('ui.click');
+        fuse.hush();
+        flow.openJournal();
+      } else if (input.pressed('codex')) {
+        sfx('ui.click');
+        fuse.hush();
+        codex.open();
+      } else if (input.pressed('settings')) {
+        sfx('ui.click');
+        fuse.hush();
+        doOpenSettings();
+      }
+    }
+    flow.tick(dt);
+  };
+  hooks.beforeRender = (time) => graphics.frame(time.frameDt * 1000, performance.now());
   let firstFrame = true;
-  const loop = new GameLoop({
-    update: (dt: number) => {
-      input.update();
-      padNav.update();
-      if (!ui.stack.hasModal && flow.state !== 'ending') {
-        if (input.pressed('journal') && flow.state === 'hall') {
-          sfx('ui.click');
-          fuse.hush();
-          flow.openJournal();
-        } else if (input.pressed('codex')) {
-          sfx('ui.click');
-          fuse.hush();
-          codex.open();
-        } else if (input.pressed('settings')) {
-          sfx('ui.click');
-          fuse.hush();
-          doOpenSettings();
-        }
-      }
-      flow.tick(dt);
-      particles.update(dt);
-      stack.update(dt);
-    },
-    render: (alpha: number, time: Time) => {
-      graphics.frame(time.frameDt * 1000, performance.now());
-      const frame = renderer.beginFrame(time.realTime, time.frameDt);
-      stack.render(frame, alpha);
-      renderer.endFrame();
-      if (firstFrame) {
-        firstFrame = false;
-        performance.mark('lr:first-frame');
-      }
-      // The caption portrait animates while FUSE talks, then rests on one idle frame.
-      if (fuse.speaking || portraitTalking) {
-        portraitTalking = fuse.speaking;
-        portrait.render(undefined, portraitTalking);
-      }
-    },
-  });
-  // Hidden, pagehide (iOS app switch) or freeze (Android): stop drawing and persist now; a
-  // phone may kill a background tab without another word. (Audio pauses itself; see attach.)
-  watchLifecycle({
-    onHide: () => {
-      loop.stop();
-      flow.commitPlayTime();
-      save.flush();
-    },
-    onShow: () => loop.start(),
-  });
+  hooks.afterRender = () => {
+    if (firstFrame) {
+      firstFrame = false;
+      performance.mark('lr:first-frame');
+    }
+    // The caption portrait animates while FUSE talks, then rests on one idle frame.
+    if (fuse.speaking || portraitTalking) {
+      portraitTalking = fuse.speaking;
+      portrait.render(undefined, portraitTalking);
+    }
+  };
+  // Hidden or paged out: the engine stops the loop and flushes the save; play time stops first.
+  hooks.hide = () => flow.commitPlayTime();
+  // Device lost: the engine halts the loop, audio and captions; the game's own work stops too.
+  hooks.deviceLost = () => {
+    sound.dispose();
+    flow.commitPlayTime();
+  };
 
-  Object.assign(ctx, {
-    surface,
-    renderer,
-    post,
-    particles,
-    input,
-    audio,
-    ui,
-    host,
-    device,
-    save,
+  return Object.assign(engine, {
+    sound,
     settings,
     graphics,
     fuse,
     codex,
     hud,
-    stack,
     flow,
     views,
     viewContext,
-    loop,
     sfx,
-    sound,
     tier,
     setMood,
     openSettings: doOpenSettings,
-  } satisfies GameCtx);
-  return ctx;
+  }) satisfies GameCtx;
+}
+
+/** Says when progress can't be kept, then starts the flow (the title) and the loop. */
+export function startGame(ctx: GameCtx): void {
+  if (!ctx.save.persistent) {
+    ctx.ui.toasts.show('Progress can’t be saved in this browser. Settings → Export keeps a copy.', {
+      tone: 'warn',
+      duration: 8000,
+    });
+  } else if (ctx.save.status.loadResult === 'recovered') {
+    // The old bytes are kept under `<key>:backup`; say so rather than silently starting over.
+    ctx.ui.toasts.show(
+      'Your saved game couldn’t be read, so a new one begins. A backup was kept.',
+      {
+        tone: 'warn',
+        duration: 9000,
+      },
+    );
+  }
+  ctx.flow.start();
+  ctx.loop.start();
+  ctx.surface.canvas.focus();
 }

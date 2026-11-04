@@ -1,6 +1,6 @@
 # Gate for main, as three jobs (D-041):
 #   engine:     @thunderclap/engine typecheck + lint + unit tests (packages/engine).
-#   engine-e2e: engine platform e2e on the harness matrix (D-041 addendum 2); not a gate yet.
+#   engine-e2e: engine platform e2e on the harness matrix (D-041 addendum 2).
 #   game:       game typecheck + lint + import-boundary check + unit tests, production build, itch zip.
 # No secrets are used or needed. Nothing is uploaded to itch.io (see docs/shipping-itch.md).
 name: CI
@@ -45,10 +45,11 @@ jobs:
     # matrix (packages/engine/playwright.config.ts). Same container and runner as e2e.yml, where
     # SwiftShader WebGPU was verified. Keep the tag in lockstep with @playwright/test.
     name: engine e2e
-    # Not a merge gate yet. In this container locally, SwiftShader lost the WebGPU device
-    # ("A valid external Instance reference no longer exists") on about 1 test in 8 (any project).
-    # Make it gate main once it has been green on GitHub's runners.
-    continue-on-error: true
+    # A gate (ws/create-game). Earlier, SwiftShader in this container lost the WebGPU device
+    # ("A valid external Instance reference no longer exists") on about 1 test in 8. Re-measured
+    # 2026-11-03 in this image on arm64 with CI=1 (1 worker), --repeat-each=3 and no retries:
+    # 576 runs, no device loss; 2 fullscreen-watch flakes, since made to poll. CI keeps 1 retry.
+    # If device loss comes back on GitHub's runners, restore `continue-on-error: true` here.
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
     container:
