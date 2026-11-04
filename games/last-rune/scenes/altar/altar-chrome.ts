@@ -242,12 +242,19 @@ ${STRIKE}[data-ready] { animation: lr-strike-ready-rail 1.8s ease-in-out infinit
 [data-reduced-motion] ${STRIKE}[data-ready] {
   animation: none; box-shadow: 0 0 0 3px #fff3c8, 0 0 16px 4px rgba(255,214,120,0.8);
 }
-/* Disabled: a 3:1 outline on the dark rail, the label dimmed (not faded away). */
+/* Disabled (glyph-truth-2: gate 7 could not tell a dim Undo from a live one): no fill, a dashed
+   outline and a muted label, so "nothing to do here" reads at a glance next to a live button's
+   solid plate; the label stays legible. */
 ${ALL}:disabled {
-  opacity: 1; filter: none; cursor: default; background: rgba(22,20,18,0.92);
-  border: 1px solid #8f826b; color: #8f826b; box-shadow: none;
+  opacity: 1; filter: none; cursor: default; background: rgba(12,10,9,0.35);
+  border: 1px dashed rgba(143,130,107,0.75); color: #7f7462; box-shadow: none;
 }
-${ALL}:disabled :is(.lr-ph-ico, b) { color: #8f826b; }
+${ALL}:disabled :is(.lr-ph-ico, b) { color: #7f7462; }
+${TURN} .lr-turn-what {
+  display: block; font-size: 11px; line-height: 1.05;
+  color: var(--lr-gold); max-width: 42px; overflow: hidden; text-overflow: clip;
+}
+${TURN} .lr-turn-what:empty { display: none; }
 /* Short phones (an iPhone SE, 320 px under the browser bars): the held header pushes the tray
    and lane lower (ws/port-altar-2 review), so the foot buttons sit 2 px lower and Strike stands
    56 px tall (D-040's floor). A teach card under a two-row tray then clears Strike by 8 px. */

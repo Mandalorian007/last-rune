@@ -220,6 +220,8 @@ const CSS = /* css */ `
   background: rgba(20,16,12,0.92); border: 2px solid rgba(232,192,106,0.85); box-shadow: 0 3px 12px rgba(0,0,0,0.7);
 }
 .tc-overlay .lr-altar .lr-altar-turnbtn b { color: var(--lr-gold); font-size: 1.4em; line-height: 1; vertical-align: -0.1em; }
+.tc-overlay .lr-altar .lr-altar-turnbtn .lr-turn-what { font-size: 0.6em; color: var(--lr-gold); margin-left: 0.3em; }
+.tc-overlay .lr-altar .lr-altar-turnbtn .lr-turn-what:empty { display: none; }
 .tc-overlay .lr-altar .lr-altar-turnbtn:active { background: rgba(70,56,30,0.95); }
 .tc-overlay .lr-altar .lr-altar-turnbtn[hidden], .tc-overlay .lr-altar-turnmark[hidden] { display: none; }
 .tc-overlay .lr-altar-turnmark {

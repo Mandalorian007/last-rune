@@ -3,7 +3,7 @@
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
 import { h, scalePxCss } from '@thunderclap/engine/ui';
-import { type Placement, type SimResult, simulate } from '../../rules';
+import { isRotational, type Placement, type SimResult, simulate } from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
 import { CYAN, HUM, LEGAL_RING, OPEN_END, PREVIEW_PATH, WHITE_HOT } from './altar-defs';
 import type { AltarScene } from './altar-scene';
@@ -12,6 +12,7 @@ import { capacitorBeats, chargeChips, liveSockets, previewPath } from './circuit
 import { anchorOf } from './layout';
 import { LAMP_LINE, lampLine } from './moments';
 import { allReached, gaugeReach } from './reach';
+import { hopTurn, restTurn } from './rest-turn';
 import { socketLooks } from './socket-looks';
 import { fizzles } from './strike';
 
@@ -154,7 +155,15 @@ export const circuitMethods = {
     // counts, not just the first (glyph-truth): a gem only a Capacitor's release reaches already
     // rests along that run, so nothing turns when Strike is pressed (the verdict faces gems
     // along the same trace; `solvedLook` hops).
-    v.faceAlong(sim.trace, true);
+    // Gems no strike reaches lie along their run, counting the held gem where it would land
+    // (glyph-truth-2); the held straight gem itself shows the turn it would sit at.
+    const gems = [...this.puzzle.fixed, ...placements];
+    v.faceAlong(sim.trace, true, gems);
+    v.heldFace = null;
+    if (ghost && !isRotational(ghost.gem)) {
+      const h = sim.trace.find((s) => s.to.x === ghost.cell.x && s.to.y === ghost.cell.y);
+      v.heldFace = h ? hopTurn(h) : restTurn(this.puzzle, gems, ghost.cell);
+    }
     v.preview = hops;
     v.previewTarget = PREVIEW_PATH ? 1 : 0;
     this.renderCaps(capacitorBeats(this.puzzle, placements, sim), sim, false);
