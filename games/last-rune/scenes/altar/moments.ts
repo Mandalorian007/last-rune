@@ -40,7 +40,7 @@ export function phoneHint(retired: boolean, holding: boolean): PhoneHint {
  * Lines that may stand in the how-to slot, highest first. `holding` is mobile-6-board's
  * "Holding: X"; `howto` is this file's `phoneHint`. Set one with `AltarScene.setHintLine(slot, text)`; `null` clears it.
  */
-export const HINT_SLOTS = ['holding', 'howto'] as const;
+export const HINT_SLOTS = ['holding', 'lamp', 'howto'] as const;
 export type HintSlot = (typeof HINT_SLOTS)[number];
 
 /** The slot whose line shows: the first in `HINT_SLOTS` order with any text. */
@@ -64,6 +64,45 @@ export function turnTeachLine(
   return where === 'hand'
     ? `↻ Turn rotates the ${name} in your hand.`
     : `↻ Turn rotates the ${name} you just placed.`;
+}
+
+/**
+ * teach-4: Turn stays dim while a gem that never turns is in hand. Where Turn has just been
+ * taught, a line says why, so a dim Turn does not read as broken: "A Channel lies along the run
+ * on its own." `null` for a gem that turns.
+ */
+export function straightLine(kind: GemKind | undefined | null): string | null {
+  if (!kind || kind === 'bend' || kind === 'gate' || kind === 'split') return null;
+  const name = CODEX[kind].name;
+  const a = /^[AEIOU]/.test(name) ? 'An' : 'A';
+  return `${a} ${name} lies along the run on its own: no turning.`;
+}
+
+/**
+ * teach-4: what the dot on a "Needs" pill means, said once where it first changes. The dot
+ * (altar-readout.ts `setNeed`) is an empty ring until the route as built reaches that gauge
+ * (reach.ts), then lit cyan; it never says how much. It turns red when a Capacitor's plan lets
+ * out more than that gauge needs (circuit-model.ts `planOver`): Strike would trip it.
+ */
+export type LampLine = 'reach' | 'over';
+export const LAMP_LINE: Record<LampLine, string> = {
+  reach: 'Lit dot: the charge reaches this gauge. Strike to see how much.',
+  over: 'Red dot: the Capacitor lets out more than this gauge needs. It will trip.',
+};
+
+/**
+ * Which dot line to show, if any: red outranks lit. `teachReach`: this player is new enough to
+ * be told (the first altar, until its first strike); `teachOver`: the first Capacitor altar.
+ */
+export function lampLine(a: {
+  reached: boolean;
+  over: boolean;
+  teachReach: boolean;
+  teachOver: boolean;
+}): LampLine | null {
+  if (a.over && a.teachOver) return 'over';
+  if (a.reached && a.teachReach) return 'reach';
+  return null;
 }
 
 /** The arrival card's button on page `page` (0-based) of `pages`: next page, or close it. */

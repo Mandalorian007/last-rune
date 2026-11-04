@@ -10,6 +10,7 @@ import type { AltarScene } from './altar-scene';
 import { DANGER, GOLD } from './altar-view';
 import { capacitorBeats, chargeChips, liveSockets, previewPath } from './circuit-model';
 import { anchorOf } from './layout';
+import { LAMP_LINE, lampLine } from './moments';
 import { allReached, gaugeReach } from './reach';
 import { socketLooks } from './socket-looks';
 import { fizzles } from './strike';
@@ -67,6 +68,27 @@ export const circuitMethods = {
    * - a new fixed gem shows the sides it joins until its first strike;
    * - Strike glows once the route reaches every machine.
    */
+  /**
+   * teach-4: the first time a gauge's dot changes from an empty ring, one line under the tray
+   * says what it means (moments.ts `lampLine`): the lit dot on the first altar until its first
+   * strike, the red dot while the plan warns on the first Capacitor altar.
+   */
+  updateLampLine(this: AltarScene): void {
+    if (!this.view.layout.phone) return;
+    const t = this.lampTeach;
+    if (this.mode !== 'edit' && this.hintLines.lamp === LAMP_LINE.reach) t.reach = false;
+    const which =
+      this.mode === 'edit'
+        ? lampLine({
+            reached: this.lampEls.some((el) => !!el?.hasAttribute('data-on')),
+            over: this.needs.some((n) => !!n?.hasAttribute('data-warn')),
+            teachReach: t.reach,
+            teachOver: t.over,
+          })
+        : null;
+    this.setHintLine('lamp', which ? LAMP_LINE[which] : null);
+  },
+
   updateFirstTime(this: AltarScene): void {
     const v = this.view;
     const edit = this.mode === 'edit';
@@ -75,6 +97,7 @@ export const circuitMethods = {
     this.lampEls.forEach((el, i) => {
       el?.toggleAttribute('data-on', edit && !!v.machineLinked[i]);
     });
+    this.updateLampLine();
     v.beckonTarget = edit && this.teachCell && !linked ? 1 : 0;
     v.guide = this.teachFixed.length > 0 ? this.guide : [];
     v.guideTarget = edit && this.teachFixed.length > 0 ? 1 : 0;

@@ -21,7 +21,7 @@ import {
   TRAY_COUNT_DROP,
   trayTipX,
 } from './layout';
-import { turnTeachLine } from './moments';
+import { straightLine, turnTeachLine } from './moments';
 
 /** A box in design px. */
 interface Box {
@@ -122,10 +122,12 @@ export const columnMethods = {
     const L = this.view.layout;
     if (!L.phone) return;
     const teachUp = this.introLeft > 0 && this.mode === 'edit' && !this.tip.hidden;
-    const row =
+    // teach-4: the goal, strikes and ring pages point at no gem.
+    const page =
       teachUp && this.tip.dataset.source === 'intro'
-        ? this.introRows()[Math.min(this.introPageIdx, this.introPages() - 1)]
+        ? this.teachPages()[Math.min(this.introPageIdx, this.introPages() - 1)]
         : undefined;
+    const row = page?.kind === 'gem' ? page : undefined;
     const trayGem = row && row.how !== 'fixed' ? row.gem : null;
     L.tray.forEach((t, i) => {
       this.slotEls[i]?.toggleAttribute('data-teach', t.gem === trayGem);
@@ -366,10 +368,20 @@ export const columnMethods = {
     // and what it turns, until the player turns one here.
     const kind =
       target === 'hand' ? this.hand?.kind : target ? this.board.at(target)?.gem : undefined;
+    // teach-4: on that altar, a gem that never turns says why Turn stays dim while it is held.
+    const straight =
+      this.straightTeach &&
+      target === null &&
+      this.mode !== 'strike' &&
+      this.hand &&
+      !this.hand.from
+        ? straightLine(this.hand.kind)
+        : null;
     if (phone)
       this.setHintLine(
         'holding',
-        turnTeachLine(kind, target === 'hand' ? 'hand' : 'placed', this.turnTeach, this.turned),
+        turnTeachLine(kind, target === 'hand' ? 'hand' : 'placed', this.turnTeach, this.turned) ??
+          straight,
       );
     if (!show) return;
     const r = L.gemSize * 0.5;

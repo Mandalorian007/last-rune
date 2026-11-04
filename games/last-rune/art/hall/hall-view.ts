@@ -17,7 +17,6 @@
 import type { DrawParams, Frame, Material, Renderer } from '@thunderclap/engine/render';
 import { MACHINES } from '../../content/machines';
 import {
-  capabilityFromKey,
   capabilityKey,
   type MachineDef,
   type SocketColour,
@@ -51,7 +50,7 @@ import {
 import { type CandleInstance, CandleRenderer } from '../materials/candles';
 import { LIGHT_HEIGHT, LightSet } from '../materials/lights';
 import { createStoneFloor, createStoneWall, type StoneSurface } from '../materials/stone';
-import { Alcove, socketKindOf } from '../props/alcove';
+import { Alcove } from '../props/alcove';
 import { Fuse } from '../props/fuse';
 import { PROP_LIGHT_FLOATS } from '../props/lighting';
 import { type PitchColour, pitch } from '../props/palette';
@@ -496,10 +495,9 @@ export class CathedralHallView implements HallView {
     const prev = slot.status;
     slot.status = a.status;
     const al = slot.alcove;
-    if (a.status === 'locked') al.setNeeds(a.missing.map((s) => capabilityFromKey(s.capability)));
-    else if (a.status === 'solved' && slot.def.grants)
-      al.setSockets([socketKindOf(slot.def.grants)]);
-    else al.setSockets([]);
+    // chrome-polish-4 (blind review 6): no coloured socket dots under the doors. Nothing
+    // explained them and the name plates half-hid them; a locked door's card names its gems.
+    al.setSockets([]);
 
     if (this.first || prev === null) {
       al.set(STATE[a.status]);
@@ -541,7 +539,10 @@ export class CathedralHallView implements HallView {
     for (const c of model.conduits) {
       const to = byId.get(c.to);
       const lit = c.lit ? (to?.status === 'solved' ? 2 : 1) : 0;
-      const rgb = lit === 2 ? SOCKET_RGB.cyan : SOCKET_RGB[c.colour];
+      // One colour, the storm's power (chrome-polish-4): a line lights when the room it leaves
+      // is fixed, and runs to the rooms that room's gem opens. Gem colours here read as a key
+      // nobody was given.
+      const rgb = SOCKET_RGB.cyan;
       // L-route: down/up the wall from the source, then across to the target.
       const pts = [c.x0, c.y0, c.x0, c.y1, c.x1, c.y1];
       let arc = 0;

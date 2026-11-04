@@ -86,3 +86,43 @@ export function firstSentence(rule: string): string {
   const m = /^.*?[.!?](?=\s|$)/.exec(rule.trim());
   return m ? m[0] : rule.trim();
 }
+
+/**
+ * teach-4: one page of a phone's arrival card. A gem page teaches a new piece; the first altar
+ * opens with the goal (and what Strike does) and closes with the gold ring; the first altar
+ * that strikes more than once says so, and what "in one strike" means, before its pieces.
+ */
+export type TeachPage =
+  | { kind: 'gem'; gem: GemKind; how: 'fixed' | 'tray' | 'turns' }
+  | { kind: 'goal' }
+  | { kind: 'strikes' }
+  | { kind: 'ring' };
+
+/** The phone arrival card's pages, in order: the goal, the strikes, each new piece, the ring. */
+export function teachPages(
+  rows: readonly { gem: GemKind; how: 'fixed' | 'tray' | 'turns' }[],
+  at: { first: boolean; firstMulti: boolean },
+): TeachPage[] {
+  return [
+    ...(at.first ? [{ kind: 'goal' } as const] : []),
+    ...(at.firstMulti ? [{ kind: 'strikes' } as const] : []),
+    ...rows.map((r) => ({ kind: 'gem' as const, gem: r.gem, how: r.how })),
+    ...(at.first ? [{ kind: 'ring' } as const] : []),
+  ];
+}
+
+/** This is the first altar the player meets that strikes more than once. */
+export function firstMultiStrike(p: PuzzleDef, solved: readonly PuzzleDef[]): boolean {
+  return p.pulses > 1 && !solved.some((q) => q.id !== p.id && q.pulses > 1);
+}
+
+/**
+ * Gems whose first card carries a picture of the charge going in and out (teach-4): the ones a
+ * sentence alone did not teach (blind review 6), on the page where each is first met, fixed on
+ * the board. Later pages (it turns, it is in the tray) are short lanes with no room and no need.
+ */
+export const PICTURED: ReadonlySet<GemKind> = new Set<GemKind>(['gate', 'split', 'capacitor']);
+
+export function hasPicture(page: TeachPage): boolean {
+  return page.kind === 'gem' && page.how === 'fixed' && PICTURED.has(page.gem);
+}

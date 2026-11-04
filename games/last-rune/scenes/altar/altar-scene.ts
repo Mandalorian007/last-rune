@@ -21,6 +21,7 @@
  */
 import type { Gestures } from '@thunderclap/engine/input';
 import type { Frame } from '@thunderclap/engine/render';
+import type { GemPortraits } from '../../art/gem-portraits';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltSegment } from '../../art/props/bolt';
 import type { BoltHandle, StormCellHandle } from '../../audio';
@@ -58,7 +59,7 @@ import { emitPuzzleEvent } from './events';
 import { setHintTarget } from './hints';
 import { type HintSlot, hintRetired } from './moments';
 import type { Fizzle, StrikeTimeline } from './strike';
-import { arrivalNudges, type NewGems, newGems, turnTeaches } from './teach';
+import { arrivalNudges, firstMultiStrike, type NewGems, newGems, turnTeaches } from './teach';
 
 type PlaceMethods = typeof placeMethods;
 type ColumnMethods = typeof columnMethods;
@@ -225,6 +226,14 @@ export class AltarScene implements GameScene {
   pendingNudges: GemKind[] = [];
   /** Seconds left on the arrival card for this altar's new gems (0 = gone). */
   introLeft = 0;
+  /** teach-4: the first altar that strikes more than once (its card explains the count). */
+  firstMulti = false;
+  /** teach-4: real gem pictures for the arrival card's in→out figures, made when first drawn. */
+  pictures: GemPortraits | null = null;
+  /** teach-4: who is told what the gauge dots mean (`lampLine`), and whether they have been. */
+  lampTeach = { reach: false, over: false };
+  /** teach-4: where Turn was just taught, why it stays dim for a Channel (`straightLine`). */
+  straightTeach = false;
   /** Phones: the arrival card's page, one new piece at a time; the player turns it (Next ›). */
   introPageIdx = 0;
   /** Phones: lines other workstreams put in the how-to slot (`setHintLine`, moments.ts). */
@@ -320,6 +329,11 @@ export class AltarScene implements GameScene {
       this.teachFixed = this.news.fixed.map((f) => ({ gem: f.gem, cell: f.cell }));
       this.teachTray = new Set(this.news.tray);
       this.turnTeach = turnTeaches(this.news);
+      this.firstMulti = firstMultiStrike(this.puzzle, solved);
+      const newKinds = [...this.news.fixed.map((f) => f.gem), ...this.news.tray];
+      this.lampTeach = { reach: solved.length === 0, over: newKinds.includes('capacitor') };
+      // Only where Turn is first taught (the Bend in the tray): the lane is roomy there.
+      this.straightTeach = this.turnTeach.has('bend');
       this.guide = guideHops(
         this.puzzle,
         this.teachFixed.map((f) => f.cell),
@@ -337,7 +351,7 @@ export class AltarScene implements GameScene {
     // On the first altar the card (with the gold-ring line) stays until the first placement.
     // Phones: until the player taps Got it (or places a gem), never on a timer.
     this.introLeft =
-      this.introRows().length === 0
+      this.introPages() === 0
         ? 0
         : this.teachCell || this.view.layout.phone
           ? Number.POSITIVE_INFINITY
@@ -381,6 +395,8 @@ export class AltarScene implements GameScene {
     this.hum = null;
     if (this.announceTimer !== null) clearTimeout(this.announceTimer);
     this.teardownView();
+    this.pictures?.destroy();
+    this.pictures = null;
     this.ctx.input.setGestures(null);
     this.gestures?.destroy();
     this.gestures = null;

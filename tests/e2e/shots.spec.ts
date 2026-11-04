@@ -383,6 +383,12 @@ for (const vp of PHONES) {
       );
       await page.evaluate(() => {
         const g = (window as G).__game;
+        // A believable run for the safety record (chrome-polish-4): the game counts both for
+        // real (flow.ts), but a seeded save has played for a minute and tripped nothing.
+        g.save.update((d: G) => {
+          d.stats.playSeconds = 47 * 60;
+          d.stats.breakersTripped = 4;
+        });
         g.flow.openPuzzle('the-last-rune');
         g.flow.completePuzzle('the-last-rune');
         g.flow.finishSolve();

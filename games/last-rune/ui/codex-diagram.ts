@@ -67,6 +67,13 @@ export const GEM_DIAGRAMS: Readonly<Record<GemKind, GemDiagram>> = {
   },
 };
 
+const TURN: readonly Dir[] = ['N', 'E', 'S', 'W'];
+
+/** `side` after the gem turns `rot` quarter turns clockwise (as on the altar, rules.md §4). */
+export function turnSide(side: Dir, rot: number): Dir {
+  return TURN[(((TURN.indexOf(side) + rot) % 4) + 4) % 4]!;
+}
+
 /** Unit vector of a side in the 0..100 diagram box (y down). */
 const SIDE: Readonly<Record<Dir, readonly [number, number]>> = {
   N: [0, -1],

@@ -71,8 +71,9 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
   gate: {
     gem: 'gate',
     name: 'Gate',
-    rule: 'Power both side inputs on the same strike; the total comes out the arrow. Power only one and the charge is lost.',
-    chip: 'Power both sides on one strike; the total leaves by the arrow.',
+    rule: 'Feed the two sides beside the arrow in one strike; their sum leaves by the arrow. Feed only one and it is lost.',
+    // teach-4: "both sides" alone read as the board's left and right; they are the arrow's sides.
+    chip: 'Feed both sides of the arrow in one strike; the sum leaves by it.',
     maths: 'In 4 and 4 → out 8. Only one in: lost.',
   },
   capacitor: {

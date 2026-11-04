@@ -115,4 +115,14 @@ ${J} .lr-j-turn[aria-label="Previous page"] { left: calc(${PLATE_L}px + ${cpx(26
 ${J} .lr-j-turn[aria-label="Next page"] { left: calc(${PLATE_R}px - ${cpx(26)}) !important; }
 ${J} .lr-j-plate { padding: 0 ${cpx(56)}; }
 ${J} .lr-j-plate::before { display: none; }
+/* chrome-polish-4 (blind review 6: on an SE a four-line rebuttal ran to the screen's bottom
+   edge between the arrows): on short phones the lines sit closer, the text runs a little nearer
+   the arrows, and the block centres 20 design px higher, so its last line keeps clear of the
+   edge and its first clear of the book. */
+@media (max-height: 330px) {
+  ${J} .lr-j-plate {
+    line-height: 1.1; padding: 0 ${cpx(50)};
+    top: ${PLATE_Y - 20 - 100}px !important; height: 200px !important;
+  }
+}
 `;

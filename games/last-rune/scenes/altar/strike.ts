@@ -116,7 +116,7 @@ const CAUSE_TEXT: Record<FizzleCause, string> = {
   ground: 'Charge ran off the altar',
   facing: 'Turned the wrong way: charge lost',
   'odd-split': "Odd charge can't split: lost",
-  'gate-alone': 'Gate needs charge on both sides',
+  'gate-alone': 'Gate needs charge on both sides of its arrow',
   spent: 'Gem already used this strike',
 };
 

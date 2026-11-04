@@ -21,3 +21,25 @@ Source: D-040 addendum 7, blind review 6 (shots: `docs/design/screens/local/gate
 - Commit to `ws/teach-4` and never merge. Log here.
 
 ## Log
+
+- 2026-11-04: work done, ready for merge.
+  - **Pictures.** The phone arrival card is now built from pages (`teach.ts` `teachPages`). In order they are: goal (first altar), strikes (first multi-strike altar), each new gem, ring.
+    - A Gate, Split or Capacitor page shows the gem as the codex draws it (`createGemPortraits`, the real gem material). It sits beside the rule, turned the way it sits on this altar (`turnSide`, unit-tested against `acceptMask`), with in and out chips and the ✕ for a side that loses the charge.
+    - Gate and Split are 72 px. The Capacitor is 46 px with no chips, because its numbers are the strip.
+    - **Compromise:** the pictures appear only where each gem is first met, fixed on the board (splitter-mill, relay-tower, capacitor-bay). Later "turns" pages, such as crane's Gate, sit in ~103 px lanes and overflowed with a picture.
+  - **Gate copy.**
+    - Rule: "Feed the two sides beside the arrow in one strike; their sum leaves by the arrow. Feed only one and it is lost."
+    - Chip: "Feed both sides of the arrow in one strike; the sum leaves by it." I kept it at 68 chars or fewer: a 72-char chip pushed crane's card past an SE lane.
+    - Fizzle cause: "Gate needs charge on both sides of its arrow".
+  - **Capacitor.** Its page reads "Built in." plus "Strike 1: stores 8 → / Strike 2: lets out 8 + 8", with this altar's own charge. FUSE's joke is unchanged and still comes after. A "Strike (2 left)" page comes first: "One tap fires both. Each gauge needs its amount in one strike."
+  - **Gauge dot.** A new `lamp` hint slot sits between holding and howto. Each line shows when the dot actually changes and starts with the dot itself:
+    - Lit: "the charge reaches this gauge. Strike to see how much." Shown on the first altar until its first strike.
+    - Red: "the Capacitor lets out more than this gauge needs. It will trip." Shown on the first Capacitor altar.
+  - **Channel.** Where Turn is first taught (the furnace, Bend in the tray), holding a Channel says "A Channel lies along the run on its own: no turning." Showing it on every turn-teach altar overflowed crane's and press-unit-4's lanes.
+  - **Intake Desk.** The goal page comes first: "Bring the storm's charge to the gauge: exactly what it Needs. Strike sends the charge; see what each gauge gets." The pointer line shows only on gem pages.
+  - **NBSP.** `nowrap.ts` `keepTogether` is used in verdicts (headline, strikes, cause, story, Try), Capacitor readouts, the Strike label and count, teach rules, "1 of N", "Gives 8" and "in one strike".
+    - **Compromise:** "Needs N" on the pills keeps its normal space. With NBSP, splitter-mill's pill grew into a socket.
+  - **Held gems.** While a goal, strikes or ring page is up, a gem in hand takes the card, so it still names the gem in hand.
+  - **E2E specs.** Specs that read `textContent` now treat a no-break space as a space: mobile-strike, mobile-moments' page count, and capacitor.
+  - **Gates.** All green: `pnpm check`, `pnpm build`, and `pnpm test:e2e` (130 passed).
+  - **Shots.** In `docs/design/screens/local/gate7/` and `docs/design/screens/local/teach4-col/`.

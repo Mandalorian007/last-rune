@@ -117,6 +117,25 @@ export const TEACH_MACHINE: MachineId = 'intake-desk';
  */
 export const RING_NAME = 'Gold ring';
 export const RING_RULE = 'A socket the charge must reach. Set a gem there.';
+/**
+ * teach-4: the first altar's arrival card opens with the goal and what Strike does, before the
+ * pieces (blind review 6: nobody said what Strike was for).
+ */
+export const GOAL_NAME = 'Goal';
+export const GOAL_RULE =
+  "Bring the storm's charge to the gauge: exactly what it Needs. Strike sends the charge; see what each gauge gets.";
+/**
+ * teach-4: the first altar that strikes more than once explains Strike's count and "in one
+ * strike" before its pieces (blind review 6: players learned multi-strike by failing).
+ */
+export function strikesRule(pulses: number): string {
+  const all = pulses === 2 ? 'both' : `all ${pulses}`;
+  return `One tap fires ${all}. Each gauge needs its amount in one strike.`;
+}
+/** teach-4: the Capacitor's two strikes, with this altar's charge (before FUSE's joke). */
+export function capacitorStrip(charge: number): [string, string] {
+  return [`Strike 1: stores ${charge} →`, `Strike 2: lets out ${charge} + ${charge}`];
+}
 
 export const SLOT_ACTIONS = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6'] as const;
 export const CYAN: RGBA = [0.25, 1.3, 1.8, 1];

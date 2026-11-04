@@ -87,7 +87,8 @@ async function arrivalProblems(
   const marker = await page.evaluate(
     () => document.querySelector('.lr-altar-tip .lr-info-page')?.textContent ?? '',
   );
-  const pages = Number(/of (\d+)/.exec(marker)?.[1] ?? 1);
+  // teach-4: the page count is kept on one line with no-break spaces.
+  const pages = Number(/of[ \u00a0](\d+)/.exec(marker)?.[1] ?? 1);
   for (let i = 0; i < pages; i++) {
     const tip = await shownBox(page, '.lr-altar-tip[data-source="intro"]');
     const strike = await shownBox(page, '[data-action="strike"]');

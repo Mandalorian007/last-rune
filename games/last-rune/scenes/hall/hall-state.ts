@@ -6,7 +6,8 @@
  * Pitch screen 2: restored alcoves hold a lit gem; unlocked ones glow gold with
  * an empty socket in the colour they will grant; locked ones show dark dotted
  * sockets in the colours they need, plus a padlock. Cyan conduits run between
- * what you've woken.
+ * what you've woken. (Since chrome-polish-4 the art draws no door sockets: the door's card
+ * names its gems, and every lit conduit is cyan.)
  */
 
 import {

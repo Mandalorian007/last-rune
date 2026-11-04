@@ -46,7 +46,9 @@ describe('codex content', () => {
     expect(CODEX_SPARKS).toContain('16');
     expect(CODEX.split.rule).toMatch(/odd/i);
     expect(CODEX.amplify.rule).toMatch(/once per path/i);
-    expect(CODEX.gate.rule).toMatch(/same strike/i);
+    expect(CODEX.gate.rule).toMatch(/one strike/i);
+    // teach-4: the inputs are named relative to the arrow, the way the gem is drawn.
+    expect(CODEX.gate.rule).toMatch(/beside the arrow/i);
   });
 
   it('gives every gem a worked example with real numbers (mobile-7-teach)', () => {
