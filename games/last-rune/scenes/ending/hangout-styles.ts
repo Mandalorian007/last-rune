@@ -89,7 +89,6 @@ export const HANGOUT_CSS = /* css */ `
   flex: none; height: 76px; display: flex; align-items: center; gap: 10px; padding: 0 30px;
   font-weight: 700; font-size: 26px; color: #fbf3e0; border-bottom: 1px solid #00000066; box-shadow: 0 1px 0 #ffffff0d;
 }
-.tc-overlay .lr-hg-top .lr-emo { font-size: 25px; }
 .tc-overlay .lr-hg-top .lr-hg-hash { font-size: 28px; width: auto; }
 /* Phone-only parts (ending-phone-styles.ts): the header's server name and unread count, a channel's start. */
 .tc-overlay .lr-hg-badge-count, .tc-overlay .lr-hg-top-server, .tc-overlay .lr-hg-start { display: none; }

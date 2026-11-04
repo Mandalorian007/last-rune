@@ -105,8 +105,10 @@ ${P} .lr-hall-next-tag[data-side="right"]::before { content: '◂ '; }
 ${P} .lr-door { padding: ${cpx(1)} ${cpx(5)}; }
 ${P} .lr-door[data-status="unlocked"] { font-size: ${tpx(13)}; color: #ffe08f; background: rgb(20 13 6 / 0.92); }
 ${P} .lr-door[data-status="solved"] { font-size: ${tpx(13)}; color: #f2faee; background: rgb(12 16 12 / 0.9); }
-${P} .lr-door[data-status="locked"] { color: #c4b99f; background: rgb(10 8 6 / 0.8); border-color: rgb(200 190 170 / 0.22); }
-${P} .lr-door[data-status="locked"] .lr-door-lock { opacity: 0.75; }
+/* polish-9: locked names a shade brighter on a near-opaque plate, so the window bars behind
+   don't show through the letters; still quieter than the open door's gold. */
+${P} .lr-door[data-status="locked"] { color: #d8cdb4; background: rgb(10 8 6 / 0.93); border-color: rgb(200 190 170 / 0.26); }
+${P} .lr-door[data-status="locked"] .lr-door-lock { opacity: 0.8; }
 /* The tapped door's plate lights up, so its card reads as its own wherever the card stands. */
 ${P} .lr-door[data-tapped] { color: #fff1c4; border-color: #ffd77a; box-shadow: 0 0 ${cpx(5)} rgb(255 205 110 / 0.75); }
 
