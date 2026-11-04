@@ -3,10 +3,10 @@
  * ring and tag, a tapped door's card, FUSE's card with its tail. Appended to the phone sheet by
  * game/ctx.ts (ui/styles.ts ensureGameStyles).
  */
-import { CT, cpx, P, tpx } from '../../ui/phone-base';
+import { CT, cpx, P, ph, tpx } from '../../ui/phone-base';
 
 /** Not at an altar or a solve card: those draw FUSE's card and its tail their own way. */
-const HALL = `${P}:not(:has(.lr-altar[data-phone])):not(:has(.lr-solve[data-phone]))`;
+const HALL = ph(':not(:has(.lr-altar[data-phone])):not(:has(.lr-solve[data-phone]))');
 
 export const HALL_PHONE_CSS = /* css */ `
 ${P} .lr-nameplate { padding: ${cpx(2)} ${cpx(8)}; font-size: ${tpx(12)}; border-radius: ${cpx(6)}; }

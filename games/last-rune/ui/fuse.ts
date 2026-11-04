@@ -5,13 +5,13 @@
  * - `say(…, { interrupt: true })` drops whatever he was saying (hover changes).
  * - The portrait is a hook: art-props' FUSE portrait swaps in via `setPortrait`.
  *   Until then a CSS placeholder (brass disc, one amber eye) stands in.
- * - `avoid(rects)` keeps the card off parts of the screen a scene needs (design px).
+ * - `keepClear(rects)` keeps the card off parts of the screen a scene needs (design px).
  * - `pointAt(spot)` gives the card a tail toward FUSE where he stands in the scene (phones draw
  *   it; mobile-7-hall).
  */
 
 import type { CaptionCard, Corner, Rect } from '@thunderclap/engine/ui';
-import { h } from '@thunderclap/engine/ui';
+import { cornerOrder, h, overlapArea } from '@thunderclap/engine/ui';
 import { cardsOf, type FuseLine } from '../content/lines';
 
 export type PortraitFactory = () => Node;
@@ -26,7 +26,12 @@ export interface FuseOptions {
   voice?: (text: string) => ((ch: string, index: number) => void) | undefined;
   /** Words per card right now (phones show a slim bubble; D-015's twenty otherwise). */
   cardWords?: () => number | undefined;
+  /** CSS px per design px of the frame (`ui.scale`): the card is laid out in CSS px. Default 1. */
+  scale?: () => number;
 }
+
+/** Narrowest the card gets when it squeezes past a `keepClear()` region, design px. */
+export const FUSE_MIN_WIDTH = 480;
 
 export function placeholderPortrait(): Node {
   return h(
@@ -40,11 +45,18 @@ export function placeholderPortrait(): Node {
 export class Fuse {
   private portraitFactory: PortraitFactory = placeholderPortrait;
   private lastId: string | null = null;
+  private avoidRects: Rect[] = [];
 
   constructor(
     private readonly caption: CaptionCard,
     private readonly opts: FuseOptions = {},
-  ) {}
+  ) {
+    caption.onPlace((el) => this.steer(el));
+  }
+
+  private get k(): number {
+    return this.opts.scale?.() || 1;
+  }
 
   /** Art swap-in point for the animated portrait. */
   setPortrait(factory: PortraitFactory): void {
@@ -102,10 +114,46 @@ export class Fuse {
    * Keep FUSE's card off these screen regions (1920×1080 design px). The card stays bottom-right
    * if it fits, else narrows, else moves to bottom-left, then the top corners, and never clips
    * its text. Set it in a scene's `enter()`/`resume()` (and again if the layout changes);
-   * clear it with `avoid(null)` in `exit()`/`pause()`, since it outlives the scene.
+   * clear it with `keepClear(null)` in `exit()`/`pause()`, since it outlives the scene.
    */
-  avoid(regions: Rect | readonly Rect[] | null): void {
-    this.caption.avoid(regions);
+  keepClear(regions: Rect | readonly Rect[] | null): void {
+    this.avoidRects = !regions ? [] : Array.isArray(regions) ? [...regions] : [regions as Rect];
+    this.caption.relayout();
+  }
+
+  /**
+   * The card has just been laid out in its line's corner (`CaptionCard.onPlace`): try each
+   * corner (`cornerOrder`) at its full width, then narrower in ~15% steps down to
+   * `FUSE_MIN_WIDTH`, and keep the first that overlaps no region, else the least overlap.
+   */
+  private steer(el: HTMLElement): void {
+    if (this.avoidRects.length === 0) return;
+    const k = this.k;
+    const preferred = el.dataset.corner as Corner;
+    const full = el.offsetWidth / k;
+    const widths = [full];
+    for (let w = full * 0.85; w > FUSE_MIN_WIDTH; w *= 0.85) widths.push(Math.round(w));
+    if (full > FUSE_MIN_WIDTH) widths.push(FUSE_MIN_WIDTH);
+    let best: { corner: Corner; width: number; area: number } | null = null;
+    for (const corner of cornerOrder(preferred)) {
+      el.dataset.corner = corner;
+      for (const w of widths) {
+        el.style.maxWidth = `${w * k}px`;
+        const box = {
+          x: el.offsetLeft / k,
+          y: el.offsetTop / k,
+          width: el.offsetWidth / k,
+          height: el.offsetHeight / k,
+        };
+        const area = overlapArea(box, this.avoidRects);
+        if (area === 0) return;
+        if (!best || area < best.area) best = { corner, width: w, area };
+      }
+    }
+    if (best) {
+      el.dataset.corner = best.corner;
+      el.style.maxWidth = `${best.width * k}px`;
+    }
   }
 
   /**
@@ -121,8 +169,14 @@ export class Fuse {
       if (el.hasAttribute('data-tail')) el.removeAttribute('data-tail');
       return;
     }
+    const k = this.k;
     const tail = tailToward(
-      { x: el.offsetLeft, y: el.offsetTop, width: el.offsetWidth, height: el.offsetHeight },
+      {
+        x: el.offsetLeft / k,
+        y: el.offsetTop / k,
+        width: el.offsetWidth / k,
+        height: el.offsetHeight / k,
+      },
       spot,
       inset,
     );
@@ -131,7 +185,7 @@ export class Fuse {
       return;
     }
     if (el.dataset.tail !== tail.side) el.dataset.tail = tail.side;
-    el.style.setProperty('--lr-tail-at', `${Math.round(tail.at)}px`);
+    el.style.setProperty('--lr-tail-at', `${Math.round(tail.at * k)}px`);
   }
 
   hush(): void {

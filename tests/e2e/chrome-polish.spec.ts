@@ -96,9 +96,7 @@ for (const vp of PHONES) {
       await page.waitForTimeout(400);
       const cap = await page.evaluate(() => {
         const c = document.querySelector('.tc-caption[data-docked]')!.getBoundingClientRect();
-        const o = document
-          .querySelector('.tc-overlay:not([data-units="css"])')!
-          .getBoundingClientRect();
+        const o = document.querySelector('.tc-layer[data-layer="hud"]')!.getBoundingClientRect();
         const m = document.querySelector('.lr-title-menu')!.getBoundingClientRect();
         return {
           left: c.left,

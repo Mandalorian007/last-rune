@@ -57,7 +57,7 @@ export function layoutBoxes(machine: MachineId): Box[] {
 /** Overlapping pairs on the altar now, in design px (empty means clear). */
 export async function auditAltar(page: Page, machine: MachineId): Promise<string[]> {
   return page.evaluate((fixed) => {
-    const root = document.querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!;
+    const root = document.querySelector<HTMLElement>('.tc-layer[data-layer="hud"]')!;
     const o = root.getBoundingClientRect();
     const s = o.width / 1920;
     const boxes: { name: string; x: number; y: number; w: number; h: number }[] = [...fixed];

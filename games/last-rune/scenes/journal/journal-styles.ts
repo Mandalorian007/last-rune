@@ -5,7 +5,7 @@
  * (clue 2): the journal pages, the ending's incident report, and the
  * post-credits clipboard all use it. System fonts only, nothing fetched.
  */
-import { scaleFontSizes } from '@thunderclap/engine/ui';
+import { designSheet } from '../../ui/styles';
 
 export const HAND_FONT =
   "'Bradley Hand', 'Segoe Print', 'Ink Free', 'Snell Roundhand', 'Apple Chancery', 'URW Chancery L', 'Comic Neue', cursive";
@@ -92,6 +92,6 @@ export function ensureJournalStyles(doc: Document): void {
   if (doc.getElementById('lr-journal-styles')) return;
   const el = doc.createElement('style');
   el.id = 'lr-journal-styles';
-  el.textContent = scaleFontSizes(CSS);
+  el.textContent = designSheet(CSS);
   doc.head.append(el);
 }

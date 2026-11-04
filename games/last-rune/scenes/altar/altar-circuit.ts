@@ -2,9 +2,10 @@
  * The circuit as the player builds it: live sockets, charge chips, the ghost, the no-go marks and the socket marks.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import { h, scalePxCss } from '@thunderclap/engine/ui';
+import { h, scalePxCss, toFrameUnits } from '@thunderclap/engine/ui';
 import { type Placement, type SimResult, simulate } from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
+import { dpx } from '../../ui/frame-units';
 import { CYAN, HUM, LEGAL_RING, OPEN_END, PREVIEW_PATH, WHITE_HOT } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { DANGER, GOLD } from './altar-view';
@@ -190,12 +191,12 @@ export const circuitMethods = {
           class: 'lr-altar-chip',
           hidden: true,
           style: {
-            left: `${a.x + (b.x - a.x) * t}px`,
-            top: `${a.y + (b.y - a.y) * t}px`,
+            left: dpx(a.x + (b.x - a.x) * t),
+            top: dpx(a.y + (b.y - a.y) * t),
             // Chips scale with the board so a 10-wide altar's run of changes stays legible.
             // and follow the text size setting.
-            fontSize: scalePxCss(chipPx),
-            lineHeight: `calc(${scalePxCss(chipPx)} + 6px)`,
+            fontSize: toFrameUnits(scalePxCss(chipPx)),
+            lineHeight: toFrameUnits(`calc(${scalePxCss(chipPx)} + 6px)`),
           },
         },
         String(c.charge),
@@ -264,7 +265,7 @@ export const circuitMethods = {
       const el = h('div', {
         class: 'lr-altar-nogo',
         'aria-hidden': 'true',
-        style: { left: `${a.x + (b.x - a.x) * t}px`, top: `${a.y + (b.y - a.y) * t}px` },
+        style: { left: dpx(a.x + (b.x - a.x) * t), top: dpx(a.y + (b.y - a.y) * t) },
       });
       this.dom.insertBefore(el, this.tip.parentNode === this.dom ? this.tip : this.leader);
       this.noGoEls.push(el);

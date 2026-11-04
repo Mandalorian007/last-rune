@@ -14,6 +14,7 @@
  */
 import type { FullscreenPass, Renderer } from '@thunderclap/engine/render';
 import { FUSE_PORTRAIT_WGSL, FUSE_UNIFORM_FLOATS } from '../../shaders/fuse-shaders';
+import { dpx } from '../../ui/frame-units';
 import type { FuseRigState } from './fuse';
 import { writeFuseState } from './fuse';
 import { PROP_LIGHT_FLOATS, PropLightRig } from './lighting';
@@ -45,8 +46,8 @@ export function createFusePortrait(
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(size * dpr);
   canvas.height = Math.round(size * dpr);
-  canvas.style.width = `${size}px`;
-  canvas.style.height = `${size}px`;
+  canvas.style.width = dpx(size);
+  canvas.style.height = dpx(size);
   canvas.style.display = 'block';
   canvas.setAttribute('aria-hidden', 'true');
   const ctx = canvas.getContext('webgpu');

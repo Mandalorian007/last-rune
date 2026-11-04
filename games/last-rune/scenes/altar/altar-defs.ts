@@ -3,6 +3,7 @@ import type { RGBA } from '@thunderclap/engine/render';
 import { h } from '@thunderclap/engine/ui';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
 import type { Cell, GemKind, MachineId } from '../../rules/types';
+import { dpxOf, frameScale } from '../../ui/frame-units';
 
 export type Mode = 'edit' | 'strike' | 'result';
 
@@ -226,10 +227,11 @@ export function hintLine(mode: HintMode, turns = true): (Node | string)[] {
  * above their anchor (arrow down, 7px) or, with data-below, under it (arrow up).
  */
 export function designBox(el: HTMLElement): { l: number; r: number; t: number; b: number } {
-  const x = Number.parseFloat(el.style.left) || 0;
-  const y = Number.parseFloat(el.style.top) || 0;
-  const w = el.offsetWidth;
-  const h = el.offsetHeight;
+  const k = frameScale(el);
+  const x = dpxOf(el.style.left);
+  const y = dpxOf(el.style.top);
+  const w = el.offsetWidth / k;
+  const h = el.offsetHeight / k;
   const tag = el.classList.contains('lr-altar-tag');
   const t = !tag ? y : el.hasAttribute('data-below') ? y : y - h - 7;
   return { l: x - w / 2, r: x + w / 2, t, b: t + h + (tag ? 7 : 0) };

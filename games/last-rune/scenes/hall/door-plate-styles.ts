@@ -6,8 +6,9 @@
  *   longer spills out of its plate. A short last word ("Conveyor A", "Cell II") stays with the
  *   word before it (ui/hud.ts `doors`).
  */
+import { P as PHONE } from '../../ui/phone-base';
 
-const P = '.tc-overlay[data-phone]:not(#lr-none) .lr-doors';
+const P = `${PHONE} .lr-doors`;
 
 export const DOOR_PLATE_CSS = /* css */ `
 ${P} .lr-door { min-width: min-content; }

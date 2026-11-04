@@ -61,7 +61,7 @@ type G = any;
 test.skip(!DIR, 'SHOTS=<dir> to take screenshots');
 test.setTimeout(900_000);
 
-const CAPTION = '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]';
+const CAPTION = '.tc-caption';
 
 /** A shot taken once the layout has stopped moving, on the page's own frames. */
 async function snap(page: Page, folder: string, name: string, sel = '#app *') {
@@ -175,7 +175,7 @@ async function holdOne(page: Page, id: MachineId, placed: unknown[]) {
   const L = await page.evaluate(
     () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
   );
-  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const k = ob.width / 1920;
   const pz = puzzleFor(id);
   const slot = L.tray.find((s) => trayRemaining(pz, placed as never, s.gem) > 0);
@@ -476,7 +476,7 @@ test.describe('desktop', () => {
       const L = await page.evaluate(
         () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
       );
-      const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+      const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
       const k = ob.width / 1920;
       const slot = L.tray.find((s) => trayRemaining(puzzleFor(id), half as never, s.gem) > 0);
       if (slot) {

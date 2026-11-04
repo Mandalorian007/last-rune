@@ -15,14 +15,12 @@ import { coffeeLink } from '../../content/ending';
 import { beatLine, type FuseLine, titleLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { hasProgress } from '../../game/save';
-import { fullscreenButton, placeWidgets } from '../../ui/chrome';
+import { fullscreenButton, isPhone, placeWidgets } from '../../ui/chrome';
 import { coffeeLinkWidget } from '../../ui/coffee';
 import type { TitleView, TitleViewFrame } from '../views';
 import { ChatterClock, ShuffleBag } from './chatter';
 
 const KNOCK_DELAY = 1.6;
-/** Where FUSE potters on the title (art/hall/title-view.ts STROLL_SPOTS), head to wheels. */
-const FUSE_ZONE: Rect = { x: 280, y: 730, width: 540, height: 250 };
 /** Design px kept clear around the menu and the release label when FUSE's card moves. */
 const AVOID_PAD = 24;
 
@@ -68,9 +66,8 @@ export class TitleScene implements GameScene {
     this.dom = null;
     this.view.dispose();
     this.ctx.fuse.hush();
-    this.ctx.fuse.avoid(null);
+    this.ctx.fuse.keepClear(null);
     this.ctx.fuse.pointAt(null);
-    this.ctx.ui.root.style.removeProperty('--lr-title-cap-top');
   }
 
   update(dt: number): void {
@@ -79,7 +76,7 @@ export class TitleScene implements GameScene {
       this.knockPending = false;
       this.view.knock?.();
       this.ctx.sfx('ui.deny', 0.8);
-      this.ctx.fuse.avoid(this.menuRegions());
+      this.ctx.fuse.keepClear(this.menuRegions());
       void this.ctx.fuse.say(beatLine('title-knock'));
       this.ctx.save.update((d) => {
         d.flags.titleKnock = true;
@@ -91,8 +88,8 @@ export class TitleScene implements GameScene {
     if (this.chatter.tick(dt, { paused, speaking })) this.chat();
     if (!this.ctx.ui.stack.hasModal && this.dom) {
       // Arrows and the pad walk the menu (and the Ko-fi link); otherwise A/Enter/Space play.
-      // On phones the menu and links are in the CSS-px overlay's regions.
-      const nav = this.ctx.chrome?.active ? this.ctx.chrome.layout.element : this.dom;
+      // On phones the menu and links are in the layout's regions.
+      const nav = isPhone(this.ctx.ui) ? this.ctx.ui.layout.element : this.dom;
       if (!menuNav(this.ctx.input, nav) && this.ctx.input.pressed('confirm')) this.primary();
     }
     this.view.update(dt, this.frameState());
@@ -128,8 +125,7 @@ export class TitleScene implements GameScene {
 
   /** An upright phone: the picture is a side-cropped slice (`TITLE_UPRIGHT`, ui/chrome.ts). */
   private upright(): boolean {
-    const chrome = this.ctx.chrome;
-    const up = !!chrome?.active && chrome.layout.formFactor === 'phone-portrait';
+    const up = this.ctx.ui.layout.formFactor === 'phone-portrait';
     const title = this.dom?.querySelector<HTMLElement>('.lr-title');
     if (title && title.hasAttribute('data-upright') !== up) {
       title.toggleAttribute('data-upright', up);
@@ -142,7 +138,7 @@ export class TitleScene implements GameScene {
     chatterBag ??= new ShuffleBag(titleLines());
     const line = chatterBag.next();
     if (!line) return;
-    this.ctx.fuse.avoid(this.menuRegions());
+    this.ctx.fuse.keepClear(this.menuRegions());
     void this.ctx.fuse.say(line);
   }
 
@@ -154,7 +150,8 @@ export class TitleScene implements GameScene {
   private menuRegions(): Rect[] {
     const ui = this.ctx.ui;
     if (!this.dom?.isConnected) return [];
-    const o = ui.root.getBoundingClientRect();
+    // The frame's origin: the HUD layer covers the canvas.
+    const o = ui.layers.hud.getBoundingClientRect();
     const out: Rect[] = [];
     for (const el of this.dom.querySelectorAll<HTMLElement>(
       '.lr-title, .lr-title-menu, .lr-release, .lr-title-links',
@@ -168,15 +165,6 @@ export class TitleScene implements GameScene {
         height: r.height / ui.scale + AVOID_PAD * 2,
       });
     }
-    // Phones (mobile-5-chrome): FUSE himself, wherever he potters, so his card never covers him.
-    if (this.ctx.device.phone && !this.ctx.chrome?.active) {
-      out.push(FUSE_ZONE);
-      const logo = this.dom.querySelector<HTMLElement>('.lr-title')?.getBoundingClientRect();
-      if (logo && logo.height > 0) {
-        const top = (logo.bottom - o.top) / ui.scale + AVOID_PAD + 4;
-        ui.root.style.setProperty('--lr-title-cap-top', `${Math.round(top)}px`);
-      }
-    }
     return out;
   }
 
@@ -189,8 +177,7 @@ export class TitleScene implements GameScene {
    */
   private placeChrome(): void {
     const dom = this.dom;
-    const chrome = this.ctx.chrome;
-    if (!dom || !chrome) return;
+    if (!dom) return;
     this.fullscreen = fullscreenButton(this.ctx.host.fullscreen);
     const q = (sel: string) => dom.querySelector<HTMLElement>(sel);
     const widgets = [
@@ -216,7 +203,7 @@ export class TitleScene implements GameScene {
       },
     ];
     this.unplace = placeWidgets(
-      chrome,
+      this.ctx.ui,
       widgets.filter((w): w is (typeof widgets)[number] & { el: HTMLElement } => w.el !== null),
     );
   }

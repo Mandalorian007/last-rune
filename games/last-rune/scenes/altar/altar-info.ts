@@ -9,6 +9,7 @@ import { gemNudge, TEACH_NUDGE } from '../../content/lines';
 import { isRotational, stormCharge } from '../../rules';
 import type { Cell, Dir, GemKind } from '../../rules/types';
 import { chipAt, diagramSvg, fizzleAt, GEM_DIAGRAMS, turnSide } from '../../ui/codex-diagram';
+import { dpx } from '../../ui/frame-units';
 import {
   capacitorStrip,
   GEM_NAME,
@@ -360,7 +361,7 @@ export const infoMethods = {
     // Bottom edge just above the tray slots (translate -100%), clear of the board's sockets.
     const s0 = L.tray[0];
     const size = s0?.size ?? 92;
-    this.tip.style.top = `${L.trayY - size * 0.62}px`;
+    this.tip.style.top = dpx(L.trayY - size * 0.62);
     this.tip.hidden = false;
     this.tipSlotX = slotX;
     this.placeTip(L);

@@ -6,6 +6,7 @@ import { h } from '@thunderclap/engine/ui';
 import type { BoltOutcome } from '../../game/flow';
 import { type SimResult, stormCharge } from '../../rules';
 import { getMachine } from '../../rules/progression';
+import { dpx } from '../../ui/frame-units';
 import { listText, OUTCOME_WORD, RING_NAME, RING_RULE, timesWord } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { type CapBeat, capBeatText, planOver } from './circuit-model';
@@ -133,7 +134,7 @@ export const readoutMethods = {
           'data-side': side,
           'aria-hidden': 'true',
           ...(live ? {} : { 'data-plan': '' }),
-          style: { left: `${x}px`, top: `${y}px` },
+          style: { left: dpx(x), top: dpx(y) },
         },
         ...lines,
       );
@@ -278,7 +279,7 @@ export const readoutMethods = {
     text: string,
     tone: 'bad' | 'info' = 'bad',
   ): HTMLElement {
-    const el = h('div', { class: 'lr-altar-tag', style: { left: `${x}px`, top: `${y}px` } }, text);
+    const el = h('div', { class: 'lr-altar-tag', style: { left: dpx(x), top: dpx(y) } }, text);
     if (tone === 'info') el.dataset.tone = 'info';
     this.dom.append(el);
     this.tags.push(el);

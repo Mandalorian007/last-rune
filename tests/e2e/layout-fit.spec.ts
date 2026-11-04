@@ -185,7 +185,7 @@ for (const width of [1280, 1920] as const) {
       await page.waitForTimeout(400);
       // Provoke the idle "Bend already here" hint (a Bend onto the Bend), then strike at once.
       const L = computeLayout(puzzleFor('relay-tower'));
-      const o = await page.locator('.tc-overlay:not([data-units="css"])').boundingBox();
+      const o = await page.locator('.tc-layer[data-layer="hud"]').boundingBox();
       const k = o!.width / 1920;
       const at = (x: number, y: number) => page.mouse.click(o!.x + x * k, o!.y + y * k);
       const slot = L.tray.find((t) => t.gem === 'bend')!;
@@ -283,9 +283,7 @@ for (const [width, scale] of [
     const c = { x: 0, y: 0 };
     cellCenter(L, { x: 3, y: 0 }, c);
     const r = await page.evaluate(() => {
-      const o = document
-        .querySelector('.tc-overlay:not([data-units="css"])')!
-        .getBoundingClientRect();
+      const o = document.querySelector('.tc-layer[data-layer="hud"]')!.getBoundingClientRect();
       const k = o.width / 1920;
       const box = (el: Element) => {
         const b = el.getBoundingClientRect();
@@ -354,14 +352,10 @@ for (const [width, scale] of [
         g.fuse.hush();
         void g.fuse.say(line, { hold: 0 });
       }, LONG_LINE);
-      await expect(
-        page.locator('.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]'),
-      ).toBeVisible();
+      await expect(page.locator('.tc-caption')).toBeVisible();
       await waitFrames(page, 2);
       return page.evaluate(() => {
-        const o = document
-          .querySelector('.tc-overlay:not([data-units="css"])')!
-          .getBoundingClientRect();
+        const o = document.querySelector('.tc-layer[data-layer="hud"]')!.getBoundingClientRect();
         const k = o.width / 1920;
         const box = (el: Element | null) => {
           if (!el || (el as HTMLElement).hidden) return null;
@@ -374,11 +368,7 @@ for (const [width, scale] of [
           };
         };
         return {
-          caption: box(
-            document.querySelector(
-              '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
-            ),
-          )!,
+          caption: box(document.querySelector('.tc-caption'))!,
           verdict: box(document.querySelector('.lr-altar-verdict')),
           tray: [...document.querySelectorAll('.lr-altar-count')].map((e) => box(e)!),
         };
@@ -423,9 +413,7 @@ test('the-last-rune at 150%: the storm card stays off the board', async ({ page 
   await waitFrames(page, 4);
   const L = computeLayout(puzzleFor('the-last-rune'));
   const m = await page.evaluate(() => {
-    const o = document
-      .querySelector('.tc-overlay:not([data-units="css"])')!
-      .getBoundingClientRect();
+    const o = document.querySelector('.tc-layer[data-layer="hud"]')!.getBoundingClientRect();
     const s = document.querySelector('.lr-altar-storm')!.getBoundingClientRect();
     const k = o.width / 1920;
     return { left: (s.left - o.left) / k, right: (s.right - o.left) / k };

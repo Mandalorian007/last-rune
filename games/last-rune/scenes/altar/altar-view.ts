@@ -171,7 +171,7 @@ export class AltarView {
     this.assets = altarAssets(r, ctx.particles);
     ensureBolts(this.assets, r, ctx.particles, Math.max(1, puzzle.pulses));
     const dev = ctx.device;
-    const L = computeLayout(puzzle, altarFrame(dev, ctx.chrome));
+    const L = computeLayout(puzzle, altarFrame(dev, ctx.ui));
     this.layout = L;
     this.slab = L.phone
       ? this.assets.slab(L.cols, L.rows, L.pitch, L.margin, L.phone.front, puzzle.blocked, true)

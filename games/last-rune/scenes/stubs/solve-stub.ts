@@ -12,6 +12,7 @@ import { machineLine } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
 import { capabilityLabel, getMachine, socketColour } from '../../rules/progression';
+import { dpx } from '../../ui/frame-units';
 import { CSS_PALETTE } from '../../ui/styles';
 
 export class SolveStubScene implements GameScene {
@@ -66,7 +67,7 @@ export class SolveStubScene implements GameScene {
         opened,
       ),
       note,
-      h('div', { class: 'lr-stub-card', style: { top: '560px', width: '640px' } }, cont),
+      h('div', { class: 'lr-stub-card', style: { top: dpx(560), width: dpx(640) } }, cont),
     );
     ctx.ui.layers.hud.append(this.dom);
     const line = machineLine(m.machine, 'solve');

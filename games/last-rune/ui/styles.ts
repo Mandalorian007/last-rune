@@ -1,11 +1,17 @@
 /**
- * Game-specific overlay CSS (design px; the overlay scales it). Procedural only:
- * gradients and shadows, no images or fonts fetched. Scoped under `.tc-overlay`.
+ * Game-specific overlay CSS (design px: `toFrameUnits` scales it with the canvas frame).
+ * Procedural only: gradients and shadows, no images or fonts fetched. Scoped under `.tc-overlay`.
  */
 
-import { scaleFontSizes } from '@thunderclap/engine/ui';
+import { scaleFontSizes, toFrameUnits } from '@thunderclap/engine/ui';
 import { CHROME_CSS } from './chrome-styles';
-import { PHONE_BASE_CSS } from './phone-base';
+import { PHONE_BASE_CSS, PHONE_ROOT_CSS } from './phone-base';
+
+/**
+ * A design-px game stylesheet as injected: fonts follow Settings → Text size, then every px is
+ * one design px of the frame (`toFrameUnits`).
+ */
+export const designSheet = (css: string): string => toFrameUnits(scaleFontSizes(css));
 
 /** Palette names from the pitch, as CSS colours for DOM UI. */
 export const CSS_PALETTE = {
@@ -139,7 +145,7 @@ const CSS = /* css */ `
 /* ── FUSE caption card ─────────────────────────────────────────────────────
    Docked low in its corner and wide enough that the longest card (127 chars) takes three
    lines, so it stays under FUSE's wheel line in the hall (y 866) and below the alcoves. The
-   speaker's name sits under the portrait. Scenes move it off things with fuse.avoid(). */
+   speaker's name sits under the portrait. Scenes move it off things with fuse.keepClear(). */
 .tc-overlay { --tc-caption-max-width: 800px; --tc-caption-margin: 24px; }
 .tc-overlay .tc-caption { gap: 16px; padding: 14px 22px; }
 .tc-overlay .tc-caption-side .tc-caption-speaker { font-size: 19px; }
@@ -388,14 +394,14 @@ export function ensureGameStyles(doc: Document = document, scenePhone = ''): voi
   injected.add(doc);
   const el = doc.createElement('style');
   el.dataset.lr = 'game';
-  el.textContent = scaleFontSizes(CSS);
+  el.textContent = designSheet(CSS);
   // Phone overrides outrank scene sheets by specificity, so their load order doesn't matter.
   const phone = doc.createElement('style');
   phone.dataset.lr = 'phone';
-  phone.textContent = scaleFontSizes(PHONE_BASE_CSS + scenePhone);
-  // Phone chrome on the CSS-px overlay (ui/chrome.ts): menus, panels, HUD, FUSE's lane.
+  phone.textContent = designSheet(PHONE_BASE_CSS + scenePhone);
+  // Phone chrome in CSS px (ui/chrome.ts): menus, panels, HUD, FUSE's lane. Not rewritten.
   const chrome = doc.createElement('style');
   chrome.dataset.lr = 'chrome';
-  chrome.textContent = scaleFontSizes(CHROME_CSS);
+  chrome.textContent = PHONE_ROOT_CSS + scaleFontSizes(CHROME_CSS);
   doc.head.append(el, phone, chrome);
 }

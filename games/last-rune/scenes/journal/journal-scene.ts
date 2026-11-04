@@ -17,6 +17,7 @@ import { h } from '@thunderclap/engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { placeWidgets } from '../../ui/chrome';
+import { dpx } from '../../ui/frame-units';
 import { DeskArt } from './desk-art';
 import { PAPER, PROP, RULE_PITCH, RULE_TOP } from './desk-wgsl';
 import {
@@ -187,7 +188,7 @@ export class JournalScene implements GameScene {
       s.pull = reduced ? target : s.pull + (target - s.pull) * Math.min(1, dt * 12);
       if (Math.abs(s.pull - target) < 0.05) s.pull = target;
       if (s.pull !== before)
-        s.el.style.transform = `translateX(${s.pull.toFixed(1)}px) rotate(${s.rot}rad)`;
+        s.el.style.transform = `translateX(${dpx(Number(s.pull.toFixed(1)))}) rotate(${s.rot}rad)`;
     }
   }
 
@@ -399,10 +400,10 @@ export class JournalScene implements GameScene {
           type: 'button',
           class: 'lr-j-slip',
           style: {
-            left: `${st.x}px`,
-            top: `${y}px`,
-            width: `${st.w}px`,
-            height: `${st.h}px`,
+            left: dpx(st.x),
+            top: dpx(y),
+            width: dpx(st.w),
+            height: dpx(st.h),
             transform: `rotate(${rot}rad)`,
           },
         },
@@ -452,31 +453,31 @@ export class JournalScene implements GameScene {
     const margin = 62;
     this.date = h('div', {
       class: 'lr-j-date',
-      style: { left: `${lx + margin}px`, top: `${ly + 64}px` },
+      style: { left: dpx(lx + margin), top: dpx(ly + 64) },
     });
     this.body = h('p', {
       class: 'lr-j-body',
       style: {
-        left: `${lx + margin}px`,
-        top: `${ly + RULE_TOP - 36}px`,
-        width: `${L.leafR.x + L.leafR.w / 2 - margin - (lx + margin)}px`,
-        height: `${RULE_PITCH * 9}px`,
-        columnGap: `${2 * margin + (rx - (lx + L.leafL.w))}px`,
+        left: dpx(lx + margin),
+        top: dpx(ly + RULE_TOP - 36),
+        width: dpx(L.leafR.x + L.leafR.w / 2 - margin - (lx + margin)),
+        height: dpx(RULE_PITCH * 9),
+        columnGap: dpx(2 * margin + (rx - (lx + L.leafL.w))),
       },
     });
     this.folio = h('div', {
       class: 'lr-j-folio',
-      style: { left: `${L.leafL.x - 60}px`, top: `${ly + L.leafL.h - 58}px` },
+      style: { left: dpx(L.leafL.x - 60), top: dpx(ly + L.leafL.h - 58) },
     });
     this.sketch = doc.createElementNS(SVG_NS, 'svg');
     this.sketch.setAttribute('class', 'lr-j-sketch');
     this.sketch.setAttribute('viewBox', '0 0 440 300');
     this.sketch.setAttribute('aria-hidden', 'true');
     Object.assign(this.sketch.style, {
-      left: `${rx + 70}px`,
-      top: `${ly + 190}px`,
-      width: '440px',
-      height: '300px',
+      left: dpx(rx + 70),
+      top: dpx(ly + 190),
+      width: dpx(440),
+      height: dpx(300),
     });
     // Page 16's signature: the Builder's loops run on into FUSE's sign-off, in the same hand.
     const sg = SIGNATURE;
@@ -485,10 +486,10 @@ export class JournalScene implements GameScene {
     this.sign.setAttribute('viewBox', `0 0 ${sg.w} ${sg.h}`);
     this.sign.setAttribute('role', 'img');
     Object.assign(this.sign.style, {
-      left: `${rx + 46}px`,
-      top: `${ly + RULE_TOP + RULE_PITCH * 5 - sg.baseline}px`,
-      width: `${sg.w}px`,
-      height: `${sg.h}px`,
+      left: dpx(rx + 46),
+      top: dpx(ly + RULE_TOP + RULE_PITCH * 5 - sg.baseline),
+      width: dpx(sg.w),
+      height: dpx(sg.h),
     });
     const sigPath = doc.createElementNS(SVG_NS, 'path');
     sigPath.setAttribute('d', trailingSignature(sg.scribble, sg.h, sg.baseline));
@@ -501,7 +502,7 @@ export class JournalScene implements GameScene {
       'div',
       {
         class: 'lr-j-empty',
-        style: { left: `${lx + 40}px`, top: `${ly + 280}px`, width: `${L.leafL.w - 80}px` },
+        style: { left: dpx(lx + 40), top: dpx(ly + 280), width: dpx(L.leafL.w - 80) },
       },
       'No pages yet. Restore a machine.',
     );
@@ -511,7 +512,7 @@ export class JournalScene implements GameScene {
         type: 'button',
         class: 'lr-j-turn',
         'aria-label': 'Previous page',
-        style: { left: `${lx + 26}px`, top: `${ly + L.leafL.h - 76}px` },
+        style: { left: dpx(lx + 26), top: dpx(ly + L.leafL.h - 76) },
         on: {
           click: (e: Event) => {
             (e.currentTarget as HTMLElement).blur();
@@ -527,7 +528,7 @@ export class JournalScene implements GameScene {
         type: 'button',
         class: 'lr-j-turn',
         'aria-label': 'Next page',
-        style: { left: `${rx + L.leafR.w - 90}px`, top: `${ly + L.leafR.h - 76}px` },
+        style: { left: dpx(rx + L.leafR.w - 90), top: dpx(ly + L.leafR.h - 76) },
         on: {
           click: (e: Event) => {
             (e.currentTarget as HTMLElement).blur();
@@ -553,10 +554,10 @@ export class JournalScene implements GameScene {
       class: 'lr-j-plate',
       'aria-live': 'polite',
       style: {
-        left: `${p.x - p.w / 2}px`,
-        top: `${p.y - p.h / 2}px`,
-        width: `${p.w}px`,
-        height: `${p.h}px`,
+        left: dpx(p.x - p.w / 2),
+        top: dpx(p.y - p.h / 2),
+        width: dpx(p.w),
+        height: dpx(p.h),
       },
     });
 
@@ -607,7 +608,7 @@ export class JournalScene implements GameScene {
       x,
     );
     this.ctx.ui.layers.hud.append(this.root);
-    this.unplace = placeWidgets(this.ctx.chrome, [
+    this.unplace = placeWidgets(this.ctx.ui, [
       { el: x, place: { default: 'right' }, id: 'lr-journal-close' },
     ]);
   }

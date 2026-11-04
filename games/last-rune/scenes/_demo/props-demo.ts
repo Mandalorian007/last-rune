@@ -324,7 +324,7 @@ export function startPropsDemo(surface: Surface, gpu: GpuContext): void {
 
   // FUSE's portrait in the engine/ui caption card, exactly as the game will use it.
   const ui = createOverlay({ parent: surface.root });
-  surface.onResize(({ rect }) => ui.setRect(rect));
+  surface.onResize(({ rect }) => ui.setFrame(rect));
   const pc = scene.portrait.canvas;
   if (shot === 'portrait') {
     pc.style.cssText +=

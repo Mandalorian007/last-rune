@@ -147,7 +147,7 @@ export function engineOptions(
     mixerKey: SAVE_GAME_ID,
     styles: (doc) => ensureGameStyles(doc, SCENE_PHONE_CSS),
     // Phones: menus, panels, the HUD and FUSE's lane in CSS px on layout regions (ui/chrome.ts).
-    overlay: { layout: CHROME_LAYOUT },
+    layout: CHROME_LAYOUT,
     // The HUD shortcuts (Codex, Settings, Journal) also work while a button or link has focus,
     // e.g. the ending's "Back to the hall". Back (Esc) and the arrows work on a focused button
     // too, so a clicked or Tabbed-to button never strands a keyboard player.
@@ -190,8 +190,7 @@ function isFallbackAdapter(adapter: GPUAdapter): boolean {
 
 /** Adds Last Rune's nouns to the engine ctx (the same object, so scenes see them). */
 export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): GameCtx {
-  const { surface, gpu, renderer, post, particles, input, audio, ui, chrome, host, device, save } =
-    engine;
+  const { surface, gpu, renderer, post, particles, input, audio, ui, host, device, save } = engine;
   const { stack, loop, hooks } = engine;
 
   // ── Graphics quality (Settings → Graphics; see game/graphics.ts) ───────
@@ -268,7 +267,6 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
         applyParticles();
         surface.root.toggleAttribute('data-reduced-motion', e.reducedMotion);
         applyTextScale(ui.root, e.textScale / 100, (t) => ui.setTheme(t));
-        if (chrome) applyTextScale(chrome.ui.root, e.textScale / 100, (t) => chrome.ui.setTheme(t));
       },
     },
     prefersReducedMotion(),
@@ -278,6 +276,7 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
   const fuse = new Fuse(ui.caption, {
     voice: (text) => sound.fuse.onChar(fuseModeForTier(tier()), text),
     cardWords: () => (device.phone ? PHONE_WORDS_PER_CARD : undefined),
+    scale: () => ui.scale,
   });
   // Animated FUSE portrait in the caption card (one canvas, reused for every line).
   const portrait = createFusePortrait(renderer, { size: 96, zoom: 0.46 });
@@ -328,19 +327,23 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
       },
     });
 
-  const hud = new Hud(ui.layers.hud, {
-    codex: () => {
-      sfx('ui.click');
-      if (!codex.isOpen) fuse.hush(); // a fresh line after the codex, not a resumed one
-      codex.toggle();
+  const hud = new Hud(
+    ui.layers.hud,
+    {
+      codex: () => {
+        sfx('ui.click');
+        if (!codex.isOpen) fuse.hush(); // a fresh line after the codex, not a resumed one
+        codex.toggle();
+      },
+      settings: () => {
+        sfx('ui.click');
+        fuse.hush();
+        doOpenSettings();
+      },
+      journal: () => openJournal(),
     },
-    settings: () => {
-      sfx('ui.click');
-      fuse.hush();
-      doOpenSettings();
-    },
-    journal: () => openJournal(),
-  });
+    () => ui.scale,
+  );
   // The desk opens from the hall or over an altar (the board waits underneath, paused). An
   // altar mid-strike says no (`canPause`): the bolt and its verdict play out first.
   const openJournal = () => {
@@ -358,14 +361,14 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
     return j.found.filter((p) => !j.read.includes(p)).length;
   };
   // Phones: FUSE's lane, the ☰ in its rail, the "turn sideways" card (ui/chrome.ts).
-  const gameChrome = createGameChrome({ chrome, ui, hud: hud.root, surface, device });
+  const gameChrome = createGameChrome({ ui, hud: hud.root, surface, device });
   gameChrome.scene(flow.state);
   engine.setFill(flow.state);
   flow.onChange((state) => {
     engine.setFill(state);
     gameChrome.scene(state);
     // Scenes own their caption avoid regions; leaving the altar must never strand one.
-    if (state !== 'puzzle') fuse.avoid(null);
+    if (state !== 'puzzle') fuse.keepClear(null);
     hud.visible = state === 'hall' || state === 'puzzle' || state === 'solve';
     hud.root.dataset.scene = state;
     hud.journalShown(state === 'hall' || state === 'puzzle', unreadPages(), state === 'hall');

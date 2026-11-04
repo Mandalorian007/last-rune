@@ -135,7 +135,7 @@ async function audit(beat: string): Promise<AuditIssue[]> {
       '.lr-altar-tip',
       '.lr-hud',
       '.lr-nameplate',
-      '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
+      '.tc-caption',
       '.lr-solve-card',
       '.lr-page-note',
       '.lr-solve-continue',

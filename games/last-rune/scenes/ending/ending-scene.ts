@@ -27,6 +27,7 @@ import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
 import { progressOf } from '../../game/save';
 import { coffeeLinkWidget, linkLabels } from '../../ui/coffee';
+import { dpx } from '../../ui/frame-units';
 import { deriveHall } from '../hall/hall-state';
 import { DeskArt } from '../journal/desk-art';
 import { PAPER, PROP } from '../journal/desk-wgsl';
@@ -361,10 +362,10 @@ export class EndingScene implements GameScene {
     const C = this.clip;
     const page = clipPage(C);
     const s = this.noteEl.style;
-    s.left = `${Math.round(page.x - page.w / 2)}px`;
-    s.top = `${Math.round(page.y - page.h / 2)}px`;
-    s.width = `${page.w}px`;
-    s.height = `${page.h}px`;
+    s.left = dpx(Math.round(page.x - page.w / 2));
+    s.top = dpx(Math.round(page.y - page.h / 2));
+    s.width = dpx(page.w);
+    s.height = dpx(page.h);
     s.transform = `rotate(${C.rot}rad)`;
   }
 

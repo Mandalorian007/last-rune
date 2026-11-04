@@ -24,6 +24,7 @@ import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
 import type { Placement } from '../../rules';
 import { capabilityLabel, getMachine, socketColour } from '../../rules/progression';
+import { dpx } from '../../ui/frame-units';
 import { CSS_PALETTE } from '../../ui/styles';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, GOLD } from './altar-view';
@@ -255,15 +256,15 @@ export class SolveScene implements GameScene {
       : h('div', { class: 'lr-solve' }, card, this.pageEl, this.contEl);
     if (band) {
       this.dom.dataset.phone = '';
-      this.dom.style.setProperty('--lr-col-l', `${band.colL}px`);
-      this.dom.style.setProperty('--lr-col-w', `${band.colR - band.colL}px`);
+      this.dom.style.setProperty('--lr-col-l', dpx(band.colL));
+      this.dom.style.setProperty('--lr-col-w', dpx(band.colR - band.colL));
       const st = this.ctx.ui.root.style;
       const capL = Math.round(band.colL + 50 * band.cssPx);
-      st.setProperty('--lr-scap-l', `${capL}px`);
-      st.setProperty('--lr-scap-w', `${1920 - capL}px`);
+      st.setProperty('--lr-scap-l', dpx(capL));
+      st.setProperty('--lr-scap-w', dpx(1920 - capL));
       // The bubble's tail points at FUSE's face (altar-view lifts him clear of the edge).
       const f = this.view.fuse;
-      st.setProperty('--lr-scap-face', `${Math.round(1080 - f.y + 1.5 * f.scale)}px`);
+      st.setProperty('--lr-scap-face', dpx(Math.round(1080 - f.y + 1.5 * f.scale)));
     }
     this.ctx.ui.layers.hud.append(this.dom);
   }

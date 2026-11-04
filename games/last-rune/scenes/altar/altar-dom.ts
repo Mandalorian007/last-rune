@@ -2,10 +2,11 @@
  * The altar's DOM: built once per layout, refreshed as the board changes.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import { button, h } from '@thunderclap/engine/ui';
+import { button, h, toFrameUnits } from '@thunderclap/engine/ui';
 import { GEM_COLOUR } from '../../art/props/palette';
 import { isRotational, stormCharge } from '../../rules';
 import { getMachine } from '../../rules/progression';
+import { dpx } from '../../ui/frame-units';
 import { CSS_PALETTE } from '../../ui/styles';
 import { type AltarColumn, placeAltarChrome } from './altar-chrome';
 import { GEM_NAME, type HintMode, hintLine, SVG_NS, timesWord } from './altar-defs';
@@ -131,7 +132,7 @@ export const domMethods = {
     this.verdict = h('div', {
       class: 'lr-altar-verdict',
       hidden: true,
-      style: { left: `${L.titleX}px`, maxWidth: `${L.titleMax}px` },
+      style: { left: dpx(L.titleX), maxWidth: dpx(L.titleMax) },
     });
     if (L.titleMax < 600) this.verdict.dataset.narrow = '';
     this.announcer = h('div', {
@@ -161,8 +162,8 @@ export const domMethods = {
     // Phones: at the foot of the left rail instead (altar-chrome.ts).
     if (!L.phone) {
       const trayRight = Math.max(...L.tray.map((s) => s.x), TRAY_CENTER_X);
-      this.turnBtn.style.left = `${trayRight + 80}px`;
-      this.turnBtn.style.top = `${L.trayY}px`;
+      this.turnBtn.style.left = dpx(trayRight + 80);
+      this.turnBtn.style.top = dpx(L.trayY);
     }
     // altar-truth: phones mark Turn's target too (its own class: a small \u21bb on the gem's corner).
     this.turnMark = h(
@@ -179,10 +180,10 @@ export const domMethods = {
         class: 'lr-altar-count',
         // Bigger text lifts the count up the gem so the hint line below stays clear.
         style: {
-          left: `${s.x}px`,
+          left: dpx(s.x),
           top: L.phone
-            ? `${Math.round(s.y + s.size / 2 + L.phone.cssPx)}px`
-            : `calc(${s.y + 40}px - (var(--tc-text-scale, 1) - 1) * 50px)`,
+            ? dpx(Math.round(s.y + s.size / 2 + L.phone.cssPx))
+            : toFrameUnits(`calc(${s.y + 40}px - (var(--tc-text-scale, 1) - 1) * 50px)`),
         },
       }),
     );
@@ -192,7 +193,7 @@ export const domMethods = {
       h('div', {
         class: 'lr-altar-need',
         'data-align': m.label.align,
-        style: { left: `${m.label.x}px`, top: `${m.label.y}px` },
+        style: { left: dpx(m.label.x), top: dpx(m.label.y) },
       }),
     );
     // The storm says what it gives, in the same card as the machines' needs, so "Gives 4" and
@@ -202,7 +203,7 @@ export const domMethods = {
       {
         class: 'lr-altar-need lr-altar-storm',
         'data-align': L.storm.label.align,
-        style: { left: `${L.storm.label.x}px`, top: `${L.storm.label.y}px` },
+        style: { left: dpx(L.storm.label.x), top: dpx(L.storm.label.y) },
       },
       h(
         'span',
@@ -238,7 +239,7 @@ export const domMethods = {
     }
     this.titleEl = h(
       'div',
-      { class: 'lr-altar-title', style: { left: `${L.titleX}px` } },
+      { class: 'lr-altar-title', style: { left: dpx(L.titleX) } },
       h('h2', null, getMachine(this.machine).name),
       this.subtitle,
       this.holdingEl,
@@ -308,7 +309,7 @@ export const domMethods = {
     // Phones: the rail buttons in the chrome's rails, the column beside the board, and the
     // board in what they leave (altar-chrome.ts).
     this.offRails = placeAltarChrome(
-      this.ctx.chrome,
+      this.ctx.ui,
       this.ctx.device,
       {
         back,

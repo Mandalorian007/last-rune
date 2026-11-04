@@ -54,7 +54,7 @@ async function boot(page: Page, solved: readonly string[]) {
 
 /** Tap a design-space (1920×1080) point. */
 async function tapAt(page: Page, x: number, y: number) {
-  const r = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const r = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const s = r.width / 1920;
   await page.touchscreen.tap(r.x + x * s, r.y + y * s);
   await waitFrames(page, 4);
@@ -193,7 +193,7 @@ test('a gem in hand turns by ↻ before it is placed; dragging a placed gem off 
   await expect(page.locator('.lr-altar-count[data-held]')).toHaveCount(0);
   // Drag it off the altar, through the engine's input feed (Input + linked Gestures, the
   // same calls the DOM listeners make): down on the gem, eight moves to the floor, up.
-  const r = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const r = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const s = r.width / 1920;
   const touch = (phase: 'down' | 'move' | 'up', x: number, y: number) =>
     page.evaluate(
@@ -237,7 +237,7 @@ test('the Last Rune at 667×375: a finger drag from the tray shows the loupe and
   await openAltar(page, 'the-last-rune');
   const p = puzzleFor('the-last-rune');
   const L = await liveLayout(page);
-  const box = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const box = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const k = box.width / 1920;
   // Sockets here are under 44 CSS px apart: the loupe's whole reason.
   expect(L.pitch * k).toBeLessThan(44);

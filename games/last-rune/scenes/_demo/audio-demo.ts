@@ -67,7 +67,7 @@ export function startAudioDemo(root: HTMLElement): AudioDemoHandle {
   const host = h('div', { style: css('position:fixed;inset:0;background:#0d1016') });
   root.appendChild(host);
   const ui = createOverlay({ parent: host });
-  const fitOverlay = () => ui.setRect({ x: 0, y: 0, width: innerWidth, height: innerHeight });
+  const fitOverlay = () => ui.setFrame({ x: 0, y: 0, width: innerWidth, height: innerHeight });
   fitOverlay();
   addEventListener('resize', fitOverlay);
 

@@ -15,7 +15,7 @@
  * - **The end card** is a column of 40 px controls (44 px to the finger), set left of centre
  *   so the dropped clipboard on the right stays a prop, apart from the buttons.
  */
-import { cpx, P, tpx } from '../../ui/phone-base';
+import { cpx, P, ph, tpx } from '../../ui/phone-base';
 
 /** Right edge of the right bar column, 3 CSS px in from the bar's edge. */
 const BAR_IN = `calc(-1 * var(--tc-bar, 0px) + ${cpx(3)})`;
@@ -40,11 +40,11 @@ ${P} .lr-end-skip {
 }
 
 /* ── FUSE's ending lines: bottom left, clear of him (he stands right of centre) ── */
-${P}:has(.lr-ending) .tc-caption {
+${ph(':has(.lr-ending)')} .tc-caption {
   left: ${cpx(8)} !important; right: auto !important; top: auto !important; bottom: ${cpx(8)} !important;
   max-width: min(${cpx(330)}, 1160px) !important; padding: ${cpx(6)} ${cpx(11)} ${cpx(5)};
 }
-${P}:has(.lr-ending) .tc-caption-text { font-size: ${tpx(14)}; line-height: 1.32; }
+${ph(':has(.lr-ending)')} .tc-caption-text { font-size: ${tpx(14)}; line-height: 1.32; }
 
 /* ── Hangout: one conversation, full screen ────────────────────────────── */
 ${P} .lr-hg {
@@ -190,7 +190,7 @@ ${P} .lr-end-footer {
 /* The whole ending fills the width like the hangout (ctx FILL_BANDS.ending), so everything
    anchored to the top or the bottom moves in by the crop. */
 ${P} .lr-end-skip { top: calc(${CT} + ${cpx(4)}); }
-${P}:has(.lr-ending) .tc-caption { bottom: calc(${CB} + ${cpx(8)}) !important; }
+${ph(':has(.lr-ending)')} .tc-caption { bottom: calc(${CB} + ${cpx(8)}) !important; }
 ${P} .lr-hg { top: ${CT}; height: calc(1080px - ${CT} - ${CB}); }
 /* "Plays by itself" beside Skip (or alone in its place on a first ending): a newcomer knows to
    watch, and that Skip is there. Desktop keeps its Skip · Esc. */

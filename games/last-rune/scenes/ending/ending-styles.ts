@@ -3,7 +3,7 @@
  * The hangout window (hangout-styles.ts), title card, safety record, credits, end card
  * and the post-credits clipboard. Phones add ending-phone-styles.ts.
  */
-import { scaleFontSizes } from '@thunderclap/engine/ui';
+import { designSheet } from '../../ui/styles';
 import { HAND_FONT } from '../journal/journal-styles';
 import { ENDING_PHONE_CSS } from './ending-phone-styles';
 import { HANGOUT_CSS } from './hangout-styles';
@@ -122,6 +122,6 @@ export function ensureEndingStyles(doc: Document): void {
   if (doc.getElementById('lr-ending-styles')) return;
   const el = doc.createElement('style');
   el.id = 'lr-ending-styles';
-  el.textContent = scaleFontSizes(HANGOUT_CSS + CSS + ENDING_PHONE_CSS);
+  el.textContent = designSheet(HANGOUT_CSS + CSS + ENDING_PHONE_CSS);
   doc.head.append(el);
 }

@@ -56,7 +56,7 @@ const meets = (a: Box, b: Box) =>
 
 /** Every count badge's rect against every tray gem's glyph box (CSS px), as drawn now. */
 async function badgeClashes(page: Page, label: string): Promise<string[]> {
-  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const k = ob.width / 1920;
   const seen = await page.evaluate(() => {
     const v = (window as G).__altarView;
@@ -113,7 +113,7 @@ for (const ph of PHONES) {
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
-        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+        const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
         const k = ob.width / 1920;
         // Hold each gem in turn: the held gem is drawn bigger than its slot.
         for (const s of L.tray) {
