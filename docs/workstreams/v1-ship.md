@@ -35,3 +35,43 @@ D-041 adopted the ThunderClap engine refactor ([../engine/refactor-plan.md](../e
   - any open issues.
 
 ## Log
+
+### 2026-11-03: v1-ship agent
+
+**Version and label.** `package.json` is at 1.0.0. The itch build has no release label, and the Pages workflow's manual label default is `v1.0.0` instead of `alpha` (6f479a6).
+
+**Baselines (`pnpm baseline`, scripts/baseline/).**
+- **Set.** 129 shots: 43 per viewport at 1280×720, 1920×1080 and iPad 1180×820, all at 1×. Stored as 256-colour palette PNGs, 34.1 MiB in total (720: 9.1, 1080: 17.0, iPad: 8.2). Regenerated after merging main at the content freeze, which includes mobile-7-teach and zoom-removal.
+- **Compare.** Playwright's `toHaveScreenshot` can't diff a quantised baseline. `compare.ts` maps each capture onto the baseline's palette and counts the indices that changed. On failure it writes an actual image and a diff image.
+- **Determinism, measured rather than assumed.** The first full compare against a fresh set failed 21 of 129 shots, and one hall shot at 1080 was off by 18.6% (a lightning flash). Fixes, all on the test side:
+  - `performance.now` comes from the fake `Date`. The fake clock's own carried a few ms of real page-load offset.
+  - Boot is awaited in real time with the clock still.
+  - `advance()` steps one frame per round trip. `until()` gives its condition real time before stepping one frame.
+  - Realtime audio is removed before boot. The engine reports it "unavailable" and plays silently. Unlocking audio started real-time pre-render work that interleaved with frames.
+  - Title and hall shots are timed between lightning strikes.
+  - Key presses get real time to arrive.
+- **Tolerance.**
+  - **Band-edge slack of 8 RGB.** Raw GPU renders of the same frame differ by 1–2 levels on 3–6% of pixels; after palette mapping that was 6–12k changed indices. With the slack it was 1–6.
+  - **0.1% changed pixels, plus one retry.** In 3 compares of an unchanged tree, most shots changed 0–61 px and the worst outlier outside verdict-fail was 617 px (solve-card at 1080). Real changes run to tens of thousands of px. A single changed short word may slip under the limit at 1080, so the per-shot numbers are printed, and `BASELINE_MAX_DIFF=0` is exact.
+  - **verdict-fail has its own 1% limit.** At identical game time, frame count and random draws it still varies by up to 0.5%, in the failed strike's smoke and FUSE's idle pose. I didn't find the cause.
+- **Unchanged-tree result.** `pnpm baseline` passed 129 of 129 in 3.9 min, with no retries needed.
+- **BASELINE.md** has the machine and browser, the full-run timings (6 passed in 3.1 min) and the perf harness (60 fps at p95 in every scene at High, DPR 1).
+
+**itch kit.**
+- `pnpm package:itch` writes `build/last-rune-itch-1.0.0.zip`: 271,748 B (265.4 KB) zipped, 855 KB unpacked, 2 files (index.html and one script).
+- **itch:sim.**
+  - `smoke.spec` already covers boot in the itch iframe, storage and `fullscreenEnabled`.
+  - The new `tests/e2e/itch-release.spec.ts` covers audio and reload. It checks that no AudioContext runs before the click and one is running after Play, that a save lands in the frame's localStorage, and that Continue appears after a reload. It passed on two runs (8.8 s and 6.4 s).
+- **shipping-itch.md §0–2.**
+  - Saves use only `thunderclap:last-rune:` keys, there are no `localStorage.clear` calls, and the store falls back to memory.
+  - Still manual: itch's own fullscreen button, `?sandbox=1`, and live Safari checks.
+- **Release notes, itch copy and devlog** are in docs/release/v1.0.md, which says phones arrive in 1.1. Nothing was uploaded (D-012).
+
+**Open issues for the PM.**
+- **Repo history.** The set adds ~34 MB of PNGs. Each future regenerate adds another ~34 MB to git history, so regenerate only at gates.
+- **Machine-specific set.** It matches this M4/Metal/Chromium 156 setup. Another machine needs its own regenerate from a known-good commit.
+- **verdict-fail residual noise.** The cause is unknown (see Tolerance). It is a candidate to investigate in the engine refactor: particles or an animation not on the fixed step.
+- **Desktop bugs.** None found in the 129 shots.
+- **Ending emoji.** The colour emoji in the ending rely on a system emoji font, which is present on macOS. Worth checking on Windows.
+
+**Gates on the final tree.** `pnpm check` passes (61 files, 772 tests passed, 2 skipped). `pnpm build` passes. `pnpm test:e2e` passed 135 with 2 skipped in 7.3 min, under load from other agents, with no flaky tests and no reruns needed.
