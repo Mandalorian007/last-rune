@@ -195,7 +195,7 @@ fn g_cut(kind: i32) -> Cut {
   } else if (kind == 1) {   // square cushion
     c.sides = 4.0; c.phase = TAU / 8.0; c.scale = vec2f(1.08);
   } else if (kind == 2) {   // wide hexagon, pointing at both outs
-    c.sides = 6.0; c.phase = 0.0; c.scale = vec2f(0.98, 0.98);
+    c.sides = 6.0; c.phase = 0.0; c.scale = vec2f(1.08, 1.0);
   } else if (kind == 3) {   // round brilliant
     c.sides = 12.0; c.phase = 0.0; c.scale = vec2f(0.97);
   } else if (kind == 4) {   // shield
@@ -431,7 +431,8 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32, soft: f32) -> f32 {
   var a = alpha;
   if (ghost) {
     let gm = clamp(max(max(gl.r, gl.g), gl.b), 0.0, 1.0);
-    a = alpha * mix(0.36, 0.58, smoothstep(0.15, 0.7, gm));
+    // glyph-truth-4: a port's hole is open in the ghost, the socket shows through it.
+    a = alpha * mix(0.36, 0.58, smoothstep(0.15, 0.7, gm)) * (1.0 - hole);
     let rimD = abs(f.sdf / pxUnit + 2.8);
     let rimW = max(1.4, 0.035 / pxUnit);
     let rimLine = 1.0 - smoothstep(rimW - 0.6, rimW + 0.6, rimD);
