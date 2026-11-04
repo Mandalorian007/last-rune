@@ -61,7 +61,8 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9j | Strike free: Strike framed as a free test, no attempt counters, verdict as information (D-043; no live readout) | ws/strike-free | 2 | 9h | ✅ merged |
 | 9m | Strike free 2: Capacitor plan vs arrival card on pre-filled phone boards; end card drops the miss count | ws/strike-free-2 | 2 | 9j | 🔄 running |
 | 9k | Menu flow: audit and clean up title/hall/altar/solve/ending menus, one back pattern, Journal in altar menu (D-043) | ws/menu-flow | 2 | 9i | ✅ merged |
-| 9l | Cover art: 8 itch covers rendered by the game at /cover-image/ for user review (D-043) | ws/cover-art | — | — | ✅ merged; live at /cover-image/, user picks |
+| 9l | Cover art: 8 itch covers rendered by the game at /cover-image/ for user review (D-043) | ws/cover-art | — | — | ✅ merged; user picked #8 fuse-portrait (D-043 add. 1) |
+| 9n | Cover final: keep fuse-portrait, page off Pages, `pnpm cover` writes the PNG | ws/cover-final | — | 9l | 🔄 running |
 | G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 6: 7/7/7/7 (D-040 add. 7; up from 6.6) → 9f–9k, then blind review 7 |
 | 10 | Camera + math | ws/camera | 3 | 9 | ⏳ |
 | 11 | Transforms + layer/depth sort | ws/transforms | 3 | 9 | ⏳ |
