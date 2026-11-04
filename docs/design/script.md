@@ -863,7 +863,7 @@ depends on them. Source: `content/codex.ts` (rule, chip, maths), `scenes/altar/s
 | Codex footer | The numbers are charge. A storm gives 4 a strike; 2× gives 8, 4× 16. |
 | Channel | Carries the charge straight through, whichever way it enters. The charge is unchanged. · chip: Carries the charge straight through, unchanged. · `out = in` |
 | Bend | Turns the charge round the corner along its bent line, either way. Charge entering any other side is lost. · chip: Turns the charge along its bent line. Other sides lose it. · `out = in, round the corner` |
-| Split | Charge enters at the plain end and leaves by both arrows, half each. Odd charge, or charge from any other side, is lost. · chip: In at the plain end, half out each arrow. Odd or wrong side: lost. · `4 → 2 + 2 · odd → lost` |
+| Split | Charge enters at the round port and leaves by both arrows, half each. Odd charge, or charge from any other side, is lost. · chip: In at the round port, half out each arrow. Odd or wrong side: lost. · `4 → 2 + 2 · odd → lost` |
 | Amplify | Doubles the charge, once per path. Charge that has already passed an Amplify, even split since, goes through unchanged. · chip: Doubles the charge, once per path. Already doubled: unchanged. · `4 → 8 · 8 → 8 (already doubled)` |
 | Gate | Both ports, same strike: the sum leaves by the arrow. One port alone, or charge at the back, is lost. · chip: Both ports, same strike: the sum leaves by the arrow. · `out = a + b, only if both arrive` (teach-7: one sentence on the codex, the chip and the teach card) |
 | Capacitor | Stores the first charge it gets; nothing comes out. Next strike, the new charge pushes both out together, straight on. · chip: Stores its first charge; next strike, lets out both. |

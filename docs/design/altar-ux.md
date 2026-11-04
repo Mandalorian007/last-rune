@@ -133,7 +133,7 @@ It sits between FUSE (x ≤ 410) and his caption card; the altar passes its meas
   whose arms end in arrowheads on the sides the halves leave by (rules.md section 4). Nothing on
   the gem points at its input (the old trillion's apex did, and read as an arrow backwards). The tray Split shows rot 0 (in from below, out left and
   right). A fixed Split met for the first time gets guide stubs into its stem and out of both
-  arms. Its card reads the Codex rule (`Charge enters at the plain end and leaves by both
+  arms. Its card reads the Codex rule (`Charge enters at the round port and leaves by both
   arrows, half each.`). Charge into any other side is lost (`Turned the wrong way: charge lost`).
 - **Storm and needs.** Every altar shows `Gives N` by the storm and `Needs N` by each machine.
 - **Strike-ready.** Strike glows on any altar once the route (over all strikes) reaches every

@@ -5,7 +5,7 @@
  *
  * Consistent with `docs/design/rules.md`, written as the player sees it. "Charge" is the one
  * noun for what flows (mobile-6-moments): no bolts, fizzles, stems or arms. Each rule names
- * what the gem's glyph shows (the Bend's bent line, the Split's plain end and arrows, the
+ * what the gem's glyph shows (the Bend's bent line, the Split's round port and arrows, the
  * Gate's ports and arrow). A 1× storm gives 4 (2× = 8, 4× = 16), and the gauge wants an
  * exact fill. Card limits: `rule` ≤ CODEX_RULE_MAX_WORDS
  * words, `maths` ≤ CODEX_MATHS_MAX_CHARS characters on one line.
@@ -65,8 +65,8 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
   split: {
     gem: 'split',
     name: 'Split',
-    rule: 'Charge goes in at the plain end; half comes out of each arrow. Odd charge, or charge from another side, is lost.',
-    chip: 'Charge in at the plain end, half out of each arrow; odd charge lost.',
+    rule: 'Charge goes in at the round port; half comes out of each arrow. Odd charge, or charge from another side, is lost.',
+    chip: 'In at the round port, half out of each arrow; odd charge lost.',
     maths: 'In 4 → out 2 and 2. Odd charge is lost.',
   },
   amplify: {
