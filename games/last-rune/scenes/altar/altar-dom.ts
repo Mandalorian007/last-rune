@@ -11,7 +11,8 @@ import { type AltarColumn, placeAltarChrome } from './altar-chrome';
 import { GEM_NAME, type HintMode, hintLine, SVG_NS, timesWord } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { TRAY_CENTER_X } from './layout';
-import { type HintSlot, phoneHint, pickHint } from './moments';
+import { type HintSlot, LAMP_LINE, phoneHint, pickHint } from './moments';
+import { keepTogether } from './nowrap';
 
 export const domMethods = {
   /**
@@ -48,7 +49,17 @@ export const domMethods = {
     if (key === this.hintMode) return;
     this.hintMode = key;
     if (other) {
-      this.hint.replaceChildren(other);
+      // teach-4: the gauge-dot line starts with the dot it explains, lit as on the gauge.
+      const dot =
+        slot === 'lamp'
+          ? h('i', {
+              class: 'lr-need-lamp',
+              'data-on': '',
+              'data-red': String(other === LAMP_LINE.over),
+              'aria-hidden': 'true',
+            })
+          : null;
+      this.hint.replaceChildren(...(dot ? [dot] : []), keepTogether(other));
       this.hint.dataset.mode = 'slot';
       this.avoidTray();
       return;
@@ -196,7 +207,7 @@ export const domMethods = {
       h(
         'span',
         { class: 'lr-need-row' },
-        'Gives ',
+        'Gives\u00a0',
         h('b', null, String(stormCharge(this.puzzle.storm.strength))),
       ),
     );

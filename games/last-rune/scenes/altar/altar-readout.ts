@@ -10,6 +10,7 @@ import { listText, OUTCOME_WORD, RING_NAME, RING_RULE, timesWord } from './altar
 import type { AltarScene } from './altar-scene';
 import { type CapBeat, capBeatText, planOver } from './circuit-model';
 import { cellCenter } from './layout';
+import { keepTogether } from './nowrap';
 import { strikeLabel } from './strike';
 
 export const readoutMethods = {
@@ -32,7 +33,7 @@ export const readoutMethods = {
         ? `${n} strikes`
         : `Strike ${now + 1} of ${n}`;
     if (this.strikeCount)
-      this.strikeCount.textContent = now < 0 ? timesWord(n) : `${now + 1} of ${n}`;
+      this.strikeCount.textContent = now < 0 ? timesWord(n) : keepTogether(`${now + 1} of ${n}`);
 
     this.strikePips.forEach((el, i) => {
       el.toggleAttribute('data-lit', i % n <= now);
@@ -49,7 +50,7 @@ export const readoutMethods = {
    */
   setStrikeWord(this: AltarScene, state: 'edit' | 'strike' | 'fail', now = -1): void {
     if (!this.strikeWord || !this.view.layout.phone) return;
-    const text = strikeLabel(this.puzzle.pulses, state, now);
+    const text = keepTogether(strikeLabel(this.puzzle.pulses, state, now));
     if (this.strikeWord.textContent !== text) this.strikeWord.textContent = text;
   },
 
@@ -119,7 +120,7 @@ export const readoutMethods = {
             'data-kind': b.kind,
             ...(need === undefined ? {} : { 'data-warn': '' }),
           },
-          capBeatText(b, this.puzzle.pulses, need),
+          keepTogether(capBeatText(b, this.puzzle.pulses, need)),
         );
         if (live) el.hidden = true;
         this.capLines.push(el);
@@ -175,14 +176,16 @@ export const readoutMethods = {
   ): void {
     // The verdict sits where the subtitle is; the subtitle steps aside until the next edit.
     this.subtitle.style.display = 'none';
-    this.verdict.textContent = text;
+    this.verdict.textContent = keepTogether(text);
     // Phones, multi-strike: each strike's reading, in words, right under the headline.
-    if (strikes) this.verdict.append(h('small', { class: 'lr-verdict-strikes' }, strikes));
+    if (strikes)
+      this.verdict.append(h('small', { class: 'lr-verdict-strikes' }, keepTogether(strikes)));
     // Phones: where it went wrong rides in the verdict, not in a tag over the board.
-    if (cause) this.verdict.append(h('small', { class: 'lr-verdict-cause' }, cause));
-    if (story) this.verdict.append(h('small', { class: 'lr-verdict-story' }, story));
+    if (cause) this.verdict.append(h('small', { class: 'lr-verdict-cause' }, keepTogether(cause)));
+    if (story) this.verdict.append(h('small', { class: 'lr-verdict-story' }, keepTogether(story)));
     // One visible next step (the fizzle tags fade; this stays until the next edit).
-    else if (hint) this.verdict.append(h('small', { class: 'lr-verdict-hint' }, hint));
+    else if (hint)
+      this.verdict.append(h('small', { class: 'lr-verdict-hint' }, keepTogether(hint)));
     this.verdict.dataset.outcome = outcome;
     this.verdict.hidden = false;
     this.fitTop();
@@ -281,7 +284,7 @@ export const readoutMethods = {
     ];
     // Multi-strike: each strike is read on its own; the strikes never add up at the machine.
     if (got === null && this.puzzle.pulses > 1)
-      kids.push(h('span', { class: 'lr-need-note' }, 'in one strike'));
+      kids.push(h('span', { class: 'lr-need-note' }, 'in\u00a0one\u00a0strike'));
     if (got !== null) {
       kids.push(h('span', { class: 'lr-need-got' }, 'got ', h('b', null, String(got))));
       const rs = this.strikeReadings[i] ?? [];

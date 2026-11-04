@@ -95,7 +95,7 @@ async function strikeRead(page: Page) {
     const app = document.getElementById('app')!.getBoundingClientRect();
     const lines = w ? w.getClientRects().length : 0;
     return {
-      word: w?.textContent ?? '',
+      word: (w?.textContent ?? '').replace(/\u00a0/g, ' '),
       lines,
       h: r.height,
       right: Math.min(app.right, window.innerWidth) - r.right,
@@ -184,7 +184,10 @@ for (const vp of PHONES) {
       // 3. The two-strike fail: compact card, each strike in words, "Try again".
       await strike(page);
       const v = await page.evaluate(() => ({
-        verdict: document.querySelector('.lr-altar-verdict')?.textContent ?? '',
+        verdict: (document.querySelector('.lr-altar-verdict')?.textContent ?? '').replace(
+          /\u00a0/g,
+          ' ',
+        ),
         cards: [...document.querySelectorAll<HTMLElement>('.lr-altar-need')]
           .filter((el) => el.offsetParent)
           // biome-ignore lint/performance/useDomNodeTextContent: the card as laid out, line by line

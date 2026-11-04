@@ -108,6 +108,53 @@ ${LANE} > .lr-altar-tip b { margin-right: 4px; }
 ${LANE} > .lr-altar-tip .lr-info-eg {
   display: block; margin-top: 2px; font: 14px/1.3 ${SERIF}; color: #a8ccf5; white-space: normal;
 }
+/* teach-4: the first Gate, Split or Capacitor card shows the gem as the codex draws it (the
+   real gem material), turned as it sits here, with the charge going in and out. It floats
+   beside the rule so the card stays the height of its words (SE lane: 163 px). */
+${LANE} > .lr-altar-tip .lr-fig {
+  float: right; position: relative; width: 72px; height: 72px; margin: 1px -4px 2px 6px;
+  border-radius: 10px; background: #22262f; box-shadow: 0 0 0 1.5px rgba(214,169,78,0.55);
+}
+${LANE} > .lr-altar-tip .lr-fig[data-small='true'] {
+  float: left; width: 46px; height: 46px; margin: 2px 8px 0 0; border-radius: 8px;
+}
+${LANE} > .lr-altar-tip .lr-fig-turn { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; }
+${LANE} > .lr-altar-tip .lr-fig-gem { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+${LANE} > .lr-altar-tip .lr-fig-bolt { position: absolute; inset: 0; pointer-events: none; }
+${LANE} > .lr-altar-tip .lr-fig-bolt svg {
+  width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 2px rgba(80,200,255,0.9));
+}
+${LANE} > .lr-altar-tip .lr-fig-bolt line { stroke: #9cf0ff; stroke-width: 4.5; stroke-linecap: round; }
+${LANE} > .lr-altar-tip .lr-fig-bolt polygon { fill: #9cf0ff; stroke: #9cf0ff; stroke-width: 1.5; stroke-linejoin: round; }
+${LANE} > .lr-altar-tip .lr-fig-chip {
+  position: absolute; transform: translate(-50%, -50%); min-width: 1.3em; padding: 0 0.25em; box-sizing: border-box;
+  border-radius: 999px; white-space: nowrap; text-align: center;
+  font: 600 14px/1.1 ${SERIF}; color: #eaf8ff;
+  background: rgba(10,18,26,0.92); border: 1.5px solid rgba(120,200,255,0.75); box-shadow: 0 0 4px rgba(80,180,255,0.45);
+}
+${LANE} > .lr-altar-tip .lr-fig-chip[data-kind='out'] { border-color: #3fe0ff; color: #dff9ff; }
+${LANE} > .lr-altar-tip .lr-fig-nogo {
+  position: absolute; width: 13px; height: 13px; transform: translate(-50%, -50%); border-radius: 50%; box-sizing: border-box;
+  background: rgba(30,6,4,0.92); border: 1.5px solid #ff5a3c;
+}
+${LANE} > .lr-altar-tip .lr-fig-nogo::before, ${LANE} > .lr-altar-tip .lr-fig-nogo::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 7px; height: 2px; background: #ffb4a4;
+  border-radius: 1px; transform: translate(-50%, -50%) rotate(45deg);
+}
+${LANE} > .lr-altar-tip .lr-fig-nogo::after { transform: translate(-50%, -50%) rotate(-45deg); }
+/* The Capacitor's two strikes, each on its own line, never broken mid-way. */
+${LANE} > .lr-altar-tip .lr-info-strip { display: block; color: #a8ccf5; }
+${LANE} > .lr-altar-tip .lr-info-strip > span { display: block; white-space: nowrap; }
+/* teach-4: the gauge-dot line starts with the dot it explains. */
+${LANE} > .lr-altar-hint .lr-need-lamp {
+  display: inline-block; width: 10px; height: 10px; margin: 0 6px 0 0; border-radius: 50%; vertical-align: 0.05em;
+  background: radial-gradient(circle at 40% 35%, #effdff 0 25%, #5fe6ff 60%, #1fb5e0);
+  box-shadow: 0 0 0 1px #d6fbff, 0 0 6px 2px rgba(63,224,255,0.85);
+}
+${LANE} > .lr-altar-hint .lr-need-lamp[data-red='true'] {
+  background: radial-gradient(circle at 40% 35%, #fff0ea 0 25%, #ff7a5c 60%, #d8341c);
+  box-shadow: 0 0 0 1px #ffd6cc, 0 0 6px 2px rgba(255,90,60,0.85);
+}
 ${LANE} > .lr-altar-tip .lr-info-foot {
   order: 1; position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between;
   gap: 8px; margin: 2px -10px 0; padding: 1px 10px; min-width: 0; float: none;
