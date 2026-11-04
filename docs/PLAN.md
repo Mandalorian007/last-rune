@@ -63,7 +63,10 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9k | Menu flow: audit and clean up title/hall/altar/solve/ending menus, one back pattern, Journal in altar menu (D-043) | ws/menu-flow | 2 | 9i | ✅ merged |
 | 9l | Cover art: 8 itch covers rendered by the game at /cover-image/ for user review (D-043) | ws/cover-art | — | — | ✅ merged; user picked #8 fuse-portrait (D-043 add. 1) |
 | 9n | Cover final: keep fuse-portrait, page off Pages, `pnpm cover` writes the PNG | ws/cover-final | — | 9l | ✅ merged (`pnpm cover`; /cover-image/ off Pages) |
-| G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 6: 7/7/7/7 (D-040 add. 7; up from 6.6) → 9f–9k, then blind review 7 |
+| 9o | Dense board: board takes the space on phones, hit areas = cells, badges/orb off neighbours, loupe aim shots (D-040 add. 8) | ws/dense-board | 2 | G2 r7 | 🔄 running |
+| 9p | Teach 5: "Strike ×2" + pips, diagram-above-text cards, Amplify diagram, Needs-dot legend, solve/ending/menu/title minors (D-040 add. 8) | ws/teach-5 | 2 | G2 r7 | 🔄 running |
+| 9q | Glyph truth 2: Split/Gate inlets at board size, Channels along their run, one tray orientation, disabled Turn/Undo/Clear, one lock badge (D-040 add. 8) | ws/glyph-truth-2 | 2 | G2 r7 | 🔄 running |
+| G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 7: 7/7/7/7 (D-040 add. 8) → 9o–9q, then blind review 8 |
 | 9.5 | One overlay: `ctx.ui` in CSS px on every form factor; delete `createCssChrome`, `legacyScale`, `avoid()`; desktop/iPad baselines unchanged. **Phase 3 entry condition** (D-044) | ws/one-overlay | 3 (entry) | 9c | 🔄 running; held from main until blind review 7 is compiled |
 | 10 | Camera + math: matrix `Camera`, `fitRect` fed by `layout.freeRect`; delete `EngineCtx.device`, `fillBands`, `setFill(key)`, `device-mode.ts` (D-044) | ws/camera | 3 | 9.5, G2 | ⏳ |
 | 11 | Transforms + layer/depth sort | ws/transforms | 3 | 9 | ⏳ |

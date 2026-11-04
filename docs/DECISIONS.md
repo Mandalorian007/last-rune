@@ -334,3 +334,38 @@ The user brought an external review of the engine at 0.2.0-alpha.1 (full text: `
 - **ws/render-call absorbs debts 4 and 5.** `Renderer.render(frame, camera, target)`; `Host.requestFrame` (rAF on web and Electron, `XRSession.requestAnimationFrame` later); `GameLoop` takes its frame source from the host. The `Host` change is logged in DECISIONS and `CHANGELOG.md` when it lands.
 - **No Forgewilds engine work until Gate 3.** It would inherit the two-overlay model and the fixed pipeline. PLAN row 17's "Forgewilds ws 1" starts after Gate 3.
 - **Timing (PM).** ws/one-overlay starts now in a worktree, because phones already run CSS px and Gate 2 judges phones. It is **held from main** until blind review 7 is compiled, and must keep the desktop and iPad baselines (`pnpm baseline`) unchanged, or within the baseline tolerance with each diff explained. ws/camera and the other Phase 3 rows wait for it and for Gate 2.
+
+### D-040 addendum 8: gate review 7 (Gate 2 blind review, PM, 2026-11-04)
+Blind review 7 on `gate7` (main after glyph-truth, teach-4, chrome-polish-4, menu-flow, strike-free and strike-free-2) scored **7 / 7 / 7 / 7** (SE, iPhone, Pro Max, Android), so Gate 2 fails again. All four say the art, the chrome, the failure feedback and the teaching are close to shippable, and the visuals match the rules wherever they traced them. They agree on:
+- **Dense boards are too small (1 blocker, 3 major).** Pitch is about 26–31 px on The Last Rune, about 30–33 on Lift Shaft and Capacitor Bay, and about 33–39 on Archive and Control Booth. Meanwhile the right ~40% of the screen holds only the tray, one card and FUSE. The magnify loupe exists, but no still shows it. A 10×8 board on a 320 px-high SE at full height can't reach 44 px. **Call:**
+  - the board takes the space: full height, with the column shrinking on dense boards;
+  - hit areas larger than the ring;
+  - badges and the source orb clear of neighbouring sockets;
+  - a held-aim shot with the loupe added to the gate set.
+
+  → ws/dense-board. This is the external review's debt 3 seen from the product side. It is done with today's `layout.setForms` and `surface.setFrame`, without pulling ws/camera forward.
+- **"Strike (2 left)" reads as a lives counter (4/4 major).** That contradicts D-043. It becomes "Strike ×2", with two pips that light one per pulse. The Capacitor card says that one tap sends two pulses and that a miss resets for free. → ws/teach-5.
+- **Teaching cards (3/4).**
+  - The Split and Gate diagram cards wrap into a narrow column ("Power / the no- / arrow end").
+  - Amplify's "once per path" has no picture.
+  - The Furnace line about Channels is cryptic.
+  - The Needs dot (hollow, lit, red) is never explained.
+  - The Capacitor warning is clipped.
+
+  → ws/teach-5. There is still no "would get N" readout (D-043 stands).
+- **Orientation on the board (3/4).**
+  - The Split's input end and the Gate's input sides blur at board size.
+  - The Channel's tray icon flips orientation between levels.
+  - Some locked Channels look drawn across their run (Splitter Mill r2c1, the Lift Shaft rows).
+  - Turn, Undo and Clear have no disabled state.
+  - The teach callout's leader line through the lock badge reads as ⊘.
+
+  → ws/glyph-truth-2.
+- **Minors**, folded into the workstreams above:
+  - the solve card shows no "got 8 ✓";
+  - the ending has no visible skip;
+  - the ☰ menu covers the hint;
+  - the title FUSE box is oversized.
+
+  → ws/teach-5.
+- **Gate unchanged:** an average of at least 8 with no blocker or major issue, then the real-phone retest. ws/one-overlay stays held until these three workstreams have merged and blind review 8 is compiled.
