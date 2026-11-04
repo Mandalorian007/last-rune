@@ -96,6 +96,19 @@ Plan: [../engine/refactor-plan.md](../engine/refactor-plan.md), "Phase 1" → ws
   - Dropped the obsolete zoom.ts → camera2d mentions (addendum 1) from ARCHITECTURE.md and from the open issues below.
 - No game specs moved. The game's `pnpm test:e2e` is untouched (testDir `tests/e2e`).
 
+### 2026-11-03: merged main at v1.0.0 (baselines), Gate 1 pixel check (merge 6672c56)
+- **Merge:**
+  - One conflict, in `package.json` scripts: kept both `test:e2e:engine` and main's `baseline`.
+  - Also restored the literal em dash in `description`, which my earlier JSON rewrite had escaped to `—`.
+  - No `@engine` imports came in (boundary check ok, 269 files). The only stale path was a comment in `scripts/baseline/stage.ts` (`engine/core/loop.ts`); it now points at `packages/engine/src/core/loop.ts`.
+- **`pnpm check`:** engine 210 tests; game 562 passed, 2 skipped; boundaries ok.
+- **`pnpm build`:** ok. `dist/` is byte-identical (`diff -r`) to a build of main exported with `git archive`.
+- **`pnpm baseline`: 129/129 passed (3.9 min).**
+  - 93 shots changed by 0 px.
+  - Of the rest, the largest were verdict-fail (4,446 px, 0.48% of its 1% limit) and solve-card (617 px, 0.03%). Every other shot changed by 61 px or less.
+  - These are exactly the numbers BASELINE.md records for an unchanged tree ("Compare 3"), so this is capture noise, not a pixel change. The identical bundle confirms it.
+- **`pnpm test:e2e`:** 135 passed, 2 skipped, 0 failed (7.3 min). Full-run included.
+
 ### Open issues for later Phase 1 workstreams
 - **host:** create `packages/engine/src/host/` and add `"./host": "./src/host/index.ts"` to the exports map; the boundary check picks it up. Today `window.open`/`navigator.clipboard`/`localStorage` appear in `platform/links.ts`, `ui/link.ts`, `ui/padnav.ts`, `save/storage.ts`, `save/store.ts`.
 - **promote-ui:** new engine files go under `packages/engine/src/<module>/` and are re-exported from that module's `index.ts`. The game must import the promoted code from its module subpath (`@thunderclap/engine/ui`, …), not a deep path. (The zoom.ts → camera2d promotion is off since D-041 addendum 1.) List each promotion in `CHANGELOG.md`.
