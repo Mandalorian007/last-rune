@@ -127,7 +127,8 @@ describe('endCard', () => {
     expect(c.footer).toBe(ENDING_COPY.footer);
     expect(c.title).toEqual(ENDING_COPY.titleCard);
     expect(c.safety).toContain('1h 29m');
-    expect(c.safety).toContain('Breakers tripped: 7');
+    expect(c.safety).toContain('Breakers reset at no charge.');
+    expect(c.safety).not.toContain('7');
   });
 
   it('hides the Ko-fi link while its URL is blank', () => {

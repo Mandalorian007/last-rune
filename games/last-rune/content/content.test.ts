@@ -338,10 +338,11 @@ describe('ending', () => {
   });
 
   it('safety record line stays in voice and in budget', () => {
-    expect(safetyRecordLine({ playSeconds: 3725, breakersTripped: 3 })).toBe(
-      'Visitor #4,211. Time on site: 1h 2m. Breakers tripped: 3. Generous. Monitoring continues.',
+    expect(safetyRecordLine({ playSeconds: 3725 })).toBe(
+      'Visitor #4,211. Time on site: 1h 2m. Breakers reset at no charge. Monitoring continues.',
     );
-    expect(safetyRecordLine({ playSeconds: 0, breakersTripped: 0 })).toContain('Suspicious');
+    // A miss costs nothing (D-043): the line never counts them.
+    expect(safetyRecordLine({ playSeconds: 0 })).not.toMatch(/tripped|Generous|Suspicious/);
   });
 });
 

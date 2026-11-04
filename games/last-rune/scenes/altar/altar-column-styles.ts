@@ -212,10 +212,14 @@ ${LANE} > .lr-altar-verdict .lr-verdict-cause { color: #ffb3a0; }
 ${LANE} > .lr-altar-verdict .lr-verdict-strikes { color: #f4e6c4; }
 ${LANE} > .lr-altar-verdict .lr-verdict-free { color: #bfe9f2; }
 
-/* Capacitor read-outs: the plan steps aside while a gem is in hand or FUSE speaks. */
+/* Capacitor read-outs: the plan steps aside while a gem is in hand, FUSE speaks or the arrival
+   card is up. */
 ${LANE} > .lr-altar-cap { display: flex; flex-direction: column; gap: 0; }
 ${LANE} > .lr-altar-cap:not(:has(.lr-cap-line:not([hidden]))) { display: none; }
 ${LANE}:is([data-hand], [data-fuse]) > .lr-altar-cap[data-plan] { display: none; }
+/* strike-free-2: the arrival card wins while it shows; the plan waits (on a pre-filled board
+   it squeezed the card on an SE down to its "New here" footer). */
+${LANE}:has(> .lr-altar-tip[data-source="intro"]:not([hidden])) > .lr-altar-cap[data-plan] { display: none; }
 ${LANE} .lr-cap-head { font: 600 13px/1.2 var(--tc-font-display, serif); letter-spacing: 0.5px; color: #9fc8ff; }
 
 /* The how-to line keeps its own slot (D-040 addendum 3): with a gem's card and while FUSE talks
