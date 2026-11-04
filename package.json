@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:engine": "pnpm --filter @thunderclap/engine test:e2e",
+    "engine:release": "node scripts/engine-release.mjs",
     "baseline": "playwright test -c scripts/baseline/playwright.config.ts",
     "package:itch": "node scripts/package-itch.mjs",
     "itch:sim": "node scripts/itch-sim/serve.mjs",
