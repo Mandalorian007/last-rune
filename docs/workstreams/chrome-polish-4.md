@@ -15,3 +15,20 @@ Source: D-040 addendum 7. Shots: `docs/design/screens/local/gate6/{se,iphone,pro
 - Commit to `ws/chrome-polish-4` and never merge. Log here.
 
 ## Log
+
+**2026-11-04: all five minors fixed (branch ws/chrome-polish-4).**
+- **Hall dots and lines.** The hall art no longer draws coloured sockets on door art (`hall-view.ts` `applyStatus` → `setSockets([])`). Each door's card already names its gems in words. Every lit conduit is cyan, so colour no longer suggests a gem kind it doesn't stand for. The "New page in journal" badge is now one line beside Menu: to its left, vertically centred, with a red dot. It no longer wedges under Menu. `mobile-hall.spec` asserts it sits beside Menu, stays on screen and is one line.
+- **Title.** Coffee and Copy link are quiet dotted text links, so Play is the only filled CTA. In landscape the menu (Play, Settings) sits in the right column, bottom-aligned. The links run small along the bottom from 41% across, so FUSE and the orb are fully visible on SE and iPhone. In portrait the docked caption no longer stretches; it is centred at its own height.
+- **End card (phones).** Back to the hall is the gold primary. Join is a dark secondary pill that keeps its ↗ and stays above Ko-fi (D-034). The shot seeds real stats (47m, 4 breakers); stats were already real in flow.ts. The clipboard is whole on all five phones. chrome-polish-3's phoneClipRest still holds.
+- **Ending cue.** "Plays by itself" is now an upright, muted status line with a pulsing gold live dot. It no longer has a ▶ or underline, and reduced-motion stops the pulse.
+- **Journal on SE.** At max-height 330 the plate text is tighter (line-height 1.1, narrower padding, raised box). It fits in 3 lines, well clear of the bottom edge.
+- **Gates.** `pnpm check` green, `pnpm build` green and `pnpm test:e2e` green. mobile-hall's badge one-line threshold went from 24 to 30 because the badge measures 24.2px. That spec reran alone: 4/4 passed.
+- **Baselines (not regenerated).** These diffs are intended:
+  - hall-first: desktop-720 2.6%, desktop-1080 2.4%, iPad 2.2%
+  - hall-mid: about 4–5% on the same three
+  - end-card: about 0.7–1.2%, from the hall backdrop behind it; the desktop end card is unchanged
+  - settings: about 0.4%, from the hall backdrop
+  - codex: about 0.2%, from the hall backdrop
+  - Not from this work: altar-*-empty on desktop-720 (boiler-room, archive, foundry) and iPad capacitor-bay, about 0.13–0.18%. The diff pixels sit on the storm orb and FUSE, so they look like animation noise.
+- **Shots.** `docs/design/screens/local/gate7/{se,iphone,promax,android,portrait}/` (01-title, 02-hall*, 05-journal, 30-ending, 31-hangout, 32-end-card).
+- **For the PM.** On desktop, Join is still the big gold CTA on the end card. Only phones changed here. Decide whether desktop should follow (Back primary, Join secondary).

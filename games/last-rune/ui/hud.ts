@@ -407,8 +407,8 @@ export class Hud {
     b.toggleAttribute('data-unread', unread > 0);
     this.menuBtn.toggleAttribute('data-unread', shown && unread > 0);
     this.menuNew.hidden = !(shown && unread > 0);
-    // Phones: a tag under the ☰ that says where the new page is (two short lines, rail wide).
-    this.menuNew.replaceChildren(unread > 1 ? 'New pages ' : 'New page ', h('br'), 'in journal');
+    // Phones: a tag beside the ☰ that says where the new page is (one line).
+    this.menuNew.textContent = unread > 1 ? 'New pages in journal' : 'New page in journal';
     this.menuBtn.setAttribute(
       'aria-label',
       shown && unread > 0 ? 'Menu, new journal pages' : 'Menu',

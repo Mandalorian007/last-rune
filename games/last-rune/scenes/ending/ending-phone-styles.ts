@@ -206,25 +206,20 @@ ${P} .lr-end-cue {
   text-shadow: 0 0 ${cpx(3)} #000, 0 0 ${cpx(8)} rgb(0 0 0 / 0.85);
 }
 ${P} .lr-end-cue[data-alone] { right: ${BAR_IN}; }
-/* chrome-polish-3 (Gate 2 review 5: "does it want a tap?"): a gold ▶ before the words and a
-   slow light running under them, as a player's "now playing" shows, so the ending reads as
-   playing on its own. Still bare text: no fill, no border, no taps. */
-${P} .lr-end-cue { font-size: ${tpx(13)}; gap: ${cpx(6)}; }
+/* chrome-polish-4 (blind review 6: the ▶ and the running underline made it read as a button):
+   a status line, small, muted and upright, led by a soft pulsing lamp like a "live" light.
+   No arrow, no underline, no fill, no border, no taps. */
+${P} .lr-end-cue {
+  font: 400 ${tpx(12)}/1 var(--tc-font-body, serif); letter-spacing: 0.06em; gap: ${cpx(6)};
+  color: rgb(239 226 196 / 0.78);
+}
 ${P} .lr-end-cue::before {
-  content: ''; flex: none; width: 0; height: 0; border-style: solid; border-color: transparent;
-  border-width: ${cpx(5)} 0 ${cpx(5)} ${cpx(8)}; border-left-color: #e8c06a;
-  filter: drop-shadow(0 0 ${cpx(3)} #000);
+  content: ''; flex: none; width: ${cpx(6)}; height: ${cpx(6)}; border-radius: 50%;
+  background: #e8c06a; box-shadow: 0 0 ${cpx(4)} #e8c06a; animation: lr-end-live 2.4s ease-in-out infinite;
 }
-${P} .lr-end-cue::after {
-  content: ''; position: absolute; left: ${cpx(24)}; right: ${cpx(10)}; bottom: ${cpx(6)}; height: ${cpx(2)};
-  border-radius: ${cpx(1)}; background: linear-gradient(90deg, transparent, #e8c06a, transparent) no-repeat;
-  background-size: 40% 100%; animation: lr-end-playing 2.4s linear infinite; opacity: 0.85;
-}
-@keyframes lr-end-playing { from { background-position: -70% 0; } to { background-position: 170% 0; } }
-@media (prefers-reduced-motion: reduce) {
-  ${P} .lr-end-cue::after { animation: none; background: rgb(232 192 106 / 0.5); }
-}
-[data-reduced-motion] ${P} .lr-end-cue::after { animation: none; background: rgb(232 192 106 / 0.5); }
+@keyframes lr-end-live { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { ${P} .lr-end-cue::before { animation: none; } }
+[data-reduced-motion] ${P} .lr-end-cue::before { animation: none; }
 ${P} .lr-hg-top { padding-right: calc(${LANE} + ${cpx(130)}); }
 ${P} .lr-hg-log {
   padding-top: ${cpx(8)};
@@ -263,11 +258,20 @@ ${P} .lr-end-footer {
   grid-column: 1 / -1; justify-self: center; margin: ${cpx(2)} 0 0; padding: 0; border-radius: 0;
   background: none; box-shadow: none; text-shadow: none; color: #f4e6c4; font-size: ${tpx(12.5)}; text-align: center;
 }
+/* chrome-polish-4 (blind review 6): Back to the hall is the primary action, the gold button;
+   Join is an outbound link, a dark secondary pill like the coffee (still above it, D-034). */
 ${P} .lr-end-card .lr-end-back {
-  grid-column: 1 / -1; justify-self: center; min-width: ${cpx(180)}; margin: 0;
-  color: #fff1cc; background: rgb(255 240 200 / 0.08); border: 1px solid rgb(255 227 160 / 0.6);
-  border-radius: ${cpx(10)}; box-shadow: none; font-family: var(--tc-font-body, serif);
+  grid-column: 1 / -1; justify-self: center; min-width: ${cpx(200)}; margin: 0;
+  color: #2a1600; background: linear-gradient(#ffe8a8, #e9b04a 55%, #b9761f); border: 0;
+  border-radius: ${cpx(10)}; font-family: var(--tc-font-display, serif); font-weight: 700; letter-spacing: 0.02em;
+  box-shadow: 0 ${cpx(3)} ${cpx(12)} #ffb43a88, inset 0 1px 0 #fff8, inset 0 -2px 0 #7a4a1088;
 }
+${P} .lr-end-card .lr-end-back:hover { filter: brightness(1.08); }
+${P} .lr-end-card a.lr-end-join {
+  color: #fff1cc; background: #2a1606c0; border: 1px solid #ffe3a055; box-shadow: none;
+  font-family: var(--tc-font-body, serif); font-size: ${tpx(13.5)}; font-weight: 400;
+}
+${P} .lr-end-card a.lr-end-join:hover { filter: none; background: #3c220bd8; border-color: #ffe3a0aa; }
 /* end mobile-6-chrome */
 
 /* mobile-7-ending */
