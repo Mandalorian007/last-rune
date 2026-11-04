@@ -41,10 +41,10 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 
 | # | Workstream | Branch | Phase | Depends on | State |
 |---|---|---|---|---|---|
-| 1 | Ship v1.0 (desktop + iPad), tags `v1.0.0` + `engine-v0.1`, baselines | main / ws/v1-baselines | 0 | mobile-7 landed | 🟡 |
-| 2 | Workspace + `@thunderclap/engine` package + ARCHITECTURE.md | ws/workspace | 1 | 1 | ⏳ |
-| 3 | Host layer (web) | ws/host | 1 | 2 | ⏳ |
-| 4 | Promote menu-nav, text-scale, device-mode, rotate card, camera2d | ws/promote-ui | 1 | 2 | ⏳ |
+| 1 | Ship v1.0 (desktop + iPad), tags `v1.0.0` + `engine-v0.1`, baselines | main / ws/v1-baselines | 0 | mobile-7 landed | ✅ Gate 0 (GitHub Release + itch upload with user) |
+| 2 | Workspace + `@thunderclap/engine` package + ARCHITECTURE.md | ws/workspace | 1 | 1 | ✅ merged, incl. engine e2e harness |
+| 3 | Host layer (web) | ws/host | 1 | 2 | 🟡 running |
+| 4 | Promote menu-nav, text-scale, device-mode, rotate card (camera2d dropped: addendum 1) | ws/promote-ui | 1 | 2 | 🟡 running |
 | 5 | `createGame()` from game/ctx.ts | ws/create-game | 1 | 3, 4 | ⏳ |
 | 6 | Gestures | ws/gestures | 2 | 5 | ⏳ |
 | 7 | Layout regions + overlay in CSS px | ws/layout | 2 | 5 | ⏳ |
