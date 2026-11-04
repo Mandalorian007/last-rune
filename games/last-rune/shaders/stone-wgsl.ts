@@ -367,8 +367,21 @@ fn altar_surf(px: vec2f) -> Surf {
     let full = vec2f(W, topH + fh);
     e = -st_rbox(px - full * 0.5, full * 0.5 - 3.0, 28.0);
   }
-  e -= (engine_fbm(px * 0.04 + 9.0, 4) - 0.4) * 10.0;
-  e -= smoothstep(0.65, 0.9, engine_noise(px * 0.02 + seed)) * 18.0;
+  let chips = (engine_fbm(px * 0.04 + 9.0, 4) - 0.4) * 10.0 +
+    smoothstep(0.65, 0.9, engine_noise(px * 0.02 + seed)) * 18.0;
+  // glyph-truth-3: a carved (blocked) cell inside a phone's slab is deliberate stone, not a
+  // tear. Its edges against the slab are clean cut lines (no chips there), and the slab plus
+  // its recesses share one outline: the recess is chipped along that outline exactly as the
+  // slab is, so it never pokes past the board's edge (Furnace's top notch, Lift Shaft's stub).
+  var rd0 = 1e5;
+  var outerD = 1e5;
+  var chipK = 1.0;
+  if (hug) {
+    rd0 = alt_recess(px);
+    outerD = min(alt_hug(px), rd0);
+    chipK = max(1.0 - smoothstep(0.0, 6.0, -rd0), 1.0 - smoothstep(4.0, 14.0, -outerD));
+  }
+  e -= chips * chipK;
   s.alpha = smoothstep(0.0, 1.5, e);
 
   let lipY = topH;
@@ -469,8 +482,8 @@ fn altar_surf(px: vec2f) -> Surf {
     let sh = 0.75 * (1.0 - smoothstep(0.0, 18.0, -e));
     // A blocked cell inside the slab (mobile-6-board): the same stone, sunk a step, its floor
     // shaded where the raised stone overhangs it. Never the black wall in a clipped box.
-    let rd = alt_recess(px) - (engine_fbm(px * 0.04 + 3.0, 3) - 0.4) * 6.0;
-    let rk = (1.0 - smoothstep(-1.5, 1.5, rd)) * (1.0 - s.alpha);
+    let rk = (1.0 - smoothstep(-1.5, 1.5, rd0)) * smoothstep(0.0, 1.5, -outerD - chips) *
+      (1.0 - s.alpha);
     let sunk = st_slate_albedo(px * 0.9, hb, 1.4) * 1.3 * (0.62 + 0.3 * smoothstep(2.0, 22.0, -e));
     s.albedo = mix(SLATE_DARK * 0.15, s.albedo * 1.3, s.alpha);
     s.albedo = mix(s.albedo, sunk, rk);

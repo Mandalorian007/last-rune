@@ -69,15 +69,17 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
   } else if (kind == 1) {
     // Bend: an L through the centre, north door to east door (rules: rot 0 joins N-E), with a
     // rounded corner. Both legs run edge to centre, so the turn reads at a glance even small;
-    // no arrowhead (it is two-way).
-    let e = 0.72;
+    // no arrowhead (it is two-way). glyph-truth-3: exactly two arms and nothing else. The old
+    // door bar across each end read, lit and bloomed, as a third arm (a T, blind review 8), so
+    // each leg now ends plain at the rim, a touch heavier than the hairline glyphs, and nothing
+    // is drawn on the two dead sides (the hot core follows the stroke too, see fs_main).
+    let e = 0.74;
     let r = 0.26;
     d = g_seg(p, vec2f(0.0, -e), vec2f(0.0, -r));
     d = min(d, g_seg(p, vec2f(r, 0.0), vec2f(e, 0.0)));
     let q = p - vec2f(r, -r);
     if (q.x <= 0.0 && q.y >= 0.0) { d = min(d, abs(length(q) - r)); }
-    d = min(d, g_seg(p, vec2f(-0.16, -e), vec2f(0.16, -e)));
-    d = min(d, g_seg(p, vec2f(e, -0.16), vec2f(e, 0.16)));
+    d -= 0.03;
   } else if (kind == 2) {
     // Split (rules rot 0): one way in, from the south; out both sides (west and east), never
     // straight on. A bold T: the stem runs from the input rim to the centre, the crossbar runs
@@ -146,8 +148,8 @@ fn g_cut(kind: i32) -> Cut {
     c.sides = 6.0; c.phase = -TAU / 4.0; c.scale = vec2f(0.66, 1.0);
   } else if (kind == 1) {   // square cushion
     c.sides = 4.0; c.phase = TAU / 8.0; c.scale = vec2f(1.08);
-  } else if (kind == 2) {   // octagon, flats on the four sides: points nowhere, so the T leads
-    c.sides = 8.0; c.phase = TAU / 16.0; c.scale = vec2f(1.02);
+  } else if (kind == 2) {   // octagon, a corner on each side: points nowhere, so the T leads
+    c.sides = 8.0; c.phase = 0.0; c.scale = vec2f(1.02);
   } else if (kind == 3) {   // round brilliant
     c.sides = 12.0; c.phase = 0.0; c.scale = vec2f(0.97);
   } else if (kind == 4) {   // shield
@@ -213,9 +215,9 @@ fn g_facet(q: vec2f, cut: Cut) -> Facet {
   return f;
 }
 
-fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
+fn g_glyph_light(p: vec2f, kind: i32, w: f32, soft: f32) -> f32 {
   let d = g_glyph(p, kind);
-  return smoothstep(w, w * 0.4, d) + exp(-d * 20.0) * 0.3;
+  return smoothstep(w, w * 0.4, d) + exp(-d * 20.0) * soft;
 }
 
 @fragment fn fs_main(in: VSOut) -> FragOut {
@@ -233,6 +235,14 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
   let f = g_facet(q, cut);
   let pxUnit = 2.0 / in.size.x;              // gem-space units per px
   let alpha = clamp(0.5 - f.sdf / (pxUnit * 1.2), 0.0, 1.0);
+  // glyph-truth-3: how small the gem lands on screen (render px across it). Small gems (The
+  // Last Rune, Archive, Lift Shaft, a phone's tray) lose their direction marks to the glyph's
+  // soft glow and the bloom, which spread by screen pixels, not by gem size. So, small, the
+  // glyph glows less softly, blooms less and sits in a darker halo: arrowheads and inlets
+  // keep their shape. Large gems are unchanged.
+  let gemPx = 1.0 / max(fwidth(in.local.x), 1e-4);
+  let small = 1.0 - smoothstep(44.0, 84.0, gemPx);
+  let soft = 0.3 * (1.0 - 0.7 * small);
 
   // State knobs.
   var glow = 0.6;
@@ -267,9 +277,9 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
   let lw = 0.13;
   let disp = off * 0.08 + vec2f(0.008, 0.0);
   var gl = vec3f(
-    g_glyph_light(gp + disp, kind, lw),
-    g_glyph_light(gp, kind, lw),
-    g_glyph_light(gp - disp, kind, lw),
+    g_glyph_light(gp + disp, kind, lw, soft),
+    g_glyph_light(gp, kind, lw, soft),
+    g_glyph_light(gp - disp, kind, lw, soft),
   );
   // Energised: a pulse runs along the glyph from input to output.
   let flow = exp(-pow((fract(q0.y * 0.6 + t * 1.1) - 0.5) * 5.0, 2.0));
@@ -301,19 +311,32 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
   var glyphCol = mix(base, vec3f(1.0), 0.5 + 0.2 * energy) * glyphK;
   if (kind == 5) { glyphCol *= vec3f(0.78, 0.94, 1.12); }
   // A dark halo behind the stroke so the glyph stands off the coloured body.
-  let halo = 1.0 - smoothstep(lw * 1.2, lw * 3.0, g_glyph(gp, kind));
-  var col = body * (1.0 - halo * select(0.65, 0.0, dim));
+  let dgl = g_glyph(gp, kind);
+  let halo = 1.0 - smoothstep(lw * 1.2, lw * 3.0, dgl);
+  // glyph-truth-3: a Bend's two dead sides are dark body, lit or not. Its turn sits off the
+  // gem's centre, so a round hot core (and the body's glow) spilled past the elbow onto the
+  // dead sides and, under the solve bloom, read as a third arm. For the Bend the core runs
+  // along the stroke instead, and an energised Bend's body glow is held down beside it.
+  let bend = kind == 1;
+  let core = select(exp(-r2 * 12.0), exp(-pow(dgl / 0.1, 2.0)) * exp(-dot(q0, q0) * 2.5), bend);
+  // Past the elbow (rot 0: south of it or west of it) is the Bend's dead side; lit, it falls
+  // to shadow so the light visibly goes round the corner and nowhere else.
+  let deadSide = smoothstep(0.05, 0.45, max(gp.y, -gp.x));
+  let bodyK = select(1.0, 1.0 - energy * (0.45 + 0.45 * deadSide), bend);
+  body *= bodyK;
+  let haloK = max(select(0.65, 0.85, bend), 0.65 + 0.25 * small);
+  var col = body * (1.0 - halo * select(haloK, 0.0, dim));
   col += gl * glyphCol * 0.9;
   // Facet edges stay out of the glyph's way (a cut line must not read as part of the wiring).
-  col += base * edgeLine * (0.3 + 0.2 * fh) * select(1.0 - halo, 0.5, dim);
+  col += base * edgeLine * (0.3 + 0.2 * fh) * select(1.0 - halo, 0.5, dim) * bodyK;
   col += vec3f(1.0, 0.95, 0.9) * girdle * (0.18 + 0.5 * rimK);
   // Neighbour light glints, pulled toward white so a gem doesn't turn rainbow.
-  let specW = mix(lit.spec, vec3f(engine_luma(lit.spec)), 0.5) * select(0.55, 0.18, dim);
+  let specW = mix(lit.spec, vec3f(engine_luma(lit.spec)), 0.5) * select(0.55, 0.18, dim) * bodyK;
   col += specW * (0.6 + 0.8 * fh);
   col += vec3f(0.75, 0.85, 1.0) * keySpec * 0.55;
   col += lit.diffuse * base * 0.08;
   // Hot white core when energised.
-  col += mix(base, vec3f(1.0, 0.97, 0.92), 0.5) * exp(-r2 * 12.0) * energy * 0.35;
+  col += mix(base, vec3f(1.0, 0.97, 0.92), 0.5) * core * energy * 0.35;
   if (dim) {
     // Engraved glyph: a dark groove with a faint lit lower lip.
     let dg = g_glyph(q0 * 1.08, kind);
@@ -329,8 +352,8 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
 
   var o: FragOut;
   o.color = vec4f(col, alpha);
-  let em = base * (inner * 0.32 + veil * 0.1) * glow + gl * glyphCol * glow * 0.55 +
-    mix(base, vec3f(1.0), 0.3) * exp(-r2 * 14.0) * energy * 0.6 + specW * 0.2;
+  let em = base * (inner * 0.32 + veil * 0.1) * glow * bodyK + gl * glyphCol * glow * 0.55 * (1.0 - 0.4 * small) +
+    mix(base, vec3f(1.0), 0.3) * select(exp(-r2 * 14.0), core, bend) * energy * 0.6 + specW * 0.2;
   // Normalise by brightness so pale gems (capacitor) don't out-bloom saturated ones.
   let lumK = 0.35 / max(engine_luma(base), 0.35);
   o.emissive = vec4f(em * in.emissive * alpha * lumK * spentK, alpha);

@@ -55,12 +55,13 @@ ${A} .lr-altar-verdict .lr-verdict-strikes {
 }
 /* altar-truth: Turn's target on a phone, a small gold ↻ on the gem's corner (the one the Turn
    button will rotate: the gem just placed, else the one in hand). */
-.tc-overlay .lr-turn-target[hidden] { display: none; }
+/* glyph-truth-3: its [hidden] rule comes after this one; before, display: flex here won and the chip never hid. */
 ${A} .lr-turn-target {
   position: absolute; pointer-events: none; transform: translate(-50%, -50%); z-index: 2;
   width: ${cpx(22)}; height: ${cpx(22)}; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-size: ${tpx(15)}; line-height: 1; color: var(--lr-gold);
   background: rgba(20,16,12,0.92); border: 1px solid rgba(232,192,106,0.9); box-shadow: 0 ${cpx(1)} ${cpx(4)} rgba(0,0,0,0.7);
 }
+${A} .lr-turn-target[hidden] { display: none; }
 /* mobile-7-strike end */
 `;
