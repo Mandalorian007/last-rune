@@ -55,8 +55,8 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 12 | `render(camera, target)` | ws/render-call | 3 | 10, 11 | ⏳ |
 | 13 | Port game shaders to camera block | ws/port-shaders | 3 | 12 | ⏳ |
 | 14 | `?demo=mesh` | ws/demo-3d | 3 | 13 | ⏳ |
-| 15 | host-electron package + builds | ws/host-electron | 4 | 3 | 🟡 running (storage stays localStorage; PM call) |
-| 16 | Last Rune desktop boot + e2e | ws/last-rune-desktop | 4 | 15 | ⏳ |
+| 15 | host-electron package + builds | ws/host-electron | 4 | 3 | ✅ merged (D-042) |
+| 16 | Last Rune desktop boot + e2e | ws/last-rune-desktop | 4 | 15 | ⏳ next (after Phase 2 chrome port settles settings) |
 | 17 | Extract engine repo, publish engine-v1.0.0 | engine repo | 5 | 13, 16, Forgewilds ws 1 | ⏳ |
 
 ## Waves (Last Rune waves 1–5; up to 10 top-level agents from D-041)
