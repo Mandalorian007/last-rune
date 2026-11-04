@@ -303,3 +303,16 @@ Blind scores were 6.5 (SE), 6.5 (iPhone), 7 (Pro Max) and 6.5 (Android), average
   - ws/chrome-polish-3: the chrome minors.
   - Then blind review 6 on a fresh gate6 set.
 - **Gate unchanged:** ≥8/10 average with no blocker or major issue, then the real-phone retest.
+
+
+### D-040 addendum 7: gate review 6 (Gate 2 blind review, PM, 2026-11-04)
+Blind scores were 7 (SE), 7 (iPhone), 7 (Pro Max) and 7 (Android), average 7.0, so Gate 2 failed again (up from 6.6). Every layout major from addendum 6 is gone: no collisions, pills fit, the verdict shows its Try line. The PM checked the issues against `docs/design/screens/local/gate6/`.
+- **Confirmed blocker or major (all four reviewers): the solve screen contradicts the rules (D-027).** In `20-solve`, the Furnace reads "restored" with the Channel at (1,2) drawn horizontal inside a vertical run. `12-furnace-held` draws it vertical. Channels are not rotational; they lie along their run. So the solve render chooses a different direction than play. The built-in Amplify off the path glows full gold, and built-in gems lose their collar and padlock at the solve moment. Bloom whites out the glyphs on solve and on fail (`13-capacitor-bay-multi`). → ws/solve-truth (started at once).
+- **Confirmed majors.**
+  - *Gem glyphs hide the rule (4/4).* The Split's no-arrow end and the Gate's input stubs are faint and lost under glow. The tray ×N badge covers the Split's no-arrow end and the Gate's bottom input. Gems at ×0 turn into different-looking dark blobs. The Capacitor at ×1 looks disabled. Holding a gem lights every socket at full cream, which drowns the circuit. → ws/glyph-truth, after solve-truth (both touch gem rendering).
+  - *Advanced gems are taught in compressed one-liners (4/4).* Gate ("both sides": which?), Split and Capacitor. Multi-strike is learned by failing. The gauge dot (empty, cyan, red) is never explained. Nothing says Channels lie along their run, so a dim Turn while holding a Channel reads as broken. → ws/teach-4: in→out mini diagrams on the cards like the codex, a two-strike strip for the Capacitor, a first-time line for the gauge dot, a line saying "Channels lie along their run", Strike named in the first teach. Sums and units must not wrap mid-expression ("8 + 8 = 16", "Needs 20 in one strike").
+- **Majors held at the addendum 6 call.**
+  - *Small sockets on dense boards (4/4).* The Last Rune is height-bound (10×8, about 31 px pitch on Android). Width in the right column does not raise pitch. The small-target loupe stays (zoom-removal kept it) and does not show in stills. The real-phone retest judges tapping. If the user's retest finds mis-taps, that becomes the 1.1 blocker.
+- **Open product question for the user:** a live "will get N" on each gauge before Strike. Three of four reviewers asked for it. It changes the puzzle from predicting to reading, so the user decides. Until then teach-4 explains the existing dot.
+- **Minors** (hall dots and lines, title button weight, end card primary button and "Time on site", journal caption, FUSE position): → ws/chrome-polish-4.
+- **Gate unchanged.** After solve-truth, glyph-truth, teach-4 and chrome-polish-4 land, run blind review 7 on a fresh gate7 set.
