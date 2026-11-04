@@ -284,6 +284,11 @@ ${CL}:has(.lr-altar-head) .lr-hud[data-open]::before { top: 36px; }
 /* teach-5 (06-menu-altar): the list's panel sits over the lane, so the hint it would cut in
    half ("Tap a gem, ther…") steps out while the list is open and comes back when it closes. */
 ${CL}:has(.lr-altar-head):has(.lr-hud[data-open]) .lr-altar-hint { visibility: hidden; }
+/* polish-8 (06-menu-altar): under the scrim Strike's gold and FUSE's cream line still read as
+   live. While the list is open his line steps out (it comes back when the list closes) and
+   Strike goes grey like the rest of the altar's controls. */
+${CL}:has(.lr-altar-head):has(.lr-hud[data-open]) .tc-caption { visibility: hidden; }
+${CL}:has(.lr-altar-head):has(.lr-hud[data-open]) [data-action="strike"] { filter: saturate(0.1) brightness(0.55); }
 
 /* The teach leader (in the scaled overlay, over the board). */
 .tc-overlay .lr-teach-leader polyline { fill: none; stroke-linejoin: round; }

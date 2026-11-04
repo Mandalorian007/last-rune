@@ -60,12 +60,14 @@ export const CHROME_LAYOUT: LayoutSpec = {
       // and below): the picture takes every row the buttons, FUSE's lane and the links leave,
       // and the title fills that frame's height, cropping the sides (FILL_BANDS.title), so the
       // screen is the room from the Full screen row down to the menu.
+      // polish-8 (dead band under the menu): the menu, FUSE's one-line lane and the links rows
+      // hug what they hold, and the picture takes the rest.
       rows: [
         48,
         'fill',
-        { frac: 0.2, min: 150, max: 190 },
-        { frac: 0.11, min: 72, max: 104 },
-        { frac: 0.09, min: 56, max: 96 },
+        { frac: 0.17, min: 130, max: 160 },
+        { frac: 0.08, min: 56, max: 76 },
+        { frac: 0.06, min: 44, max: 60 },
       ],
       areas: [
         'top         top         top',
@@ -95,10 +97,21 @@ const LANDSCAPE_ONLY = new Set(['hall', 'puzzle', 'solve', 'journal', 'ending'])
 /** Scenes that show the HUD (☰). On phones it sits at the top of the right rail. */
 const HUD_SCENES = new Set(['hall', 'puzzle', 'solve']);
 
+/**
+ * The rotate card's body line per scene (polish-8: the hall had the altar's "This room" line).
+ * Each says what is wide about where the player stands.
+ */
+const ROTATE_LINES: Record<string, string> = {
+  hall: "The hall's doors stand side by side. It plays in landscape.",
+  puzzle: 'This room is wider than it is tall. It plays in landscape.',
+  solve: 'This room is wider than it is tall. It plays in landscape.',
+  journal: 'The journal lies open across the desk. It reads in landscape.',
+  ending: 'The last room is wider than it is tall. It plays in landscape.',
+};
+
 /** The rotate card's words (game copy) and the game's colours for it. */
 const ROTATE = {
   title: 'Turn your phone sideways',
-  lines: ['This room is wider than it is tall. It plays in landscape.'],
   note: { tag: 'FUSE', text: 'Sideways, visitor. The building was. Regulation 1.' },
   colors: {
     background: 'radial-gradient(circle at 50% 40%, #1d1530, #07050c 75%)',
@@ -181,6 +194,7 @@ export function createGameChrome(opts: {
   let captionHandle: WidgetHandle | null = null;
   let hudHandle: WidgetHandle | null = null;
   let rotate: RotateCard | null = null;
+  let rotateLine = '';
 
   const frame = () => {
     // Phones: the bars beside the journal's desk are the desk's own dark wood, not the night's ink.
@@ -216,11 +230,11 @@ export function createGameChrome(opts: {
       hudHandle?.remove();
       hudHandle = null;
     }
-    if (LANDSCAPE_ONLY.has(state)) {
-      rotate ??= createRotateCard({ ...ROTATE, device, doc });
-    } else {
+    const line = LANDSCAPE_ONLY.has(state) ? (ROTATE_LINES[state] ?? '') : '';
+    if (line !== rotateLine) {
       rotate?.destroy();
-      rotate = null;
+      rotate = line ? createRotateCard({ ...ROTATE, lines: [line], device, doc }) : null;
+      rotateLine = line;
     }
     frame();
   };

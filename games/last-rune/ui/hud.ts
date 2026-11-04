@@ -249,7 +249,9 @@ export class Hud {
     const g = at.gap ?? 6;
     const b = at.bounds;
     const ring = { x: at.x - at.w / 2, y: at.y - at.h / 2, width: at.w, height: at.h };
-    const obstacles: Obstacle[] = [{ rect: ring, weight: 4 }, ...this.plateBoxes(null, 10)];
+    // A margin round each plate (polish-8): a tag flush under a plate read as one label with it
+    // ("The Last Rune: Start here"), so the tag keeps a gap's clearance or moves beside the ring.
+    const obstacles: Obstacle[] = [{ rect: ring, weight: 4 }, ...this.plateBoxes(null, 10, g)];
     const menu = this.box(this.menuBtn);
     if (menu) obstacles.push({ rect: menu, weight: 10 });
     const inner = { left: b.left + g, top: b.top + g, right: b.right - g, bottom: b.bottom - g };
@@ -295,13 +297,20 @@ export class Hud {
     };
   }
 
-  /** Every door plate's box as an obstacle (but `skip`'s), design px. */
-  private plateBoxes(skip: string | null, weight: number): Obstacle[] {
+  /** Every door plate's box as an obstacle (but `skip`'s), grown by `pad` each side, design px. */
+  private plateBoxes(skip: string | null, weight: number, pad = 0): Obstacle[] {
     const out: Obstacle[] = [];
     for (const el of this.doorLayer.querySelectorAll<HTMLElement>('.lr-door')) {
       if (skip && el.dataset.door === skip) continue;
-      const rect = this.box(el);
-      if (rect) out.push({ rect, weight });
+      const r = this.box(el);
+      if (!r) continue;
+      const rect = {
+        x: r.x - pad,
+        y: r.y - pad,
+        width: r.width + 2 * pad,
+        height: r.height + 2 * pad,
+      };
+      out.push({ rect, weight });
     }
     return out;
   }

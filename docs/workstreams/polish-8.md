@@ -22,3 +22,29 @@ Don't touch scenes/altar layout, the loupe, gem art or teach copy: ws/dense-boar
 check, check:boundaries, build and test:e2e green. `pnpm baseline`: list intended diffs (don't update). `SHOTS=polish-8`; look at the changed screens on SE, Android and portrait. Commit to ws/polish-8 and never merge. Log here.
 
 ## Log
+
+- **Shots** (tests/e2e/shots.spec.ts):
+  - New Turn shots, each holding a gem that turns where it first reaches the tray:
+    - `12-furnace-held-bend` and `12-furnace-held-bend-turned`
+    - `12-press-unit-4-held-split` and `12-press-unit-4-held-split-turned`
+    - Turn is lit in each, and the turned shot waits for the gem to settle.
+  - Teach shots:
+    - `14-intake-desk-teach` and `14-relay-tower-teach` duplicated `10-*` and are gone.
+    - New `14-intake-desk-first-gem`: the card and board after the first gem is set.
+    - `14-intake-desk-teach-2` stays.
+    - `14-relay-tower-teach-2` is taken only if the card has a second page. Today it has none, so no shot.
+  - New `16-dot-legend`: the intake board seeded whole, card closed. It is keyed on `.lr-altar-hint[data-legend]:not([data-wait])` with a soft expect, so teach-6 changing when the legend shows won't break the run.
+- **Hall** (ui/hud.ts): the tag scorer now treats plates as obstacles grown 10 px, so "Start here" no longer reads as one label with the plate under it. It now sits beside the Intake Desk.
+- **Title, landscape**:
+  - The fill band is centred at y 600 (was 505), so FUSE stands whole on wide phones.
+  - A new `TitleViewFrame.compact` flag (phone landscape) makes the view draw the name at y 330, scale 0.8. `.lr-title[data-compact]` moves the subtitle to match.
+  - In compact mode the view drops the two short candles that burned through Copy link and the coffee link.
+  - FUSE's docked line now starts just right of his head.
+- **Title, portrait**:
+  - The menu, caption and links rows are tighter: cardLane 0.17/130..160, captionLane 0.08/56..76, bottom 0.06/44..60.
+  - The menu is centred in its lane, and `TITLE_UPRIGHT.minVisibleWidth` is 740.
+  - The name is drawn at scale 0.54 and the subtitle at 36 px, so both keep a margin.
+- **Menu over the altar** (altar-column-styles.ts): while ☰ is open, FUSE's caption is hidden and Strike is desaturated and darkened, so neither reads as live.
+- **Solve card** (altar-phone-styles.ts): the stray dark diamond was the caption's tail (`::after`). Its `bottom` came from FUSE's face height, which is greater than a one-line caption is tall, so it floated above the line. It is now clamped to the caption's own edge.
+- **Rotate prompt** (ui/chrome.ts): each landscape scene has its own line (`ROTATE_LINES`). The hall's is "The hall's doors stand side by side. It plays in landscape." The card is rebuilt when the line changes.
+- **Out of scope, seen in shots:** a small dark round chip overlaps the top right of the held Split's tray slot (12-press-unit-4-held-split). That is gem art or the tray, owned by glyph-truth-3 or dense-board-3.

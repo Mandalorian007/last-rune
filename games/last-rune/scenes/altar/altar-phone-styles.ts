@@ -108,7 +108,11 @@ ${P}:has(.lr-solve[data-phone]) .tc-caption {
   max-width: min(calc(var(--lr-scap-w) + var(--tc-bar, 0px) - ${cpx(12)}), var(--tc-third)) !important;
 }
 ${P}:has(.lr-solve[data-phone]) .tc-caption::after {
-  content: ''; position: absolute; left: ${cpx(-5)}; bottom: calc(var(--lr-scap-face, ${cpx(40)}) - ${cpx(8)} - ${cpx(4)});
+  /* polish-8 (20-solve, Android): when his face sits higher than a one-line caption is tall,
+     the unclamped tail floated above the line as a stray dark diamond under the card. Keep it
+     on the caption's own edge. */
+  content: ''; position: absolute; left: ${cpx(-5)};
+  bottom: clamp(${cpx(6)}, calc(var(--lr-scap-face, ${cpx(40)}) - ${cpx(8)} - ${cpx(4)}), calc(100% - ${cpx(14)}));
   width: ${cpx(8)}; height: ${cpx(8)}; background: inherit; border: 1px solid var(--tc-color-border);
   border-width: 0 0 1px 1px; transform: rotate(45deg); pointer-events: none;
 }
