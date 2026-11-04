@@ -19,8 +19,11 @@ export interface SettingsPanelDeps {
   readonly audio: AudioEngine;
   readonly save: GameSave;
   readonly settings: SettingsController;
-  /** Copies the exported save code (Clipboard API, `execCommand`, or the selected field). */
-  readonly host: Pick<Host, 'copyText'>;
+  /**
+   * Copies the exported save code (Clipboard API, `execCommand`, or the selected field).
+   * `window` is only there in the desktop shell, which adds a Quit button (D-042).
+   */
+  readonly host: Pick<Host, 'copyText' | 'window'>;
   /** Progress was replaced (import) or wiped (reset): rebuild scenes from the save. */
   readonly onProgressReplaced: (why: 'import' | 'reset') => void;
 }
@@ -219,6 +222,18 @@ export function openSettings(deps: SettingsPanelDeps): void {
   );
   const col = (...kids: HTMLElement[]) => h('div', { class: 'lr-settings-col' }, ...kids);
   const done = button('Done', () => ui.stack.pop('programmatic'), { variant: 'primary' });
+  // Desktop only: a game window needs its own way out. Progress is saved first.
+  const win = deps.host.window;
+  const quit = win
+    ? button(
+        'Quit game',
+        () => {
+          save.flush();
+          win.close();
+        },
+        { className: 'lr-quit' },
+      )
+    : null;
 
   if (!phone) {
     // Two columns so the whole panel, Done included, fits a 720p screen at 100% text.
@@ -232,7 +247,7 @@ export function openSettings(deps: SettingsPanelDeps): void {
       'div',
       { class: 'lr-settings' },
       cols,
-      h('div', { class: 'lr-row lr-settings-done' }, done),
+      h('div', { class: 'lr-row lr-settings-done' }, quit, done),
     );
     ui.stack.push({
       content,
@@ -349,7 +364,7 @@ export function openSettings(deps: SettingsPanelDeps): void {
       ...pages.map((p) => p.tab),
     ),
     h('div', { class: 'lr-settings-scroll' }, ...pages.map((p) => p.body), rail),
-    h('div', { class: 'lr-row lr-settings-done' }, done),
+    h('div', { class: 'lr-row lr-settings-done' }, quit, done),
   );
   ui.stack.push({
     content,

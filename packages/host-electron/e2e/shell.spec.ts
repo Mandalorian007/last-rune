@@ -140,9 +140,14 @@ test('links open through the bridge; only plain https leaves', async () => {
     expect(direct).toEqual([false, false, true]);
     await expect.poll(opened).toEqual([url, url, url, url, 'https://ok.example/']);
 
-    // No new windows from the page.
+    // No new windows from the page: an https new-window request (a target=_blank link) goes to
+    // the system browser instead; anything else is just refused.
     expect(await page.evaluate(() => window.open('https://example.com') === null)).toBe(true);
+    expect(await page.evaluate(() => window.open('http://example.com') === null)).toBe(true);
     expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
+    await expect
+      .poll(opened)
+      .toEqual([url, url, url, url, 'https://ok.example/', 'https://example.com/']);
   } finally {
     await app.close();
   }
