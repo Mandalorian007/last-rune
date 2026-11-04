@@ -10,7 +10,7 @@ Plan: [../engine/refactor-plan.md](../engine/refactor-plan.md), "Phase 1" → ws
 
 ## Follow-ups from host (PM calls)
 - `games/last-rune/ui/settings-panel.ts` save export: route it through `ctx.host.copyText`. The execCommand and selected-field fallback inside itch is the D-036 behaviour we want everywhere, so the behaviour change is accepted.
-- `phone-chrome.ts` / rotate-card fullscreen goes through `ctx.host.fullscreen`. Do this after promote-ui lands, wherever that code ends up.
+- ~~phone-chrome fullscreen through the host~~: done in promote-ui.
 - Afterwards, grep that the game makes no direct `navigator.clipboard`, `window.open`, `localStorage` or `requestFullscreen` calls.
 
 ## Gate 1 (the PM runs it after this merges)
