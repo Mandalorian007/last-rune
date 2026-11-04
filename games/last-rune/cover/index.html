@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex" />
-    <title>The Last Rune: cover candidates</title>
+    <title>The Last Rune: itch cover</title>
     <style>
       :root {
         color-scheme: dark;
@@ -70,15 +70,7 @@
       .side h2 {
         margin: 0;
         font-size: 18px;
-      }
-      .side h2 span {
-        color: var(--gold);
-        margin-right: 8px;
-      }
-      .side p {
-        margin: 0;
-        color: var(--dim);
-        max-width: 40ch;
+        max-width: 32ch;
       }
       .thumb {
         width: 315px;
@@ -113,15 +105,25 @@
   </head>
   <body>
     <header>
-      <h1>The Last Rune: itch cover candidates</h1>
+      <h1>The Last Rune: itch cover</h1>
       <p>
-        Eight 630×500 covers, rendered live by the game's own engine and art. Each has a
-        315×250 preview at the size itch's browse grid shows it. Download saves the cover as a
-        630×500 PNG.
+        The 630×500 itch cover, rendered by the game's own engine and art, with a 315×250 copy
+        at the size itch's browse grid shows it. Download saves the cover as a 630×500 PNG.
+        <code>pnpm cover</code> writes both to <code>build/</code>.
       </p>
       <div id="status">Starting the renderer…</div>
     </header>
-    <main id="covers"></main>
+    <main>
+      <section class="cover">
+        <canvas id="full" class="full"></canvas>
+        <div class="side">
+          <h2>FUSE by candlelight, eye on a glowing gem: the friendly face of the puzzle</h2>
+          <div class="thumb-label">At itch browse size (315×250)</div>
+          <canvas id="thumb" class="thumb"></canvas>
+          <button id="download" type="button">Download PNG</button>
+        </div>
+      </section>
+    </main>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
