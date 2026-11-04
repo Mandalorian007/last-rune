@@ -228,7 +228,7 @@ describe('GameFlow', () => {
     expect(f.save.get().stats.completedAt).toBeGreaterThan(0);
   });
 
-  it('journal: opens only from the hall, closes back to it, marks only found pages read', () => {
+  it('journal: opens from the hall (not the title), closes back to it, marks only found pages read', () => {
     const f = setup(true);
     f.flow.start();
     expect(f.flow.openJournal()).toBe(false); // title
@@ -245,6 +245,28 @@ describe('GameFlow', () => {
     });
     f.flow.markPagesRead([1, 2, 3, 1]);
     expect(f.save.get().journal.read).toEqual([1, 3]);
+  });
+
+  it('journal: opens over an altar and closes back to the same puzzle', () => {
+    const f = setup(true);
+    f.flow.start();
+    f.flow.newGame();
+    expect(f.flow.openPuzzle('intake-desk')).toBe(true);
+    expect(f.flow.openJournal()).toBe(true);
+    expect(f.kinds()).toEqual(['hall', 'puzzle', 'journal']);
+    expect(f.flow.state).toBe('journal');
+    expect(f.flow.journalFrom).toBe('puzzle');
+    expect(f.flow.machine).toBe('intake-desk');
+    f.flow.closeJournal();
+    expect(f.kinds()).toEqual(['hall', 'puzzle']);
+    expect(f.flow.state).toBe('puzzle');
+    expect(f.flow.machine).toBe('intake-desk');
+    // Back at the hall, the next journal goes back to the hall.
+    f.flow.closePuzzle();
+    expect(f.flow.openJournal()).toBe(true);
+    expect(f.flow.journalFrom).toBe('hall');
+    f.flow.closeJournal();
+    expect(f.flow.state).toBe('hall');
   });
 
   it('journal: without a scene wired, the hall stays put', () => {

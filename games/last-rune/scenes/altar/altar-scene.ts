@@ -248,6 +248,8 @@ export class AltarScene implements GameScene {
   /** Phones: the frame the layout was built for, and a rebuild waiting for edit mode. */
   frame = '';
   relayoutPending = false;
+  /** The journal desk is over the altar: its view is torn down until `resume`. */
+  paused = false;
   offDevice: (() => void) | null = null;
   // altar-truth: no charge numbers on the route before Strike, on any altar (one rule, D-040
   // addendum 5). The plan's numbers live on the Capacitor read-out; chips come with Strike.
@@ -394,7 +396,7 @@ export class AltarScene implements GameScene {
     this.hum?.stop(0.4);
     this.hum = null;
     if (this.announceTimer !== null) clearTimeout(this.announceTimer);
-    this.teardownView();
+    if (!this.paused) this.teardownView();
     this.pictures?.destroy();
     this.pictures = null;
     this.ctx.input.setGestures(null);
@@ -463,8 +465,13 @@ export class AltarScene implements GameScene {
    */
   relayout(): void {
     this.relayoutPending = false;
-    this.frame = this.frameKey();
     this.teardownView();
+    this.rebuildView();
+  }
+
+  /** A fresh view and labels over the board as it stands (relayout, and back from the desk). */
+  rebuildView(): void {
+    this.frame = this.frameKey();
     this.view = new AltarView(this.ctx, this.puzzle);
     this.view.reducedMotion = this.ctx.settings.reducedMotion;
     this.view.reduceFlashes = this.ctx.settings.reduceFlashes;
@@ -487,12 +494,39 @@ export class AltarScene implements GameScene {
     this.settleFrames = 4;
   }
 
+  /**
+   * The journal opens over an altar only between strikes (ctx `openJournal`): a bolt and its
+   * verdict play out first.
+   */
+  canPause(): boolean {
+    return this.mode === 'edit';
+  }
+
+  /**
+   * A scene over the altar (the journal desk). The board itself is kept as it is; its view,
+   * labels, rails, gestures and hum go away so the desk has the screen, camera and chrome to
+   * itself. `resume` builds them again over the same board.
+   */
   pause(): void {
     this.ctx.fuse.hush();
     this.ctx.fuse.avoid(null);
+    this.dropHand();
+    this.holdFuse(false);
+    this.phoneCaption(false);
+    this.hum?.stop(0.3);
+    this.hum = null;
+    this.ctx.input.setGestures(null);
+    this.teardownView();
+    this.paused = true;
   }
 
   resume(): void {
+    if (this.paused) {
+      this.paused = false;
+      this.hum = this.ctx.sound.sfx.stormCell(this.puzzle.storm.strength, 0.8);
+      if (this.gestures) this.ctx.input.setGestures(this.gestures);
+      this.rebuildView();
+    }
     this.setMood();
     this.fitTop(); // the text size may have changed in Settings
     this.avoidTray();

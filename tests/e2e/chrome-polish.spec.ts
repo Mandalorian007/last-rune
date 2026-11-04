@@ -7,8 +7,8 @@ import { DEV_URL, waitFrames } from './helpers';
 //     ✕ is the only way out (no Done beside it).
 //  3. Hall: door plates break between words (never inside one), and none overlap.
 //  4. Codex: no plate's badge is cut by the plate.
-//  5. Menus: the altar's menu is the hall's minus Journal (the journal is a room off the hall),
-//     in the same order.
+//  5. Menus: the altar's menu is the hall's, in the same order (Journal included since
+//     menu-flow: it opens over the altar and comes back to the same board).
 // And an iPhone (its user agent, Fullscreen API or not) never shows Full screen.
 
 const PHONES = [
@@ -223,9 +223,7 @@ for (const vp of PHONES) {
       await expect(page.locator('.lr-hud-scrim')).toBeVisible();
       const altar = await menuItems(page);
       expect(hall, 'the hall menu').toEqual(['Journal', 'Codex', 'Settings']);
-      expect(altar, "the altar's menu is the hall's minus Journal").toEqual(
-        hall.filter((s) => s !== 'Journal'),
-      );
+      expect(altar, "the altar's menu is the hall's").toEqual(hall);
 
       expect(problems).toEqual([]);
     });
