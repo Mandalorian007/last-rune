@@ -96,7 +96,7 @@ _Last updated: 2026-11-03 by PM_
 - GitHub Pages enabled (source: GitHub Actions). Every push to main deploys to https://mandalorian007.github.io/last-rune/ (D-023); `gh workflow run pages.yml -f label=alpha-1` stamps a release label. At M3α, show `VITE_RELEASE_LABEL` on the title screen.
 
 ## Risks
-- Flaky e2e: fixed by e2e-flakes (2026-11-04); altar-labels:12 wait fix handed to port-altar-2. A failure under load is now a real failure.
+- Flaky e2e: fixed by e2e-flakes (2026-11-04); altar-labels:12 wait fix handed to port-altar-2. A failure under load is now a real failure. Watch: after the port-altar-2 merge one full run failed layout-fit:174, layout-fit:265 and ending:23 while another agent's Playwright run shared the machine; all 3 passed alone and the next full run was clean (123/123, 0 failed). If it recurs with the machine idle, reopen e2e-flakes.
 - Flaky e2e: `turn-clarity.spec.ts:189` was likely the engine dropping a repeat key press on adjacent frames (fixed in link-copy). Watch for recurrence.
 - e2e flake (fixed twice over): repeat taps now queue in Input, and each worktree runs e2e on its own ports (tests/e2e/ports.ts).
 - The master limiter is now on by default (above −1 dBFS only). Needs a human listen along with the rest of the audio.
