@@ -422,9 +422,9 @@ export const handMethods = {
       const n = this.board.remaining(s.gem);
       const held = this.hand && !this.hand.from && this.hand.kind === s.gem;
       t.state = n === 0 ? 'spent' : held || i === this.hoverSlot ? 'hover' : 'idle';
-      // All of a kind on the board: a dimmed, smaller copy of the gem stays in its slot ("all
-      // placed" under it), so the tray keeps its shape and nothing there reads as a button.
-      t.size = n === 0 && L.phone ? s.size * 0.8 : s.size;
+      // All of a kind on the board: a slightly dimmed copy of the gem stays in its slot at full
+      // size (polish-10: a smaller one read as another gem), its "×0" badge struck through.
+      t.size = s.size;
       const lift = this.view.trayLift[i]!;
       const fresh = (i === 0 && this.teaching) || this.teachTray.has(s.gem);
       const bob =
