@@ -120,8 +120,14 @@ export function firstMultiStrike(p: PuzzleDef, solved: readonly PuzzleDef[]): bo
  * Gems whose first card carries a picture of the charge going in and out (teach-4): the ones a
  * sentence alone did not teach (blind review 6), on the page where each is first met, fixed on
  * the board. Later pages (it turns, it is in the tray) are short lanes with no room and no need.
+ * teach-5: Amplify too (4 in → 8 out, then "a second Amplify on the same path: 8 → 8").
  */
-export const PICTURED: ReadonlySet<GemKind> = new Set<GemKind>(['gate', 'split', 'capacitor']);
+export const PICTURED: ReadonlySet<GemKind> = new Set<GemKind>([
+  'gate',
+  'split',
+  'amplify',
+  'capacitor',
+]);
 
 export function hasPicture(page: TeachPage): boolean {
   return page.kind === 'gem' && page.how === 'fixed' && PICTURED.has(page.gem);

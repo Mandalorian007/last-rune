@@ -68,14 +68,14 @@ export function turnTeachLine(
 
 /**
  * teach-4: Turn stays dim while a gem that never turns is in hand. Where Turn has just been
- * taught, a line says why, so a dim Turn does not read as broken: "A Channel lies along the run
- * on its own." `null` for a gem that turns.
+ * taught, a line says why, so a dim Turn does not read as broken (teach-5, in plain words): "A Channel
+ * works whichever way the charge comes in: no need to turn it." `null` for a gem that turns.
  */
 export function straightLine(kind: GemKind | undefined | null): string | null {
   if (!kind || kind === 'bend' || kind === 'gate' || kind === 'split') return null;
   const name = CODEX[kind].name;
   const a = /^[AEIOU]/.test(name) ? 'An' : 'A';
-  return `${a} ${name} lies along the run on its own: no turning.`;
+  return `${a} ${name} works whichever way the charge comes in: no need to turn it.`;
 }
 
 /**
@@ -85,14 +85,29 @@ export function straightLine(kind: GemKind | undefined | null): string | null {
  * out more than that gauge needs (circuit-model.ts `planOver`): Strike would trip it.
  */
 export type LampLine = 'reach' | 'over';
+/**
+ * teach-5: `reach` is the dot's legend, shown once per game the first time a dot lights
+ * (`DOT_LEGEND` draws it, a real dot on each row); `over` is the short reminder on the first
+ * Capacitor altar, where the red dot first shows.
+ */
 export const LAMP_LINE: Record<LampLine, string> = {
-  reach: 'Lit dot: the charge reaches this gauge. Strike to see how much.',
-  over: 'Red dot: the Capacitor lets out more than this gauge needs. It will trip.',
+  reach:
+    'The dot on a gauge: hollow, no charge reaches it yet; lit, charge reaches it; red, it will trip.',
+  over: 'Red dot: this gauge will trip.',
 };
+/** The legend's rows, each led by the dot as the gauge draws it. Never an amount (D-043). */
+export const DOT_LEGEND_HEAD = 'The dot on a gauge:';
+export const DOT_LEGEND: readonly { readonly look: 'off' | 'on' | 'red'; readonly text: string }[] =
+  [
+    { look: 'off', text: 'no charge reaches it yet' },
+    { look: 'on', text: 'charge reaches it' },
+    { look: 'red', text: 'it will trip' },
+  ];
 
 /**
- * Which dot line to show, if any: red outranks lit. `teachReach`: this player is new enough to
- * be told (the first altar, until its first strike); `teachOver`: the first Capacitor altar.
+ * Which dot line to show, if any: red outranks lit. `teachReach`: this player has not seen the
+ * legend yet (once per game, until the strike after it shows); `teachOver`: the first Capacitor
+ * altar.
  */
 export function lampLine(a: {
   reached: boolean;

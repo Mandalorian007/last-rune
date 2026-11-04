@@ -164,9 +164,13 @@ export function emojiRuns(text: string): TextRun[] {
   return out;
 }
 
-/** Skippable after the first viewing: any replay of the Last Rune once the facility is complete. */
-export function endingSkippable(moment: { readonly firstTime: boolean }): boolean {
-  return !moment.firstTime;
+/**
+ * teach-5 (blind review 7): the ending can always be skipped, the first viewing too. A player
+ * who cannot see a way out of a two-minute scene thinks the game has hung; "Plays by itself"
+ * beside a visible Skip says both things.
+ */
+export function endingSkippable(_moment: { readonly firstTime: boolean }): boolean {
+  return true;
 }
 
 export interface EndCard {

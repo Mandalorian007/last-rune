@@ -432,3 +432,46 @@ for (const vp of PHONES) {
     });
   });
 }
+
+// teach-5: the gauge dot is explained once per game, the first time a dot lights; the strike
+// after that retires it for good (a saved flag), so a reload or the next altar stays quiet.
+test.describe('the dot legend (se)', () => {
+  test.use({
+    viewport: { width: 667, height: 320 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 1,
+  });
+
+  test('shows once, when a dot first lights, and never after the next strike', async ({ page }) => {
+    await boot(page, 0);
+    const legend = page.locator('.lr-altar-hint[data-legend]');
+    await openFresh(page, MACHINE_IDS[0], 1);
+    await dismissCard(page);
+    await expect(legend).toBeVisible();
+    await expect(legend).toContainText('The dot on a gauge:');
+    const looks = await legend
+      .locator('.lr-need-lamp')
+      .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.look));
+    expect(looks).toEqual(['off', 'on', 'red']);
+    expect(await legend.textContent()).not.toMatch(/\d/);
+    expect(await page.evaluate(() => !!(window as G).__game.save.get().flags.dotTold)).toBe(false);
+
+    // Strike: the legend has done its job.
+    await page.locator('[data-action="strike"]').tap();
+    await expect
+      .poll(() => page.evaluate(() => !!(window as G).__game.save.get().flags.dotTold))
+      .toBe(true);
+
+    // A reload, and the next altar with its dots lit: no legend.
+    await page.reload();
+    await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+      timeout: 30_000,
+    });
+    await openFresh(page, MACHINE_IDS[1], 1);
+    await dismissCard(page);
+    await expect(page.locator('.lr-altar-need .lr-need-lamp[data-on]').first()).toBeAttached();
+    await waitFrames(page, 6);
+    await expect(legend).toHaveCount(0);
+  });
+});

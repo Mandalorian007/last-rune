@@ -3,7 +3,7 @@ import { CODEX } from '../../content/codex';
 import { puzzleFor } from '../../content/puzzles';
 import { MACHINE_IDS } from '../../rules/types';
 import { capacitorStrip, GOAL_RULE, strikesRule } from './altar-defs';
-import { HINT_SLOTS, LAMP_LINE, lampLine, pickHint, straightLine } from './moments';
+import { DOT_LEGEND, HINT_SLOTS, LAMP_LINE, lampLine, pickHint, straightLine } from './moments';
 import { firstMultiStrike, hasPicture, newGems, teachPages } from './teach';
 
 const solvedBefore = (id: (typeof MACHINE_IDS)[number]) =>
@@ -26,18 +26,19 @@ describe('arrival card pages (teach-4)', () => {
       firstMulti: true,
     });
     expect(pages.map((p) => p.kind)).toEqual(['strikes', 'gem']);
-    expect(strikesRule(2)).toMatch(/both/);
-    expect(strikesRule(2)).toMatch(/in one strike/);
+    // teach-5: one tap, two strikes, one after the other; a miss resets for free.
+    expect(strikesRule(2)).toMatch(/One tap sends two strikes, one after the other/);
+    expect(strikesRule(2)).toMatch(/miss resets for free/);
   });
 
-  it('pictures Gate, Split and Capacitor where each is first met, fixed on the board', () => {
+  it('pictures Gate, Split, Amplify and Capacitor where each is first met, fixed on the board', () => {
     const pictured: string[] = [];
     for (const id of MACHINE_IDS) {
       const news = newGems(puzzleFor(id), solvedBefore(id));
       for (const f of news.fixed)
         if (hasPicture({ kind: 'gem', gem: f.gem, how: 'fixed' })) pictured.push(f.gem);
     }
-    expect(pictured.sort()).toEqual(['capacitor', 'gate', 'split']);
+    expect(pictured.sort()).toEqual(['amplify', 'capacitor', 'gate', 'split']);
     expect(hasPicture({ kind: 'gem', gem: 'gate', how: 'turns' })).toBe(false);
     expect(hasPicture({ kind: 'gem', gem: 'bend', how: 'fixed' })).toBe(false);
   });
@@ -63,7 +64,11 @@ describe('gauge dot and Channel lines (teach-4)', () => {
     // The real semantics: lit = reaches (not an amount); red = the Capacitor overshoots.
     expect(LAMP_LINE.reach).toMatch(/reaches/);
     expect(LAMP_LINE.reach).not.toMatch(/\d/);
-    expect(LAMP_LINE.over).toMatch(/Capacitor/);
+    expect(LAMP_LINE.over).toMatch(/Red dot/);
+    expect(LAMP_LINE.over).toMatch(/trip/);
+    // teach-5: the legend names all three looks, hollow, lit and red, and never an amount.
+    expect(DOT_LEGEND.map((r) => r.look)).toEqual(['off', 'on', 'red']);
+    for (const r of DOT_LEGEND) expect(r.text).not.toMatch(/\d/);
   });
 
   it('gives the lamp line a slot below "Holding" and above the how-to', () => {
@@ -73,7 +78,9 @@ describe('gauge dot and Channel lines (teach-4)', () => {
   });
 
   it('says why Turn stays dim for a gem that never turns', () => {
-    expect(straightLine('channel')).toBe('A Channel lies along the run on its own: no turning.');
+    expect(straightLine('channel')).toBe(
+      'A Channel works whichever way the charge comes in: no need to turn it.',
+    );
     expect(straightLine('amplify')).toMatch(/^An? /);
     for (const g of ['bend', 'gate', 'split'] as const) expect(straightLine(g)).toBeNull();
     expect(straightLine(undefined)).toBeNull();

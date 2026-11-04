@@ -295,6 +295,16 @@ export const columnMethods = {
     const live = this.capEls.some((el) => !el.hasAttribute('data-plan') && el.offsetHeight > 0);
     const cardUp = !this.verdict.hidden || !this.tip.hidden || live;
     this.holdFuse(cardUp);
+    // teach-5: a picture-first card that does not fit its lane (a short lane under a tall tray)
+    // draws its picture smaller rather than scroll. Turning the page clears it (altar-info).
+    const tip = this.tip;
+    if (
+      tip.hasAttribute('data-fig') &&
+      !tip.hasAttribute('data-tight') &&
+      tip.offsetHeight > 0 &&
+      tip.scrollHeight > tip.clientHeight + 1
+    )
+      tip.toggleAttribute('data-tight', true);
     // A card taller than its region scrolls; until its end is in view it says there is more
     // (a fade and a ▾ over its foot) and takes touches, so the rest is a swipe away.
     for (const card of [this.tip, this.verdict, ...this.capEls]) {

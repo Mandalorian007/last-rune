@@ -231,7 +231,14 @@ ${STRIKE} {
 }
 ${STRIKE} > span { display: flex; flex-direction: row; align-items: center; }
 ${STRIKE} .lr-strike-word { white-space: nowrap; line-height: 1; }
-${STRIKE} :is(.lr-strike-n, .lr-strike-pips) { display: none; }
+${STRIKE} .lr-strike-n { display: none; }
+/* teach-5: "Strike ×2" and its pips, one per strike, lit as each fires; gone on "Try again". */
+${STRIKE} .lr-strike-pips { display: inline-flex; gap: 4px; margin-left: 8px; vertical-align: 0; }
+${STRIKE} .lr-strike-pips i {
+  width: 9px; height: 9px; box-sizing: border-box; border: 2px solid rgba(60,36,8,0.85); background: rgba(60,36,8,0.12); box-shadow: none;
+}
+${STRIKE} .lr-strike-pips i[data-lit] { background: #3a2406; }
+${STRIKE}[data-fail] .lr-strike-pips { display: none; }
 ${STRIKE}:not([data-ready]):not(:disabled) { filter: none; }
 /* Ready: every gauge's lamp is lit. A bright rim and a slow glow (steady under reduced motion). */
 ${STRIKE}[data-ready] { animation: lr-strike-ready-rail 1.8s ease-in-out infinite; }

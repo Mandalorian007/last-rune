@@ -10,6 +10,8 @@ import { isRotational, stormCharge } from '../../rules';
 import type { Cell, Dir, GemKind } from '../../rules/types';
 import { chipAt, diagramSvg, fizzleAt, GEM_DIAGRAMS, turnSide } from '../../ui/codex-diagram';
 import {
+  AMPLIFY_AGAIN,
+  AMPLIFY_ONCE,
   capacitorStrip,
   GEM_NAME,
   GOAL_NAME,
@@ -345,8 +347,20 @@ export const infoMethods = {
         'New here',
         n > 1 ? h('span', { class: 'lr-info-of' }, keepTogether(` ${i + 1} of ${n}`)) : null,
       );
-      this.tip.replaceChildren(h('div', { class: 'lr-info-foot' }, page, next), items[i]!);
-    } else this.tip.replaceChildren(...items);
+      // teach-5: a pictured page (Gate, Split, Amplify, Capacitor) leads with its picture, in a
+      // head row with "New here" and the button, so the words below get the card's full width
+      // (no "Power / the no- / arrow end" wraps beside a floated picture).
+      const item = items[i]!;
+      const fig = item.querySelector<HTMLElement>(':scope > .lr-fig');
+      const foot = h('div', { class: 'lr-info-foot' }, fig, page, next);
+      this.tip.toggleAttribute('data-fig', !!fig);
+      this.tip.removeAttribute('data-tight');
+      this.tip.replaceChildren(foot, item);
+    } else {
+      this.tip.removeAttribute('data-fig');
+      this.tip.removeAttribute('data-tight');
+      this.tip.replaceChildren(...items);
+    }
     // A card with a button is read and used, not a hover tooltip (the announcer reads the rest).
     this.tip.setAttribute('aria-hidden', String(!paged));
     this.tip.toggleAttribute('data-full', key.startsWith('p'));
@@ -393,6 +407,16 @@ export const infoMethods = {
           ' ',
           h('span', null, keepTogether(two)),
         ),
+      );
+    }
+    if (fig && p.gem === 'amplify') {
+      // teach-5: the picture says 4 → 8; the line under it says what "once per path" means.
+      return row(
+        p.how,
+        GEM_NAME[p.gem],
+        fig,
+        rule(`${FIXED_NOTE} ${AMPLIFY_ONCE}`),
+        h('span', { class: 'lr-info-eg' }, keepTogether(AMPLIFY_AGAIN)),
       );
     }
     return row(p.how, GEM_NAME[p.gem], fig, rule(this.chipRule(p, true)));

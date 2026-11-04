@@ -460,14 +460,12 @@ export function verdictParts(text: string): [string, string] {
 }
 
 /**
- * What Strike says it will do (phones): "Strike", or on a multi-strike altar "Strike (2 left)";
- * while the strikes run, how many are left, then "Strike again" for the last; after a fail,
- * "Try again". Always one short line.
+ * What Strike says it will do (phones): "Strike", or on a multi-strike altar "Strike ×2"
+ * (teach-5: one tap sends two strikes; the button's pips light one per strike as they fire, so
+ * nothing on the label counts down). After a fail, "Try again". Always one short line.
  */
-export function strikeLabel(pulses: number, state: 'edit' | 'strike' | 'fail', now = -1): string {
+export function strikeLabel(pulses: number, state: 'edit' | 'strike' | 'fail'): string {
   if (state === 'fail') return 'Try again';
   if (pulses < 2) return 'Strike';
-  if (state === 'edit' || now < 0) return `Strike (${pulses} left)`;
-  if (now >= pulses - 1) return 'Strike again';
-  return `Strike (${pulses - now - 1} left)`;
+  return `Strike ×${pulses}`;
 }

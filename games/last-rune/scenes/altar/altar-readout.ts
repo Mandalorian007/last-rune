@@ -19,13 +19,13 @@ export const readoutMethods = {
    * once strike `now` fires, with that many pips lit.
    */
   setStrikeRow(this: AltarScene, now: number): void {
-    this.setStrikeWord(now < 0 ? 'edit' : 'strike', now);
+    this.setStrikeWord(now < 0 ? 'edit' : 'strike');
     if (!this.strikeRow) return;
     const n = this.puzzle.pulses;
-    // Phones (mobile-5-board): the storm's card says the number is per strike ("Gives 8" /
-    // "per strike") and Strike says what one tap does ("Strike" / "twice"), then counts the run
-    // ("1 of 2"). The pips are hidden there, and the card keeps "per strike" through the run
-    // (the button counts it), so it fits the gauge's gutter at 13 px.
+    // Phones (mobile-5-board, teach-5): the storm's card says the number is per strike ("Gives
+    // 8" / "per strike") and Strike says what one tap does ("Strike ×2"); its pips light one
+    // per strike as they fire. The storm's pips are hidden there, and the card keeps "per
+    // strike" through the run, so it fits the gauge's gutter at 13 px.
     const phone = !!this.view.layout.phone;
     this.strikeRow.textContent = phone
       ? 'per strike'
@@ -48,10 +48,13 @@ export const readoutMethods = {
    * Phones (mobile-7-strike): Strike says what a tap will do, on one line (`strikeLabel`).
    * Big screens keep "Strike" and the pips.
    */
-  setStrikeWord(this: AltarScene, state: 'edit' | 'strike' | 'fail', now = -1): void {
+  setStrikeWord(this: AltarScene, state: 'edit' | 'strike' | 'fail'): void {
     if (!this.strikeWord || !this.view.layout.phone) return;
-    const text = keepTogether(strikeLabel(this.puzzle.pulses, state, now));
+    const text = keepTogether(strikeLabel(this.puzzle.pulses, state));
     if (this.strikeWord.textContent !== text) this.strikeWord.textContent = text;
+    // teach-5: the pips stand beside "Strike ×2" and light one per strike as they fire; on
+    // "Try again" they step aside (nothing is firing).
+    this.strikeBtn?.toggleAttribute('data-fail', state === 'fail');
   },
 
   /**

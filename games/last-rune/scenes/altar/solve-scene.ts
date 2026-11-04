@@ -184,11 +184,17 @@ export class SolveScene implements GameScene {
     const m = this.moment;
     const def = getMachine(m.machine);
     const band = this.view.layout.phone;
+    // teach-5: the card says what the gauge got, in the gauge's own terms: "Got 8 ✓".
+    const got = puzzleFor(m.machine)
+      .machines.map((x) => x.need)
+      .join(' and ');
     const kids: (HTMLElement | string)[] = [
       h('h2', null, `${def.name} restored`),
       h(
         'p',
         { class: 'lr-solve-sub' },
+        h('b', { class: 'lr-solve-got' }, `Got ${got.replaceAll(' ', ' ')} ✓`),
+        ' ',
         m.firstTime ? 'Exactly the right charge. It wakes.' : 'Already restored. It hums anyway.',
       ),
     ];

@@ -420,7 +420,11 @@ ${C} .tc-region[data-region="bottom"] .lr-title-menu .lr-gold-button { min-heigh
 ${C} .tc-caption[data-docked] { box-sizing: border-box; }
 /* Title, landscape (chrome-polish-3): the lane runs right of the storm cell (design x ≤ 740 of
    1920, under 40% of the width) and FUSE's strolls, so his line never covers either. */
-${CL}:has(.lr-title-menu) .tc-caption[data-docked] { width: auto; margin-left: 41%; }
+${CL}:has(.lr-title-menu) .tc-caption[data-docked] {
+  width: auto; margin-left: 41%;
+  /* teach-5: the box hugs its one line, not the lane's height. */
+  align-self: center; height: auto; min-height: 0; padding-top: 6px; padding-bottom: 6px;
+}
 /* Upright (chrome-polish-4): the box hugs his line, centred in the lane, rather than standing
    three times its height. */
 ${CP}:has(.lr-title-menu) .tc-caption[data-docked] { align-self: center; height: auto; padding-top: 8px; padding-bottom: 8px; }

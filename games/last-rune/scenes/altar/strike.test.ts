@@ -315,7 +315,7 @@ describe('hints come from the room (altar-truth)', () => {
     const over = planOver(beats, res);
     const i = beats.findIndex((b) => b.kind === 'release');
     expect(over.beats.get(i)).toBe(8);
-    expect(capBeatText(beats[i]!, p.pulses, 8)).toBe('Strike 2: 8 + 8 → 16, over the 8 needed');
+    expect(capBeatText(beats[i]!, p.pulses, 8)).toBe('Strike 2 sends 16; needs 8.');
     expect([...over.machines].map((j) => res.machines[j]!.need)).toEqual([8]);
     // The intended solve warns nowhere.
     const ok = simulate(p, p.design.intended);
