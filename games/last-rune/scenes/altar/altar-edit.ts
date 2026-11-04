@@ -15,7 +15,8 @@ export const editMethods = {
    * Touch aiming (engine Gestures `magnify`): while a finger holds a gem it aims at the nearest
    * socket the gem may go in, 56 CSS px above the fingertip while it drags, and on small sockets
    * (under 48 CSS px, dense-board: every dense board on every phone, Lift Shaft's 45 on a Pro
-   * Max included) a loupe beside the finger shows that socket, ringed. Mouse, pen and keyboard
+   * Max included) a loupe beside the finger shows that socket, ringed, clear of its eight
+   * neighbours (dense-board-3). Mouse, pen and keyboard
    * never aim; nor does a finger with nothing in hand.
    */
   linkGestures(this: AltarScene): void {
@@ -35,6 +36,23 @@ export const editMethods = {
         },
         over: (x, y) => !!cellAt(L(), x, y),
         toClient: (x, y) => ctx.surface.logicalToClient(x, y),
+        // dense-board-3: the loupe never covers the aimed socket or its eight neighbours (the
+        // player still sees where the gem goes and what it joins), and keeps off the column's
+        // title, held-gem pill and tray counts unless nowhere else is free.
+        clear: (t) => {
+          if (!t) return null;
+          const l = L();
+          const to = (x: number, y: number) => ctx.surface.logicalToClient(x, y);
+          const n = 1.5 * l.pitch;
+          const a = to(t.x - n, t.y - n);
+          const b = to(t.x + n, t.y + n);
+          const keep = [{ l: a.x, t: a.y, r: b.x, b: b.y }];
+          const ph = l.phone;
+          if (!ph) return { keep };
+          const c0 = to(ph.colL, 0);
+          const c1 = to(ph.colR, ph.laneTop);
+          return { keep, avoid: [{ l: c0.x, t: Number.NEGATIVE_INFINITY, r: c1.x, b: c1.y }] };
+        },
         source: ctx.surface.canvas,
         className: 'lr-loupe',
       },

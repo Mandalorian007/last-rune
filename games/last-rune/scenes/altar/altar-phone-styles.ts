@@ -27,7 +27,7 @@ ${T} .lr-altar:not([data-phone]):has(.lr-altar-tip[data-source="tray"]:not([hidd
 ${P} .lr-altar-tag { font-size: ${tpx(11)}; padding: ${cpx(1)} ${cpx(5)}; border-radius: ${cpx(5)}; }
 ${A} .lr-altar-need { white-space: normal; text-align: center; }
 ${A} .lr-altar-need[data-align="above"] { transform: translate(-50%, calc(-100% - ${cpx(4)})); }
-${A} .lr-altar-need[data-align="above"]::before { top: auto; bottom: -9px; transform: translateX(-50%) rotate(225deg); left: 50%; border-left-width: 2px; border-top-width: 2px; }
+${A} .lr-altar-need[data-align="above"]::before { top: auto; bottom: -9px; transform: translateX(-50%) rotate(225deg); left: var(--lr-notch, 50%); border-left-width: 2px; border-top-width: 2px; }
 ${A} .lr-altar-need:is([data-align="up"], [data-align="down"]) {
   flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0 ${cpx(4)};
   max-width: ${cpx(118)}; white-space: nowrap;

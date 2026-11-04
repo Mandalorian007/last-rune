@@ -415,14 +415,15 @@ const PH = {
   stormDense: 1.7,
   /**
    * dense-board-2: a west/east card hung over carved stone is taken this wide (two lines,
-   * "Needs 20 · got 16"), and may drop at most this many pitches past the rings under its gauge.
+   * "Needs 20 · got 16").
    */
   sideCardW: 84,
   /** The source's card ("Gives 16 per strike") never shows a "got". */
   sideGivesW: 68,
   /** dense-board-2: a dense board's inset from the visible band's top and bottom. */
   edgeDense: 4,
-  sideDrop: 1.1,
+  /** dense-board-3: compact gauges are taken when they buy the sockets this many CSS px. */
+  compactGain: 0.5,
 } as const;
 
 /** A lifted gem rises this far (design px; gems.ts GEM_LIFT_PX) and grows 7%. */
@@ -464,16 +465,38 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
   const base = phoneFit(p, f, false);
   const { w, h } = altarDims(p.altar);
   if (w * h < PH.denseCells || base.pitch / f.cssPx >= PH.dense) return base;
-  const dense = phoneFit(p, f, true);
+  // dense-board-3: every gauge on the board is drawn at the compact size when that buys the
+  // sockets at least `compactGain` CSS px (a height-bound board: the gauges above and below
+  // cost rows); otherwise they keep the size that grows with the pitch. And a west/east card that would drop under its edge column's rings gets a
+  // gutter of its own when the board is height-bound (the width costs it no socket pitch).
+  const fitDense = (lane: number) => {
+    const grown = phoneFit(p, f, true, lane);
+    const compact = phoneFit(p, f, true, lane, true);
+    const pick = compact.pitch >= grown.pitch + PH.compactGain * f.cssPx;
+    const one = pick ? compact : grown;
+    const wide = phoneFit(p, f, true, lane, pick, true);
+    return wide.pitch >= one.pitch ? wide : one;
+  };
+  const dense = fitDense(0);
   let best = dense.pitch > base.pitch ? dense : base;
   // dense-board-2: on an SE, a board that already lived with the ordinary lane (its own fit's
   // column under `laneDense`) may keep that lane in the dense fit too, where it is bigger.
   const baseCol = base.phone ? (base.phone.colR - base.phone.colL) / f.cssPx : 0;
   if (DESIGN_W / f.cssPx < PH.wideCss && baseCol < PH.laneDense) {
-    const lean = phoneFit(p, f, true, PH.laneMin);
+    const lean = fitDense(PH.laneMin);
     if (lean.pitch > best.pitch) best = lean;
   }
   return best;
+}
+
+/**
+ * dense-board-3: how far a source orb is drawn from its glass's centre (design px, for a quad
+ * `size` wide; storm-shaders.ts): its brass rings (one per strength step, 0.8 + 0.075 per ring
+ * units of 0.4 size, plus the bar) every way, and its iron foot 1.2 units under the glass.
+ */
+export function orbExtent(size: number, rings: number): { ring: number; foot: number } {
+  const ring = (0.8 + 0.075 * (Math.max(1, rings) - 1) + 0.026) * 0.4 * size;
+  return { ring, foot: Math.max(ring, 0.48 * size) };
 }
 
 /**
@@ -507,7 +530,14 @@ function carvedEdges(
 /**
  * `lane`: an SE's column floor on a dense board, CSS px (default `PH.laneDense`).
  */
-function phoneFit(p: PuzzleDef, f: PhoneFrame, dense: boolean, lane = 0): AltarLayout {
+function phoneFit(
+  p: PuzzleDef,
+  f: PhoneFrame,
+  dense: boolean,
+  lane = 0,
+  compact = false,
+  wide = false,
+): AltarLayout {
   const c = f.cssPx;
   const { w: cols, h: rows } = altarDims(p.altar);
   const edge = PH.edge * c;
@@ -517,7 +547,9 @@ function phoneFit(p: PuzzleDef, f: PhoneFrame, dense: boolean, lane = 0): AltarL
   // their reach above and below the board costs fewer sockets' worth of height.
   const machineMin = (dense ? PH.machineDense : 40) * c;
   const machineSizeAt = (pitch: number) =>
-    Math.round(Math.min(52 * c, Math.max(machineMin, pitch * (dense ? 1.1 : 1.2))));
+    compact
+      ? Math.round(machineMin)
+      : Math.round(Math.min(52 * c, Math.max(machineMin, pitch * (dense ? 1.1 : 1.2))));
   const stormSizeAt = (pitch: number) =>
     Math.round(Math.min(pitch * (dense ? PH.stormDense : 1.9), 92 * c));
   const props = [
@@ -588,7 +620,8 @@ function phoneFit(p: PuzzleDef, f: PhoneFrame, dense: boolean, lane = 0): AltarL
    * the canvas side as the label placement does (`placePhoneLabels`): against the canvas edge
    * under a west gauge, against the column under an east one. Like that placement, it drops
    * once, past any ring it would cover; it must then cover no ring, drop at most
-   * `PH.sideDrop` pitches and end above the slab's front face.
+   * one card's height (dense-board-3: none at all in a `wide` fit, so it reads as its gauge's)
+   * and end above the slab's front face.
    */
   const sideFit = (q: { at: Cell; storm: boolean }, pitch: number, slabAt: number): number => {
     if (!dense) return 0;
@@ -622,7 +655,7 @@ function phoneFit(p: PuzzleDef, f: PhoneFrame, dense: boolean, lane = 0): AltarL
     };
     const t0 = t;
     t += rings(t);
-    if (rings(t) > 0 || t - t0 > PH.sideDrop * pitch) return 0;
+    if (rings(t) > 0 || t - t0 > (wide ? 0 : labelH)) return 0;
     if (t + ch > sm * 2 + rows * pitch + sf) return 0;
     return gutter;
   };
@@ -653,7 +686,15 @@ function phoneFit(p: PuzzleDef, f: PhoneFrame, dense: boolean, lane = 0): AltarL
     for (const q of props) {
       const s = sideOf(q.at, cols, rows);
       if (s === 1 || s === 3) {
-        v[s] = Math.max(v[s], sideFit(q, pitch, slabAt) || PH.gutter * c);
+        // dense-board-3: `wide`, a card that cannot hang over carved stone gets a gutter wide
+        // enough to hang clear of the edge column's rings (to within 2 CSS px), against the
+        // canvas edge (west) or the column (east), instead of dropping under them.
+        const cw = (q.storm ? PH.sideGivesW : PH.sideCardW) * c;
+        const clearW = cw + edge + 2 * c - sm - 0.12 * pitch - (s === 1 ? PH.colGap * c : 0);
+        v[s] = Math.max(
+          v[s],
+          sideFit(q, pitch, slabAt) || Math.max(PH.gutter * c, wide ? clearW : 0),
+        );
         continue;
       }
       const k = sinkSides(q.at, q.storm, pitch);
@@ -661,7 +702,11 @@ function phoneFit(p: PuzzleDef, f: PhoneFrame, dense: boolean, lane = 0): AltarL
         pitch + Math.round(pitch * slab[0]) + (s === 2 ? Math.round(pitch * slab[1]) : 0);
       const card = k.r || k.l ? Math.max(0, labelH - room) : clear + labelH;
       // dense-board: an orb at N/S stands far enough out that it never covers the edge row.
-      const orb = q.storm ? orbOut(size, s === 0 ? sm : sm + sf) + r : 0;
+      // dense-board-3: and its rings (N) or its foot (S) stay on screen.
+      const oe = orbExtent(size, p.storm.strength);
+      const orb = q.storm
+        ? orbOut(size, s === 0 ? sm : sm + sf) + (s === 0 ? oe.ring : oe.foot)
+        : 0;
       // A north cabinet stands 0.69 of its size over the slab (its spot: 0.225 + 0.46).
       const cab = (!q.storm && s === 0 ? 0.69 * m : 0.62 * m) - nestAt(s, pitch, slabAt);
       // (dense-board-2: the 1.4 orb radii are the orb's room; a cabinet keeps only its own.)
