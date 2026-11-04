@@ -51,7 +51,8 @@ export function pickHint(lines: Partial<Record<HintSlot, string | null>>): HintS
 /**
  * altar-truth: the line that teaches Turn, in the `holding` slot. On an altar that teaches a
  * turnable gem, while that gem is Turn's target (in hand, or just placed) and until the player
- * has turned one here: "↻ Turn rotates the Bend in your hand." `null` otherwise.
+ * has turned one here: "↻ Turn rotates the Bend." `null` otherwise. card-fit: it no longer adds "in
+ * your hand" (the "Holding" pill says so), so it stays one line under a gem's card on an SE.
  */
 export function turnTeachLine(
   kind: GemKind | undefined,
@@ -62,7 +63,7 @@ export function turnTeachLine(
   if (!kind || turned || !teaches.has(kind)) return null;
   const name = CODEX[kind].name;
   return where === 'hand'
-    ? `↻ Turn rotates the ${name} in your hand.`
+    ? `↻ Turn rotates the ${name}.`
     : `↻ Turn rotates the ${name} you just placed.`;
 }
 

@@ -325,14 +325,23 @@ export const columnMethods = {
     const live = this.capEls.some((el) => !el.hasAttribute('data-plan') && el.offsetHeight > 0);
     const cardUp = !this.verdict.hidden || !this.tip.hidden || live;
     this.holdFuse(cardUp);
+    // card-fit: the dot's legend (four lines) gets the lane to itself. It waits while a gem's
+    // card, a teach card, the verdict or a live read-out is up (stacked under one, an SE's lane
+    // cut both short), and the Capacitor plan steps aside for it (CSS) until it retires.
+    const wait = cardUp && this.hint.hasAttribute('data-legend');
+    if (wait !== this.hint.hasAttribute('data-wait')) this.hint.toggleAttribute('data-wait', wait);
     // teach-5: a picture-first card that does not fit its lane (a short lane under a tall tray)
-    // draws its picture smaller rather than scroll. Turning the page clears it (altar-info).
+    // draws its picture smaller rather than scroll. card-fit: so does one whose head row is too
+    // narrow for "New here" beside the picture and the button (an iPhone's 172 px column ran
+    // "New" under "Got it"). Turning the page clears it (altar-info).
     const tip = this.tip;
+    const page = tip.querySelector<HTMLElement>('.lr-info-foot .lr-info-page');
     if (
       tip.hasAttribute('data-fig') &&
       !tip.hasAttribute('data-tight') &&
       tip.offsetHeight > 0 &&
-      tip.scrollHeight > tip.clientHeight + 1
+      (tip.scrollHeight > tip.clientHeight + 1 ||
+        (!!page && page.scrollWidth > page.clientWidth + 1))
     )
       tip.toggleAttribute('data-tight', true);
     // A card taller than its region scrolls; until its end is in view it says there is more

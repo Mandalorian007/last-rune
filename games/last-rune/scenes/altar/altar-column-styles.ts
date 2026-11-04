@@ -155,6 +155,10 @@ ${LANE} > .lr-altar-hint .lr-need-lamp {
 }
 /* teach-5: the dot's legend, once per game: a short head, then one row per look of the dot. */
 ${LANE} > .lr-altar-hint[data-legend] { text-wrap: wrap; text-align: left; padding: 4px 8px; }
+/* card-fit: the legend never stacks with another card. It waits for a gem's card, the verdict or
+   a live read-out (altar-column.ts arrangeColumn), and the Capacitor plan waits for it. */
+${LANE} > .lr-altar-hint[data-legend][data-wait] { display: none; }
+${LANE}:has(> .lr-altar-hint[data-legend]:not([data-wait])) > .lr-altar-cap[data-plan] { display: none; }
 ${LANE} > .lr-altar-hint .lr-dot-head { display: block; color: #c9b995; font-size: 13px; }
 ${LANE} > .lr-altar-hint .lr-dot-row { display: block; white-space: nowrap; }
 ${LANE} > .lr-altar-hint .lr-need-lamp[data-look='off'] {
@@ -177,6 +181,12 @@ ${LANE} > .lr-altar-tip[data-fig] .lr-info-foot {
   background: none; border-top: 0; border-bottom: 1px solid rgba(232,192,106,0.28);
 }
 ${LANE} > .lr-altar-tip[data-fig] .lr-info-foot .lr-fig { float: none; flex: none; margin: 0; zoom: 0.8; }
+/* card-fit: in the head row "1 of 2" goes on its own line under "New here" (on a 165 px column it
+   ran past its box after a lone "·"), and the button keeps less side padding (its 44 px hit area
+   stays). */
+${LANE} > .lr-altar-tip[data-fig] .lr-info-foot .lr-info-of { display: block; white-space: nowrap; }
+${LANE} > .lr-altar-tip[data-fig] .lr-info-foot .lr-info-of::before { content: none; }
+${LANE} > .lr-altar-tip[data-fig] .lr-info-foot .lr-info-next { padding: 0 8px; }
 /* A short lane: the picture shrinks so the words still fit without a scroll (altar-column). */
 ${LANE} > .lr-altar-tip[data-fig][data-tight] .lr-info-foot { padding-top: 1px; padding-bottom: 1px; margin-bottom: 1px; }
 ${LANE} > .lr-altar-tip[data-fig][data-tight] .lr-info-foot .lr-fig { zoom: 0.62; }
