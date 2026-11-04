@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-04 by PM_
 
-**Gate 2 (2026-11-04):** blind review 6 scored 7 / 7 / 7 / 7 (D-040 add. 7), so it failed again (up from 6.6). Layout majors are gone. solve-truth, chrome-polish-4, teach-4 ✅ merged. glyph-truth ✅ merged. D-043 (user): no live readout, Strike is a free test → strike-free; menu-flow cleanup; cover-art (8 covers at /cover-image/). Blind review 7 after strike-free and menu-flow merge.
+**Gate 2 (2026-11-04):** blind review 6 scored 7 / 7 / 7 / 7 (D-040 add. 7), so it failed again (up from 6.6). Layout majors are gone. solve-truth, chrome-polish-4, teach-4 ✅ merged. glyph-truth ✅ merged. D-043 (user): no live readout, Strike is a free test → strike-free; menu-flow cleanup; cover-art (8 covers at /cover-image/). menu-flow ✅ merged. Blind review 7 after strike-free merges.
 
 **D-041 Gate 1 ✅ (2026-11-03):** Phase 1 merged (workspace, host, promote-ui, create-game). `pnpm check`/`build` green; game e2e 118/2 skipped; engine e2e 177/15 skipped; baseline 129/129 (create-game branch); CI engine e2e is now a blocking job, green on 3 GitHub runs of the same commit. Engine `0.2.0-alpha.1` cut with `pnpm engine:release` (no tag, addendum 3). Next: Phase 2 (gestures, layout) and, in parallel, Phase 4 (host-electron).
 
@@ -38,7 +38,7 @@ _Last updated: 2026-11-04 by PM_
 | onboarding-2 | ws/onboarding-2 | ✅ merged | gem info card lives over the tray band (hover/focus/held; arrival card fades), fixed gems get iron brackets + "Fixed in place", first turnable Bend/Gate shows a turn badge and the preview swings as it turns; Gives N + strike-ready on all 16; new-gem lines before use; tray matches board; charge chips on new gems; `altar-labels.spec` e2e |
 | split-rotate | ws/split-rotate | ✅ merged | D-031: Split has one input (stem) and turns; octagon cut + bold T glyph with outward arrows; red ✕ where the preview stops at a wrong-facing Bend/Gate/Split; 14 Split puzzles keep their routes (conveyor-a 8→4 solutions); solver ignores turn choice in scoring (follow-up) |
 | strike-free | ws/strike-free | 🔄 running | D-043: Strike as a free test, no attempt counters |
-| menu-flow | ws/menu-flow | 🔄 running | D-043: menu audit + cleanup, Journal in altar menu |
+| menu-flow | ws/menu-flow | ✅ merged | Audit in brief. Esc closes the phone ☰ list only (focus back to ☰); Journal in altar ☰ + desktop corner + J, refused mid-strike/verdict, altar pauses and resumes the same board; journal reads "Back to the altar". menu-flow.spec (4). Kept: hall Esc = Settings, HUD panels focus the canvas, no quit-to-title. Backlog: pad B with phone ☰ open falls through (needs engine hook; phone-only, rare) |
 | cover-art | ws/cover-art | ✅ merged | 8 covers (title-wall, altar-bolt, fuse-storm, restored-hall, last-altar, one-gem, storm-chain, fuse-portrait), own vite config → dist/cover-image/, kept out of the itch zip; PNG download 630×500. Agent's top 3: fuse-portrait, one-gem, altar-bolt |
 | turn-2 | ws/turn-2 | ✅ merged | R/Q/scroll over a placed gem turns it in place and saves at once, even with a gem in hand; held-gem ghost only over empty sockets; drag-turn kept on drop; plainer hint/tag/card text; 2 new e2e |
 | turn-clarity | ws/turn-clarity | ✅ merged | one input rule: click picks up/sets down, R/Q/scroll/RB turn the gem under the cursor (held gem drawn as a ghost in its socket); gems that can't turn say so in place; Split shows an "in" marker; splitter-mill storm moved to the North edge (1 solution before and after, score 2.4) |
