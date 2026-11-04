@@ -2,7 +2,7 @@
  * Edit mode input: pointer, touch gestures, keyboard and pad.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import { Gestures } from '@thunderclap/engine/input';
+import { Gestures, type Rect } from '@thunderclap/engine/input';
 import { isRotational } from '../../rules';
 import type { Cell } from '../../rules/types';
 import { DRAG_PX, HOLD_SECS, SLOT_ACTIONS } from './altar-defs';
@@ -51,7 +51,20 @@ export const editMethods = {
           if (!ph) return { keep };
           const c0 = to(ph.colL, 0);
           const c1 = to(ph.colR, ph.laneTop);
-          return { keep, avoid: [{ l: c0.x, t: Number.NEGATIVE_INFINITY, r: c1.x, b: c1.y }] };
+          // polish-9: it leaves the Gives/Needs cards and the open hint or teach card in sight
+          // too when it can (below the 3×3 and the finger, above the column's head).
+          const spare: Rect[] = [];
+          for (const el of [...this.needs, this.stormLabel, this.hint, this.tip]) {
+            if (!el || el.hidden || !el.isConnected) continue;
+            const r = el.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0)
+              spare.push({ l: r.left, t: r.top, r: r.right, b: r.bottom });
+          }
+          return {
+            keep,
+            spare,
+            avoid: [{ l: c0.x, t: Number.NEGATIVE_INFINITY, r: c1.x, b: c1.y }],
+          };
         },
         source: ctx.surface.canvas,
         className: 'lr-loupe',

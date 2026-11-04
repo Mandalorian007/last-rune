@@ -60,6 +60,7 @@ export class Machine {
   private awakeK = 0;
   private breakerK = 0;
   private breakerT = -1;
+  private breakerRest = 0;
   private pinned = false;
   private time = Math.random() * 10;
   private readonly seed = Math.random() * 20;
@@ -118,13 +119,23 @@ export class Machine {
     this.awake = true;
   }
 
-  /** Over-charge: needle slams into the red, lamp blinks, then everything drops dead. */
-  breaker(): void {
+  /**
+   * Over-charge: needle slams into the red, lamp blinks, then everything drops dead. The needle
+   * then falls back to `rest` (0 by default; the altar keeps it at the over reading, in the red).
+   */
+  breaker(rest = 0): void {
     this.gauge = MACHINE_GAUGE_MAX;
+    this.breakerRest = rest;
     this.vel += 6;
     this.breakerT = 0;
     this.pinned = false;
     this.awake = false;
+  }
+
+  /** Put the needle on its target now, with no swing (a reading that already arrived). */
+  settle(): void {
+    this.needle = Math.min(Math.max(this.gauge, 0), MACHINE_GAUGE_MAX);
+    this.vel = 0;
   }
 
   reset(): void {
@@ -139,7 +150,7 @@ export class Machine {
     if (this.breakerT >= 0) {
       this.breakerT += dt;
       this.breakerK = this.breakerT < 1.6 ? 1 : Math.max(0, 1 - (this.breakerT - 1.6) * 2);
-      if (this.breakerT > 1.1) this.gauge = 0;
+      if (this.breakerT > 1.1) this.gauge = this.breakerRest;
       if (this.breakerT > 2.2) this.breakerT = -1;
     } else {
       this.breakerK = 0;
