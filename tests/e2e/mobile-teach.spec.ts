@@ -283,8 +283,9 @@ for (const vp of PHONES) {
           if (c.box.h > c.line) problems.push(`${tag}: the used-up badge takes two lines`);
           if (c.cursor === 'pointer') problems.push(`${tag}: pointer cursor`);
           if (c.slotSeen && c.tick) problems.push(`${tag}: a ✓ circle`);
-          if (!(c.gem.size > 0) || c.gem.state !== 'dim')
-            problems.push(`${tag}: no dimmed silhouette (${c.gem.state} ${c.gem.size})`);
+          // glyph-truth: a dimmed copy of the real icon (the `spent` gem state), every kind alike.
+          if (!(c.gem.size > 0) || c.gem.state !== 'spent')
+            problems.push(`${tag}: no dimmed copy (${c.gem.state} ${c.gem.size})`);
           g.forEach((o, j) => {
             if (j !== i && hit(c.box, o.box)) problems.push(`${tag}: overlaps count ${j + 1}`);
           });

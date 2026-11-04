@@ -38,7 +38,7 @@ emboss.draw(frame, label, x, y);
 
 ## `gems.ts`: `GemRenderer`, `GemInstance`, `addGemLight`
 `GemInstance { kind, x, y, size, state, rot?, glow?, lift?, seed? }`
-- `state`: `'idle' | 'hover' | 'placed' | 'energised' | 'dim'`.
+- `state`: `'idle' | 'hover' | 'placed' | 'energised' | 'dim' | 'spent'` (`spent`: a tray gem with none left, a dimmed copy of itself).
 - `rot`: quarter turns clockwise (fractional animates). 0 = output north. The glyph rotates and
   the lighting stays fixed.
 - `lift` 0..1 lifts by `GEM_LIFT_PX` (16), grows 7% and spreads the shadow (animate on hover).

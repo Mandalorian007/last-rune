@@ -543,7 +543,7 @@ export const LIT_SURFACE_WGSL = /* wgsl */ `${LIGHTS_WGSL}
  */
 export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
 @fragment fn fs_main(in: VSOut) -> FragOut {
-  // Socket radius = 1; the quad reaches 1.3 radii, or params.w when set (the collar's 1.42).
+  // Socket radius = 1; the quad reaches 1.3 radii, or params.w when set (collar 1.6, fault 1.42).
   let p = (in.local * 2.0 - 1.0) * select(1.3, in.params.w, in.params.w > 0.0);
   let r = length(p);
   let state = i32(in.params.x + 0.5);
@@ -689,9 +689,11 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
     col = mix(col, vec3f(0.70, 0.58, 0.36), riv * 0.5 * glint);
     // The lock pip (altar-truth): the lower-right rivet is a bigger brass disc carrying a dark
     // padlock (body and shackle), so "can't move this" reads without the card.
-    let lc = p - vec2f(1.0, 1.0) * mid * 0.70710678;
+    // glyph-truth: bigger (0.42 radii, ~12 CSS px across on an SE) and pushed out past the gem's
+    // edge onto the collar's lower-right shoulder, so no gem cut covers it.
+    let lc = p - vec2f(1.0, 1.0);
     let lr = length(lc);
-    let pipR = 0.27;
+    let pipR = 0.42;
     let pip = 1.0 - smoothstep(pipR - 0.03, pipR + 0.005, lr);
     var lockA = 0.0;
     if (pip > 0.0) {
@@ -721,12 +723,14 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
     // Legal (mobile-6-board): a steady, crisp ring of light just outside the bowl, with a dark
     // keyline either side so it reads on pale stone and on dark alike. No shimmer and no pulse:
     // every socket the held gem may go in wears exactly the same ring.
-    let band = smoothstep(0.95, 1.0, r) * (1.0 - smoothstep(1.13, 1.18, r));
-    let key = smoothstep(0.84, 0.93, r) * (1.0 - smoothstep(1.2, 1.29, r));
-    let a = max(band, key * 0.7) * min(k, 1.0);
-    let c = mix(vec3f(0.015, 0.012, 0.01), tint, band / max(max(band, key * 0.7), 0.001));
+    // glyph-truth: calmer. A thin warm-gold line over the rim, not a full cream band, with a
+    // faint keyline inside, so the circuit and the built-in gems keep the eye.
+    let band = smoothstep(0.95, 0.99, r) * (1.0 - smoothstep(1.06, 1.1, r));
+    let key = smoothstep(0.86, 0.93, r) * (1.0 - smoothstep(0.95, 0.99, r));
+    let a = max(band * 0.78, key * 0.4) * min(k, 1.0);
+    let c = mix(vec3f(0.015, 0.012, 0.01), tint, band / max(max(band, key), 0.001));
     o.color = vec4f(c, a);
-    o.emissive = vec4f(tint * band * in.emissive * 0.1 * k, a);
+    o.emissive = vec4f(tint * band * in.emissive * 0.04 * k, a);
     return o;
   }
   if (state == 8) {

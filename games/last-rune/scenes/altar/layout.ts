@@ -373,8 +373,12 @@ const PH = {
   slotShort: 40,
   shortCss: 345,
   slotGap: 8,
-  /** port-altar-3: the count is a badge on the gem's corner, so rows stand this far apart. */
-  rowGap: 8,
+  /**
+   * glyph-truth: the count is a badge under the gem, off its glyph (`TRAY_COUNT_DROP` slots
+   * below the centre, `countH` tall), so rows stand far enough apart that it clears the glyph
+   * of the gem below too.
+   */
+  countH: 13,
   titleH: 26,
   badge: 26,
   /** FUSE's bubble / the hint sit this far above the canvas bottom (clear of Strike, 64 px). */
@@ -389,6 +393,20 @@ const PH = {
 
 /** A lifted gem rises this far (design px; gems.ts GEM_LIFT_PX) and grows 7%. */
 const LIFT = 16;
+
+/**
+ * glyph-truth: a gem's glyph reaches this far from its centre, as a fraction of its drawn size
+ * (the shader draws every glyph edge to edge: 0.72 of the glyph's half-width, scaled by 1/1.08,
+ * plus the stroke).
+ */
+export const TRAY_GLYPH_HALF = 0.38;
+/**
+ * glyph-truth: the held gem rests flat in its tray slot at the slot's size (no lift, no size-up;
+ * its gold ring and the Holding pill mark it), so no badge reaches its glyph.
+ */
+export const TRAY_HELD_SCALE = 1;
+/** glyph-truth: the count badge's top sits at the glyph's lower edge, under the gem centre. */
+export const TRAY_COUNT_DROP = TRAY_GLYPH_HALF;
 
 /** The widest a west/east gauge's card may be on a phone, CSS px (it wraps to fit). */
 export const PHONE_GUTTER_CARD = PH.gutter - PH.clear - PH.edge;
@@ -558,7 +576,11 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
     Math.min(slotMax, Math.floor((colR - colL) / c / Math.max(per, 2) - PH.slotGap)),
   );
   const slotDX = slot + PH.slotGap;
-  const slotDY = Math.max(44, slot + PH.rowGap);
+  // A row's badge (under its gem) clears the glyph of the gem in the next row.
+  const slotDY = Math.max(
+    slot + PH.slotGap,
+    Math.ceil((TRAY_COUNT_DROP + TRAY_GLYPH_HALF * TRAY_HELD_SCALE) * slot + PH.countH + 1),
+  );
   const lift = LIFT / c;
   // First row: a held gem, lifted, and its ↻ badge clear of the title line.
   const row0 =
@@ -580,8 +602,8 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
       padL: f.padL,
       colL,
       colR,
-      // The count badge hangs 3 px under the gem's corner; the cards start 6 px under that.
-      laneTop: Math.round(T + (lastRow + slot / 2 + 9) * c),
+      // The count badge hangs under the gem; the cards start 1 px under that.
+      laneTop: Math.round(T + (lastRow + TRAY_COUNT_DROP * slot + PH.countH + 1) * c),
       bubbleL: colL,
       bubbleB: Math.round(B - PH.bubbleUp * c),
       fuseX: Math.round(colL + 22 * c),

@@ -150,8 +150,11 @@ export const circuitMethods = {
     }
     this.updateNoGo(placements, sim);
     // Straight-through glyphs face the way the bolt will really come in, with the held gem
-    // where it would land. Bend, Gate and Split keep the turn they were set at.
-    v.faceAlong(hops, true);
+    // where it would land. Bend, Gate and Split keep the turn they were set at. Every strike
+    // counts, not just the first (glyph-truth): a gem only a Capacitor's release reaches already
+    // rests along that run, so nothing turns when Strike is pressed (the verdict faces gems
+    // along the same trace; `solvedLook` hops).
+    v.faceAlong(sim.trace, true);
     v.preview = hops;
     v.previewTarget = PREVIEW_PATH ? 1 : 0;
     this.renderCaps(capacitorBeats(this.puzzle, placements, sim), sim, false);

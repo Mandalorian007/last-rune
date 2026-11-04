@@ -88,6 +88,8 @@ export interface HeldGem {
   snapped: boolean;
   /** Drawn size, design px, when not the board's gem size (phones: resting in its tray slot). */
   size?: number;
+  /** Hover lift when not the default (phones: 0, it rests flat in its tray ring; glyph-truth). */
+  lift?: number;
 }
 
 export class AltarView {
@@ -673,7 +675,7 @@ export class AltarView {
       g.rot = this.restRot({ gem: h.kind, cell: { x: 0, y: 0 }, rot: h.rot as Placement['rot'] });
       g.x = h.x;
       g.y = h.y;
-      g.lift = h.snapped ? 0.6 : 1;
+      g.lift = h.lift ?? (h.snapped ? 0.6 : 1);
       g.state = 'hover';
       g.size = h.size ?? L.gemSize * (h.snapped ? 1 : 1.05);
       g.glow = 1.1;

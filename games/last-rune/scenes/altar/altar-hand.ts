@@ -14,7 +14,7 @@ import {
 } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { emitPuzzleEvent, puzzleEventsWanted } from './events';
-import { cellCenter } from './layout';
+import { cellCenter, TRAY_HELD_SCALE } from './layout';
 
 export const handMethods = {
   changed(this: AltarScene, placed: Cell | null = null): void {
@@ -421,8 +421,8 @@ export const handMethods = {
       const t = this.view.tray[i]!;
       const n = this.board.remaining(s.gem);
       const held = this.hand && !this.hand.from && this.hand.kind === s.gem;
-      t.state = n === 0 ? 'dim' : held || i === this.hoverSlot ? 'hover' : 'idle';
-      // All of a kind on the board: a dimmed, smaller silhouette stays in its slot ("all
+      t.state = n === 0 ? 'spent' : held || i === this.hoverSlot ? 'hover' : 'idle';
+      // All of a kind on the board: a dimmed, smaller copy of the gem stays in its slot ("all
       // placed" under it), so the tray keeps its shape and nothing there reads as a button.
       t.size = n === 0 && L.phone ? s.size * 0.8 : s.size;
       const lift = this.view.trayLift[i]!;
@@ -451,6 +451,7 @@ export const handMethods = {
     const pt = { x: 0, y: 0 };
     let snapped = false;
     let size: number | undefined;
+    let lift: number | undefined;
     const p = this.ctx.input.pointer;
     const cell = this.keyboard ? this.cursor : this.hoverCell;
     let refused: string | null = null;
@@ -479,10 +480,14 @@ export const handMethods = {
         const i = L.tray.findIndex((s) => s.gem === hand.kind);
         const s = L.tray[Math.max(0, i)]!;
         pt.x = s.x;
-        // Phones: it rests lifted in its own slot, under the title (mobile-4-board), a size up
-        // inside its gold ring, so the gem in hand is unmistakable (mobile-6-board).
+        // Phones: it rests in its own slot, under the title (mobile-4-board), inside its gold
+        // ring (mobile-6-board). It sits flat at the slot's size, not lifted or grown, so its
+        // glyph stays clear of the count badges above and below it (glyph-truth).
         pt.y = L.phone ? s.y : s.y - 70;
-        if (L.phone) size = Math.round(s.size * 1.16);
+        if (L.phone) {
+          size = Math.round(s.size * TRAY_HELD_SCALE);
+          lift = 0;
+        }
       }
     }
     this.showRefusal(refused ? cell : null, refused);
@@ -494,7 +499,9 @@ export const handMethods = {
       h0.y = pt.y;
       h0.snapped = snapped;
       h0.size = size;
-    } else this.view.held = { kind: hand.kind, rot: hand.rot, x: pt.x, y: pt.y, snapped, size };
+      h0.lift = lift;
+    } else
+      this.view.held = { kind: hand.kind, rot: hand.rot, x: pt.x, y: pt.y, snapped, size, lift };
   },
 
   /** With a gem in hand (not dragging), is the pointer or cursor on one of the player's gems? */

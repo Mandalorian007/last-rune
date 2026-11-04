@@ -13,7 +13,14 @@ import { isRotational } from '../../rules';
 import type { Cell } from '../../rules/types';
 import { SVG_NS } from './altar-defs';
 import type { AltarScene } from './altar-scene';
-import { type AltarLayout, cellCenter, FUSE_LANE, TRAY_CENTER_X, trayTipX } from './layout';
+import {
+  type AltarLayout,
+  cellCenter,
+  FUSE_LANE,
+  TRAY_CENTER_X,
+  TRAY_COUNT_DROP,
+  trayTipX,
+} from './layout';
 import { straightLine, turnTeachLine } from './moments';
 
 /** A box in design px. */
@@ -94,12 +101,13 @@ export const columnMethods = {
         s.top = y(t.y);
         s.width = s.height = `${(t.size * k).toFixed(1)}px`;
       }
-      // The count is a badge hung from the gem's lower-right corner, growing left over its own
-      // gem (never into the next one), the same in every room.
+      // The count is a badge centred under the gem, its top clear of the glyph (glyph-truth:
+      // on the corner it hid the Split's input end and the Gate's lower input), the same in
+      // every room.
       const c = this.counts[i]?.style;
       if (c) {
-        c.left = x(t.x + t.size * 0.52);
-        c.top = y(t.y + t.size * 0.38);
+        c.left = x(t.x);
+        c.top = y(t.y + t.size * TRAY_COUNT_DROP);
       }
     });
   },
