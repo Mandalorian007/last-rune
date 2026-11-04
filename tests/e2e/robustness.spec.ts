@@ -257,13 +257,9 @@ test('a lost GPU device shows the friendly reload screen above everything', asyn
   await expect(page.locator('.lr-title-menu').first()).toBeVisible({ timeout: 15_000 });
 });
 
-const BAD_SAVES: [string, string][] = [
-  ['not JSON', '{oops'],
-  ['no envelope', JSON.stringify({ progress: { solved: ['intake-desk'] } })],
-  ['wrong shape', JSON.stringify({ v: 1, t: 1, d: { progress: 7 } })],
-  ['future version', JSON.stringify({ v: 99, t: 1, d: {} })],
-  ['empty string', ''],
-];
+// One shape is enough here: the game's notice and fresh start. The engine save tests recover
+// all five (not JSON, no envelope, wrong shape, future version, empty string; D-041).
+const BAD_SAVES: [string, string][] = [['not JSON', '{oops']];
 
 for (const [what, raw] of BAD_SAVES) {
   test(`a corrupt save (${what}) boots to the title and says so`, async ({ page }) => {

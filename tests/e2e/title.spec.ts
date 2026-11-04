@@ -82,11 +82,10 @@ test('FUSE chatters on the title, clear of the menu, and stops when the player s
   expect(problems).toEqual([]);
 });
 
-test('the title offers a quiet Ko-fi link that opens only on a click (D-034)', async ({ page }) => {
+test('the title offers a quiet Ko-fi link (D-034)', async ({ page }) => {
   test.setTimeout(60_000);
+  // That the link opens only on a click is an engine host check (packages/engine/e2e/host.spec.ts).
   const problems = trackProblems(page);
-  const popups: string[] = [];
-  page.on('popup', (p) => popups.push(p.url()));
   await page.goto(DEV_URL);
   await page.waitForFunction(
     () => (window as unknown as { __game?: GameHandle }).__game?.flow.state === 'title',
@@ -114,7 +113,5 @@ test('the title offers a quiet Ko-fi link that opens only on a click (D-034)', a
   await page.keyboard.press('ArrowUp');
   await expect(coffee).toBeFocused();
 
-  await page.waitForTimeout(1000);
-  expect(popups).toEqual([]);
   expect(problems).toEqual([]);
 });
