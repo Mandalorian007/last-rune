@@ -5,6 +5,7 @@
  * `PuzzleDef`, so difficulty-fun can retune boards and trays freely. Geometry mirrors
  * `AltarSlab` (margin = 0.8 × pitch, front face = 0.42 × pitch).
  */
+import { snapToGrid } from '@thunderclap/engine/input';
 import { altarDims, type PuzzleDef } from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
 import { GEM_KINDS } from '../../rules/types';
@@ -720,7 +721,7 @@ export function cellAt(L: AltarLayout, x: number, y: number): Cell | null {
 }
 
 /**
- * Touch aiming: the socket a finger means. The socket under the point if `ok` accepts it;
+ * Touch aiming (engine `snapToGrid`): the socket a finger means. The socket under the point if `ok` accepts it;
  * otherwise the nearest accepted socket whose edge is within half a pitch of the point (so a
  * slightly-off aim at carved stone or a fixed gem lands next door instead of nowhere). Null
  * when nothing accepted is that close.
@@ -731,29 +732,14 @@ export function snapCell(
   y: number,
   ok: (c: Cell) => boolean,
 ): Cell | null {
-  const fx = (x - L.left - L.margin) / L.pitch;
-  const fy = (y - L.top - L.margin) / L.pitch;
-  const cx = Math.floor(fx);
-  const cy = Math.floor(fy);
-  let best: Cell | null = null;
-  let bestD = Number.POSITIVE_INFINITY;
-  for (let j = cy - 1; j <= cy + 1; j++) {
-    for (let i = cx - 1; i <= cx + 1; i++) {
-      if (i < 0 || j < 0 || i >= L.cols || j >= L.rows) continue;
-      // Distance from the point to the socket's square, in pitches (0 inside it).
-      const ox = Math.max(0, Math.abs(fx - (i + 0.5)) - 0.5);
-      const oy = Math.max(0, Math.abs(fy - (j + 0.5)) - 0.5);
-      if (ox > 0.5 || oy > 0.5) continue;
-      const c = { x: i, y: j };
-      if (!ok(c)) continue;
-      const d = Math.hypot(fx - (i + 0.5), fy - (j + 0.5));
-      if (d < bestD) {
-        bestD = d;
-        best = c;
-      }
-    }
-  }
-  return best;
+  const grid = {
+    left: L.left + L.margin,
+    top: L.top + L.margin,
+    pitch: L.pitch,
+    cols: L.cols,
+    rows: L.rows,
+  };
+  return snapToGrid(grid, x, y, (i, j) => ok({ x: i, y: j }));
 }
 
 /** Tray slot under a logical point, or -1. */
