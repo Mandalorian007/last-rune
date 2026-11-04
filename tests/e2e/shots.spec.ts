@@ -112,6 +112,8 @@ async function seed(
       if (g.flow.state === 'puzzle') g.flow.closePuzzle();
       g.save.update((d: G) => {
         d.flags.hallIntro = true;
+        // Past the first altar a player has struck, which retires the dot legend (teach-6).
+        d.flags.dotTold = solved.length > 0;
         d.settings.captionSpeed = 'instant';
         d.progress.solved = solved;
         d.puzzles = puzzles;
