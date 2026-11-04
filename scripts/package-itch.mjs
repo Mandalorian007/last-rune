@@ -42,8 +42,10 @@ function walk(dir) {
   const out = [];
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
-    // dist/desktop/ holds the Electron builds (`pnpm desktop:build`); never the web upload.
-    if (e.isDirectory() && dir === distDir && e.name === 'desktop') continue;
+    // dist/desktop/ holds the Electron builds (`pnpm desktop:build`) and dist/cover-image/ the
+    // itch cover candidates page (Pages only); neither belongs in the web upload.
+    if (e.isDirectory() && dir === distDir && (e.name === 'desktop' || e.name === 'cover-image'))
+      continue;
     if (e.isDirectory()) out.push(...walk(p));
     else if (e.isFile()) out.push(p);
   }
