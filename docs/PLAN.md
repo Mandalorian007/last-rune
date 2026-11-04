@@ -59,7 +59,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9h | Teach 4: in→out diagrams on gem cards, Capacitor two-strike strip, gauge dot explained, Channels lie along their run, no mid-sum wraps | ws/teach-4 | 2 | 9c | ✅ merged |
 | 9i | Chrome polish 4: hall legend, title/end-card button weight, end-card stats, journal caption | ws/chrome-polish-4 | 2 | 9c | ✅ merged |
 | 9j | Strike free: Strike framed as a free test, no attempt counters, verdict as information (D-043; no live readout) | ws/strike-free | 2 | 9h | ✅ merged |
-| 9m | Strike free 2: Capacitor plan vs arrival card on pre-filled phone boards; end card drops the miss count | ws/strike-free-2 | 2 | 9j | 🔄 running |
+| 9m | Strike free 2: Capacitor plan vs arrival card on pre-filled phone boards; end card drops the miss count | ws/strike-free-2 | 2 | 9j | ✅ merged |
 | 9k | Menu flow: audit and clean up title/hall/altar/solve/ending menus, one back pattern, Journal in altar menu (D-043) | ws/menu-flow | 2 | 9i | ✅ merged |
 | 9l | Cover art: 8 itch covers rendered by the game at /cover-image/ for user review (D-043) | ws/cover-art | — | — | ✅ merged; user picked #8 fuse-portrait (D-043 add. 1) |
 | 9n | Cover final: keep fuse-portrait, page off Pages, `pnpm cover` writes the PNG | ws/cover-final | — | 9l | 🔄 running |
