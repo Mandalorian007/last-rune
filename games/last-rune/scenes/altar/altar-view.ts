@@ -102,6 +102,8 @@ export class AltarView {
   /** Tray slot emphasis (selected kind) and lift targets. */
   readonly trayLift: number[];
   readonly marks: SocketMark[] = [];
+  /** Extra glow a fully energised gem gets (the solve moment turns it down; solve-truth). */
+  energyGlow = 0.6;
   held: HeldGem | null = null;
   /** A gem shown large in front of everything (the solve moment's granted gem). */
   showcase: GemInstance | null = null;
@@ -424,9 +426,11 @@ export class AltarView {
       const s = b.settle;
       const bounce = rm ? 0 : Math.sin(s * Math.PI * 2.2) * s * 0.09;
       g.size = this.layout.gemSize * (1 + bounce);
-      g.state = b.energy > 0.15 ? 'energised' : b.hidden ? 'dim' : 'placed';
+      // A gem the bolt has passed and left cools to its placed look (glyph and turn read
+      // plainly under the verdict); one still holding or waiting on charge stays energised.
+      g.state = b.energy > 0.45 ? 'energised' : b.hidden ? 'dim' : 'placed';
       const hold = b.holding ? 0.35 + 0.25 * Math.sin(this.time * 6) : 0;
-      g.glow = 1 + b.energy * 0.6 + hold + (b.fixed ? 0 : 0);
+      g.glow = 1 + b.energy * this.energyGlow + hold;
     }
     for (let i = 0; i < this.tray.length; i++) {
       const t = this.tray[i]!;
