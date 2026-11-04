@@ -56,7 +56,7 @@ ${HEAD} .lr-altar-slot {
   position: absolute; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; display: none;
 }
 ${HEAD} .lr-altar-slot[data-held]:not([data-empty]) {
-  display: block; transform: translate(-50%, -50%) scale(1.22);
+  display: block; width: var(--lr-held-d) !important; height: var(--lr-held-d) !important;
   box-shadow: 0 0 0 2.5px #ffd77a, 0 0 0 4px rgba(20,12,4,0.85), 0 0 14px 3px rgba(255,205,110,0.5);
   background: radial-gradient(circle, rgba(255,215,122,0.16) 0 60%, transparent 72%);
 }

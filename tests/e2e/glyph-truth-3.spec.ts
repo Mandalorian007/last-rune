@@ -130,3 +130,98 @@ test('the Bend glyph has no cross bar at either end', () => {
   // Each end is plain: a door bar across an arm's end reads as a third arm (a T) when lit.
   expect(bend).not.toMatch(/-0\.16/);
 });
+
+// glyph-truth-3 (PM, polish-8 shots): on a phone the held tray slot's gold ring cut across the
+// count of the gem above it, and a dark ↻ chip sat on the ring's corner. The held ring keeps
+// clear of every other slot's count, and the gem in hand wears no chip (Turn names it).
+test.describe('the held tray slot on a phone (SE)', () => {
+  test.use({ viewport: { width: 667, height: 320 }, isMobile: true, hasTouch: true });
+  for (const id of ['press-unit-4', 'furnace'] as const) {
+    test(`${id}: the held ring clears every other count, no chip on the gem in hand`, async ({
+      page,
+    }) => {
+      const pz = puzzleFor(id);
+      const half = pz.design.intended.slice(0, Math.floor(pz.design.intended.length / 2));
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(DEV_URL);
+      await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+        timeout: 30_000,
+      });
+      await page.evaluate(
+        ({ id, placements, solved }) => {
+          const g = (window as G).__game;
+          g.save.update((d: G) => {
+            d.flags.hallIntro = true;
+            d.settings.captionSpeed = 'instant';
+            d.progress.solved = solved;
+            d.puzzles = { [id]: { attempts: 0, placements } };
+          });
+          g.flow.continueGame();
+          g.flow.openPuzzle(id);
+        },
+        { id, placements: half, solved: ORDER.slice(0, ORDER.indexOf(id)) },
+      );
+      await expect(page.locator('.lr-altar')).toBeVisible();
+      await page.waitForFunction(() => !!(window as G).__altarLayout);
+      // Put the arrival card away.
+      for (let i = 0; i < 20; i++) {
+        await page.evaluate(() => (window as G).__game.fuse.hush());
+        await waitFrames(page, 4);
+        const next = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
+        if (!(await next.isVisible())) break;
+        await next.tap({ timeout: 2000 }).catch(() => {});
+      }
+      const L = await page.evaluate(() => (window as G).__altarLayout);
+      const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+      const k = ob.width / 1920;
+      const problems: string[] = [];
+      for (const slot of L.tray as { gem: string; x: number; y: number }[]) {
+        if (slot.gem === 'amplify') continue;
+        await page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);
+        const got = await page
+          .waitForFunction((g) => (window as G).__altarView?.held?.kind === g, slot.gem, {
+            timeout: 3000,
+          })
+          .then(() => true)
+          .catch(() => false);
+        if (!got) continue;
+        await waitFrames(page, 4);
+        const seen = await page.evaluate(() => {
+          const ring = document.querySelector<HTMLElement>('.lr-altar-slot[data-held]');
+          const rr = ring?.getBoundingClientRect();
+          const counts = [
+            ...document.querySelectorAll<HTMLElement>('.lr-altar-count:not([data-held])'),
+          ].map((c) => {
+            const r = c.getBoundingClientRect();
+            return { l: r.left, r: r.right, t: r.top, b: r.bottom, text: c.textContent ?? '' };
+          });
+          const chip = document.querySelector<HTMLElement>('.lr-turn-target');
+          return {
+            ring: rr && { cx: rr.x + rr.width / 2, cy: rr.y + rr.height / 2, r: rr.width / 2 },
+            counts,
+            chip: !!chip?.checkVisibility(),
+          };
+        });
+        if (!seen.ring) {
+          problems.push(`${slot.gem}: no held ring`);
+          continue;
+        }
+        // The ring's outer edge (2.5 px gold + 1.5 px dark outline) against each other count.
+        const outer = seen.ring.r + 4;
+        for (const c of seen.counts) {
+          const dx = Math.max(c.l - seen.ring.cx, 0, seen.ring.cx - c.r);
+          const dy = Math.max(c.t - seen.ring.cy, 0, seen.ring.cy - c.b);
+          if (Math.hypot(dx, dy) < outer)
+            problems.push(`${slot.gem}: held ring over the "${c.text}" count`);
+        }
+        if (seen.chip) problems.push(`${slot.gem}: a ↻ chip on the gem in hand`);
+        // With SHOTS=<dir>, keep a look at each held slot (git-ignored, docs/design/screens/local).
+        if (process.env.SHOTS)
+          await page.screenshot({
+            path: `docs/design/screens/local/${process.env.SHOTS}/se/12-${id}-held-${slot.gem}.png`,
+          });
+      }
+      expect(problems).toEqual([]);
+    });
+  }
+});

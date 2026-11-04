@@ -120,12 +120,27 @@ export const columnMethods = {
     this.headKey = key;
     const x = (dx: number) => `${(o.left + dx * k - hr.left).toFixed(1)}px`;
     const y = (dy: number) => `${(o.top + dy * k - hr.top).toFixed(1)}px`;
+    // glyph-truth-3: the held slot's gold ring grows past the gem only as far as it stays clear
+    // of every other slot's count badge (it used to cut across the "×4" above it).
+    const countHalfW = (j: number) => Math.max(10, (this.counts[j]?.offsetWidth ?? 24) / 2);
     L.tray.forEach((t, i) => {
       const s = this.slotEls[i]?.style;
       if (s) {
         s.left = x(t.x);
         s.top = y(t.y);
+        let r = t.size * k * 0.61;
+        L.tray.forEach((u, j) => {
+          if (j === i) return;
+          // The badge's box, CSS px, relative to this slot's centre.
+          const cx = (u.x - t.x) * k;
+          const top = (u.y + u.size * TRAY_COUNT_DROP - t.y) * k;
+          const dx = Math.max(0, Math.abs(cx) - countHalfW(j));
+          const dy = top > 0 ? top : Math.max(0, -(top + 13));
+          // Ring outline (2.5 px gold + 1.5 px dark) plus a 2 px gap.
+          r = Math.min(r, Math.hypot(dx, dy) - 6);
+        });
         s.width = s.height = `${(t.size * k).toFixed(1)}px`;
+        s.setProperty('--lr-held-d', `${Math.max(t.size * k * 0.5, r * 2).toFixed(1)}px`);
       }
       // The count is a badge centred under the gem, its top clear of the glyph (glyph-truth:
       // on the corner it hid the Split's input end and the Gate's lower input), the same in
@@ -402,6 +417,11 @@ export const columnMethods = {
     this.turnTarget = target;
     const show = target !== null;
     const phone = !!L.phone;
+    // glyph-truth-3: on a phone the gem in hand rests in its tray slot, its gold ring, the
+    // Holding pill and Turn's own label already name it, so it wears no ↻ chip (one sat on the
+    // ring's corner like a stray mark). A gem on the board keeps its chip: Turn turns that one.
+    const mark = show && !(phone && target === 'hand');
+    if (this.turnMark.hidden === mark) this.turnMark.hidden = !mark;
     if (this.turnShown !== show) {
       this.turnShown = show;
       // Phones (mobile-5-board): one rotate control. Turn stays on the left rail, dim until a
@@ -409,7 +429,6 @@ export const columnMethods = {
       this.turnBtn.hidden = !show && !phone;
       this.turnBtn.disabled = phone && !show;
       this.turnBtn.toggleAttribute('data-active', show);
-      this.turnMark.hidden = !show;
       if (phone) this.updateHint();
       this.avoidTray();
     }
