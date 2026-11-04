@@ -10,7 +10,7 @@
  *   compact format, "Needs 20 · got 0". Per-strike readings are told in the verdict.
  * - The verdict's strike line sits right under its headline.
  */
-import { cpx, P, tpx } from '../../ui/phone-styles';
+import { cpx, P, tpx } from '../../ui/phone-base';
 
 const A = `${P} .lr-altar[data-phone]`;
 

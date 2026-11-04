@@ -15,7 +15,7 @@
  * - **The end card** is a column of 40 px controls (44 px to the finger), set left of centre
  *   so the dropped clipboard on the right stays a prop, apart from the buttons.
  */
-import { cpx, P, tpx } from '../../ui/phone-styles';
+import { cpx, P, tpx } from '../../ui/phone-base';
 
 /** Right edge of the right bar column, 3 CSS px in from the bar's edge. */
 const BAR_IN = `calc(-1 * var(--tc-bar, 0px) + ${cpx(3)})`;
@@ -30,6 +30,8 @@ const CT = 'var(--tc-crop-t, 0px)';
 const CB = 'var(--tc-crop-b, 0px)';
 
 export const ENDING_PHONE_CSS = /* css */ `
+/* Hangout: no "unread" count; nothing there is for the player to open (D-027). */
+${P} .lr-hg-badge-count { display: none !important; }
 /* ── Skip: its own lane, top right, in the bar ───────────────────────────── */
 ${P} .lr-end-skip {
   right: ${BAR_IN}; top: ${cpx(4)}; bottom: auto; z-index: 3; width: ${LANE}; min-width: 0; height: ${cpx(36)};

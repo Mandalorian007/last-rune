@@ -4,10 +4,8 @@
  */
 
 import { scaleFontSizes } from '@thunderclap/engine/ui';
-import { DOOR_PLATE_CSS } from '../scenes/hall/door-plate-styles';
-import { JOURNAL_PHONE_CSS } from '../scenes/journal/journal-phone-styles';
 import { CHROME_CSS } from './chrome-styles';
-import { PHONE_CSS } from './phone-styles';
+import { PHONE_BASE_CSS } from './phone-base';
 
 /** Palette names from the pitch, as CSS colours for DOM UI. */
 export const CSS_PALETTE = {
@@ -380,7 +378,11 @@ const CSS = /* css */ `
 
 let injected: WeakSet<Document> | null = null;
 
-export function ensureGameStyles(doc: Document = document): void {
+/**
+ * Injects the game sheet, the phone sheet (the base rules, then `scenePhone`: each scene's own
+ * phone rules, handed in by game/ctx.ts) and the phone chrome sheet.
+ */
+export function ensureGameStyles(doc: Document = document, scenePhone = ''): void {
   injected ??= new WeakSet();
   if (injected.has(doc)) return;
   injected.add(doc);
@@ -390,7 +392,7 @@ export function ensureGameStyles(doc: Document = document): void {
   // Phone overrides outrank scene sheets by specificity, so their load order doesn't matter.
   const phone = doc.createElement('style');
   phone.dataset.lr = 'phone';
-  phone.textContent = scaleFontSizes(PHONE_CSS + DOOR_PLATE_CSS + JOURNAL_PHONE_CSS);
+  phone.textContent = scaleFontSizes(PHONE_BASE_CSS + scenePhone);
   // Phone chrome on the CSS-px overlay (ui/chrome.ts): menus, panels, HUD, FUSE's lane.
   const chrome = doc.createElement('style');
   chrome.dataset.lr = 'chrome';

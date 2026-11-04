@@ -5,7 +5,7 @@
  * follows Settings → Text size and floors at 12 px (`scaleFontSizes`, styles.ts).
  *
  * World-anchored phone rules (the altar, the hall's door plates and Next ring, the journal's
- * book, the ending) stay on the scaled overlay in phone-styles.ts.
+ * book, the ending) stay on the scaled overlay in ui/phone-base.ts and the scenes' *-phone-styles.ts.
  */
 
 /** The CSS-px overlay on a phone, ranked above every `.tc-overlay .class` rule. */
@@ -362,7 +362,7 @@ ${C} .lr-title-links :is(.lr-title-coffee, .tc-link-copy) {
 ${C} .lr-title-links :is(.lr-title-coffee, .tc-link-copy):hover { color: #fff3d6; border-color: rgb(232 192 106 / 0.8); }
 /* Settings: each segment a 36 px tap. */
 ${C} .lr-seg button { min-height: 36px; }
-/* Every button and link keeps a 44 px hit area (an invisible ::before; see phone-styles). */
+/* Every button and link keeps a 44 px hit area (an invisible ::before; see phone-base). */
 :where(${C}) :where(button, a[href], [role="button"], summary) { position: relative; }
 :where(${C}) :where(button, a[href], [role="button"], summary)::before {
   content: ''; position: absolute; pointer-events: auto;

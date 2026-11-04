@@ -363,7 +363,7 @@ for (const vp of PHONES) {
       await page.evaluate(() => (window as G).__game.fuse.hush());
       await shot(page, '13-capacitor-bay-before');
       await strike(page);
-      await expect(page.locator('.lr-altar-verdict')).toContainText('Strike 2');
+      await expect(page.locator('.lr-altar-verdict')).toContainText('then 16');
       await shot(page, '13-capacitor-bay-multi');
 
       // A solve: the Furnace really solved, under its solve card.

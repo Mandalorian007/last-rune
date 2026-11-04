@@ -38,6 +38,10 @@ import {
 import { PHONE_WORDS_PER_CARD } from '../content/lines';
 import { storyTier } from '../rules/progression';
 import type { MachineId } from '../rules/types';
+import { DOOR_PLATE_CSS } from '../scenes/hall/door-plate-styles';
+import { HALL_PHONE_CSS } from '../scenes/hall/hall-phone-styles';
+import { JOURNAL_PHONE_CSS } from '../scenes/journal/journal-phone-styles';
+import { TITLE_PHONE_CSS } from '../scenes/title/title-phone-styles';
 import { TITLE_UPRIGHT, type ViewContext, type ViewCue, type ViewFactories } from '../scenes/views';
 import { CHROME_LAYOUT, createGameChrome } from '../ui/chrome';
 import { Codex } from '../ui/codex';
@@ -50,6 +54,9 @@ import { GameFlow, type SolveMoment } from './flow';
 import { GraphicsController } from './graphics';
 import { createGameSave, type GameSave, progressOf, repairSave, SAVE_GAME_ID } from './save';
 import { SettingsController } from './settings';
+
+/** Each scene's phone rules, appended to the phone sheet in this order (ui/styles.ts). */
+const SCENE_PHONE_CSS = TITLE_PHONE_CSS + HALL_PHONE_CSS + JOURNAL_PHONE_CSS + DOOR_PLATE_CSS;
 
 export const DESIGN_W = 1920;
 export const DESIGN_H = 1080;
@@ -138,7 +145,7 @@ export function engineOptions(
     // The browser tab or itch's frame; saves live in its localStorage (v1.0 keys unchanged).
     save: (host) => createGameSave({ host }),
     mixerKey: SAVE_GAME_ID,
-    styles: ensureGameStyles,
+    styles: (doc) => ensureGameStyles(doc, SCENE_PHONE_CSS),
     // Phones: menus, panels, the HUD and FUSE's lane in CSS px on layout regions (ui/chrome.ts).
     overlay: { layout: CHROME_LAYOUT },
     // The HUD shortcuts (Codex, Settings, Journal) also work while a button or link has focus,

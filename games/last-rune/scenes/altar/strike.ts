@@ -327,7 +327,7 @@ export function hintRoom(
 /** Too much charge: name the real cause where the rules know it, and only gems in the room. */
 function overStep(room: HintRoom | undefined): string {
   if (!room) return 'Try: less charge.';
-  const halve = room.gems.has('split') ? ' A Split halves the charge.' : '';
+  const halve = room.gems.has('split') ? ' A Split halves it.' : '';
   // A Capacitor let out more than the machine takes: what it kept plus the new charge.
   const m = room.machine;
   const k = m ? m.readings.findIndex((r) => r > m.need) : -1;
@@ -438,13 +438,15 @@ export function failHead(m: MachineResult, outcome: 'over' | 'under'): string {
 
 /**
  * Phones, multi-strike altars: what each strike gave the machine the verdict is about, and
- * what it needs, in full sentences: "Strike 1 gave it 0. Strike 2 gave it 8. It needs 20 in one
- * strike." Empty on a one-strike altar (the gauge's "got" says it all).
+ * what it needs: "Got 0, then 8; needs 20 in one strike." Short enough that the verdict's Try
+ * line still fits an SE's lane under it (port-altar-3). Empty on a one-strike altar (the
+ * gauge's "got" says it all).
  */
 export function strikesLine(m: MachineResult, pulses: number): string {
   if (pulses < 2 || m.readings.length === 0) return '';
-  const each = m.readings.map((r, i) => `Strike ${i + 1} gave it ${r}.`).join(' ');
-  return `${each} It needs ${m.need} in one strike.`;
+  const r = m.readings;
+  const got = r.length > 1 ? `${r.slice(0, -1).join(', ')}, then ${r[r.length - 1]}` : `${r[0]}`;
+  return `Got ${got}; needs ${m.need} in one strike.`;
 }
 
 /**

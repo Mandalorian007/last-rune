@@ -18,6 +18,7 @@ import {
   type FormSpec,
   type LayoutState,
   type Rect,
+  type RegionName,
   resolveLayout,
 } from '@thunderclap/engine/ui';
 import { placeWidgets, type RegionWidget } from '../../ui/chrome';
@@ -86,13 +87,67 @@ export function altarFrame(d: FrameDevice, chrome: CssChrome | null): PhoneFrame
   return frameFromRegions(d, altarRegions(st.width, st.height, st.safeArea), st.width);
 }
 
+/** The foot row under the cards: Strike (58 px) 6 px off the screen's foot, FUSE beside it. */
+export const ALTAR_FOOT = 64;
+
 /**
- * Puts the altar's tracks on the chrome and its rail buttons in their regions while the CSS-px
- * chrome is live (`placeWidgets`); off phones they stay in the scaled overlay's button row.
+ * port-altar-3: the altar's tracks with the column. The board is fitted first (layout.ts
+ * phoneLayout, against the rails alone); the column then takes what the board leaves, as a
+ * track of its own between `fill` and the right rail:
+ *
+ *   left | fill | top (title, tray)  | right (the ☰)
+ *   left | fill | cardLane (gem, teach and verdict cards; FUSE's line)
+ *   left | fill | bottom (FUSE, Strike)
+ *
+ * `w` is the column's width and `head` the title-and-tray row's height, CSS px.
+ */
+export function altarForm(col: { w: number; head: number } | null): FormSpec {
+  if (!col) return ALTAR_FORM;
+  return {
+    ...ALTAR_FORM,
+    columns: [RAIL_LEFT, 'fill', col.w, RAIL_RIGHT],
+    rows: [col.head, 'fill', ALTAR_FOOT],
+    areas: ['left fill top right', 'left fill cardLane cardLane', 'left fill bottom bottom'],
+  };
+}
+
+/** The column's DOM and where the board's fit put it (design px). */
+export interface AltarColumn {
+  /** Title, "Holding" pill and the tray's counts: the `top` region. */
+  head: HTMLElement;
+  /** The cards (how-to line, gem and teach card, verdict, read-outs): `cardLane`. */
+  cards: HTMLElement;
+  /** FUSE's caption, docked under the cards in `cardLane`. */
+  caption: { element: HTMLElement; dock(host: HTMLElement | null): void };
+  /** The column's left edge and the tray's foot, design px (layout.ts PhoneBand). */
+  colL: number;
+  headB: number;
+}
+
+/** The column's tracks for this chrome (CSS px), or null without a column or a live chrome. */
+export function columnTracks(
+  st: LayoutState,
+  d: FrameDevice,
+  col: { colL: number; headB: number },
+): { w: number; head: number } | null {
+  if (st.width <= 0) return null;
+  // The column starts where the board's fit put it, and runs to the right rail.
+  const colL = (col.colL + d.bar) / d.cssPx;
+  const railX = st.width - st.safeArea.right - RAIL_RIGHT;
+  return {
+    w: Math.max(0, Math.round(railX - colL)),
+    head: Math.max(52, Math.round((col.headB - (d.cropT ?? 0)) / d.cssPx)),
+  };
+}
+
+/**
+ * Puts the altar's tracks on the chrome and its rail buttons, column and cards in their regions
+ * while the CSS-px chrome is live (`placeWidgets`); off phones they stay in the scaled overlay.
  * Returns the undo for the scene's exit and relayouts.
  */
-export function placeAltarRails(
+export function placeAltarChrome(
   chrome: CssChrome | null,
+  d: FrameDevice,
   rails: {
     back: HTMLElement;
     undo: HTMLElement;
@@ -100,28 +155,36 @@ export function placeAltarRails(
     turn: HTMLElement;
     strike: HTMLElement;
   },
+  col: AltarColumn | null,
 ): () => void {
   if (!chrome) return () => {};
-  chrome.layout.setForms({ 'phone-landscape': ALTAR_FORM });
-  const left = (el: HTMLElement, order: number, id: string): RegionWidget => ({
+  const tracks = col ? columnTracks(chrome.layout.state, d, col) : null;
+  chrome.layout.setForms({ 'phone-landscape': altarForm(tracks) });
+  const at = (el: HTMLElement, region: RegionName, order: number, id: string): RegionWidget => ({
     el,
-    place: { 'phone-landscape': 'left', default: 'hidden' },
+    place: { 'phone-landscape': region, default: 'hidden' },
     order,
     id,
   });
-  const off = placeWidgets(chrome, [
-    left(rails.back, 0, 'lr-altar-back'),
-    left(rails.undo, 1, 'lr-altar-undo'),
-    left(rails.clear, 2, 'lr-altar-clear'),
-    left(rails.turn, 3, 'lr-altar-turn'),
-    {
-      el: rails.strike,
-      place: { 'phone-landscape': 'right', default: 'hidden' },
-      order: 9,
-      id: 'lr-altar-strike',
-    },
-  ]);
+  const widgets: RegionWidget[] = [
+    at(rails.back, 'left', 0, 'lr-altar-back'),
+    at(rails.undo, 'left', 1, 'lr-altar-undo'),
+    at(rails.clear, 'left', 2, 'lr-altar-clear'),
+    at(rails.turn, 'left', 3, 'lr-altar-turn'),
+    at(rails.strike, tracks ? 'bottom' : 'right', 9, 'lr-altar-strike'),
+  ];
+  if (col && tracks) {
+    widgets.push(at(col.head, 'top', 0, 'lr-altar-head'));
+    widgets.push(at(col.cards, 'cardLane', -1, 'lr-altar-cards'));
+  }
+  const off = placeWidgets(chrome, widgets);
+  // FUSE's line docks under the cards; off phones it goes back to its corner.
+  const cap =
+    col && tracks
+      ? chrome.layout.dockCaption(col.caption, { 'phone-landscape': 'cardLane', default: 'hidden' })
+      : null;
   return () => {
+    cap?.remove();
     off();
     chrome.layout.setForms(null);
   };
@@ -140,7 +203,7 @@ export const ALTAR_CHROME_CSS = /* css */ `
 ${RAIL}, ${TURN} {
   position: absolute; left: 3px; width: 44px; height: 44px; min-width: 0; min-height: 0; padding: 0;
   border-radius: 8px; display: flex; align-items: center; justify-content: center;
-  font-family: var(--tc-font-ui); font-size: 11px; line-height: 1.1; letter-spacing: 0;
+  font-family: var(--tc-font-display, serif); font-size: 11px; line-height: 1.1; letter-spacing: 0;
 }
 ${CL} .tc-region > :is([data-action="back"], [data-action="undo"], [data-action="clear"], .lr-altar-turnbtn) > span {
   display: flex; flex-direction: column; align-items: center; gap: 0;
@@ -169,8 +232,6 @@ ${STRIKE} {
 ${STRIKE} > span { display: flex; flex-direction: row; align-items: center; }
 ${STRIKE} .lr-strike-word { white-space: nowrap; line-height: 1; }
 ${STRIKE} :is(.lr-strike-n, .lr-strike-pips) { display: none; }
-/* A verdict too tall for the column owns the corner until it clears (altar-scene arrangeColumn). */
-${STRIKE}[data-yield] { visibility: hidden; }
 ${STRIKE}:not([data-ready]):not(:disabled) { filter: none; }
 /* Ready: every gauge's lamp is lit. A bright rim and a slow glow (steady under reduced motion). */
 ${STRIKE}[data-ready] { animation: lr-strike-ready-rail 1.8s ease-in-out infinite; }

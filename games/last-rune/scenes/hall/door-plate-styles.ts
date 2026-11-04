@@ -1,6 +1,6 @@
 /**
- * The hall's door plates on phones (chrome-polish-3, Gate 2 review 5). Kept with the hall, not in
- * ui/phone-styles.ts (which ws/port-altar-3 is retiring); these rules sit after it and outrank it.
+ * The hall's door plates on phones (chrome-polish-3, Gate 2 review 5). Appended to the phone
+ * sheet after the hall's other phone rules (game/ctx.ts SCENE_PHONE_CSS), so these win.
  *
  * - A plate is never narrower than its longest word (with the padlock or ✓): "Capacitor" no
  *   longer spills out of its plate. A short last word ("Conveyor A", "Cell II") stays with the

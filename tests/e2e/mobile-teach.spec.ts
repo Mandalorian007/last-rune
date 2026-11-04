@@ -257,6 +257,7 @@ for (const vp of PHONES) {
             const after = sl ? getComputedStyle(sl, '::after').content : 'none';
             return {
               empty: c.hasAttribute('data-empty'),
+              label: c.getAttribute('aria-label') ?? '',
               text: (c.querySelector('.lr-n')?.textContent ?? '').trim(),
               box: { l: r.left, r: r.right, t: r.top, b: r.bottom, h: r.height },
               line: Number.parseFloat(cs.fontSize) * 1.6,
@@ -275,9 +276,11 @@ for (const vp of PHONES) {
         g.forEach((c, i) => {
           if (!c.empty) return;
           const tag = `${id} slot ${i + 1}`;
-          if (c.text !== 'all placed') problems.push(`${tag}: reads "${c.text}"`);
-          if (c.box.h > c.line) problems.push(`${tag}: "all placed" takes two lines`);
-          if (c.border || c.plate) problems.push(`${tag}: "all placed" wears a button's outline`);
+          // port-altar-3: the same short badge in every room, "×0", dimmed (it says "all placed"
+          // to a screen reader); one line, in its own place on the gem.
+          if (c.text !== '×0') problems.push(`${tag}: reads "${c.text}"`);
+          if (c.label !== 'all placed') problems.push(`${tag}: aria-label "${c.label}"`);
+          if (c.box.h > c.line) problems.push(`${tag}: the used-up badge takes two lines`);
           if (c.cursor === 'pointer') problems.push(`${tag}: pointer cursor`);
           if (c.slotSeen && c.tick) problems.push(`${tag}: a ✓ circle`);
           if (!(c.gem.size > 0) || c.gem.state !== 'dim')
@@ -326,7 +329,11 @@ for (const vp of PHONES) {
                 document.querySelector<HTMLElement>('.lr-altar-tip .lr-info-row')?.dataset.how ??
                 '',
               rule: document.querySelector('.lr-altar-tip .lr-info-rule')?.textContent ?? '',
-              leader: document.querySelectorAll('.lr-teach-leader .lr-leader-line').length,
+              // A line, or (port-altar-3) the ring alone where no line clears every gauge and
+              // label: the gem is still marked on the board.
+              leader: document.querySelectorAll(
+                '.lr-teach-leader :is(.lr-leader-line, .lr-leader-ring)',
+              ).length,
               lit: [...document.querySelectorAll<HTMLElement>('.lr-altar-slot[data-teach]')].filter(
                 (s) => getComputedStyle(s).display !== 'none',
               ).length,
@@ -346,7 +353,7 @@ for (const vp of PHONES) {
           // The card points at what it teaches: a line to a fixed gem, a lit tray tile for
           // a gem the player places; and says which it is.
           if (g.how === 'fixed') {
-            if (!g.leader) problems.push(`${tag}: no line from the card to the fixed gem`);
+            if (!g.leader) problems.push(`${tag}: nothing marks the fixed gem on the board`);
             if (!g.rule.startsWith(FIXED_NOTE))
               problems.push(`${tag}: a fixed gem's page says "${g.rule}"`);
           } else if (g.how === 'tray' || g.how === 'turns') {

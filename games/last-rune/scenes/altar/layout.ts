@@ -360,7 +360,7 @@ const PH = {
    * Biggest socket pitch (6×4 boards stop here; the column takes what is left). mobile-5-board:
    * raised from 52 now that the altar fills a wide phone's width, so the board fills its height.
    */
-  maxPitch: 76,
+  maxPitch: 84,
   /**
    * Tray (mobile-4-board): gems as big as three to a row allow, between these; the gap between
    * gems and the count line under each; the header above. A held gem (lifted, ↻ badge at
@@ -369,8 +369,12 @@ const PH = {
    */
   slotMin: 38,
   slotMax: 46,
+  /** port-altar-3: a short band (an SE, ≤ `shortCss` tall) takes smaller gems, so a card fits under. */
+  slotShort: 40,
+  shortCss: 345,
   slotGap: 8,
-  countH: 18,
+  /** port-altar-3: the count is a badge on the gem's corner, so rows stand this far apart. */
+  rowGap: 8,
   titleH: 26,
   badge: 26,
   /** FUSE's bubble / the hint sit this far above the canvas bottom (clear of Strike, 64 px). */
@@ -548,12 +552,13 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
   // Tray: rows of up to three under the title, centred in the column, the gems as big as
   // the column allows (types the puzzle starts without are left out).
   const colX = (colL + colR) / 2;
+  const slotMax = (B - T) / c <= PH.shortCss ? PH.slotShort : PH.slotMax;
   const slot = Math.max(
     PH.slotMin,
-    Math.min(PH.slotMax, Math.floor((colR - colL) / c / Math.max(per, 2) - PH.slotGap)),
+    Math.min(slotMax, Math.floor((colR - colL) / c / Math.max(per, 2) - PH.slotGap)),
   );
   const slotDX = slot + PH.slotGap;
-  const slotDY = Math.max(44, slot + PH.countH + 4);
+  const slotDY = Math.max(44, slot + PH.rowGap);
   const lift = LIFT / c;
   // First row: a held gem, lifted, and its ↻ badge clear of the title line.
   const row0 =
@@ -575,7 +580,8 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
       padL: f.padL,
       colL,
       colR,
-      laneTop: Math.round(T + (lastRow + slot / 2 + 1 + PH.countH + 6) * c),
+      // The count badge hangs 3 px under the gem's corner; the cards start 6 px under that.
+      laneTop: Math.round(T + (lastRow + slot / 2 + 9) * c),
       bubbleL: colL,
       bubbleB: Math.round(B - PH.bubbleUp * c),
       fuseX: Math.round(colL + 22 * c),

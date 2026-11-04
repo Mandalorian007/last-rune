@@ -6,7 +6,7 @@
  * On phones every panel and toast lays out in it (the engine moves those layers), the title's
  * menu and the HUD's ☰ sit in regions in CSS px (`placeWidgets`), and FUSE's caption is docked
  * in `captionLane` on the title and the journal. World-anchored pieces (door plates, the Next ring, the altar, the journal's
- * spread, the ending) stay on the scaled overlay with their own phone rules (phone-styles.ts).
+ * spread, the ending) stay on the scaled overlay with their own phone rules (ui/phone-base.ts and each scene's *-phone-styles.ts).
  *
  * Also here: the "turn it sideways" card (the hall, the altar, the solve card, the journal and
  * the ending are landscape art; the title and the panels read upright) and the title's Full
