@@ -201,13 +201,14 @@ ${LANE} > .lr-altar-verdict {
   font-family: var(--tc-font-display, serif); font-size: 15px; line-height: 1.25;
 }
 ${LANE} > .lr-altar-verdict[hidden] { display: none; }
-${LANE} > .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-hint, .lr-verdict-cause, .lr-verdict-strikes) {
+${LANE} > .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-hint, .lr-verdict-cause, .lr-verdict-strikes, .lr-verdict-free) {
   display: block; max-width: none; margin: 2px 0 0; white-space: normal; text-align: left;
   font: 14px/1.25 ${SERIF}; letter-spacing: 0;
 }
 ${LANE} > .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-hint, .lr-verdict-cause)::before { content: none; }
 ${LANE} > .lr-altar-verdict .lr-verdict-cause { color: #ffb3a0; }
 ${LANE} > .lr-altar-verdict .lr-verdict-strikes { color: #f4e6c4; }
+${LANE} > .lr-altar-verdict .lr-verdict-free { color: #bfe9f2; }
 
 /* Capacitor read-outs: the plan steps aside while a gem is in hand or FUSE speaks. */
 ${LANE} > .lr-altar-cap { display: flex; flex-direction: column; gap: 0; }

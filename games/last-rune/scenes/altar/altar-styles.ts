@@ -245,6 +245,10 @@ const CSS = /* css */ `
   display: block; max-width: 640px; margin: 4px auto 0; white-space: normal; font-family: var(--tc-font-body, serif);
   font-size: 20px; line-height: 1.3; letter-spacing: 0; color: #ffd98a;
 }
+.tc-overlay .lr-altar-verdict .lr-verdict-free {
+  display: block; max-width: 640px; margin: 4px auto 0; white-space: normal; font-family: var(--tc-font-body, serif);
+  font-size: 18px; line-height: 1.3; letter-spacing: 0; color: #bfe9f2;
+}
 .tc-overlay .lr-altar-verdict[data-narrow] { font-size: 24px; letter-spacing: 0; padding: 8px 18px; }
 .tc-overlay .lr-altar-verdict[data-outcome="over"] { border-color: #ff5a3c; }
 .tc-overlay .lr-altar-verdict[data-outcome="under"] { border-color: #ffb03f; }

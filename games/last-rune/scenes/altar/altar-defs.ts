@@ -119,11 +119,14 @@ export const RING_NAME = 'Gold ring';
 export const RING_RULE = 'A socket the charge must reach. Set a gem there.';
 /**
  * teach-4: the first altar's arrival card opens with the goal and what Strike does, before the
- * pieces (blind review 6: nobody said what Strike was for).
+ * pieces (blind review 6: nobody said what Strike was for). D-043: Strike is a free test, so the
+ * card says a miss costs nothing.
  */
 export const GOAL_NAME = 'Goal';
 export const GOAL_RULE =
-  "Bring the storm's charge to the gauge: exactly what it Needs. Strike sends the charge; see what each gauge gets.";
+  "Bring the storm's charge to the gauge: exactly what it Needs. Strike any time to see what it gets; a miss costs nothing.";
+/** D-043: said once, under the verdict of the player's first miss ever. */
+export const FIRST_MISS_LINE = 'A miss costs nothing. Strike as often as you like.';
 /**
  * teach-4: the first altar that strikes more than once explains Strike's count and "in one
  * strike" before its pieces (blind review 6: players learned multi-strike by failing).

@@ -90,6 +90,11 @@ const Flags = s.object({
   titleKnock: s.boolean(),
   /** The hall's first-entry line has played. */
   hallIntro: s.boolean(),
+  /**
+   * The first missed strike's verdict has said "a miss costs nothing" (D-043: Strike is a free
+   * test). Optional so older saves still validate (missing = not yet said).
+   */
+  missTold: s.optional(s.boolean()),
 });
 
 export const SaveV1 = s.object({

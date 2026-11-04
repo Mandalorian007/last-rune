@@ -124,7 +124,9 @@ test('keyboard path title → settings → hall → altar, with axe and the stri
   const hint = (await verdict.locator('.lr-verdict-hint').textContent())!.trim();
   expect(hint).toMatch(/^Try: /);
   await expect(announce).toContainText(hint);
-  await expect(announce).toContainText('Change anything to try again.');
+  await expect(announce).toContainText('Change anything and try again.');
+  // A fresh game: this is the first miss, so the verdict says once that it cost nothing (D-043).
+  await expect(announce).toContainText('A miss costs nothing.');
   await expectNoAxeViolations(page, 'altar result');
 
   // Esc on a focused altar button still means Back.

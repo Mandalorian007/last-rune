@@ -152,6 +152,18 @@ describe('GameFlow', () => {
     expect(f.flow.placementsFor('intake-desk')).toHaveLength(1);
   });
 
+  it('says "a miss costs nothing" on the first miss only, and again after New Game (D-043)', () => {
+    const f = setup();
+    f.flow.start();
+    f.flow.newGame();
+    expect(f.flow.firstMissDue()).toBe(true);
+    f.flow.tellFirstMiss();
+    expect(f.flow.firstMissDue()).toBe(false);
+    expect(f.save.get().flags.missTold).toBe(true);
+    f.flow.newGame();
+    expect(f.flow.firstMissDue()).toBe(true);
+  });
+
   it('play time counts only outside the title and commits in batches', () => {
     const f = setup();
     f.flow.start();

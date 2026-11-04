@@ -6,7 +6,7 @@ import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { exactLine, reactionLine } from '../../content/lines';
 import type { BoltOutcome } from '../../game/flow';
 import { type SimResult, simulate } from '../../rules';
-import { FF_RATE, OUT_GLOW, SKIP_RATE, TICK } from './altar-defs';
+import { FF_RATE, FIRST_MISS_LINE, OUT_GLOW, SKIP_RATE, TICK } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { capacitorBeats } from './circuit-model';
 import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
@@ -290,6 +290,7 @@ export const runMethods = {
     // The numbers name the machine: its need label shows the same "Needs N · got M", lit in
     // the outcome colour, so a multi-machine verdict needs no "second machine" ordinal.
     const say = (_i: number, text: string) => text;
+    let free = false;
     if (o === 'exact') {
       // The solve moment's FUSE line follows at once, so the exact line rides in the verdict.
       const [title, body] = verdictParts(
@@ -370,6 +371,10 @@ export const runMethods = {
         placed.push(tag);
         count++;
       }
+      // D-043: the first miss ever says once that a strike is a free test.
+      // Only where it fits: a long verdict keeps its room, and the line waits for a later miss.
+      free = this.ctx.flow.firstMissDue() && this.verdictNote(FIRST_MISS_LINE);
+      if (free) this.ctx.flow.tellFirstMiss();
       const line = reactionLine(
         o,
         Math.min(3, this.ctx.tier()) as 1 | 2 | 3,
@@ -382,8 +387,8 @@ export const runMethods = {
         this.pendingQuip = line;
       } else if (line) void this.ctx.fuse.say(line, { interrupt: true });
     }
-    this.subtitle.textContent =
-      o === 'exact' ? 'Restored' : `Attempt ${this.attempts} · change anything to try again`;
+    // No attempt count anywhere (D-043): a strike is a free test, not a scored try.
+    this.subtitle.textContent = o === 'exact' ? 'Restored' : 'Change anything and try again';
     this.updateCapLive();
     const head = this.verdict.firstChild?.textContent ?? '';
     const told = this.verdict.querySelector('.lr-verdict-story')?.textContent;
@@ -391,7 +396,9 @@ export const runMethods = {
     this.announce(
       this.resultText(told ? `${head}. ${told}` : head) +
         (next ? ` ${next}` : '') +
-        (o === 'exact' ? '' : ' Change anything to try again.'),
+        (o === 'exact'
+          ? ''
+          : `${free ? ` ${FIRST_MISS_LINE}` : ''} Change anything and try again.`),
     );
     this.refreshHud();
   },

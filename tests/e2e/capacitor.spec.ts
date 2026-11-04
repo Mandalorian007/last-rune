@@ -111,7 +111,7 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
   expect(seen.indexOf('Strike 1 of 2 | Strike 1: keeps 8')).toBeLessThan(
     seen.findIndex((s) => s.startsWith('Strike 2 of 2 |')),
   );
-  await expect(verdict).toContainText('Breaker tripped on strike 2: needs 8, got 16');
+  await expect(verdict).toContainText('Got 16 on strike 2, needs 8: breaker tripped');
   await expect(verdict.locator('.lr-verdict-story')).toHaveText(
     'Strike 1: the Capacitor kept 8. Strike 2: the Capacitor let out 8 + 8 = 16.',
   );
