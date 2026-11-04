@@ -13,13 +13,13 @@ import { DEV_URL, readSave, waitFrames } from './helpers';
 // dense-board (D-040 addendum 8): on a phone the densest boards take the room. The Last Rune's
 // sockets are at least a set pitch apart on each realistic phone; every socket's hit area is its
 // whole cell; no lock pip or source orb reaches into a neighbouring cell; and the touch loupe
-// shows on every dense board.
+// shows on every dense board. No two Gives/Needs cards overlap (dense-board-2).
 
 const PHONES = [
-  { name: 'se', width: 667, height: 320, inset: 0, rune: 26 },
-  { name: 'iphone', width: 844, height: 340, inset: 47, rune: 32.5 },
-  { name: 'promax', width: 932, height: 380, inset: 59, rune: 36.5 },
-  { name: 'android', width: 915, height: 360, inset: 0, rune: 34.5 },
+  { name: 'se', width: 667, height: 320, inset: 0, rune: 32 },
+  { name: 'iphone', width: 844, height: 340, inset: 47, rune: 34 },
+  { name: 'promax', width: 932, height: 380, inset: 59, rune: 38.5 },
+  { name: 'android', width: 915, height: 360, inset: 0, rune: 36 },
 ] as const;
 
 /** The dense boards, and Splitter Mill (its orb once covered a socket). */
@@ -149,6 +149,24 @@ for (const vp of PHONES) {
           }
         }
         expect(over, `${vp.name} ${id}: cells under the orb`).toEqual([]);
+        // dense-board-2: no two Gives/Needs cards overlap (two north cards once sank into the
+        // same carved stone).
+        const clash = await page.evaluate(() => {
+          const r = [...document.querySelectorAll('.lr-altar-need')].map((el) => ({
+            t: el.textContent?.trim() ?? '',
+            b: el.getBoundingClientRect(),
+          }));
+          const out: string[] = [];
+          for (let i = 0; i < r.length; i++)
+            for (let j = i + 1; j < r.length; j++) {
+              const a = r[i]!.b;
+              const c = r[j]!.b;
+              if (a.width && c.width && a.left < c.right && c.left < a.right)
+                if (a.top < c.bottom && c.top < a.bottom) out.push(`${r[i]!.t} / ${r[j]!.t}`);
+            }
+          return out;
+        });
+        expect(clash, `${vp.name} ${id}: cards that overlap`).toEqual([]);
       }
     });
 
