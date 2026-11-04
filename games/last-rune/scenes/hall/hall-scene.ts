@@ -46,8 +46,8 @@ import {
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 const DWELL = 0.35;
-/** The phone ☰ column at the right edge, CSS px (3 in from the edge, 44 wide, 4 clear). */
-const MENU_COLUMN = 51;
+/** The phone ☰ column at the right edge, CSS px, when there is no CSS-px chrome to measure. */
+const MENU_COLUMN = 64;
 const AMBIENT_EVERY = 75;
 
 export class HallScene implements GameScene {
@@ -271,7 +271,11 @@ export class HallScene implements GameScene {
     if (device.phone) {
       const r = surface.rect;
       const k = r.width / 1920 || 1;
-      const reserve = Math.max(0, MENU_COLUMN * device.cssPx - device.bar);
+      // The ☰ rail (the chrome's right region, its width from the layout) stays clear of doors.
+      const st = this.ctx.chrome?.active ? this.ctx.chrome.layout.state : null;
+      const rail = st?.regions.right;
+      const railCss = rail && rail.width > 0 ? st.width - rail.x : MENU_COLUMN;
+      const reserve = Math.max(0, railCss * device.cssPx - device.bar);
       const view = {
         top: Math.max(0, -r.y) / k,
         height: Math.min(1080, surface.root.clientHeight / k),

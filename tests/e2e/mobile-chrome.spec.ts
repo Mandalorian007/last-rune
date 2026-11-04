@@ -758,7 +758,7 @@ for (const vp of PHONES) {
       if (Math.max(hb.l, hb.r) > HALL_BAR * vp.width)
         problems.push(`hall art bars ${hb.l.toFixed(0)}/${hb.r.toFixed(0)} px`);
       await expect(page.locator('.lr-hud-menu-label')).toHaveText('Menu');
-      await expect(page.locator('.lr-hud-menu-new')).toHaveText(/New page/);
+      await expect(page.locator('.lr-hud-menu-new')).toHaveText(/New page in journal/);
       problems.push(
         ...(await tinyText(page, '.lr-doors, .lr-hud-menu, .lr-hall-next-tag')).map(
           (s) => `hall text: ${s}`,

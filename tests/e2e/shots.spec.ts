@@ -70,10 +70,16 @@ for (const vp of PHONES) {
         g.save.update((d: G) => {
           d.flags.hallIntro = true;
           d.settings.captionSpeed = 'instant';
+          // Mid-game, with an unread journal page (the ☰ badge shows).
+          d.progress.solved = ['intake-desk', 'furnace', 'splitter-mill'];
+          d.journal.found = [1, 2, 3, 4];
+          d.journal.read = [1, 2, 3];
         });
         g.flow.continueGame();
       });
       await page.waitForTimeout(600);
+      await page.evaluate(() => (window as G).__game.fuse.hush());
+      await page.waitForTimeout(300);
       await page.screenshot({ path: out(`${vp.name}-hall`) });
       for (const id of MACHINE_IDS) {
         if (ONLY.some((o) => MACHINE_IDS.includes(o as never)) && !want(id)) continue;
