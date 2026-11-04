@@ -102,3 +102,20 @@ Blind review 5 scored 6.6/10. Every layout major is in the tray / gem card / hin
   - The verdict no longer shrinks (up to the whole region); a Capacitor read-out under it gives way first.
   - Note for content: SE's lane holds about 3 lines of card text; Split's how-to and Capacitor verdicts run longer.
 - **Baselines (not regenerated, as the PM asked):** 84 altar shots differ: every altar scene, "empty" and "solved", at desktop-720, desktop-1080 and ipad. Main at 42a4e6f fails the same 84, and pre-merge ab3c7f3 passed all 96 altar baselines, so the diffs come from altar-truth's changes. The 44 non-altar baselines pass.
+
+**PM review of gate6: two fixes**
+- **The verdict shows its Try line in full.** While a verdict is up on a phone, the Capacitor read-out is hidden, since the verdict already gives what each strike delivered. The verdict uses a little less padding and spacing.
+  - Copy is shortened, keeping altar-truth's plain wording.
+  - The phone strikes line is now "Got 0, then 16; needs 8 in one strike." It used to be "Strike 1 gave it 0. Strike 2 gave it 16. It needs 8 in one strike."
+  - The over-charge Try ends "A Split halves it."
+  - Result: the headline, the cause and a two-line Try fit an SE's 103 px lane.
+- **Teach cards fit the SE lane with no scrolling.** The card text gets three lines, using line-height 1.25 and a slimmer footer. Shorter copy:
+  - Split: "Power the no-arrow end: half out each arrow, odd charge lost."
+  - Gate: "Power both sides on one strike; the total leaves by the arrow."
+  - The turn suffix is now "Turn to fit."
+  - Also fixed: the Next button's 44 px hit area hung 5 px below the card, so every card scrolled by 3 px. It now grows upward from the button.
+- **No ghosting.** Text cut off under a footer is hidden outright by an opaque strip; the ▾ alone says there is more. There is no fade.
+- **New `altar-column.spec` checks:**
+  - every gem, teach and how-to card and every verdict fits its lane, with no scroll and nothing outside the lane;
+  - the Try line sits fully inside the verdict;
+  - on every phone, Capacitor Bay's two-strike verdict shows its Try line and hides the read-out.

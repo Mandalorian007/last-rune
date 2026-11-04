@@ -8,7 +8,9 @@ import { DEV_URL, settled, waitFrames } from './helpers';
 // altar and phone nothing in it touches anything else. At first meeting (the arrival card up),
 // at open, while FUSE speaks, with a gem in hand and at the verdict: no two of the cards, FUSE's
 // line, the title, the tray gems and their counts, the Gives/Needs labels, the sockets, Strike
-// and the rail buttons overlap, and every card's text is at least 14 CSS px.
+// and the rail buttons overlap, and every card's text is at least 14 CSS px. Every gem, teach
+// and how-to card fits its lane with no scrolling, and the verdict shows in full: its "Try:" line
+// sits inside the lane, not clipped and not scrolled to (D-027).
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0 },
@@ -35,6 +37,15 @@ test.setTimeout(400_000);
 
 /** Set COLUMN_SHOTS to a folder (docs/design/screens/local/…) to save what the checks saw. */
 const SHOTS = process.env.COLUMN_SHOTS ?? '';
+
+const BAY_FIRST_TRY = [
+  { cell: { x: 4, y: 5 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 4 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 3 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 2 }, gem: 'bend', rot: 1 },
+  { cell: { x: 6, y: 2 }, gem: 'channel', rot: 0 },
+  { cell: { x: 7, y: 2 }, gem: 'channel', rot: 0 },
+];
 
 const LINE =
   "That one's a Splitter. Charge goes in one side and comes out the two beside it, half each.";
@@ -139,6 +150,33 @@ async function parts(page: Page, blocked: Cell[]): Promise<{ parts: Part[]; smal
   }, blocked);
 }
 
+/** Cards that do not fit: a gem/teach card or the verdict with text past its edge. */
+async function unfit(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const out: string[] = [];
+    const lane = document.querySelector<HTMLElement>('.lr-altar-lane')?.getBoundingClientRect();
+    for (const el of document.querySelectorAll<HTMLElement>(
+      '.lr-altar-lane > :is(.lr-altar-tip, .lr-altar-verdict)',
+    )) {
+      if (el.offsetHeight === 0) continue;
+      const what = el.classList.contains('lr-altar-tip') ? 'card' : 'verdict';
+      const text = el.textContent?.trim().slice(0, 40);
+      if (el.scrollHeight > el.clientHeight + 1 || el.scrollTop > 0)
+        out.push(`${what} overflows (${el.scrollHeight} > ${el.clientHeight}) "${text}"`);
+      const box = el.getBoundingClientRect();
+      if (lane && (box.top < lane.top - 0.5 || box.bottom > lane.bottom + 0.5))
+        out.push(`${what} outside the lane "${text}"`);
+      const tryLine = el.querySelector<HTMLElement>('.lr-verdict-hint');
+      if (tryLine) {
+        const r = tryLine.getBoundingClientRect();
+        if (r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5 || r.height === 0)
+          out.push(`Try line not fully shown "${tryLine.textContent?.slice(0, 40)}"`);
+      }
+    }
+    return out;
+  });
+}
+
 function overlaps(list: Part[]): string[] {
   const hit = (a: Box, b: Box) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
   const out: string[] = [];
@@ -157,6 +195,7 @@ async function check(page: Page, id: MachineId, label: string, problems: string[
   const m = await parts(page, puzzleFor(id).blocked);
   for (const o of overlaps(m.parts)) problems.push(`${label}: ${o}`);
   for (const s of m.small) problems.push(`${label}: card text ${s}`);
+  for (const s of await unfit(page)) problems.push(`${label}: ${s}`);
   if (SHOTS)
     await page.screenshot({
       path: `${SHOTS}/${page.viewportSize()?.width}-${label.replace(/\W+/g, '-')}.png`,
@@ -229,6 +268,49 @@ for (const vp of PHONES) {
         await check(page, id, `${id} verdict`, problems);
         await page.evaluate(() => (window as G).__game.flow.closePuzzle());
       }
+      expect(problems).toEqual([]);
+    });
+
+    test(`a long verdict shows its Try line in full at ${vp.width}×${vp.height}`, async ({
+      page,
+    }) => {
+      // Capacitor Bay's first try (as in the gate shots): two strikes, the breaker trips, and the
+      // verdict has its strike line, its cause and a two-line Try. The read-out steps aside.
+      await boot(page, vp.inset);
+      await page.evaluate(
+        ({ solved, placements }) => {
+          const g = (window as G).__game;
+          g.save.update((d: G) => {
+            d.flags.hallIntro = true;
+            d.settings.captionSpeed = 'instant';
+            d.progress.solved = solved;
+            d.puzzles = { 'capacitor-bay': { placements, attempts: 0 } };
+          });
+          if (g.flow.state !== 'hall') g.flow.continueGame();
+          g.flow.openPuzzle('capacitor-bay');
+          g.fuse.hush();
+        },
+        {
+          solved: MACHINE_IDS.slice(0, MACHINE_IDS.indexOf('capacitor-bay')) as unknown as string[],
+          placements: BAY_FIRST_TRY,
+        },
+      );
+      await expect(page.locator('.lr-altar')).toBeVisible();
+      for (let i = 0; i < 6; i++) {
+        const next = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
+        if ((await next.count()) === 0) break;
+        await next.first().tap();
+        await waitFrames(page, 3);
+      }
+      await page.locator('[data-action="strike"]').tap();
+      await expect(page.locator('.lr-altar-verdict')).toContainText('then 16', {
+        timeout: 30_000,
+      });
+      await page.evaluate(() => (window as G).__game.fuse.hush());
+      await expect(page.locator('.lr-altar-verdict .lr-verdict-hint')).toContainText('Try:');
+      const problems: string[] = [];
+      await check(page, 'capacitor-bay', 'capacitor-bay two strikes', problems);
+      await expect(page.locator('.lr-altar-lane > .lr-altar-cap')).toBeHidden();
       expect(problems).toEqual([]);
     });
   });

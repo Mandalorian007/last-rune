@@ -321,8 +321,8 @@ export const runMethods = {
       // Phones (mobile-7-strike): the cause in plain words ("The charge hit an empty socket"),
       // and the Try line under it, so cause and fix read together.
       const cause = why ? causeHeadline(why.cause) : '';
-      // Phones, multi-strike: a plain headline, then each strike's reading in words ("Strike 1:
-      // 0 · Strike 2: 8. Needs 20 in one strike."); the gauge's own card stays compact.
+      // Phones, multi-strike: a plain headline, then each strike's reading in words ("Got 0,
+      // then 8; needs 20 in one strike."); the gauge's own card stays compact.
       const multi = phone && this.puzzle.pulses > 1;
       const head = (m: SimResult['machines'][number], oc: 'over' | 'under') =>
         multi ? failHead(m, oc) : failText(m, oc, this.puzzle.pulses);

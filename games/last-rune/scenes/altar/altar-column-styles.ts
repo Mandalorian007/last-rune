@@ -97,7 +97,8 @@ ${CARD} {
 ${CARD} > * { flex: none; }
 
 /* Gem and teach card: the rule over the full width, the footer row under it. */
-${LANE} > .lr-altar-tip { display: flex; flex-direction: column; }
+/* Three lines of rule over the footer fit an SE's lane (altar-column.spec checks none scrolls). */
+${LANE} > .lr-altar-tip { display: flex; flex-direction: column; line-height: 1.25; padding-bottom: 0; }
 ${LANE} > .lr-altar-tip[hidden] { display: none; }
 ${LANE} > .lr-altar-tip::after { display: none; }
 ${LANE} > .lr-altar-tip:has(.lr-info-next) { pointer-events: auto; }
@@ -108,8 +109,8 @@ ${LANE} > .lr-altar-tip .lr-info-eg {
   display: block; margin-top: 2px; font: 14px/1.3 ${SERIF}; color: #a8ccf5; white-space: normal;
 }
 ${LANE} > .lr-altar-tip .lr-info-foot {
-  order: 1; position: sticky; bottom: -6px; display: flex; align-items: center; justify-content: space-between;
-  gap: 8px; margin: 4px -10px -6px; padding: 3px 10px 4px; min-width: 0; float: none;
+  order: 1; position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin: 2px -10px 0; padding: 1px 10px; min-width: 0; float: none;
   background: rgba(20,16,12,0.98); border-top: 1px solid rgba(232,192,106,0.28);
 }
 ${LANE} > .lr-altar-tip .lr-info-page {
@@ -122,31 +123,40 @@ ${LANE} > .lr-altar-tip .lr-info-next {
   position: relative; flex: none; pointer-events: auto; min-width: 0; min-height: 36px; padding: 0 12px;
   font: 600 14px/1 var(--tc-font-display, serif); border-radius: 8px; border-width: 1px;
 }
+/* The 44 px hit area grows up from the button, never past the card's bottom edge (that would
+   make the card scroll). */
 ${LANE} > .lr-altar-tip .lr-info-next::before {
-  content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%);
+  content: ''; position: absolute; left: 50%; top: auto; bottom: -1px; width: max(100%, 44px); height: 44px; transform: translateX(-50%);
 }
-/* More below (altar-column.ts arrangeColumn): the card takes a swipe, and its foot says so. */
+/* More below (altar-column.ts arrangeColumn): the card takes a swipe and shows a ▾. The text cut
+   off under the footer is hidden outright (no fade, no ghost of the next line). */
 ${LANE} > :is(.lr-altar-tip, .lr-altar-verdict, .lr-altar-cap)[data-more] { pointer-events: auto; }
 ${LANE} > .lr-altar-tip[data-more] .lr-info-foot::before {
-  content: '▾'; position: absolute; right: 0; bottom: 100%; height: 18px; padding: 0 8px 0 14px;
-  font: 14px/18px ${SERIF}; color: #e8c06a; pointer-events: none;
-  background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,0.98) 10px);
+  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 5px;
+  background: rgb(20,16,12); pointer-events: none;
 }
-${LANE} > :is(.lr-altar-verdict, .lr-altar-cap)[data-more] {
-  mask-image: linear-gradient(#000 calc(100% - 18px), transparent);
+${LANE} > .lr-altar-tip[data-more] .lr-info-foot::after {
+  content: '▾'; position: absolute; right: 0; bottom: calc(100% + 5px); height: 18px; padding: 0 8px 0 6px;
+  font: 14px/18px ${SERIF}; color: #e8c06a; pointer-events: none; background: rgb(20,16,12);
+}
+${LANE} > :is(.lr-altar-verdict, .lr-altar-cap)[data-more]::after {
+  content: '▾'; position: sticky; bottom: -6px; align-self: flex-end; float: right; margin-bottom: -6px;
+  padding: 0 0 0 6px; font: 14px/18px ${SERIF}; color: #e8c06a; background: rgb(20,16,12);
 }
 
 /* The verdict: the headline, then each strike, the cause and the next step on lines of their own.
-   The player reads it first, so it keeps its height (up to the whole region) and a Capacitor
-   read-out under it gives way, scrolling with its cue. */
+   The "Try:" line is the point of it (D-027): the verdict keeps its whole height and the Capacitor
+   read-out steps aside while it is up (the verdict's strike line already says what each strike
+   gave). altar-column.spec checks the Try line shows in full on every phone. */
+${LANE}:has(> .lr-altar-verdict:not([hidden])) > .lr-altar-cap { display: none; }
 ${LANE} > .lr-altar-verdict {
-  order: -1; flex-shrink: 0; max-height: 100%;
+  order: -1; flex-shrink: 0; max-height: 100%; padding-block: 4px;
   font-family: var(--tc-font-display, serif); font-size: 15px; line-height: 1.25;
 }
 ${LANE} > .lr-altar-verdict[hidden] { display: none; }
 ${LANE} > .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-hint, .lr-verdict-cause, .lr-verdict-strikes) {
-  display: block; max-width: none; margin: 3px 0 0; white-space: normal; text-align: left;
-  font: 14px/1.3 ${SERIF}; letter-spacing: 0;
+  display: block; max-width: none; margin: 2px 0 0; white-space: normal; text-align: left;
+  font: 14px/1.25 ${SERIF}; letter-spacing: 0;
 }
 ${LANE} > .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-hint, .lr-verdict-cause)::before { content: none; }
 ${LANE} > .lr-altar-verdict .lr-verdict-cause { color: #ffb3a0; }

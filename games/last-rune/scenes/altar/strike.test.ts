@@ -304,9 +304,7 @@ describe('hints come from the room (altar-truth)', () => {
     const beats = capacitorBeats(p, BAY_OVER, res);
     const m = res.machines.find((x) => x.outcome === 'over');
     const hint = nextStep('over', [], true, hintRoom(p, BAY_OVER, res, beats, m));
-    expect(hint).toBe(
-      'Try: feed the Capacitor less. It let out 8 + 8 = 16. A Split halves the charge.',
-    );
+    expect(hint).toBe('Try: feed the Capacitor less. It let out 8 + 8 = 16. A Split halves it.');
     expect(hint).not.toMatch(/Amplify/);
   });
 
@@ -337,9 +335,7 @@ describe('hints come from the room (altar-truth)', () => {
       readings: [0, 16],
       wokeOn: 1,
     };
-    expect(strikesLine(m, 2)).toBe(
-      'Strike 1 gave it 0. Strike 2 gave it 16. It needs 8 in one strike.',
-    );
+    expect(strikesLine(m, 2)).toBe('Got 0, then 16; needs 8 in one strike.');
     expect(verdictParts('Exactly right. Look at it go.')).toEqual([
       'Exactly right.',
       'Look at it go.',

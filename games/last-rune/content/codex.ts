@@ -58,7 +58,7 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
     gem: 'split',
     name: 'Split',
     rule: 'Power the end with no arrow; half the charge comes out of each arrow. Odd charge, or charge from another side, is lost.',
-    chip: 'Power the no-arrow end: half out each arrow. Odd charge is lost.',
+    chip: 'Power the no-arrow end: half out each arrow, odd charge lost.',
     maths: 'In 4 → out 2 and 2. Odd charge is lost.',
   },
   amplify: {
@@ -72,7 +72,7 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
     gem: 'gate',
     name: 'Gate',
     rule: 'Power both side inputs on the same strike; the total comes out the arrow. Power only one and the charge is lost.',
-    chip: 'Power both side inputs on one strike: the total comes out the arrow.',
+    chip: 'Power both sides on one strike; the total leaves by the arrow.',
     maths: 'In 4 and 4 → out 8. Only one in: lost.',
   },
   capacitor: {

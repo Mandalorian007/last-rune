@@ -126,7 +126,7 @@ export const infoMethods = {
    */
   chipRule(this: AltarScene, r: { gem: GemKind; how: InfoHow }, intro = false): string {
     const line = codexEntry(r.gem).chip;
-    if (r.how === 'turns') return `${line} Turn it to fit.`;
+    if (r.how === 'turns') return `${line} Turn to fit.`;
     // The arrival card's gold line already shows which gem; it says just "Built in." so the card
     // fits an SE. A tap on the gem says the whole line.
     if (r.how === 'fixed') return `${intro ? FIXED_NOTE : FIXED_NOTE_FULL} ${line}`;
