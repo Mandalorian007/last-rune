@@ -403,7 +403,7 @@ for (const vp of PHONES) {
         await waitFrames(page, 3);
       }
       await page.locator('[data-action="strike"]').tap();
-      await expect(page.locator('.lr-altar-verdict')).toContainText('then 16', {
+      await expect(page.locator('.lr-altar-verdict')).toContainText('Strike 2: 16.', {
         timeout: 30_000,
       });
       await page.evaluate(() => (window as G).__game.fuse.hush());

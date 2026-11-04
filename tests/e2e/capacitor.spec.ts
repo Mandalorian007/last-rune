@@ -69,16 +69,16 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
   await expect(page.locator('.lr-altar-storm .lr-storm-strikes')).toHaveText('2 strikes');
   await expect(page.locator('.lr-altar-storm .lr-strike-pips i')).toHaveCount(2);
   await expect(page.locator('.lr-altar-actions .lr-strike-pips i')).toHaveCount(2);
-  await expect(page.locator('.lr-altar-need').first()).toContainText('on strike 1 or 2');
-  // The plan read-out at the ice: what it stores, then what it lets out.
+  await expect(page.locator('.lr-altar-need').first()).toContainText('on one strike');
+  // The plan read-out at the ice: the rule, no numbers before Strike (teach-8, D-043).
   const cap = page.locator('.lr-altar-cap');
   await expect(cap).toHaveCount(1);
   await expect(cap).toHaveAttribute('data-plan', '');
-  // altar-truth: 16 is more than the 8 the machine takes, so the plan says so and warns, and
-  // so does that gauge.
+  // altar-truth: the release is more than the 8 the machine takes, so its line warns, and so
+  // does that gauge.
   await expect(cap.locator('.lr-cap-line')).toHaveText([
-    'Strike 1: stores 8',
-    'Strike 2 sends 16; needs 8.',
+    'Strike 1: stores, sends nothing.',
+    'Strike 2: lets out both.',
   ]);
   await expect(cap.locator('.lr-cap-line[data-warn]')).toHaveCount(1);
   await expect(page.locator('.lr-altar-need[data-warn]')).toHaveCount(1);

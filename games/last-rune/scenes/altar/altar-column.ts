@@ -175,7 +175,8 @@ export const columnMethods = {
     });
     const svg = this.leader;
     if (!svg) return;
-    const cells = row?.how === 'fixed' ? this.news.fixed.filter((f) => f.gem === row.gem) : [];
+    const at = row?.how === 'fixed' ? this.teachCellOf(row.gem) : undefined;
+    const cells = at ? [{ cell: at }] : [];
     if (cells.length === 0) {
       if (this.leaderKey) svg.replaceChildren();
       this.leaderKey = '';

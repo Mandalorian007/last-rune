@@ -319,7 +319,10 @@ describe('hints come from the room (altar-truth)', () => {
     const over = planOver(beats, res);
     const i = beats.findIndex((b) => b.kind === 'release');
     expect(over.beats.get(i)).toBe(8);
-    expect(capBeatText(beats[i]!, p.pulses, 8)).toBe('Strike 2 sends 16; needs 8.');
+    // teach-8: the plan says the rule, never this board's numbers (D-043); results keep them.
+    expect(capBeatText(beats[i]!, p.pulses, true)).toBe('Strike 2: lets out both.');
+    expect(capBeatText(beats[0]!, p.pulses, true)).toBe('Strike 1: stores, sends nothing.');
+    expect(capBeatText(beats[i]!, p.pulses)).toBe('Strike 2: 8 + 8 → 16');
     expect([...over.machines].map((j) => res.machines[j]!.need)).toEqual([8]);
     // The intended solve warns nowhere.
     const ok = simulate(p, p.design.intended);
@@ -339,7 +342,10 @@ describe('hints come from the room (altar-truth)', () => {
       readings: [0, 16],
       wokeOn: 1,
     };
-    expect(strikesLine(m, 2)).toBe('Got 0, then 16; needs 8 on strike 1 or 2.');
+    expect(strikesLine(m, 2)).toBe('Strike 2: 16. Needs 8 on one strike.');
+    expect(strikesLine({ ...m, outcome: 'under', readings: [0, 4] }, 2)).toBe(
+      'Strike 1: 0 · 2: 4. Needs 8 on one strike.',
+    );
     // teach-7: every other gauge that missed is named by its numbers.
     const top = {
       at: { x: 1, y: 0 },
@@ -358,12 +364,13 @@ describe('hints come from the room (altar-truth)', () => {
     expect(alsoMissed([m, top, woke], 0)).toBe('Also missed: Needs 2, got nothing.');
     expect(alsoMissed([m, woke], 0)).toBe('');
     expect(readingsText([3])).toBe('3');
-    expect(readingsText([1, 2, 3])).toBe('1, 2, then 3');
+    expect(readingsText([1, 2, 3])).toBe('strike 1: 1, strike 2: 2, strike 3: 3');
     // Nothing is lost by a miss, so Strike never reads "Try again".
     expect(strikeLabel(1)).toBe('Strike');
     expect(strikeLabel(2)).toBe('Strike ×2');
-    expect(needNote(2)).toBe('on strike 1 or 2');
-    expect(needNote(3)).toBe('on any strike');
+    // teach-8: one phrase for any strike count.
+    expect(needNote(2)).toBe('on one strike');
+    expect(needNote(3)).toBe('on one strike');
     expect(verdictParts('Exactly right. Look at it go.')).toEqual([
       'Exactly right.',
       'Look at it go.',

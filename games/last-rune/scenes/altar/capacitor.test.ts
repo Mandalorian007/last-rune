@@ -69,7 +69,7 @@ describe('capacitor read-out', () => {
       expect(capacitorBeats(p, pl, r)).toEqual([]);
       if (r.pulsesRun > 1)
         expect(strikeStory(p.pulses, r, [])).toBe(
-          'Each strike is read on its own: strikes never add up.',
+          'Each strike is checked on its own: strikes never add up.',
         );
     }
     const p = puzzleFor('lift-shaft');

@@ -44,6 +44,26 @@ export const CODEX_CHIP_MAX_CHARS = 68;
  * (ws/held-gem): an inward port on each input side, one arrow out.
  */
 export const GATE_RULE = 'Both ports, same strike: the sum leaves by the arrow.';
+/**
+ * teach-8 (D-040 add. 11, C): on a one-strike altar "same strike" confused players (Relay Tower,
+ * Foundry), and nothing said what one port alone does. There the Gate reads this way; altars
+ * with more than one strike, and the codex, keep `GATE_RULE`.
+ */
+export const GATE_RULE_ONE =
+  'Feed both round ports; their sum leaves by the arrow. One port alone: lost.';
+/** The Gate's sentence for an altar that strikes `pulses` times. */
+/** teach-8: the one-strike chip, short enough for a held gem's lane on an SE. */
+/**
+ * teach-8 (polish-10, blind review 10): a Capacitor on an altar that strikes once is a red
+ * herring (Control Booth); its card says so, or it reads as a trap or a bug.
+ */
+export const CAP_ONE_STRIKE = 'One strike here: what a Capacitor stores never comes out.';
+export const CAP_CHIP_ONE = 'Stores its first charge. One strike here: it never comes out.';
+
+export const GATE_CHIP_ONE = 'Feed both round ports: the sum leaves by the arrow.';
+export function gateRule(pulses: number): string {
+  return pulses > 1 ? GATE_RULE : GATE_RULE_ONE;
+}
 
 export const CODEX_SPARKS = 'The numbers are charge. A storm gives 4 a strike; 2× gives 8, 4× 16.';
 
@@ -72,8 +92,9 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
   amplify: {
     gem: 'amplify',
     name: 'Amplify',
-    rule: 'Doubles the charge, once per path. Charge that has already passed an Amplify, even split since, goes through unchanged.',
-    chip: 'Doubles the charge, once per path. Already doubled: unchanged.',
+    // teach-8: "once per path" never said what a path was (blind review 10); in plain words.
+    rule: 'Doubles the charge once. Charge that has already been doubled, even split since, passes through unchanged.',
+    chip: 'Doubles the charge once. Already doubled: passes unchanged.',
     maths: 'In 4 → out 8. Doubled already: 8 stays 8.',
   },
   gate: {

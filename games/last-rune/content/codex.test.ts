@@ -46,7 +46,9 @@ describe('codex content', () => {
     expect(CODEX_SPARKS).toContain('8');
     expect(CODEX_SPARKS).toContain('16');
     expect(CODEX.split.rule).toMatch(/odd/i);
-    expect(CODEX.amplify.rule).toMatch(/once per path/i);
+    // teach-8: "path" was never defined; it says once, and what a second one does.
+    expect(CODEX.amplify.rule).toMatch(/^Doubles the charge once\./);
+    expect(CODEX.amplify.rule).not.toMatch(/path/);
     expect(CODEX.gate.rule).toMatch(/same strike/i);
     // teach-7: one sentence everywhere: ports in, the sum out by the arrow, as the gem is drawn.
     expect(CODEX.gate.chip).toBe(GATE_RULE);

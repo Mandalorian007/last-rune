@@ -132,32 +132,37 @@ export const FIRST_MISS_LINE = 'A miss costs nothing. Strike as often as you lik
  * strike" before its pieces (blind review 6: players learned multi-strike by failing).
  * teach-5: under "Strike ×2", in plain words: one tap, both strikes, one after the other; a
  * miss resets for free. teach-6: it names the marks beside "Strike ×2" (blind review 8 read
- * them as "00"); the card's title shows the same marks.
+ * them as "00"); the card's title shows the same marks. teach-8: "each lighting a mark" didn't
+ * say what a mark was (blind review 10); it says the marks are the strikes.
  */
 export function strikesRule(pulses: number): string {
   const n = pulses === 2 ? 'two' : String(pulses);
-  return `One tap sends ${n} strikes, each lighting a mark. A miss resets for free.`;
+  const marks = '○'.repeat(pulses);
+  return `${marks} = your ${n} strikes. One tap sends ${pulses === 2 ? 'both' : 'them all'}. A miss resets for free.`;
 }
 /**
- * What the gauge's "on strike 1 or 2" means, on its own page after the strikes page (teach-6;
- * blind review 8 read "in one strike", and blind review 9 "in either strike", as every strike or
- * as one of them). teach-7: the page is named for the gauge's words and says one is enough. The
- * rule as the sim reads it: a gauge wakes on the first strike that brings exactly its number; a
- * strike that brings more before then trips it. No amount, ever (D-043): the only digits are
- * the strikes' own numbers.
+ * teach-8 (D-040 add. 11, A): the multi-strike rule, said once in plain words, on its own page
+ * after the strikes page. Three gauge phrases failed blind review ("in one strike", "in either
+ * strike", "on strike 1 or 2"); the gauge now says "on one strike" and this page says what that
+ * means. Its words are `ONE_STRIKE_RULE`, the same in the codex and the a11y briefing. As the
+ * sim reads it (rules/sim.ts): each strike, a gauge that hasn't woken reads that strike alone;
+ * exactly its number wakes it, more trips it, less does nothing. No amount, ever (D-043).
  */
-export function eitherName(pulses: number): string {
-  return pulses === 2 ? 'Strike 1 or 2' : 'Any strike';
+export function eitherName(_pulses: number): string {
+  return 'On one strike';
 }
-export function eitherRule(pulses: number): string {
-  const of = pulses === 2 ? 'strike 1 or strike 2' : 'any strike';
-  return `A gauge wakes when ${of} brings exactly its number; one is enough. A strike that brings more trips it.`;
+export const ONE_STRIKE_RULE =
+  "Each strike is checked on its own. Exactly the gauge's number on one strike wakes it. Less does nothing; more trips it.";
+export function eitherRule(_pulses: number): string {
+  return ONE_STRIKE_RULE;
 }
 /**
- * teach-5: the first Amplify card. Its picture shows 4 in, 8 out; the line under it says what
- * "once per path" means. teach-6: in words ("8 → 8" read as a typo).
+ * teach-5: the first Amplify card. Its picture shows 4 in, 8 out; the line under it says the
+ * rest. teach-6: in words ("8 → 8" read as a typo). teach-8: "once per path" never said what a
+ * path was (blind review 10; Furnace has two built-in Amplifies), so it says "once" and the
+ * line under it says a second one doesn't double again.
  */
-export const AMPLIFY_ONCE = 'Doubles the charge, once per path.';
+export const AMPLIFY_ONCE = 'Doubles the charge once.';
 export const AMPLIFY_AGAIN = "A second Amplify doesn't double again.";
 /**
  * teach-4: the Capacitor's two strikes, with this altar's charge (before FUSE's joke).

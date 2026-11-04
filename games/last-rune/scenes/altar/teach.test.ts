@@ -1,10 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { CODEX } from '../../content/codex';
+import { CAP_ONE_STRIKE, CODEX } from '../../content/codex';
 import { puzzleFor } from '../../content/puzzles';
 import { MACHINE_IDS } from '../../rules/types';
-import { AMPLIFY_AGAIN, capacitorStrip, eitherRule, GOAL_RULE, strikesRule } from './altar-defs';
+import {
+  AMPLIFY_AGAIN,
+  capacitorStrip,
+  eitherRule,
+  GOAL_RULE,
+  ONE_STRIKE_RULE,
+  strikesRule,
+} from './altar-defs';
 import { DOT_LEGEND, HINT_SLOTS, LAMP_LINE, lampLine, pickHint, straightLine } from './moments';
-import { firstMultiStrike, gateSides, hasPicture, newGems, teachPages } from './teach';
+import {
+  firstMultiStrike,
+  gateSides,
+  hasPicture,
+  newGems,
+  teachPages,
+  teachRows as teachRowsOf,
+} from './teach';
 
 const solvedBefore = (id: (typeof MACHINE_IDS)[number]) =>
   MACHINE_IDS.slice(0, MACHINE_IDS.indexOf(id)).map((m) => puzzleFor(m));
@@ -28,17 +42,17 @@ describe('arrival card pages (teach-4)', () => {
     // teach-6: "on strike 1 or 2" (teach-7) gets its own page after the strikes page.
     expect(pages.map((p) => p.kind)).toEqual(['strikes', 'either', 'gem']);
     // teach-5: one tap, two strikes, one after the other; a miss resets for free.
-    expect(strikesRule(2)).toMatch(/One tap sends two strikes/);
+    expect(strikesRule(2)).toMatch(/One tap sends both\./);
     expect(strikesRule(2)).toMatch(/miss resets for free/);
     // teach-6: it names the marks beside "Strike ×2".
-    expect(strikesRule(2)).toMatch(/each lighting a mark/);
-    // teach-7: the rule as the sim reads it (rules/sim.ts): exactly, on strike 1 or strike 2;
-    // more trips it. It names strikes by number only, never an amount (D-043).
-    expect(eitherRule(2)).toBe(
-      'A gauge wakes when strike 1 or strike 2 brings exactly its number; one is enough. A strike that brings more trips it.',
-    );
-    expect(eitherRule(2).replace(/strike \d/g, '')).not.toMatch(/\d/);
-    expect(eitherRule(3)).toMatch(/any strike/);
+    // teach-8: the marks by Strike are the player's strikes.
+    expect(strikesRule(2)).toMatch(/^\u25cb\u25cb = your two strikes\./);
+    // teach-8: the rule as the sim reads it (rules/sim.ts), in the gauge's words ("on one
+    // strike"): each strike alone; exactly wakes it, more trips it. No amount (D-043).
+    expect(eitherRule(2)).toBe(ONE_STRIKE_RULE);
+    expect(ONE_STRIKE_RULE).toMatch(/on one strike/);
+    expect(ONE_STRIKE_RULE).not.toMatch(/\d/);
+    expect(eitherRule(3)).toBe(ONE_STRIKE_RULE);
   });
 
   it('pictures Gate, Split, Amplify and Capacitor where each is first met, fixed on the board', () => {
@@ -49,7 +63,9 @@ describe('arrival card pages (teach-4)', () => {
         if (hasPicture({ kind: 'gem', gem: f.gem, how: 'fixed' })) pictured.push(f.gem);
     }
     expect(pictured.sort()).toEqual(['amplify', 'capacitor', 'gate', 'split']);
+    // teach-8: a reminder carries it too; a "turns" page (seen before, pictured) stays short.
     expect(hasPicture({ kind: 'gem', gem: 'gate', how: 'turns' })).toBe(false);
+    expect(hasPicture({ kind: 'gem', gem: 'split', how: 'fixed', again: true })).toBe(true);
     expect(hasPicture({ kind: 'gem', gem: 'bend', how: 'fixed' })).toBe(false);
   });
 
@@ -77,6 +93,11 @@ describe('arrival card pages (teach-4)', () => {
     expect(gateSides(0).startsWith(CODEX.gate.chip)).toBe(true);
     // Relay Tower's Gate: turned once, in from top and bottom, out right.
     expect(gateSides(1)).toMatch(/ Ports: above and below\.$/);
+    // teach-8: an altar that strikes once has no "same strike" to compare.
+    expect(gateSides(0, 1)).toBe(
+      'Feed both round ports, left and right; their sum leaves by the arrow. One port alone: lost.',
+    );
+    expect(gateSides(1, 1)).toMatch(/round ports, above and below;/);
     expect(gateSides(2)).toMatch(/ Ports: left and right\.$/);
     expect(gateSides(3)).toMatch(/ Ports: above and below\.$/);
   });
@@ -116,5 +137,65 @@ describe('gauge dot and Channel lines (teach-4)', () => {
     expect(straightLine('amplify')).toMatch(/^An? /);
     for (const g of ['bend', 'gate', 'split'] as const) expect(straightLine(g)).toBeNull();
     expect(straightLine(undefined)).toBeNull();
+  });
+});
+
+describe('every piece taught on first sight (teach-8)', () => {
+  const play = [
+    'intake-desk',
+    'furnace',
+    'conveyor-a',
+    'splitter-mill',
+    'storm-cell-2',
+    'press-unit-4',
+  ] as const;
+  const playedBefore = (id: (typeof play)[number]) =>
+    play.slice(0, play.indexOf(id)).map((m) => puzzleFor(m));
+
+  it('reminds of a piece taught elsewhere until the player has had one in hand', () => {
+    // Played Conveyor A first: Splitter Mill's Split was taught there, never placed.
+    const mill = newGems(puzzleFor('splitter-mill'), playedBefore('splitter-mill'));
+    expect(mill.fixed).toEqual([]);
+    expect(mill.remind.map((r) => r.gem)).toEqual(['split']);
+    expect(mill.remind[0]!.cell).toBeDefined();
+    // Press Unit 4 puts the first Amplify in the tray.
+    expect(newGems(puzzleFor('press-unit-4'), playedBefore('press-unit-4')).remind).toEqual([
+      { gem: 'amplify' },
+    ]);
+    // Once a Split has been in the hand on a solved altar, no reminder.
+    const later = [...playedBefore('press-unit-4'), puzzleFor('press-unit-4')];
+    expect(newGems(puzzleFor('splitter-mill'), later).remind).toEqual([]);
+    const pages = teachPages(teachRowsOf(mill), { first: false, firstMulti: false });
+    expect(pages).toEqual([{ kind: 'gem', gem: 'split', how: 'fixed', again: true }]);
+    expect(hasPicture(pages[0]!)).toBe(true);
+  });
+
+  it('teaches a gem once, at whichever altar it is first met', () => {
+    // Splitter Mill played straight after Furnace: its Split is new there.
+    const mill = newGems(puzzleFor('splitter-mill'), playedBefore('conveyor-a'));
+    expect(mill.fixed.map((f) => f.gem)).toEqual(['split']);
+    // Then Conveyor A, the Split taught at Splitter Mill (not yet solved): not new again.
+    const taught = { split: 'splitter-mill' };
+    const conveyor = newGems(puzzleFor('conveyor-a'), playedBefore('conveyor-a'), taught);
+    expect(conveyor.fixed.map((f) => f.gem)).toEqual([]);
+    expect(conveyor.remind.map((r) => r.gem)).toContain('split');
+    // The altar that taught it keeps teaching it until it is solved.
+    const again = newGems(puzzleFor('splitter-mill'), playedBefore('conveyor-a'), taught);
+    expect(again.fixed.map((f) => f.gem)).toEqual(['split']);
+  });
+
+  it("names Control Booth's one-strike Capacitor even to a player who has held one", () => {
+    // Every other altar solved first, Roof Array's Capacitor among them.
+    const all = MACHINE_IDS.filter((m) => m !== 'control-booth' && m !== 'the-last-rune').map((m) =>
+      puzzleFor(m),
+    );
+    const booth = puzzleFor('control-booth');
+    expect(booth.pulses).toBeLessThanOrEqual(1);
+    expect(newGems(booth, all).remind).toEqual([{ gem: 'capacitor' }]);
+    // Where it has two strikes, a Capacitor already held is not repeated.
+    const roof = puzzleFor('roof-array');
+    expect(roof.pulses).toBeGreaterThan(1);
+    expect(newGems(roof, all).remind.map((r) => r.gem)).not.toContain('capacitor');
+    expect(CAP_ONE_STRIKE).toBe('One strike here: what a Capacitor stores never comes out.');
   });
 });

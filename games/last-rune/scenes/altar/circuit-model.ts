@@ -240,13 +240,18 @@ export function capacitorBeats(
 
 /**
  * One line of a Capacitor's read-out: "Strike 1: stores 8", "Strike 2: 8 + 8 → 16". A bolt
- * stored on the altar's last strike never comes out, and the line says so (teach-7: "stores"). teach-5: a release over
- * the gauge's need says so in one short line, "Strike 2 sends 16; needs 8."
+ * stored on the altar's last strike never comes out, and the line says so (teach-7: "stores").
+ * The numbers are results, shown as each strike lands; the plan before Strike (`plan`) says only
+ * the rule, "Strike 1: stores, sends nothing." / "Strike 2: lets out both." (teach-8).
  */
-export function capBeatText(b: CapBeat, pulses: number, over?: number): string {
+export function capBeatText(b: CapBeat, pulses: number, plan = false): string {
   const n = `Strike ${b.pulse + 1}: `;
-  if (b.kind === 'release' && over !== undefined)
-    return `Strike ${b.pulse + 1} sends ${b.out}; needs ${over}.`;
+  // teach-8 (D-040 add. 11, A): before Strike, the rule and no numbers about this board (blind
+  // review 10: "Strike 2 sends 16; needs 8" nearly solved the puzzle and is a forecast, D-043).
+  if (plan) {
+    if (b.kind === 'release') return `${n}lets out both.`;
+    return `${n}${b.pulse >= pulses - 1 ? 'stores, never lets out.' : 'stores, sends nothing.'}`;
+  }
   if (b.kind === 'release') return `${n}${b.stored} + ${b.incoming} → ${b.out}`;
   return `${n}stores ${b.stored}${b.pulse >= pulses - 1 ? ', never let out' : ''}`;
 }
