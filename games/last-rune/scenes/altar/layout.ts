@@ -394,14 +394,15 @@ const PH = {
   maxPitch: 76,
   /**
    * Tray (mobile-4-board): gems as big as three to a row allow, between these; the gap between
-   * gems and the count line under each; the title line above. A held gem (lifted, ↻ badge at
-   * its corner) stays under the title, so the first row sits low enough for both.
+   * gems and the count line under each; the header above. A held gem (lifted, ↻ badge at
+   * its corner) stays under the header, which then stacks the puzzle's name over the "Holding
+   * X" pill (two 12 px lines, 3 px in from the top), so the first row sits low enough for both.
    */
   slotMin: 38,
   slotMax: 46,
   slotGap: 8,
   countH: 18,
-  titleH: 22,
+  titleH: 30,
   badge: 26,
   /** FUSE's bubble / the hint sit this far above the canvas bottom (clear of Strike, 64 px). */
   bubbleUp: 68,
