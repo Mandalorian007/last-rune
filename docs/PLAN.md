@@ -46,8 +46,8 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 3 | Host layer (web) | ws/host | 1 | 2 | ✅ merged |
 | 4 | Promote menu-nav, text-scale, device-mode, rotate card (camera2d dropped: addendum 1) | ws/promote-ui | 1 | 2 | ✅ merged |
 | 5 | `createGame()` from game/ctx.ts | ws/create-game | 1 | 3, 4 | ✅ merged · **Gate 1 ✅** (engine 0.2.0-alpha.1 cut, no tag) |
-| 6 | Gestures | ws/gestures | 2 | 5 | ⏳ |
-| 7 | Layout regions + overlay in CSS px | ws/layout | 2 | 5 | ⏳ |
+| 6 | Gestures | ws/gestures | 2 | 5 | 🟡 running |
+| 7 | Layout regions + overlay in CSS px | ws/layout | 2 | 5 | 🟡 running |
 | 8 | Port title, hall, settings, journal, codex, ending | ws/port-chrome | 2 | 6, 7 | ⏳ |
 | 9 | Port altar; delete phone-styles.ts (→ Last Rune 1.1, phones; D-040 gate) | ws/port-altar | 2 | 8 | ⏳ |
 | 10 | Camera + math | ws/camera | 3 | 9 | ⏳ |
@@ -55,7 +55,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 12 | `render(camera, target)` | ws/render-call | 3 | 10, 11 | ⏳ |
 | 13 | Port game shaders to camera block | ws/port-shaders | 3 | 12 | ⏳ |
 | 14 | `?demo=mesh` | ws/demo-3d | 3 | 13 | ⏳ |
-| 15 | host-electron package + builds | ws/host-electron | 4 | 3 | ⏳ |
+| 15 | host-electron package + builds | ws/host-electron | 4 | 3 | 🟡 running (storage stays localStorage; PM call) |
 | 16 | Last Rune desktop boot + e2e | ws/last-rune-desktop | 4 | 15 | ⏳ |
 | 17 | Extract engine repo, publish engine-v1.0.0 | engine repo | 5 | 13, 16, Forgewilds ws 1 | ⏳ |
 
