@@ -1,7 +1,7 @@
 /**
- * Cover stage (ws/cover-art): one offscreen engine renderer per cover, drawing a game scene at
- * twice itch's cover size, framed by the camera, with the game's embossed gold title on top.
- * Each tick hands back a bitmap that the page scales into the 630×500 cover canvas.
+ * Cover stage (ws/cover-art, ws/cover-final): an offscreen engine renderer for the itch cover,
+ * drawing a game scene at twice itch's cover size, framed by the camera, with the game's embossed
+ * gold title on top. A capture hands back a bitmap that the page scales into the 630×500 canvas.
  *
  * A cover works in "world" px (the game's 1920×1080 design space, so the game's views and
  * props draw where they always do) and picks what the 630×500 frame shows with `shot`.

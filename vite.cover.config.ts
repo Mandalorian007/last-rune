@@ -1,10 +1,10 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
-// The itch cover candidates page (D-043, ws/cover-art): a separate build so the game's own
-// bundle stays exactly as it was. It lands in dist/cover-image/ after the game build
-// (`pnpm build` runs both), so GitHub Pages serves it at /cover-image/. package-itch leaves it
-// out of the itch zip. Dev: `pnpm exec vite -c vite.cover.config.ts`.
+// The itch cover page (D-043 addendum 1, ws/cover-final): a separate build so the game's own
+// bundle stays exactly as it was. Local only: `pnpm cover` builds it into build/cover-image/
+// (ignored by version control, never in dist/ or on Pages) and saves the cover PNGs
+// (scripts/cover/). Dev: `pnpm exec vite -c vite.cover.config.ts`.
 const root = fileURLToPath(new URL('./games/last-rune/cover', import.meta.url));
 
 export default defineConfig({
@@ -18,7 +18,7 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    outDir: fileURLToPath(new URL('./dist/cover-image', import.meta.url)),
+    outDir: fileURLToPath(new URL('./build/cover-image', import.meta.url)),
     emptyOutDir: true,
     assetsInlineLimit: 4096,
   },

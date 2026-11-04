@@ -65,3 +65,6 @@ stub ctx (renderer, particles, desktop device, no chrome).
 
 Screenshots are in `docs/design/screens/local/cover-art/` (git-ignored): per-cover full and thumb,
 plus `sheet-full.png` and `sheet-thumb.png`.
+
+### 2026-11-04: superseded by ws/cover-final
+The user picked #8 fuse-portrait (D-043 addendum 1). ws/cover-final removed the other seven and the `/cover-image/` Pages build; `pnpm cover` now renders the cover locally to `build/last-rune-itch-cover.png`.

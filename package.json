@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "pnpm typecheck && vite build && vite build -c vite.cover.config.ts",
+    "build": "pnpm typecheck && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run --passWithNoTests",
@@ -22,6 +22,7 @@
     "desktop:icon": "node scripts/desktop/icon.mjs",
     "engine:release": "node scripts/engine-release.mjs",
     "baseline": "playwright test -c scripts/baseline/playwright.config.ts",
+    "cover": "playwright test -c scripts/cover/playwright.config.ts",
     "package:itch": "node scripts/package-itch.mjs",
     "itch:sim": "node scripts/itch-sim/serve.mjs",
     "audio:check": "node scripts/audio-check.mjs",

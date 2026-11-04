@@ -112,7 +112,7 @@ After the first butler push, make sure the `html5` channel's upload is ticked "p
   - Firefox 141+ on Windows, or 145+ on Apple Silicon macOS 26.
   - Linux Chrome needs WebGPU enabled.
 - [ ] "Progress is saved in this browser only."
-- [ ] Cover image (630×500), screenshots and an optional GIF. The page background and colors should match the game's palette.
+- [ ] Cover image (630×500): run `pnpm cover` and upload `build/last-rune-itch-cover.png` (fuse-portrait, D-043 addendum 1; `build/last-rune-itch-cover-thumb.png` shows it at browse size). Also screenshots and an optional GIF. The page background and colors should match the game's palette.
 - [ ] Genre: Puzzle. Tags: puzzle, webgpu, browser, singleplayer.
 - [ ] Credits and license. Fonts and audio must allow redistribution.
 

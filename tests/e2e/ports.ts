@@ -21,6 +21,8 @@ export const PORT_OFFSET = offset();
 export const PREVIEW_PORT = 4173 + PORT_OFFSET;
 export const DEV_PORT = 5175 + PORT_OFFSET;
 export const ITCH_SIM_PORT = 8790 + PORT_OFFSET;
+/** `pnpm cover` (scripts/cover/) serves the itch cover page here. */
+export const COVER_PORT = 6290 + PORT_OFFSET;
 
 export const PREVIEW_URL = `http://localhost:${PREVIEW_PORT}`;
 export const DEV_URL = `http://127.0.0.1:${DEV_PORT}/`;
