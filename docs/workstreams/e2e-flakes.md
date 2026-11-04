@@ -35,3 +35,11 @@ Branch: `ws/e2e-flakes`. PM brief (2026-11-04): `pnpm test:e2e` fails a few test
 ### Hands-off files: cause and proposed fix (not edited)
 - **altar-labels.spec.ts:12**: did not fail in my runs. Its only timing assumption is `waitForTimeout(1000)`, with the comment "the arrival line and new-gem card are both up a second in". That second is wall time, but the arrival and card run on game time, so under load the audit can run before they are up or while they are still moving in. Proposed fix: replace the second with a wait on state. Wait for FUSE's caption (`.tc-caption`) and, on altars that introduce a gem, the new-gem card to be visible. Then wait until the audited boxes are the same across 2 consecutive rAFs, then audit. Any altar test that presses F and then Enter has the same race; use `strikeToVerdict` (helpers.ts).
 - **mobile-budget.spec.ts:430**: not reproduced. The other agent has the file open, so I didn't look for a cause. If it recurs, check for the same patterns: fixed waits before measuring, F then Enter, or a touch held still before a drag.
+
+### Result
+- Under the stress setup (16 workers across 2 processes), the changed specs all passed, including 172 of 172 for layout-fit and altar-labels.
+- Three full `pnpm test:e2e` runs in a row, at default workers, each with 116 passed and 7 skipped, 0 failed or flaky:
+  - run 1: 7.4 m
+  - run 2: 7.7 m
+  - run 3: 8.0 m
+- `pnpm check` and `pnpm build` pass.
