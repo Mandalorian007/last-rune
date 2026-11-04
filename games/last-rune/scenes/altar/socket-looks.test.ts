@@ -85,7 +85,7 @@ describe('hugged slab (mobile-5-board)', () => {
     return frame;
   });
 
-  it('every socket, fixed gem and wire end lies on the stone; blocked cells are wall', () => {
+  it('every socket, fixed gem and wire end lies on the stone; blocked cells are wall or flush stone', () => {
     for (const p of Object.values(PUZZLES))
       for (const f of frames) {
         const L = computeLayout(p, f);
@@ -101,7 +101,12 @@ describe('hugged slab (mobile-5-board)', () => {
             const o = centre({ x, y });
             const isBlocked = p.blocked.some((b) => b.x === x && b.y === y);
             if (isBlocked) {
-              expect(inside(o.x, o.y), `${p.id} blocked ${x},${y}`).toBeGreaterThan(0);
+              // held-gem: a blocked cell inside the slab is filled flush; at the edge, wall.
+              const filled = recessCells(L.cols, L.rows, p.blocked).some(
+                (c) => c.x === x && c.y === y,
+              );
+              const d = inside(o.x, o.y);
+              expect(filled ? -d : d, `${p.id} blocked ${x},${y}`).toBeGreaterThan(0);
               continue;
             }
             // The whole bowl and its lip sit on stone.

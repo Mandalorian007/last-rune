@@ -77,7 +77,7 @@ fn st_rbox(p: vec2f, half: vec2f, r: f32) -> f32 {
 }
 
 /** Hewn block surface: chisel facets, grain, tool marks. e = distance to the block edge. */
-fn st_hewn(px: vec2f, hb: f32, e: f32, scale: f32) -> vec2f {
+fn st_hewn(px: vec2f, hb: f32, e: f32, scale: f32, tool: f32) -> vec2f {
   let vp = px / (70.0 * scale) + hb * 13.0;
   let vor = st_voronoi(vp);
   let g = (engine_hash22(vor.xy * 3.1) - 0.5) * 0.8;
@@ -90,7 +90,7 @@ fn st_hewn(px: vec2f, hb: f32, e: f32, scale: f32) -> vec2f {
   let dir = vec2f(cos(ang), sin(ang));
   let gl = abs(fract(dot(px, dir) / (8.0 * scale)) - 0.5) * 2.0;
   let groove = 1.0 - smoothstep(0.0, 0.35, gl);
-  let toolMask = smoothstep(0.5, 0.72, engine_fbm(px * 0.008 / scale + hb * 7.0, 3));
+  let toolMask = smoothstep(0.5, 0.72, engine_fbm(px * 0.008 / scale + hb * 7.0, 3)) * tool;
   top -= groove * toolMask * 0.06;
   let shoulder = sqrt(clamp(e / (16.0 * scale), 0.0, 1.0));
   return vec2f(top * shoulder, toolMask * groove);
@@ -143,11 +143,14 @@ fn wall_surf(px: vec2f) -> Surf {
   let centre = vec2f((left + right) * 0.5, rowH * 0.5);
   let half = vec2f((right - left) * 0.5 - 4.0, rowH * 0.5 - 4.0);
   var e = -st_rbox(vec2f(xs, ty) - centre, half, 16.0);
-  // Chipped edges: small bites everywhere, a few big ones.
+  // Chipped edges: small bites everywhere, a few big ones. held-gem (blind review 9): the big
+  // bites keep to the block's edge; deep inside a block they punched dark mortar holes, and
+  // the wall takes no hatched tool marks (st_hewn's tool 0): both read as render glitches.
+  let edge = 1.0 - smoothstep(14.0, 34.0, e);
   e -= (engine_fbm(px * 0.035 + hb * 50.0, 4) - 0.35) * 14.0;
-  e -= smoothstep(0.6, 0.9, engine_noise(px * 0.014 + hb * 31.0)) * 26.0;
+  e -= smoothstep(0.6, 0.9, engine_noise(px * 0.014 + hb * 31.0)) * 26.0 * edge;
 
-  let hw = st_hewn(px, hb, e, 1.0);
+  let hw = st_hewn(px, hb, e, 1.0, 0.0);
   let mortarH = 0.06 + engine_fbm(px * 0.09, 3) * 0.1;
   let inBlock = smoothstep(-1.0, 1.5, e);
   s.h = mix(mortarH, hw.x, inBlock);
@@ -211,7 +214,7 @@ fn floor_surf(pxIn: vec2f) -> Surf {
   e -= smoothstep(0.62, 0.9, engine_noise(px * 0.012 + hb * 17.0)) * 24.0;
   // Measure edges in screen px so bevels compress with distance.
   let es = e / depth;
-  let hw = st_hewn(px, hb, e, 1.3);
+  let hw = st_hewn(px, hb, e, 1.3, 1.0);
   let inBlock = smoothstep(-1.0, 1.5, es);
   s.h = mix(0.05, hw.x * 0.8, inBlock);
   var c = st_slate_albedo(vec2f(px.x, px.y * 0.1), hb, 1.3) * 0.85;
@@ -234,8 +237,10 @@ fn alt_solid(cell: vec2f) -> bool {
 }
 
 // Hugged slab (phones, mobile-5-board): signed distance to the top face as the union of one
-// rounded block per open cell, each a margin bigger than its cell. Solid cells are left out,
-// so the wall shows through where there is no socket.
+// rounded block per open cell, each a margin bigger than its cell. Solid cells at the edge are
+// left out, so the wall shows through where there is no socket; a solid cell inside the slab
+// (alt_inner) is filled flush with the slab's own stone (held-gem: a sunk square there read
+// as a square socket).
 fn alt_hug(px: vec2f) -> f32 {
   let pitch = G.altar.z;
   let m = G.altar.w;
@@ -249,7 +254,7 @@ fn alt_hug(px: vec2f) -> f32 {
       if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= G.altar.x || cell.y >= G.altar.y) {
         continue;
       }
-      if (alt_solid(cell)) { continue; }
+      if (alt_solid(cell) && !alt_inner(cell)) { continue; }
       let sc = m + pitch * 0.5 + cell * pitch;
       d = min(d, st_rbox(px - sc, half, rc));
     }
@@ -257,11 +262,12 @@ fn alt_hug(px: vec2f) -> f32 {
   return d;
 }
 
+// Part of the hugged stone: an open cell, or a solid one filled flush inside the slab.
 fn alt_open(cell: vec2f) -> bool {
   if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= G.altar.x || cell.y >= G.altar.y) {
     return false;
   }
-  return !alt_solid(cell);
+  return !alt_solid(cell) || alt_inner(cell);
 }
 
 // A solid cell inside the slab (mobile-6-board; mirrored by recessCells in socket-looks.ts):
@@ -284,26 +290,6 @@ fn alt_inner(cell: vec2f) -> bool {
     if (j < cell.y) { u = true; } else { d = true; }
   }
   return (l && r) || (u && d);
-}
-
-// Signed distance to the recessed stone: one block per inner solid cell, the same size as the
-// hugged top face's blocks, so recess and top face meet without a seam of wall between them.
-fn alt_recess(px: vec2f) -> f32 {
-  let pitch = G.altar.z;
-  let m = G.altar.w;
-  let base = round((px - m - pitch * 0.5) / pitch);
-  let half = vec2f(pitch * 0.5 + m - 3.0);
-  let rc = min(m * 0.9, 22.0);
-  var d = 1e5;
-  for (var dy = -1; dy <= 1; dy++) {
-    for (var dx = -1; dx <= 1; dx++) {
-      let cell = base + vec2f(f32(dx), f32(dy));
-      if (!alt_inner(cell)) { continue; }
-      let sc = m + pitch * 0.5 + cell * pitch;
-      d = min(d, st_rbox(px - sc, half, rc));
-    }
-  }
-  return d;
 }
 
 // How deep inside the hugged top face a point is (px, negative outside). The union's own
@@ -369,17 +355,10 @@ fn altar_surf(px: vec2f) -> Surf {
   }
   let chips = (engine_fbm(px * 0.04 + 9.0, 4) - 0.4) * 10.0 +
     smoothstep(0.65, 0.9, engine_noise(px * 0.02 + seed)) * 18.0;
-  // glyph-truth-3: a carved (blocked) cell inside a phone's slab is deliberate stone, not a
-  // tear. Its edges against the slab are clean cut lines (no chips there), and the slab plus
-  // its recesses share one outline: the recess is chipped along that outline exactly as the
-  // slab is, so it never pokes past the board's edge (Furnace's top notch, Lift Shaft's stub).
-  var rd0 = 1e5;
-  var outerD = 1e5;
+  // Chipped along the outline only; deep in the stone the chips would mark the top face.
   var chipK = 1.0;
   if (hug) {
-    rd0 = alt_recess(px);
-    outerD = min(alt_hug(px), rd0);
-    chipK = max(1.0 - smoothstep(0.0, 6.0, -rd0), 1.0 - smoothstep(4.0, 14.0, -outerD));
+    chipK = 1.0 - smoothstep(4.0, 14.0, -alt_hug(px));
   }
   e -= chips * chipK;
   s.alpha = smoothstep(0.0, 1.5, e);
@@ -396,7 +375,7 @@ fn altar_surf(px: vec2f) -> Surf {
     // --- top face ---
     let eFront = select(lipY - px.y, uTop, hug);
     let eTop = min(e, eFront + (engine_noise(px * 0.05) - 0.5) * 8.0);
-    let hw = st_hewn(px, hb, eTop, 1.6);
+    let hw = st_hewn(px, hb, eTop, 1.6, 1.0);
     var h = 0.55 + hw.x * 0.45;
     var c = st_slate_albedo(px * 0.9, hb, 1.4) * 1.05;
     // Worn, smoother centre.
@@ -461,7 +440,7 @@ fn altar_surf(px: vec2f) -> Surf {
   } else {
     // --- front face (vertical, faces the viewer and down) ---
     let fy = below / fh;
-    let hw = st_hewn(px * vec2f(1.0, 2.0), hb + 0.3, e, 1.2);
+    let hw = st_hewn(px * vec2f(1.0, 2.0), hb + 0.3, e, 1.2, 1.0);
     var c = st_slate_albedo(px * vec2f(1.0, 2.5), hb + 0.5, 1.0) * 1.05;
     // Horizontal chisel lines.
     let ln = 1.0 - smoothstep(0.0, 0.25, abs(fract(px.y / 7.0) - 0.5) * 2.0);
@@ -480,18 +459,8 @@ fn altar_surf(px: vec2f) -> Surf {
     // A soft contact shadow on the wall round the hugged stone, so it stands off the wall.
     // The stone a shade paler than the wall too: on a phone the wall shows between islands.
     let sh = 0.75 * (1.0 - smoothstep(0.0, 18.0, -e));
-    // A blocked cell inside the slab (mobile-6-board): the same stone, sunk a step, its floor
-    // shaded where the raised stone overhangs it. Never the black wall in a clipped box.
-    let rk = (1.0 - smoothstep(-1.5, 1.5, rd0)) * smoothstep(0.0, 1.5, -outerD - chips) *
-      (1.0 - s.alpha);
-    let sunk = st_slate_albedo(px * 0.9, hb, 1.4) * 1.3 * (0.62 + 0.3 * smoothstep(2.0, 22.0, -e));
     s.albedo = mix(SLATE_DARK * 0.15, s.albedo * 1.3, s.alpha);
-    s.albedo = mix(s.albedo, sunk, rk);
-    s.h = mix(s.h, 0.0, rk);
-    // A floor faces up like the top face: no front-face tilt, open to the light.
-    s.ao = mix(s.ao, 0.9, rk);
-    s.front = select(s.front, 0.0, rk > 0.5);
-    s.alpha = max(max(s.alpha, rk), sh);
+    s.alpha = max(s.alpha, sh);
   }
   return s;
 }

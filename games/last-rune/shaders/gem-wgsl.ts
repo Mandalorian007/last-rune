@@ -5,7 +5,10 @@
  * - tint     = gem colour (linear)
  * - params.x = kind (0 channel, 1 bend, 2 split, 3 amplify, 4 gate, 5 capacitor)
  * - params.y = state (0 idle, 1 hover, 2 placed, 3 energised, 4 dim-locked, 5 spent: a tray
- *   gem with none left, drawn as a dimmed copy of its idle look)
+ *   gem with none left, drawn as a dimmed copy of its idle look, 6 ghost: the held gem
+ *   previewed in the socket it would land in, its body faint and its glyph still clear, 7 ring:
+ *   the held tray gem's selection ring, the cut's own outline drawn round the gem and turned
+ *   with it; nothing is laid over the gem)
  * - params.z = rotation in radians, clockwise (rotates cut + glyph; lighting stays fixed)
  * - params.w = seed (inclusions, facet sparkle phase)
  * - emissive = glow multiplier (1 = default for the state)
@@ -41,15 +44,39 @@ fn g_ring(p: vec2f, c: vec2f, r: f32) -> f32 {
   return abs(length(p - c) - r);
 }
 
-// glyph-truth-2: an inlet, a side the bolt may only come IN by: a solid half-disc on the rim,
-// its flat side on the rim and its dome toward the centre, like a port the wire plugs into.
-// Solid where every outlet is an open arrowhead, so "in" and "out" differ in kind; a filled
-// shape survives the glow at a 26 px pitch where the old thin door bar did not; and it is no
-// arrow, so the Codex's "the end with no arrow" stays true. \`at\` is the rim point, \`dir\`
-// points into the gem.
+// held-gem (blind review 9, finding C): one arrow language on every gem. An arrowhead always
+// means OUT. An input side is a port: a solid round plug set in from the rim, its lead running
+// on to the centre. Round, never pointed, so it cannot read as an arrow (the old half-disc,
+// flat on the rim and domed inward, flared under the glow into a funnel that read as one, and
+// players wired the Gate backwards). \`at\` is the rim point, \`dir\` points into the gem.
+// glyph-truth-2's name is kept: its test counts the inputs by it.
 fn g_inlet(p: vec2f, at: vec2f, dir: vec2f) -> f32 {
-  let v = p - at;
-  return max(length(v) - 0.3, -dot(v, dir));
+  return length(p - (at + dir * 0.24)) - 0.16;
+}
+
+// A solid triangle (iq's exact distance), for the outlets' arrowheads.
+fn g_tri(p: vec2f, p0: vec2f, p1: vec2f, p2: vec2f) -> f32 {
+  let e0 = p1 - p0;
+  let e1 = p2 - p1;
+  let e2 = p0 - p2;
+  let v0 = p - p0;
+  let v1 = p - p1;
+  let v2 = p - p2;
+  let pq0 = v0 - e0 * clamp(dot(v0, e0) / dot(e0, e0), 0.0, 1.0);
+  let pq1 = v1 - e1 * clamp(dot(v1, e1) / dot(e1, e1), 0.0, 1.0);
+  let pq2 = v2 - e2 * clamp(dot(v2, e2) / dot(e2, e2), 0.0, 1.0);
+  let s = sign(e0.x * e2.y - e0.y * e2.x);
+  let d = min(min(vec2f(dot(pq0, pq0), s * (v0.x * e0.y - v0.y * e0.x)),
+                  vec2f(dot(pq1, pq1), s * (v1.x * e1.y - v1.y * e1.x))),
+                  vec2f(dot(pq2, pq2), s * (v2.x * e2.y - v2.y * e2.x)));
+  return -sqrt(d.x) * sign(d.y);
+}
+
+// An outlet: a solid arrowhead whose tip sits at \`tip\`, pointing along \`dir\` (out of the gem).
+fn g_outlet(p: vec2f, tip: vec2f, dir: vec2f) -> f32 {
+  let n = vec2f(-dir.y, dir.x);
+  let back = tip - dir * 0.3;
+  return g_tri(p, tip, back + n * 0.25, back - n * 0.25);
 }
 
 /**
@@ -82,21 +109,14 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     d -= 0.03;
   } else if (kind == 2) {
     // Split (rules rot 0): one way in, from the south; out both sides (west and east), never
-    // straight on. A bold T: the stem runs from the input rim to the centre, the crossbar runs
-    // rim to rim, and each arm ends in a wide arrowhead pointing out (D-031). Drawn heavier
-    // than the other glyphs so it, not the cut, is what reads; nothing points at the input.
-    // glyph-truth-2: the input is a solid inlet wedge on the rim (\`g_inlet\`) feeding a heavy
-    // stem, so the one way in reads at a 26 px pitch, lit or not, and never as an outlet.
-    let e = 0.7;
-    let h = 0.24;
-    d = g_seg(p, vec2f(0.0, 0.5), vec2f(0.0, 0.0)) - 0.035;
-    d = min(d, g_inlet(p, vec2f(0.0, 0.8), vec2f(0.0, -1.0)) + 0.035);
-    d = min(d, g_seg(p, vec2f(-e, 0.0), vec2f(e, 0.0)));
-    d = min(d, g_seg(p, vec2f(-e + h, -h), vec2f(-e, 0.0)));
-    d = min(d, g_seg(p, vec2f(-e + h, h), vec2f(-e, 0.0)));
-    d = min(d, g_seg(p, vec2f(e - h, -h), vec2f(e, 0.0)));
-    d = min(d, g_seg(p, vec2f(e - h, h), vec2f(e, 0.0)));
-    d -= 0.035;
+    // straight on. A bold T: a port on the input rim (\`g_inlet\`) feeds the stem to the
+    // centre, and the crossbar runs out both ways to a solid arrowhead on each side (D-031).
+    // held-gem: one port and two arrows, where the Gate has two ports and one arrow.
+    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.0)) - 0.02;
+    d = min(d, g_inlet(p, vec2f(0.0, 0.8), vec2f(0.0, -1.0)));
+    d = min(d, g_seg(p, vec2f(-0.5, 0.0), vec2f(0.5, 0.0)) - 0.02);
+    d = min(d, g_outlet(p, vec2f(-0.8, 0.0), vec2f(-1.0, 0.0)));
+    d = min(d, g_outlet(p, vec2f(0.8, 0.0), vec2f(1.0, 0.0)));
   } else if (kind == 3) {
     // Amplify: a Channel with its diamond node doubled (a diamond inside a diamond), so it reads
     // "a Channel, twice". Symmetric end to end: it can't turn and points neither way (D-031).
@@ -110,19 +130,16 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     d = min(d, g_seg(p, vec2f(-0.16, -0.72), vec2f(0.16, -0.72)));
     d += 0.022;
   } else if (kind == 4) {
-    // Gate: inputs from west and east meet in a ring; one output leaves north (rules rot 0).
-    // glyph-truth-2: each input is a solid inlet wedge on the rim (\`g_inlet\`, as the Split's)
-    // with a heavy lead to the ring, and the output an open arrow, so both ways in read at a
-    // 26 px pitch, lit or not: two wedges and one arrow, where the Split has one and two.
-    d = g_seg(p, vec2f(-0.45, 0.0), vec2f(-0.2, 0.0)) - 0.03;
-    d = min(d, g_seg(p, vec2f(0.45, 0.0), vec2f(0.2, 0.0)) - 0.03);
-    d = min(d, g_inlet(p, vec2f(-0.8, 0.0), vec2f(1.0, 0.0)) + 0.035);
-    d = min(d, g_inlet(p, vec2f(0.8, 0.0), vec2f(-1.0, 0.0)) + 0.035);
-    d = min(d, g_ring(p, vec2f(0.0, 0.0), 0.2));
-    d = min(d, g_seg(p, vec2f(0.0, -0.2), vec2f(0.0, -0.68)));
-    d = min(d, g_seg(p, vec2f(-0.21, -0.47), vec2f(0.0, -0.68)));
-    d = min(d, g_seg(p, vec2f(0.21, -0.47), vec2f(0.0, -0.68)));
-    d -= 0.01;
+    // Gate: inputs from west and east meet at the centre; one output leaves north (rules rot
+    // 0). held-gem: a port on each input rim (\`g_inlet\`, as the Split's) with its lead to the
+    // centre, and one solid arrowhead out: two ports and one arrow, where the Split has one
+    // port and two arrows. No ring at the centre: it sat between the two and, small, made the
+    // glyph a cross of blobs like the Split's.
+    d = g_seg(p, vec2f(-0.56, 0.0), vec2f(0.56, 0.0)) - 0.02;
+    d = min(d, g_inlet(p, vec2f(-0.8, 0.0), vec2f(1.0, 0.0)));
+    d = min(d, g_inlet(p, vec2f(0.8, 0.0), vec2f(-1.0, 0.0)));
+    d = min(d, g_seg(p, vec2f(0.0, 0.0), vec2f(0.0, -0.52)) - 0.02);
+    d = min(d, g_outlet(p, vec2f(0.0, -0.8), vec2f(0.0, -1.0)));
   } else {
     // Capacitor: two plates with leads, straight through.
     d = g_seg(p, vec2f(0.0, 0.66), vec2f(0.0, 0.14));
@@ -231,6 +248,26 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32, soft: f32) -> f32 {
   let p = in.local * 2.0 - 1.0;              // screen-aligned -1..1 (y down)
   let q0 = g_rot(p, -rot);                   // gem space
   let cut = g_cut(kind);
+  // Derivatives before any early return (WGSL uniformity).
+  let gemPx = 1.0 / max(fwidth(in.local.x), 1e-4);
+  if (state == 7) {
+    // held-gem ring: a gold line on a dark under-stroke along the cut's outline, shrunk so its
+    // corners stay inside the quad. Drawn under the held tray gem, hugging its edge.
+    let rs = 1.16;
+    let fr = g_facet((g_rot(p * rs, -rot) + cut.offset) / cut.scale, cut);
+    let pu = 2.0 / in.size.x;
+    let dl = abs(fr.sdf / rs + 0.07);
+    let lineW = max(0.03, 1.4 * pu);
+    let underW = lineW + max(0.03, 1.2 * pu);
+    let line = 1.0 - smoothstep(lineW - pu, lineW + pu, dl);
+    let under = 1.0 - smoothstep(underW - pu, underW + pu, dl);
+    let gold = vec3f(1.0, 0.72, 0.3);
+    var ro: FragOut;
+    let ra = max(under * 0.85, line);
+    ro.color = vec4f(gold * line * 1.1 + vec3f(0.008, 0.005, 0.002) * (1.0 - line), ra);
+    ro.emissive = vec4f(gold * line * 0.3 * in.emissive, ra);
+    return ro;
+  }
   let q = (q0 + cut.offset) / cut.scale;     // unit polygon space
   let f = g_facet(q, cut);
   let pxUnit = 2.0 / in.size.x;              // gem-space units per px
@@ -240,7 +277,6 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32, soft: f32) -> f32 {
   // soft glow and the bloom, which spread by screen pixels, not by gem size. So, small, the
   // glyph glows less softly, blooms less and sits in a darker halo: arrowheads and inlets
   // keep their shape. Large gems are unchanged.
-  let gemPx = 1.0 / max(fwidth(in.local.x), 1e-4);
   let small = 1.0 - smoothstep(44.0, 84.0, gemPx);
   let soft = 0.3 * (1.0 - 0.7 * small);
 
@@ -254,6 +290,8 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32, soft: f32) -> f32 {
   else if (state == 3) { glow = 1.15; glyphK = 1.6; energy = 1.0; }
   let dim = state == 4;
   let spent = state == 5;
+  let ghost = state == 6;
+  if (ghost) { glow = 0.35; glyphK = 1.15; }
 
   // Dim-locked gems are dead stone: desaturated, dark, glyph engraved rather than lit.
   if (dim) {
@@ -350,13 +388,21 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32, soft: f32) -> f32 {
     col = mix(col, vec3f(engine_luma(col)), 0.35) * 0.42;
   }
 
+  // Ghost (held-gem): the stone shows through the body, the glyph stays near solid, so the
+  // preview reads as "this gem, this turn, not here yet".
+  var a = alpha;
+  if (ghost) {
+    let gm = clamp(max(max(gl.r, gl.g), gl.b), 0.0, 1.0);
+    a = alpha * mix(0.38, 0.95, smoothstep(0.15, 0.7, gm));
+  }
+
   var o: FragOut;
-  o.color = vec4f(col, alpha);
+  o.color = vec4f(col, a);
   let em = base * (inner * 0.32 + veil * 0.1) * glow * bodyK + gl * glyphCol * glow * 0.55 * (1.0 - 0.4 * small) +
     mix(base, vec3f(1.0), 0.3) * select(exp(-r2 * 14.0), core, bend) * energy * 0.6 + specW * 0.2;
   // Normalise by brightness so pale gems (capacitor) don't out-bloom saturated ones.
   let lumK = 0.35 / max(engine_luma(base), 0.35);
-  o.emissive = vec4f(em * in.emissive * alpha * lumK * spentK, alpha);
+  o.emissive = vec4f(em * in.emissive * a * lumK * spentK, a);
   return o;
 }
 `;

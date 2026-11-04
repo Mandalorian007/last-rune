@@ -55,10 +55,12 @@ ${HEAD} .lr-altar-holding i {
 ${HEAD} .lr-altar-slot {
   position: absolute; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; display: none;
 }
+/* held-gem: the held slot's box is the ring's footprint (placeHead keeps it clear of the
+   counts), but nothing is painted over the canvas gem: any DOM paint laid over it paled the
+   gem and its glyph in the shots (blind review 9, finding A). The canvas draws the ring, the
+   gem's own outline just outside it, turned with it (altar-view.ts, gem state "ring"). */
 ${HEAD} .lr-altar-slot[data-held]:not([data-empty]) {
   display: block; width: var(--lr-held-d) !important; height: var(--lr-held-d) !important;
-  box-shadow: 0 0 0 2.5px #ffd77a, 0 0 0 4px rgba(20,12,4,0.85), 0 0 14px 3px rgba(255,205,110,0.5);
-  background: radial-gradient(circle, rgba(255,215,122,0.16) 0 60%, transparent 72%);
 }
 ${HEAD}[data-first] .lr-altar-slot:not([data-empty]):not([data-held]),
 ${HEAD} .lr-altar-slot[data-teach]:not([data-empty]):not([data-held]) {

@@ -112,6 +112,8 @@ export class AltarScene implements GameScene {
   result: SimResult | null = null;
   timeline: StrikeTimeline | null = null;
   fizzleList: Fizzle[] = [];
+  /** Trace hops into an Amplify that passes the bolt on undoubled (held-gem, `amp-idle.ts`). */
+  idleAmps: Set<number> = new Set();
   /** The root red mark of a failed strike: the verdict moves so it never covers this socket. */
   verdictAvoid: Cell | null = null;
   pulseSegs: BoltSegment[][] = [];
