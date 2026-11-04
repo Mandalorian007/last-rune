@@ -8,14 +8,15 @@ import type { Cell } from '../../rules/types';
 import { DRAG_PX, HOLD_SECS, SLOT_ACTIONS } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { jumpCursor, stepCursor } from './cursor';
-import { cellAt, cellCenter, snapCell, traySlotAt } from './layout';
+import { cellAt, cellCenter, LOUPE_BELOW, snapCell, traySlotAt } from './layout';
 
 export const editMethods = {
   /**
    * Touch aiming (engine Gestures `magnify`): while a finger holds a gem it aims at the nearest
    * socket the gem may go in, 56 CSS px above the fingertip while it drags, and on small sockets
-   * (under 44 CSS px) a loupe beside the finger shows that socket, ringed. Mouse, pen and
-   * keyboard never aim; nor does a finger with nothing in hand.
+   * (under 48 CSS px, dense-board: every dense board on every phone, Lift Shaft's 45 on a Pro
+   * Max included) a loupe beside the finger shows that socket, ringed. Mouse, pen and keyboard
+   * never aim; nor does a finger with nothing in hand.
    */
   linkGestures(this: AltarScene): void {
     const ctx = this.ctx;
@@ -23,6 +24,7 @@ export const editMethods = {
     this.gestures = new Gestures({
       magnify: {
         pitch: () => L().pitch / ctx.device.cssPx,
+        below: LOUPE_BELOW,
         when: () => !!this.hand && !this.keyboard && this.mode === 'edit',
         snap: (x, y) => {
           const cell = snapCell(L(), x, y, this.aimable);

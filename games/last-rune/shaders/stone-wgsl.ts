@@ -17,6 +17,16 @@ export const STONE_MODE = { wall: 0, floor: 1, altar: 2 } as const;
 /** Vertical height scale (px) of the baked height field; used by the lit pass for lights. */
 export const STONE_HEIGHT_PX = 26;
 
+/** A socket's radius as a share of the pitch (stone.ts `socketRadius`). */
+export const SOCKET_RADIUS = 0.36;
+
+/**
+ * The collar's lock pip on phones (dense-board): its centre on the lower-right diagonal and its
+ * radius, in socket radii (desktop keeps its centre at 1.0). `at + r` stays under half a pitch, so the pip never crosses into the next
+ * cell (0.5 / SOCKET_RADIUS = 1.39 radii).
+ */
+export const LOCK_PIP = { at: 0.94, r: 0.42 } as const;
+
 const GEN_COMMON = /* wgsl */ `
 struct StoneGen {
   size: vec4f,    // width px, height px, seed, mode
@@ -543,8 +553,10 @@ export const LIT_SURFACE_WGSL = /* wgsl */ `${LIGHTS_WGSL}
  */
 export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
 @fragment fn fs_main(in: VSOut) -> FragOut {
-  // Socket radius = 1; the quad reaches 1.3 radii, or params.w when set (collar 1.6, fault 1.42).
-  let p = (in.local * 2.0 - 1.0) * select(1.3, in.params.w, in.params.w > 0.0);
+  // Socket radius = 1; the quad reaches 1.3 radii, or |params.w| when set (collar 1.6, fault
+  // 1.42). A negative params.w on a collar pulls its lock pip in (dense-board, phones).
+  let ext = abs(in.params.w);
+  let p = (in.local * 2.0 - 1.0) * select(1.3, ext, ext > 0.0);
   let r = length(p);
   let state = i32(in.params.x + 0.5);
   let seed = in.params.y;
@@ -691,9 +703,12 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
     // padlock (body and shackle), so "can't move this" reads without the card.
     // glyph-truth: bigger (0.42 radii, ~12 CSS px across on an SE) and pushed out past the gem's
     // edge onto the collar's lower-right shoulder, so no gem cut covers it.
-    let lc = p - vec2f(1.0, 1.0);
+    // dense-board: on phones its centre is pulled in to LOCK_PIP.at so its edge stays inside
+    // the cell; desktop keeps 1.0 (its pitch leaves the ~1 px overhang unreadable).
+    let pipAt = select(1.0, ${LOCK_PIP.at}, in.params.w < 0.0);
+    let lc = p - vec2f(pipAt, pipAt);
     let lr = length(lc);
-    let pipR = 0.42;
+    let pipR = ${LOCK_PIP.r};
     let pip = 1.0 - smoothstep(pipR - 0.03, pipR + 0.005, lr);
     var lockA = 0.0;
     if (pip > 0.0) {

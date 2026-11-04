@@ -13,6 +13,7 @@ import type {
 } from '@thunderclap/engine/render';
 import {
   LIT_SURFACE_WGSL,
+  SOCKET_RADIUS,
   SOCKET_WGSL,
   SOLID_BITS,
   STONE_ALBEDO_WGSL,
@@ -221,6 +222,8 @@ export class AltarSlab {
   readonly topHeight: number;
   readonly surface: StoneSurface;
   private readonly socketMat: Material;
+  /** Phones (`AltarOptions.hug`): a collar's lock pip sits inside its cell (dense-board). */
+  private readonly hug: boolean;
   private cx = 0;
   private cy = 0;
   private readonly dp: DrawParams = { x: 0, y: 0, params: [0, 0, 0, 0] };
@@ -228,9 +231,10 @@ export class AltarSlab {
   constructor(renderer: Renderer, opts: AltarOptions) {
     this.cols = opts.cols;
     this.rows = opts.rows;
+    this.hug = opts.hug ?? false;
     this.pitch = opts.pitch ?? 118;
     this.margin = opts.margin ?? Math.round(this.pitch * 0.8);
-    this.socketRadius = Math.round(this.pitch * 0.36);
+    this.socketRadius = Math.round(this.pitch * SOCKET_RADIUS);
     this.frontHeight = opts.front ?? Math.round(this.pitch * 0.42);
     this.width = this.cols * this.pitch + this.margin * 2;
     this.topHeight = this.rows * this.pitch + this.margin * 2;
@@ -303,7 +307,8 @@ export class AltarSlab {
     // past the gem's edge so it reads on a phone (glyph-truth).
     const wide = state === 'collar' || state === 'fault';
     const reach = state === 'collar' ? 1.6 : wide ? 1.42 : 1.3;
-    p[3] = wide ? reach : 0;
+    // dense-board: a phone's collar (hug) signs its reach negative to pull the lock pip in.
+    p[3] = wide ? (state === 'collar' && this.hug ? -reach : reach) : 0;
     dp.w = this.socketRadius * 2 * reach;
     dp.h = this.socketRadius * 2 * reach;
     dp.tint = color;
