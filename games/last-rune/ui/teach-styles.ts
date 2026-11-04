@@ -23,7 +23,7 @@ ${A}[data-hand] .lr-altar-lane .lr-altar-cap[data-plan] { display: none; }
 /* The puzzle's name stays while a gem is in hand: it shrinks to a small line and the
    "Holding X" pill sits under it, both over the tray (the pill no longer covers the name). */
 ${A} .lr-altar-title[data-holding] {
-  top: calc(var(--lr-crop-t, 0px) + ${cpx(0.5)}); display: flex; flex-direction: column; align-items: center;
+  top: calc(var(--tc-crop-t, 0px) + ${cpx(0.5)}); display: flex; flex-direction: column; align-items: center;
   gap: ${cpx(1)};
 }
 ${A} .lr-altar-title[data-holding] > :not(.lr-altar-holding) { visibility: visible; }

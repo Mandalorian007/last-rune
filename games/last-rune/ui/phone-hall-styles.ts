@@ -4,7 +4,7 @@
  */
 import { cpx, P, tpx } from './phone-styles';
 
-const CT = 'var(--lr-crop-t, 0px)';
+const CT = 'var(--tc-crop-t, 0px)';
 /** Not at an altar or a solve card: those draw FUSE's card and its tail their own way. */
 const hall = () => `${P}:not(:has(.lr-altar[data-phone])):not(:has(.lr-solve[data-phone]))`;
 
@@ -51,7 +51,7 @@ ${P} .lr-card-fuse b { font: 700 ${tpx(12)}/1 var(--tc-font-display, serif); fon
 /* The open ☰ list stands on a panel of its own over a dimmed hall: no door name shows
    through it. */
 ${P} .lr-hud-scrim {
-  position: absolute; inset: 0 calc(-1 * var(--lr-bar, 0px)); z-index: 4; pointer-events: none;
+  position: absolute; inset: 0 calc(-1 * var(--tc-bar, 0px)); z-index: 4; pointer-events: none;
   background: rgb(4 3 2 / 0.6);
 }
 ${P} .lr-hud-scrim[hidden] { display: none; }

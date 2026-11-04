@@ -18,7 +18,7 @@
 import { cpx, P, tpx } from '../../ui/phone-styles';
 
 /** Right edge of the right bar column, 3 CSS px in from the bar's edge. */
-const BAR_IN = `calc(-1 * var(--lr-bar, 0px) + ${cpx(3)})`;
+const BAR_IN = `calc(-1 * var(--tc-bar, 0px) + ${cpx(3)})`;
 /** Skip's lane: a 44 CSS px column at the top of the right bar. */
 const LANE = cpx(44);
 /** The chat header: tall enough to hold Skip on its right. */
@@ -26,8 +26,8 @@ const HEAD = cpx(44);
 /** The end card's stack is centred this far left of the screen's centre (design px). */
 const SHIFT = '260px';
 /** Design px cropped off the top and bottom while the ending fills the width (mobile-6-chrome). */
-const CT = 'var(--lr-crop-t, 0px)';
-const CB = 'var(--lr-crop-b, 0px)';
+const CT = 'var(--tc-crop-t, 0px)';
+const CB = 'var(--tc-crop-b, 0px)';
 
 export const ENDING_PHONE_CSS = /* css */ `
 /* ── Skip: its own lane, top right, in the bar ───────────────────────────── */
@@ -46,7 +46,7 @@ ${P}:has(.lr-ending) .tc-caption-text { font-size: ${tpx(14)}; line-height: 1.32
 
 /* ── Hangout: one conversation, full screen ────────────────────────────── */
 ${P} .lr-hg {
-  left: calc(-1 * var(--lr-bar, 0px)); top: 0; width: calc(1920px + 2 * var(--lr-bar, 0px)); height: 1080px;
+  left: calc(-1 * var(--tc-bar, 0px)); top: 0; width: calc(1920px + 2 * var(--tc-bar, 0px)); height: 1080px;
   border: 0; border-radius: 0; box-shadow: none; transform: translateY(${cpx(12)}); line-height: 1.32;
 }
 ${P} .lr-hg[data-in] { transform: none; }

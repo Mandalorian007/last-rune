@@ -68,17 +68,14 @@ test('keyboard path title → settings → hall → altar, with axe and the stri
   await page.keyboard.press('Tab');
   expect(await focused(page)).toBe('button:Settings');
 
-  // Settings: focus moves in, Tab is trapped, Esc closes and focus returns to the opener.
+  // Settings by keyboard, then Esc. (Focus trap and restore are the engine's: packages/engine
+  // e2e/ui.spec.ts.)
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Settings' });
   await expect(dialog).toBeVisible();
-  expect(await page.evaluate(() => !!document.activeElement?.closest('[role=dialog]'))).toBe(true);
-  for (let i = 0; i < 20; i++) await page.keyboard.press('Tab');
-  expect(await page.evaluate(() => !!document.activeElement?.closest('[role=dialog]'))).toBe(true);
   await expectNoAxeViolations(page, 'settings');
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
-  expect(await focused(page)).toBe('button:Settings');
 
   // Play from the menu by keyboard.
   await page.keyboard.press('Shift+Tab');
@@ -88,15 +85,14 @@ test('keyboard path title → settings → hall → altar, with axe and the stri
   await page.waitForTimeout(1200);
   await expectNoAxeViolations(page, 'hall');
 
-  // A HUD button opens the codex; when it closes, focus goes to the canvas, not the button,
-  // so the arrows and Enter drive the hall again.
+  // A HUD button opens the codex. When it closes, the arrows and Enter drive the hall again
+  // (focus goes home to the canvas: the engine's NO_RESTORE_FOCUS_ATTR, e2e/ui.spec.ts).
   await page.locator('.lr-hud button', { hasText: 'Codex' }).click();
   const codex = page.getByRole('dialog', { name: 'Codex' });
   await expect(codex).toBeVisible();
   await expectNoAxeViolations(page, 'codex');
   await page.keyboard.press('Escape');
   await expect(codex).toBeHidden();
-  expect(await focused(page)).toBe('canvas:Game view');
 
   // Hall → the first altar with the arrows; the name plate says what a door needs.
   const order = focusOrder(deriveHall(initialState()));
@@ -138,7 +134,7 @@ test('keyboard path title → settings → hall → altar, with axe and the stri
   expect(problems).toEqual([]);
 });
 
-test('solve, journal and end card: axe, and Esc works from a focused button', async ({ page }) => {
+test('solve, journal and end card: axe, Esc and the end card Tab order', async ({ page }) => {
   test.setTimeout(120_000);
   const problems = trackProblems(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -166,17 +162,13 @@ test('solve, journal and end card: axe, and Esc works from a focused button', as
   await page.keyboard.press('Enter');
   await expect.poll(() => flowState(page)).toBe('hall');
 
-  // Journal: Tab to a page slip, then Esc (a button key) still goes back to the hall.
+  // Journal, then Esc back to the hall. (Esc from a focused button is the engine's button-key
+  // behaviour: packages/engine e2e/ui.spec.ts.)
   await page.waitForTimeout(500);
   await pressKey(page, 'KeyJ');
   await expect.poll(() => flowState(page)).toBe('journal');
   await page.waitForTimeout(800);
   await expectNoAxeViolations(page, 'journal');
-  for (let i = 0; i < 4; i++) {
-    await page.keyboard.press('Tab');
-    if (await page.evaluate(() => !!document.activeElement?.matches('.lr-j-slip'))) break;
-  }
-  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('BUTTON');
   await pressKey(page, 'Escape');
   await expect.poll(() => flowState(page)).toBe('hall');
 

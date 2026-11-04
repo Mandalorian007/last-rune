@@ -15,7 +15,7 @@
 import type { Voice } from '@thunderclap/engine/audio';
 import type { PostSettingsPatch } from '@thunderclap/engine/post';
 import type { DrawParams, Frame, Material, RGBA } from '@thunderclap/engine/render';
-import { externalLink, h } from '@thunderclap/engine/ui';
+import { externalLink, h, menuNav } from '@thunderclap/engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import { Fuse as FuseProp } from '../../art/props/fuse';
 import { createFusePortrait, type FusePortrait } from '../../art/props/fuse-portrait';
@@ -27,7 +27,6 @@ import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
 import { progressOf } from '../../game/save';
 import { coffeeLinkWidget, linkLabels } from '../../ui/coffee';
-import { menuNav } from '../../ui/menu-nav';
 import { deriveHall } from '../hall/hall-state';
 import { DeskArt } from '../journal/desk-art';
 import { PAPER, PROP } from '../journal/desk-wgsl';

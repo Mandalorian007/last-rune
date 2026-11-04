@@ -96,7 +96,7 @@ export const PHONE_COL_CSS = 50;
 /** The right-hand column holds Strike 12 CSS px in from the screen's edge (mobile-5-board). */
 export const PHONE_STRIKE_CSS = 58;
 
-/** What `phoneFrameFor` reads off the device (ui/device-mode.ts). */
+/** What `phoneFrameFor` reads off the device (engine platform/device-mode.ts). */
 export interface PhoneDevice {
   readonly phone: boolean;
   readonly cssPx: number;

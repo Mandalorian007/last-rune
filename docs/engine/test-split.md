@@ -41,7 +41,7 @@ It has its own `playwright.config.ts` with one project per matrix row. It reuses
 |---|---|
 | P1 workspace | Harness skeleton and CI job. WebGPU adapter sanity, the unsupported screens (no `navigator.gpu`, null adapter), non-black canvas. |
 | P1 host | Wrappers: itch-sim iframe and click-to-launch. Open and copy through `Host` (granted, refused, missing, `execCommand` fallback, popup blocked, gamepad activate). Storage: available, blocked, quota. Fullscreen present or absent. |
-| P1 promote-ui | Text-scale tokens 100/125/150 on base widgets. `menu-nav` pad focus. Rotate card on portrait phones. Device-mode flags (`data-touch`, `data-phone`). |
+| P1 promote-ui (done: e2e/ui.spec.ts) | Text-scale tokens 100/125/150 on base widgets. `menu-nav` pad focus. Rotate card on portrait phones. Device-mode flags (`data-touch`, `data-phone`). |
 | P1 create-game | Resize and DPR mid-scene (overlay tracks canvas, buffer follows DPR). GPU device loss screen and halt. Lifecycle: hidden, pagehide and freeze flush the save and stop frames and audio, show resumes them. Audio unlock. Browser-zoom blocking. |
 | P2 gestures | Tap vs pan boundary, long-press, drag origin and drag-off, `blocked()`, loupe and snap (`magnify`), all through real CDP touch on the phone rows. |
 | P2 layout | Regions per form factor and orientation, safe areas, `freeRect`. No page scroll, no clipped text, everything on screen. `--tc-tap-min` 44 hit areas, `--tc-text-min` floors. Panel fits at 150% or scrolls to its last control. Caption lane never overlaps another region. Panel-stack spam leaves at most one panel. Focus returns after a panel closes. |
@@ -107,8 +107,8 @@ Line numbers are the `test(` line on `main` at `a036840`. "×4" means once per p
 | ending :23 | ending plays; ThunderClap link opens only on a click | MIXED | ui (`externalLink`), host | P1 host | "Opens only on a click" goes to the engine. The game keeps that the link is there with the right URL, and the whole ending. |
 | title :29 | FUSE chatters, clear of menu, stops | GAME | | | |
 | title :85 | quiet Ko-fi link opens only on a click | MIXED | ui, host | P1 host | Same split as ending :23. |
-| a11y :51 | keyboard path with axe, strike announcement | MIXED | ui (focus trap, focus restore) | P1 promote-ui | axe on game screens and the live-region wording stay. Focus return after a HUD panel closes goes to the engine. |
-| a11y :141 | solve, journal, end card with axe; Esc from a focused button | MIXED | ui | P1 promote-ui | Esc from a focused button goes to the engine; axe stays. |
+| a11y :51 | keyboard path with axe, strike announcement | MIXED | ui (focus trap, focus restore) | P1 promote-ui (done: e2e/ui.spec.ts) | axe on game screens and the live-region wording stay. Focus return after a HUD panel closes goes to the engine. |
+| a11y :141 | solve, journal, end card with axe; Esc from a focused button | MIXED | ui | P1 promote-ui (done: e2e/ui.spec.ts) | Esc from a focused button goes to the engine; axe stays. |
 | layout-fit :56 (×3 scales) | Settings fits 1280×720, Done on screen | MIXED | ui (panel fit and scroll × text scale) | P2 layout | The engine owns panel fit at 100/125/150. The game keeps 150% only (its Settings content). |
 | layout-fit :78 (×3) | every Codex spread fits | GAME, shrink | | P2 port-chrome | Keep 150% only (worst case). |
 | layout-fit :118 (×2) | fizzle tags never cover the verdict | GAME | | | |
@@ -160,11 +160,11 @@ Today every phone spec runs ×4 (se, iphone, promax, android). Under the split t
 | mobile-moments :393 (×4) | right column has one owner | GAME, shrink | | Runs at phone-se only | P2 port-altar |
 | mobile-strike :127 (×4) | Strike, lamps, verdict, solve card | GAME, shrink | (≥12 inside the play area is the engine's safe-area row) | Everything else; runs at phone-se only | P2 port-altar |
 | mobile-zoom :103, :268, :440 (×4) | zoom | GONE | | | zoom-removal (D-041 addendum 1) |
-| mobile :111 | intake desk by touch alone | MIXED | `data-touch` and `data-phone` flags (device mode) | the touch play path: the touch analogue of full-run | P1 promote-ui (flags); the rest stays |
+| mobile :111 | intake desk by touch alone | MIXED | `data-touch` and `data-phone` flags (device mode) | the touch play path: the touch analogue of full-run | P1 promote-ui (flags, done); the rest stays |
 | mobile :149 | furnace by touch with ↻ Turn | GAME | | | |
 | **mobile :173** | turn before placing; drag a placed gem off to remove it | MIXED | CDP touch drag recognition (start, move, end, origin) | That a drag-off removes the gem, driven through the `Gestures` test feed instead of CDP timing. This makes it shorter and no longer flaky. | P2 gestures (engine), P2 port-altar (game) |
 | **mobile :350** (×2) | fits a 844×390 and a 667×375 phone: hall, panels, every altar | REDUNDANT | Everything: no scroll, text ≥11, ≥44 targets, no clipping, on screen. These are the engine layout rows. | Nothing: mobile-budget covers the altars at phone-se. | P2 layout (engine), then delete at P2 port-altar |
-| mobile :400 | upright phone shows the turn-sideways card | ENGINE | ui (`rotate-card`), platform | P1 promote-ui | |
+| mobile :400 | upright phone shows the turn-sideways card | ENGINE | ui (`rotate-card`), platform | P1 promote-ui (done: e2e/ui.spec.ts) | |
 | **mobile :416** | Last Rune: tray drag zooms in | GONE | | | zoom-removal |
 
 ### Helpers (not tests)
