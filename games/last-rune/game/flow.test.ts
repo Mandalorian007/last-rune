@@ -164,6 +164,23 @@ describe('GameFlow', () => {
     expect(f.save.get().stats.playSeconds).toBeCloseTo(11, 5);
   });
 
+  it('a hidden tab adds no play time: hide commits what was played, the gap counts nothing', () => {
+    // Hidden, the engine stops the loop (createGame; engine e2e lifecycle.spec), so no ticks
+    // arrive, and hooks.hide calls commitPlayTime. From robustness.spec :133 (test-split).
+    const f = setup();
+    f.flow.start();
+    f.flow.newGame();
+    for (let i = 0; i < 60 * 3; i++) f.flow.tick(1 / 60);
+    expect(f.save.get().stats.playSeconds).toBe(0);
+    f.flow.commitPlayTime(); // hide
+    expect(f.save.get().stats.playSeconds).toBeCloseTo(3, 5);
+    f.flow.commitPlayTime(); // a second hide (pagehide after visibilitychange) adds nothing
+    expect(f.save.get().stats.playSeconds).toBeCloseTo(3, 5);
+    for (let i = 0; i < 60 * 2; i++) f.flow.tick(1 / 60); // shown again
+    f.flow.toTitle();
+    expect(f.save.get().stats.playSeconds).toBeCloseTo(5, 5);
+  });
+
   it('continue keeps progress; new game wipes it', () => {
     const f = setup();
     f.flow.start();

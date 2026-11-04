@@ -42,7 +42,7 @@ It has its own `playwright.config.ts` with one project per matrix row. It reuses
 | P1 workspace | Harness skeleton and CI job. WebGPU adapter sanity, the unsupported screens (no `navigator.gpu`, null adapter), non-black canvas. |
 | P1 host (done: `e2e/host.spec.ts`, `src/host/*.test.ts`) | Wrappers: itch-sim iframe and click-to-launch. Open and copy through `Host` (granted, refused, missing, `execCommand` fallback, popup blocked, gamepad activate). Storage: available, blocked, quota. Fullscreen present or absent. |
 | P1 promote-ui (done: e2e/ui.spec.ts) | Text-scale tokens 100/125/150 on base widgets. `menu-nav` pad focus. Rotate card on portrait phones. Device-mode flags (`data-touch`, `data-phone`). |
-| P1 create-game | Resize and DPR mid-scene (overlay tracks canvas, buffer follows DPR). GPU device loss screen and halt. Lifecycle: hidden, pagehide and freeze flush the save and stop frames and audio, show resumes them. Audio unlock. Browser-zoom blocking. |
+| P1 create-game (done: `e2e/lifecycle.spec.ts`, `e2e/surface.spec.ts`, `src/core/game.test.ts`; page `harness/game.html`) | Resize and DPR mid-scene (overlay tracks canvas, buffer follows DPR). GPU device loss screen and halt. Lifecycle: hidden, pagehide and freeze flush the save and stop frames and audio, show resumes them. Audio unlock. Browser-zoom blocking. Flip-leak (mem.spec). |
 | P2 gestures | Tap vs pan boundary, long-press, drag origin and drag-off, `blocked()`, loupe and snap (`magnify`), all through real CDP touch on the phone rows. |
 | P2 layout | Regions per form factor and orientation, safe areas, `freeRect`. No page scroll, no clipped text, everything on screen. `--tc-tap-min` 44 hit areas, `--tc-text-min` floors. Panel fits at 150% or scrolls to its last control. Caption lane never overlaps another region. Panel-stack spam leaves at most one panel. Focus returns after a panel closes. |
 | P3 camera / render-call | `fitRect`, `screenToWorld` round trip on every row. A noun-free perf scene (camera-uniform cost). |
@@ -133,11 +133,11 @@ Line numbers are the `test(` line on `main` at `a036840`. "×4" means once per p
 | smoke :57, :74 | unsupported screen: no `navigator.gpu`; null adapter | ENGINE | render, platform | P1 workspace | |
 | smoke :88 | loads in a cross-site iframe with WebGPU and localStorage | ENGINE | host (itch-embed) | P1 host | |
 | smoke :117 | click-to-launch at 960×540 | ENGINE | host (itch-embed) | P1 host | |
-| lifecycle :95 | hidden flushes the save, stops frames and audio; visible resumes | ENGINE | core, platform, save, audio | P1 create-game | Uses `__game` only to write the save; the harness has a noun-free save probe. |
-| lifecycle :115 | pagehide and freeze flush; pageshow restores | ENGINE | core, platform, save | P1 create-game | |
-| robustness :91 | resize and DPR mid-scene keep canvas and overlay in step | ENGINE | platform (surface), render | P1 create-game (P3 render-call re-checks it through `Surface`) | The "verdict survives a resize mid-strike" tail is REDUNDANT. |
-| robustness :133 | hidden tab pauses play time | MIXED | core (pause on hidden) | P1 create-game | The engine asserts the loop pauses. The game keeps that play time does not count, as a `game/flow` unit test, and drops the e2e. |
-| robustness :164 | lost GPU device shows the reload screen above everything | ENGINE | render, platform | P1 create-game | Loop, audio and timer halt included. |
+| lifecycle :95 | hidden flushes the save, stops frames and audio; visible resumes | ENGINE | core, platform, save, audio | P1 create-game | Uses `__game` only to write the save; the harness has a noun-free save probe. **Moved: engine `e2e/lifecycle.spec.ts`; game spec deleted.** |
+| lifecycle :115 | pagehide and freeze flush; pageshow restores | ENGINE | core, platform, save | P1 create-game | **Moved: engine `e2e/lifecycle.spec.ts`; game spec deleted.** |
+| robustness :91 | resize and DPR mid-scene keep canvas and overlay in step | ENGINE | platform (surface), render | P1 create-game (P3 render-call re-checks it through `Surface`) | The "verdict survives a resize mid-strike" tail is REDUNDANT. **Moved: engine `e2e/surface.spec.ts`; game test removed.** |
+| robustness :133 | hidden tab pauses play time | MIXED | core (pause on hidden) | P1 create-game | The engine asserts the loop pauses. The game keeps that play time does not count, as a `game/flow` unit test, and drops the e2e. **Done: engine `e2e/lifecycle.spec.ts` plus a `game/flow` unit test; game e2e removed.** |
+| robustness :164 | lost GPU device shows the reload screen above everything | ENGINE | render, platform | P1 create-game | Loop, audio and timer halt included. **Moved: engine `e2e/surface.spec.ts`; game test removed.** |
 | robustness :269 (×5) | corrupt save (5 shapes) boots to the title and says so | MIXED | save | P1 host (storage moves under `Host`) | The engine unit-tests all 5 shapes. The game keeps 1 e2e (its notice text). |
 | robustness :293 | old save without newer fields loads intact | GAME | | | Game schema migrations. |
 | **robustness :328** | spamming Strike, Back, Enter never stacks scenes or panels | MIXED | ui (panel stack), input (repeat queue) | P2 layout | "At most one panel, Esc spam closes it" goes to the engine. The game keeps "12 × F = one attempt" and "solve card → hall once". Shorter and less flaky. |
@@ -201,7 +201,7 @@ Later workstreams extend `links` and `save` (host), and add `gestures`, `layout`
 | `content/*` (7 files: altar-lines, codex, content, puzzles/difficulty, finale, puzzles, solve) | GAME | | | |
 | `art/*` (candles, bolt, fuse-stroll, fuse) | GAME | | | |
 | `audio/bank`, `audio/dsp`, `audio/logic` | GAME | | | The game's sound design. The engine DSP is tested in `engine/audio`. |
-| `game/flow` | GAME | | | Add the play-time-while-hidden case here (from robustness :133). |
+| `game/flow` | GAME | | | Add the play-time-while-hidden case here (from robustness :133). **Done.** |
 | `game/settings` | GAME | | | The setting's legal values are product. |
 | `game/graphics` | GAME | (render, if ever promoted) | | Tier policy over `DynamicResolution`. Not in the promotion plan; flag it if Forgewilds needs it. |
 | `game/save` | MIXED | save, host | P1 host | "Works without storage (memory fallback)", "round-trips through storage" and the corrupt-backup case re-verify engine save and storage; they move. Schema, migrations, `codex.met`, placement repair and new game stay. |
@@ -222,7 +222,7 @@ Later workstreams extend `links` and `save` (host), and add `gestures`, `layout`
 |---|---|---|---|
 | `perf.spec` (frame times per scene) | MIXED | The engine gets a noun-free perf scene (post stack, dynamic resolution, camera uniform). Phase 3 needs it as the camera-cost gate. The game keeps per-scene budgets for title, hall, altar, strike and ending. | P3 render-call |
 | `load.spec` (load and audio pre-render) | GAME | The game's bank and boot time. Engine boot cost is visible in the engine perf scene. | |
-| `mem.spec` (memory, orientation flips) | MIXED | Texture and buffer leaks on landscape↔portrait flips go to the engine (surface). Decoded audio per sound and the JS heap stay. | P1 create-game (flip-leak check); the rest stays |
+| `mem.spec` (memory, orientation flips) | MIXED | Texture and buffer leaks on landscape↔portrait flips go to the engine (surface). Decoded audio per sound and the JS heap stay. | P1 create-game (flip-leak check); the rest stays **Flip-leak done: engine `e2e/surface.spec.ts`.** |
 
 `scripts/playtest/*.spec.ts` (31 capture scripts) are screenshot tooling for reviews, not tests. They stay with the game and are out of scope.
 

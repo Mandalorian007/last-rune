@@ -14,13 +14,7 @@
   </head>
   <body>
     <main id="app"></main>
-    <script>
-      // Game input, not a document: stop double-tap / pinch / trackpad smart-zoom from zooming the page.
-      // Keyboard zoom (Cmd/Ctrl +/-) is left alone for accessibility.
-      for (const t of ['gesturestart', 'gesturechange', 'dblclick'])
-        document.addEventListener(t, (e) => e.preventDefault(), { passive: false });
-      document.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
-    </script>
+    <!-- Browser-zoom blocking (double-tap, pinch, ctrl+wheel) is the engine's: createGame installs it. -->
     <script type="module" src="/games/last-rune/main.ts"></script>
   </body>
 </html>
