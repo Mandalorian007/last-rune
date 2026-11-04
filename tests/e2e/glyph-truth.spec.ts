@@ -59,7 +59,14 @@ async function badgeClashes(page: Page, label: string): Promise<string[]> {
   const seen = await page.evaluate(() => {
     const v = (window as G).__altarView;
     return {
-      gems: v.tray.map((t: G) => ({ kind: t.kind, x: t.x, y: t.y, size: t.size })),
+      // The tray's gems, and the gem in hand resting (a size up) in its slot.
+      gems: [...v.tray, ...(v.held ? [v.held] : [])].map((t: G) => ({
+        kind: t.kind,
+        x: t.x,
+        y: t.y,
+        size: t.size,
+      })),
+      trayN: v.tray.length,
       badges: [...document.querySelectorAll<HTMLElement>('.lr-altar-count')].map((b) => {
         const r = b.getBoundingClientRect();
         return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width };
@@ -68,8 +75,8 @@ async function badgeClashes(page: Page, label: string): Promise<string[]> {
   });
   const out: string[] = [];
   const shown = seen.badges.filter((b: { w: number }) => b.w > 0);
-  if (shown.length !== seen.gems.length)
-    out.push(`${label}: ${shown.length} badges for ${seen.gems.length} tray gems`);
+  if (shown.length !== seen.trayN)
+    out.push(`${label}: ${shown.length} badges for ${seen.trayN} tray gems`);
   seen.gems.forEach((g: { kind: string; x: number; y: number; size: number }) => {
     const cx = ob.x + g.x * k;
     const cy = ob.y + g.y * k;
