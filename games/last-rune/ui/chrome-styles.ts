@@ -12,7 +12,7 @@
 export const C = '.tc-overlay[data-units="css"][data-form-factor^="phone"]:not(#lr-none)';
 /** Either overlay off phones: phone-only controls (✕, segmented toggles) hide there. */
 const CP = '.tc-overlay[data-units="css"][data-form-factor="phone-portrait"]:not(#lr-none)';
-const CL = '.tc-overlay[data-units="css"][data-form-factor="phone-landscape"]:not(#lr-none)';
+export const CL = '.tc-overlay[data-units="css"][data-form-factor="phone-landscape"]:not(#lr-none)';
 const OFF = '.tc-overlay:not([data-phone]):not([data-form-factor^="phone"])';
 
 export const CHROME_CSS = /* css */ `

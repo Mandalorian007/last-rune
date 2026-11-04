@@ -150,6 +150,8 @@ async function measure(page: Page) {
     for (const sel of [
       '.lr-hud > button',
       '.lr-altar-actions button',
+      // Phones: the rail buttons in the chrome's regions (altar-chrome.ts).
+      '.tc-region > [data-action]',
       '.lr-altar-title h2',
       '.lr-altar-turnbtn',
     ]) {

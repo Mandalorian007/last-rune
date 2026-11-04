@@ -25,11 +25,6 @@ export const P = '.tc-overlay[data-phone]:not(#lr-none)';
 /** Touch root selector, same rank. */
 export const T = '.tc-overlay[data-touch]:not(#lr-none)';
 
-/** Left edge of the left bar column / right edge of the right one, 3 CSS px in from the bar's edge. */
-const BAR_IN = `calc(-1 * var(--tc-bar, 0px) + ${cpx(3)})`;
-/** An edge-column button: 44 CSS px square. */
-const COL = cpx(44);
-
 /** mobile-3-board: the phone altar root, ranked above the mobile-2 altar rules. */
 const A = `${P} .lr-altar[data-phone]`;
 
@@ -280,27 +275,6 @@ ${P} .lr-j-plate { font-size: var(--tc-text-min); padding: 0 ${cpx(10)}; }
    Left bar: Back (top), Undo and Clear. Right bar: ☰ (top, the HUD), ↻ Turn, Strike (bottom).
    Bottom band (layout.ts PhoneBand): FUSE and his bubble, the tray, then the info lane where
    the gem chip, the verdict or the hint shows, one at a time. The title is one line on top. */
-${P} .lr-altar-actions { inset: 0; display: block; pointer-events: none; }
-${P} .lr-altar-actions button {
-  position: absolute; width: ${COL}; height: ${COL}; min-height: 0; padding: 0; border-radius: ${cpx(8)};
-  display: flex; align-items: center; justify-content: center; font-family: var(--tc-font-ui); font-size: ${tpx(11)};
-  line-height: 1.1; letter-spacing: 0; pointer-events: auto;
-}
-${P} .lr-altar-actions button > span { display: flex; flex-direction: column; align-items: center; gap: 0; }
-${P} .lr-altar-actions .lr-ph-ico { font-style: normal; font-size: ${cpx(17)}; line-height: 1; color: var(--lr-gold); }
-${P} .lr-altar-actions [data-action="back"] { left: ${BAR_IN}; top: ${cpx(4)}; }
-${P} .lr-altar-actions [data-action="undo"] { left: ${BAR_IN}; top: 34%; }
-${P} .lr-altar-actions [data-action="clear"] { left: ${BAR_IN}; top: calc(34% + ${cpx(52)}); }
-${P} .lr-altar-actions [data-action="strike"] {
-  right: ${BAR_IN}; bottom: ${cpx(6)}; height: ${cpx(58)}; font-family: var(--tc-font-display); font-size: ${tpx(12)};
-}
-${P} .lr-altar-actions .lr-gold-button .lr-strike-pips { margin: ${cpx(3)} 0 0; vertical-align: 0; }
-${P} .lr-altar .lr-altar-turnbtn {
-  left: auto !important; right: ${BAR_IN}; top: 50% !important; width: ${COL}; height: ${cpx(52)}; min-height: 0;
-  padding: 0; border-radius: ${cpx(10)}; border-width: 1px; font-family: var(--tc-font-ui); font-size: ${tpx(11)}; line-height: 1.1;
-}
-${P} .lr-altar .lr-altar-turnbtn > span { display: flex; flex-direction: column; align-items: center; }
-${P} .lr-altar .lr-altar-turnbtn b { font-size: ${cpx(20)}; }
 
 ${P} .lr-altar-title { top: ${cpx(1)}; max-width: none !important; line-height: 1.1; }
 ${P} .lr-altar-title h2 { font-size: ${tpx(13)}; letter-spacing: 0.5px; white-space: nowrap; }
@@ -412,7 +386,6 @@ ${P}:has(.lr-altar[data-crowd]) .tc-caption { visibility: hidden; }
 
 /* Turn: in the left bar under Clear, so the right bar between ☰ and Strike stays free for the
    gem chip and FUSE's bubble. */
-${A} .lr-altar-turnbtn { left: ${BAR_IN} !important; right: auto; top: auto !important; bottom: ${cpx(6)}; }
 
 /* Gives / Needs: under a west/east gauge (wrapping to its gutter), beside a north/south one. */
 ${A} .lr-altar-need { white-space: normal; text-align: center; }
@@ -437,10 +410,7 @@ ${A} .lr-altar-storm .lr-strike-pips { display: none; }
 
 /* Strike: full gold whenever it can fire (it glows once the route reaches a machine); a
    multi-strike altar says "×2", then "1/2", in words not pips. */
-${A} .lr-altar-actions .lr-gold-button:not([data-ready]):not(:disabled) { filter: none; }
-${A} .lr-altar-actions .lr-gold-button .lr-strike-pips { display: none; }
 .tc-overlay .lr-strike-n { display: none; }
-${A} .lr-altar-actions .lr-strike-n { display: block; font-family: var(--tc-font-ui); font-size: ${tpx(12)}; line-height: 1.1; }
 
 /* Solve moment: card, journal page and Continue fill the altar's column and the free right
    bar (solve-scene); FUSE speaks beside himself at the column's foot. */
@@ -561,11 +531,6 @@ ${P}:has(.lr-solve[data-phone][data-crowd]) .tc-caption { visibility: hidden; }
    Strike stands 12 CSS px in from the screen's edge. Text: Gives/Needs numbers 15 px, every
    other board label, gem count and the hint 13 px. One rotate control: Turn on the rail, dim
    until there is a gem to turn, then lit; no ↻ chip on the gem. */
-${P} .lr-altar-actions [data-action="back"] { top: calc(${CT} + ${cpx(4)}); }
-${P} .lr-altar-actions [data-action="undo"] { top: calc(${CT} + (1080px - ${CT} - ${CB}) * 0.34); }
-${P} .lr-altar-actions [data-action="clear"] { top: calc(${CT} + (1080px - ${CT} - ${CB}) * 0.34 + ${cpx(52)}); }
-${P} .lr-altar-actions [data-action="strike"] { right: calc(-1 * var(--tc-bar, 0px) + ${cpx(12)}); bottom: calc(${CB} + ${cpx(6)}); }
-${A} .lr-altar-turnbtn { bottom: calc(${CB} + ${cpx(6)}); }
 ${A} .lr-altar-title { top: calc(${CT} + ${cpx(3)}); }
 /* The solve card reaches from the column to 12 px inside the screen's edge (the canvas fills
    the width, so there is no free right bar; Strike and the menu are gone while it shows). */
@@ -576,12 +541,6 @@ ${P} .lr-solve[data-phone] {
 ${P}:has(.lr-solve[data-phone]) .tc-caption { bottom: calc(${CB} + ${cpx(8)}) !important; }
 
 ${A} .lr-altar-turnmark { display: none !important; }
-${A} .lr-altar-turnbtn:disabled { opacity: 0.45; filter: saturate(0.3); cursor: default; }
-${A} .lr-altar-turnbtn:disabled b { color: #bfae8a; }
-${A} .lr-altar-turnbtn[data-active] {
-  color: #fff6dd; background: rgba(66,50,22,0.96); border-color: var(--lr-gold);
-  box-shadow: 0 0 0 ${cpx(1)} rgba(232,192,106,0.6), 0 0 ${cpx(12)} rgba(232,192,106,0.55);
-}
 
 ${A} .lr-altar-need { font-size: ${tpx(13)}; color: #f4e6c4; }
 ${A} .lr-altar-need .lr-need-row b { font-size: ${tpx(15)}; }
@@ -635,11 +594,6 @@ ${A} .lr-altar-count[data-empty] {
   font-family: var(--tc-font-ui);
 }
 /* Disabled rail buttons: a 3:1 outline on the dark bar, the label dimmed (not faded away). */
-${P} .lr-altar-actions button:disabled, ${A} .lr-altar-turnbtn:disabled {
-  opacity: 1; filter: none; cursor: default; background: rgba(22,20,18,0.92);
-  border: 1px solid #8f826b; color: #8f826b; box-shadow: none;
-}
-${P} .lr-altar-actions button:disabled .lr-ph-ico, ${A} .lr-altar-turnbtn:disabled b { color: #8f826b; }
 /* mobile-6-board end */
 
 /* mobile-6-moments ─ One owner of the column; teach cards paged by tap (D-040 addendum 4) ──

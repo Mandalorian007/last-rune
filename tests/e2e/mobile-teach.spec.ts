@@ -198,7 +198,7 @@ for (const vp of PHONES) {
               .getBoundingClientRect();
             const others = [
               ...document.querySelectorAll<HTMLElement>(
-                '.lr-altar-slot, .lr-altar-count, .lr-altar-actions button, .tc-hud-menu, .lr-altar-tip:not([hidden])',
+                '.lr-altar-slot, .lr-altar-count, .lr-altar-actions button, .tc-region > [data-action], .tc-hud-menu, .lr-altar-tip:not([hidden])',
               ),
             ]
               .filter((e) => e.getBoundingClientRect().width > 0)

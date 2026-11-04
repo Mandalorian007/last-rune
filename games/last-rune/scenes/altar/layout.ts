@@ -78,9 +78,9 @@ export interface TraySlot {
 }
 
 /**
- * A phone in landscape (mobile-2, mobile-3-board): the buttons live in the letterbox bars, so
- * the board gets nearly the whole canvas. `padL`/`padR` are what the edge button columns take
- * inside the canvas when a bar is too narrow for them (design px; 0 when the bars hold them).
+ * A phone in landscape (mobile-2, mobile-3-board): the buttons live in the chrome's rails, so
+ * the board gets nearly the whole canvas. `padL`/`padR` are what the rails take inside the
+ * canvas past its letterbox bars (design px), read off their regions (altar-chrome.ts).
  * `cssPx` is design px per CSS px: phone sizes are budgeted in CSS px (D-040).
  */
 export interface PhoneFrame {
@@ -90,37 +90,6 @@ export interface PhoneFrame {
   /** The visible band, design y (the canvas is cropped top and bottom when it fills the width). */
   top?: number;
   bottom?: number;
-}
-
-/** Width of a phone's edge button column, CSS px (a 44 px target plus a little air). */
-export const PHONE_COL_CSS = 50;
-/** The right-hand column holds Strike 12 CSS px in from the screen's edge (mobile-5-board). */
-export const PHONE_STRIKE_CSS = 58;
-
-/** What `phoneFrameFor` reads off the device (engine platform/device-mode.ts). */
-export interface PhoneDevice {
-  readonly phone: boolean;
-  readonly cssPx: number;
-  readonly bar: number;
-  readonly cropT?: number;
-  readonly cropB?: number;
-}
-
-/**
- * The phone frame for a device, or null off phones. `cssPx` is design px per CSS px and `bar`
- * the letterbox bar each side (design px); the columns use the bars and take from the canvas
- * only what a bar lacks. `cropT`/`cropB`: design px cut off the top and bottom.
- */
-export function phoneFrameFor(d: PhoneDevice): PhoneFrame | null {
-  if (!d.phone) return null;
-  const pad = (css: number) => Math.max(0, Math.round(css * d.cssPx - d.bar));
-  return {
-    padL: pad(PHONE_COL_CSS),
-    padR: pad(PHONE_STRIKE_CSS),
-    cssPx: d.cssPx,
-    top: d.cropT ?? 0,
-    bottom: DESIGN_H - (d.cropB ?? 0),
-  };
 }
 
 /**
