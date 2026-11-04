@@ -55,3 +55,11 @@ Plan: [../engine/refactor-plan.md](../engine/refactor-plan.md), "Phase 4" → ws
     - Should the Quit entry also be on the title screen?
     - The icon needs a user and PM look.
     - The ~1.2 kB chunk name `src-*.js` comes from the package entry path; it can be renamed with a Vite `chunkFileNames` rule if wanted.
+  - **Gates (2026-11-03, macOS arm64):** all green, with no flaky reruns needed.
+    - `pnpm check`: engine 320, host-electron 24, game 563 + 2 skipped.
+    - `pnpm build`.
+    - `pnpm baseline`: 129/129.
+    - `pnpm test:e2e`: 118 passed, 2 skipped.
+    - `pnpm test:e2e:engine`: 252 passed, 26 skipped.
+    - `pnpm test:e2e:desktop`: shell 5/5, Last Rune 2/2.
+    - `pnpm desktop:build` wrote `dist/desktop/The-Last-Rune-1.0.0-mac-arm64.dmg` (121.4 MB) and `.zip` (117.3 MB), unsigned.
