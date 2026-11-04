@@ -9,6 +9,7 @@
 import { AudioEngine, persistMixer, recipes } from '@thunderclap/engine/audio';
 import { GameLoop, type Scene, SceneStack, type Time } from '@thunderclap/engine/core';
 import { ParticleSystem } from '@thunderclap/engine/fx';
+import { createWebHost, type Host } from '@thunderclap/engine/host';
 import { Input } from '@thunderclap/engine/input';
 import {
   deviceTraits,
@@ -103,6 +104,8 @@ export interface GameCtx {
   /** Game sound bank, music moods and FUSE's voice (games/last-rune/audio). */
   readonly sound: GameAudio;
   readonly ui: Overlay;
+  /** The page the game runs in (engine/host): links, copying, fullscreen and save storage. */
+  readonly host: Host;
   /** Phone-sized screen and touch input flags (ui/device-mode.ts, D-039). */
   readonly device: DeviceMode;
   readonly save: GameSave;
@@ -191,8 +194,10 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   );
   renderer.onGpuTime((ms) => graphics.sample(ms, performance.now()));
 
-  // ── Save + overlay ─────────────────────────────────────────────────────
-  const save = createGameSave();
+  // ── Host, save + overlay ───────────────────────────────────────────────
+  // The browser tab or itch's frame; saves live in its localStorage (v1.0 keys unchanged).
+  const host = createWebHost();
+  const save = createGameSave({ host });
   ensureGameStyles(surface.root.ownerDocument);
   // When a panel closes and its opener can't (or, for the HUD's shortcut buttons, shouldn't)
   // take focus back, focus returns to the canvas so keys keep reaching the game.
@@ -233,7 +238,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
   // ── Audio ──────────────────────────────────────────────────────────────
   const audio = new AudioEngine();
   audio.attach();
-  persistMixer(audio, { game: SAVE_GAME_ID });
+  persistMixer(audio, { game: SAVE_GAME_ID, host });
   defineUiSounds(audio);
   // Load timing: the audio pre-render runs after the first gesture (scripts/perf/load.spec.ts).
   const sound = createGameAudio(audio, {
@@ -464,6 +469,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     input,
     audio,
     ui,
+    host,
     device,
     save,
     settings,

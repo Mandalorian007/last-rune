@@ -1,15 +1,6 @@
 /// <reference types="@webgpu/types" />
 import { expect, test } from '@playwright/test';
-import {
-  ITCH_GAME_ORIGIN,
-  ITCH_SIM_URL,
-  itchGameFrame,
-  nonBlackFraction,
-  PREVIEW_URL,
-  probeWebGPU,
-  trackProblems,
-  waitForBoot,
-} from './helpers';
+import { nonBlackFraction, PREVIEW_URL, probeWebGPU, trackProblems, waitForBoot } from './helpers';
 
 // Smoke tests for the production build (vite preview of dist/) and for the itch.io embed
 // (scripts/itch-sim). Several tests depend on engine-render's WebGPU boot; until it merges,
@@ -84,46 +75,6 @@ test.describe('production build', () => {
   });
 });
 
-test.describe('itch.io embed (itch-sim)', () => {
-  test('game loads in a cross-site iframe with WebGPU and localStorage', async ({ page }) => {
-    const problems = trackProblems(page);
-    await page.goto(`${ITCH_SIM_URL}/?autoload=1`);
-    const frame = await itchGameFrame(page);
-    expect(new URL(frame.url()).origin).toBe(ITCH_GAME_ORIGIN);
-
-    // WebGPU is not gated by a permissions policy; it must work in itch's iframe.
-    const gpu = await probeWebGPU(frame);
-    expect(gpu.adapter).toBe(true);
-
-    // Partitioned localStorage must be usable from inside the iframe.
-    const stored = await frame.evaluate(() => {
-      const k = 'last-rune:e2e-probe';
-      localStorage.setItem(k, 'ok');
-      const v = localStorage.getItem(k);
-      localStorage.removeItem(k);
-      return v;
-    });
-    expect(stored).toBe('ok');
-
-    // itch's allow list includes fullscreen and autoplay.
-    expect(await frame.evaluate(() => document.fullscreenEnabled)).toBe(true);
-
-    await waitForBoot(frame);
-    await page.waitForTimeout(1000);
-    // Catches absolute URLs and wrong-case paths: itch-sim 404s them like itch's CDN does.
-    expect(problems).toEqual([]);
-  });
-
-  test('click-to-launch flow starts the game at 960x540', async ({ page }) => {
-    await page.goto(ITCH_SIM_URL);
-    await page.getByRole('button', { name: /Run game/ }).click();
-    const frame = await itchGameFrame(page);
-    const size = await frame.evaluate(() => [innerWidth, innerHeight]);
-    expect(size).toEqual([960, 540]);
-
-    const canvas = frame.locator('#app canvas').first();
-    await expect(canvas).toBeVisible();
-    await page.waitForTimeout(1500);
-    expect(await nonBlackFraction(page, await canvas.screenshot())).toBeGreaterThan(0.01);
-  });
-});
+// The itch.io embed (cross-site iframe, WebGPU, localStorage, fullscreen, click-to-launch) is an
+// engine host check now: packages/engine/e2e/host.spec.ts on its itch-iframe row. The built game
+// inside itch-sim is itch-release.spec.ts.

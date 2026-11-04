@@ -40,7 +40,7 @@ It has its own `playwright.config.ts` with one project per matrix row. It reuses
 | Workstream | Adds to the harness |
 |---|---|
 | P1 workspace | Harness skeleton and CI job. WebGPU adapter sanity, the unsupported screens (no `navigator.gpu`, null adapter), non-black canvas. |
-| P1 host | Wrappers: itch-sim iframe and click-to-launch. Open and copy through `Host` (granted, refused, missing, `execCommand` fallback, popup blocked, gamepad activate). Storage: available, blocked, quota. Fullscreen present or absent. |
+| P1 host (done: `e2e/host.spec.ts`, `src/host/*.test.ts`) | Wrappers: itch-sim iframe and click-to-launch. Open and copy through `Host` (granted, refused, missing, `execCommand` fallback, popup blocked, gamepad activate). Storage: available, blocked, quota. Fullscreen present or absent. |
 | P1 promote-ui | Text-scale tokens 100/125/150 on base widgets. `menu-nav` pad focus. Rotate card on portrait phones. Device-mode flags (`data-touch`, `data-phone`). |
 | P1 create-game | Resize and DPR mid-scene (overlay tracks canvas, buffer follows DPR). GPU device loss screen and halt. Lifecycle: hidden, pagehide and freeze flush the save and stop frames and audio, show resumes them. Audio unlock. Browser-zoom blocking. |
 | P2 gestures | Tap vs pan boundary, long-press, drag origin and drag-off, `blocked()`, loupe and snap (`magnify`), all through real CDP touch on the phone rows. |
