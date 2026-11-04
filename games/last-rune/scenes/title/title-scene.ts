@@ -181,10 +181,11 @@ export class TitleScene implements GameScene {
   }
 
   /**
-   * Phones (ws/port-chrome): Full screen and the release label along the top; the menu a row
-   * along the bottom (landscape) or a column under the picture (upright); the Ko-fi link and
-   * Copy link bottom right, after the menu (landscape), or along the bottom (upright). The name
-   * is drawn in the picture, so nothing sits over the top of it.
+   * Phones (ws/port-chrome): Full screen and the release label along the top; the menu a column
+   * in the card lane: right of the picture (landscape, chrome-polish-4: the storm and FUSE's
+   * strolls keep the left 41% clear of every button) or under it (upright); the Ko-fi link and
+   * Copy link small along the bottom. The name is drawn in the picture, so nothing sits over
+   * the top of it.
    */
   private placeChrome(): void {
     const dom = this.dom;
@@ -209,7 +210,7 @@ export class TitleScene implements GameScene {
       },
       {
         el: q('.lr-title-menu'),
-        place: { default: 'bottom' as const, 'phone-portrait': 'cardLane' as const },
+        place: { default: 'cardLane' as const },
         order: 1,
         id: 'lr-title-menu',
       },
