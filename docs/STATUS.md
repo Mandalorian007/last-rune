@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-04 by PM_
 
-**Gate 2 (2026-11-04):** blind review 6 scored 7 / 7 / 7 / 7 (D-040 add. 7), so it failed again (up from 6.6). Layout majors are gone. solve-truth, chrome-polish-4, teach-4 ✅ merged. glyph-truth running; then blind review 7.
+**Gate 2 (2026-11-04):** blind review 6 scored 7 / 7 / 7 / 7 (D-040 add. 7), so it failed again (up from 6.6). Layout majors are gone. solve-truth, chrome-polish-4, teach-4 ✅ merged. glyph-truth in final tests. D-043 (user): no live readout, Strike is a free test → strike-free; menu-flow cleanup; cover-art (8 covers at /cover-image/). Blind review 7 after glyph-truth, strike-free and menu-flow merge.
 
 **D-041 Gate 1 ✅ (2026-11-03):** Phase 1 merged (workspace, host, promote-ui, create-game). `pnpm check`/`build` green; game e2e 118/2 skipped; engine e2e 177/15 skipped; baseline 129/129 (create-game branch); CI engine e2e is now a blocking job, green on 3 GitHub runs of the same commit. Engine `0.2.0-alpha.1` cut with `pnpm engine:release` (no tag, addendum 3). Next: Phase 2 (gestures, layout) and, in parallel, Phase 4 (host-electron).
 
@@ -37,6 +37,9 @@ _Last updated: 2026-11-04 by PM_
 | link-copy | ws/link-copy | ✅ merged | D-036 engine service: `@engine/platform` links (safeExternalUrl, embedContext, openExternal, copyText) + `@engine/ui` externalLink widget; Copy link beside Join + Ko-fi; Clipboard API → execCommand → selected field; blocked-tab fallback on gamepad; verified in itch-sim frame. Input: fast repeat presses no longer dropped |
 | onboarding-2 | ws/onboarding-2 | ✅ merged | gem info card lives over the tray band (hover/focus/held; arrival card fades), fixed gems get iron brackets + "Fixed in place", first turnable Bend/Gate shows a turn badge and the preview swings as it turns; Gives N + strike-ready on all 16; new-gem lines before use; tray matches board; charge chips on new gems; `altar-labels.spec` e2e |
 | split-rotate | ws/split-rotate | ✅ merged | D-031: Split has one input (stem) and turns; octagon cut + bold T glyph with outward arrows; red ✕ where the preview stops at a wrong-facing Bend/Gate/Split; 14 Split puzzles keep their routes (conveyor-a 8→4 solutions); solver ignores turn choice in scoring (follow-up) |
+| strike-free | ws/strike-free | 🔄 running | D-043: Strike as a free test, no attempt counters |
+| menu-flow | ws/menu-flow | 🔄 running | D-043: menu audit + cleanup, Journal in altar menu |
+| cover-art | ws/cover-art | 🔄 running | D-043: 8 itch covers rendered by the game at /cover-image/ |
 | turn-2 | ws/turn-2 | ✅ merged | R/Q/scroll over a placed gem turns it in place and saves at once, even with a gem in hand; held-gem ghost only over empty sockets; drag-turn kept on drop; plainer hint/tag/card text; 2 new e2e |
 | turn-clarity | ws/turn-clarity | ✅ merged | one input rule: click picks up/sets down, R/Q/scroll/RB turn the gem under the cursor (held gem drawn as a ghost in its socket); gems that can't turn say so in place; Split shows an "in" marker; splitter-mill storm moved to the North edge (1 solution before and after, score 2.4) |
 | first-altar | ws/first-altar | ✅ merged | storm "Gives N" card opposite "Needs N", pulsing storm/machine conduits + gold endpoints, live route preview from the first gem, Bend side stubs, Strike pulses only when the wire reaches the machine; glyphs thicker with halos, Split/facing fixes (gems face the real flow) |
@@ -102,7 +105,7 @@ _Last updated: 2026-11-04 by PM_
 | mobile-perf | ws/mobile-perf | ✅ merged | D-039: support matrix in docs/design/mobile.md (iOS 26+ Safari, Android 12+ Chrome on Qualcomm/Mali); handhelds start Auto→Low (hall GPU 13.9→5.5 ms p50 emulated ×4); steady-30 fallback when Low can't hold 60; iOS interruptions recover, audio re-arms on tap, pause on pagehide/freeze; lifecycle flush via watchLifecycle; memory ~120 MB steady, nothing cut; desktop unchanged. PM: keep default iOS audio session (silent switch mutes), steady-30 also on weak desktops OK, Reload on device loss stays |
 
 ## Blocked / needs user
-- Product call (D-040 add. 7): show a live "will get N" on each gauge before Strike? 3 of 4 reviewers asked; it changes the puzzle from predicting to reading.
+- Cover pick: user reviews 8 covers at https://mandalorian007.github.io/last-rune/cover-image/ once ws/cover-art merges (D-043).
 - itch.io launch is manual with the user after M5 (D-012)
 - GitHub Pages enabled (source: GitHub Actions). Every push to main deploys to https://mandalorian007.github.io/last-rune/ (D-023); `gh workflow run pages.yml -f label=alpha-1` stamps a release label. At M3α, show `VITE_RELEASE_LABEL` on the title screen.
 
