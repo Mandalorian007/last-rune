@@ -327,7 +327,7 @@ export const domMethods = {
       // A keycap for the hotkey, then the count apart from it: "1 ×6" must never read "16".
       el.replaceChildren(
         h('kbd', { class: 'lr-k' }, String(i + 1)),
-        // Phones: a used-up gem stays as a dimmed silhouette with a "×0" badge (port-altar-3:
+        // Phones: a used-up gem stays as a dimmed copy of itself with a "×0" badge (port-altar-3:
         // the same short badge in its own slot in every room, so nothing can cut it).
         h('span', { class: 'lr-n' }, `×${n}`),
       );

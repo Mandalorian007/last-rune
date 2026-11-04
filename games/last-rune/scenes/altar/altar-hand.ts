@@ -14,7 +14,7 @@ import {
 } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { emitPuzzleEvent, puzzleEventsWanted } from './events';
-import { cellCenter } from './layout';
+import { cellCenter, TRAY_HELD_SCALE } from './layout';
 
 export const handMethods = {
   changed(this: AltarScene, placed: Cell | null = null): void {
@@ -421,8 +421,8 @@ export const handMethods = {
       const t = this.view.tray[i]!;
       const n = this.board.remaining(s.gem);
       const held = this.hand && !this.hand.from && this.hand.kind === s.gem;
-      t.state = n === 0 ? 'dim' : held || i === this.hoverSlot ? 'hover' : 'idle';
-      // All of a kind on the board: a dimmed, smaller silhouette stays in its slot ("all
+      t.state = n === 0 ? 'spent' : held || i === this.hoverSlot ? 'hover' : 'idle';
+      // All of a kind on the board: a dimmed, smaller copy of the gem stays in its slot ("all
       // placed" under it), so the tray keeps its shape and nothing there reads as a button.
       t.size = n === 0 && L.phone ? s.size * 0.8 : s.size;
       const lift = this.view.trayLift[i]!;
@@ -482,7 +482,7 @@ export const handMethods = {
         // Phones: it rests lifted in its own slot, under the title (mobile-4-board), a size up
         // inside its gold ring, so the gem in hand is unmistakable (mobile-6-board).
         pt.y = L.phone ? s.y : s.y - 70;
-        if (L.phone) size = Math.round(s.size * 1.16);
+        if (L.phone) size = Math.round(s.size * TRAY_HELD_SCALE);
       }
     }
     this.showRefusal(refused ? cell : null, refused);

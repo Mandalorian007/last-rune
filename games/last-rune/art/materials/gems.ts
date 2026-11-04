@@ -14,7 +14,11 @@ import { GEM_WGSL } from '../../shaders/gem-wgsl';
 import { LIGHT_HEIGHT, LIGHT_SET_FLOATS, type LightSet } from './lights';
 import { GEM_INDEX, gemColor } from './palette';
 
-export type GemState = 'idle' | 'hover' | 'placed' | 'energised' | 'dim';
+/**
+ * `dim` is dead stone (a hidden board gem). `spent` is a tray gem with none left (glyph-truth):
+ * a dimmed copy of its idle look, same cut, colour and glyph, for every kind alike.
+ */
+export type GemState = 'idle' | 'hover' | 'placed' | 'energised' | 'dim' | 'spent';
 
 const STATE_INDEX: Readonly<Record<GemState, number>> = {
   idle: 0,
@@ -22,6 +26,7 @@ const STATE_INDEX: Readonly<Record<GemState, number>> = {
   placed: 2,
   energised: 3,
   dim: 4,
+  spent: 5,
 };
 
 /** One gem to draw. Keep these objects around and mutate them (no per-frame allocation). */
@@ -98,7 +103,7 @@ export class GemRenderer {
     p[0] = 3.6;
     p[1] = 1; // colour target only: light on stone, no bloom
     for (const g of list) {
-      if (g.state === 'dim') continue;
+      if (g.state === 'dim' || g.state === 'spent') continue;
       const c = gemColor(g.kind);
       const k = poolStrength(g) * 0.055;
       tint[0] = c[0] * k;
@@ -164,7 +169,7 @@ function poolStrength(g: GemInstance): number {
  * glint with it). Light budget is 16: add energised gems first.
  */
 export function addGemLight(lights: LightSet, g: GemInstance, intensity = 1): boolean {
-  if (g.state === 'dim') return false;
+  if (g.state === 'dim' || g.state === 'spent') return false;
   return lights.add(
     g.x,
     g.y,

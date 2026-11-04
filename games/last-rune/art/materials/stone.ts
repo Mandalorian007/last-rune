@@ -299,9 +299,10 @@ export class AltarSlab {
     dp.x = o.x;
     dp.y = o.y;
     // The collar and the fault ring reach further than the other marks (1.42 radii,
-    // mobile-5-board; mobile-7-strike).
+    // mobile-5-board; mobile-7-strike). The collar reaches 1.6 for its padlock pip, which sits
+    // past the gem's edge so it reads on a phone (glyph-truth).
     const wide = state === 'collar' || state === 'fault';
-    const reach = wide ? 1.42 : 1.3;
+    const reach = state === 'collar' ? 1.6 : wide ? 1.42 : 1.3;
     p[3] = wide ? reach : 0;
     dp.w = this.socketRadius * 2 * reach;
     dp.h = this.socketRadius * 2 * reach;

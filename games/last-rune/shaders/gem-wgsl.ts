@@ -4,7 +4,8 @@
  * Per instance:
  * - tint     = gem colour (linear)
  * - params.x = kind (0 channel, 1 bend, 2 split, 3 amplify, 4 gate, 5 capacitor)
- * - params.y = state (0 idle, 1 hover, 2 placed, 3 energised, 4 dim-locked)
+ * - params.y = state (0 idle, 1 hover, 2 placed, 3 energised, 4 dim-locked, 5 spent: a tray
+ *   gem with none left, drawn as a dimmed copy of its idle look)
  * - params.z = rotation in radians, clockwise (rotates cut + glyph; lighting stays fixed)
  * - params.w = seed (inclusions, facet sparkle phase)
  * - emissive = glow multiplier (1 = default for the state)
@@ -71,9 +72,12 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     // straight on. A bold T: the stem runs from the input rim to the centre, the crossbar runs
     // rim to rim, and each arm ends in a wide arrowhead pointing out (D-031). Drawn heavier
     // than the other glyphs so it, not the cut, is what reads; nothing points at the input.
+    // glyph-truth: the input is a heavy stem capped by a wide door bar at the rim (the
+    // Channel's "a side the bolt uses" mark), so the no-arrow end reads at ~30 CSS px, lit or not.
     let e = 0.7;
     let h = 0.24;
-    d = g_seg(p, vec2f(0.0, 0.74), vec2f(0.0, 0.0));
+    d = g_seg(p, vec2f(0.0, 0.72), vec2f(0.0, 0.0)) - 0.035;
+    d = min(d, g_seg(p, vec2f(-0.27, 0.72), vec2f(0.27, 0.72)) - 0.03);
     d = min(d, g_seg(p, vec2f(-e, 0.0), vec2f(e, 0.0)));
     d = min(d, g_seg(p, vec2f(-e + h, -h), vec2f(-e, 0.0)));
     d = min(d, g_seg(p, vec2f(-e + h, h), vec2f(-e, 0.0)));
@@ -94,12 +98,18 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     d += 0.022;
   } else if (kind == 4) {
     // Gate: inputs from west and east meet in a ring; one output leaves north (rules rot 0).
-    d = g_seg(p, vec2f(-0.66, 0.0), vec2f(-0.17, 0.0));
-    d = min(d, g_seg(p, vec2f(0.66, 0.0), vec2f(0.17, 0.0)));
-    d = min(d, g_ring(p, vec2f(0.0, 0.0), 0.17));
-    d = min(d, g_seg(p, vec2f(0.0, -0.17), vec2f(0.0, -0.66)));
-    d = min(d, g_seg(p, vec2f(-0.14, -0.52), vec2f(0.0, -0.66)));
-    d = min(d, g_seg(p, vec2f(0.14, -0.52), vec2f(0.0, -0.66)));
+    // glyph-truth: each input is a heavy lead capped by a wide door bar at the rim (as the
+    // Split's input and the Channel's ends), and the output a bold arrow, so both input sides
+    // read at ~30 CSS px, lit or not.
+    d = g_seg(p, vec2f(-0.66, 0.0), vec2f(-0.2, 0.0)) - 0.03;
+    d = min(d, g_seg(p, vec2f(0.66, 0.0), vec2f(0.2, 0.0)) - 0.03);
+    d = min(d, g_seg(p, vec2f(-0.66, -0.25), vec2f(-0.66, 0.25)) - 0.03);
+    d = min(d, g_seg(p, vec2f(0.66, -0.25), vec2f(0.66, 0.25)) - 0.03);
+    d = min(d, g_ring(p, vec2f(0.0, 0.0), 0.2));
+    d = min(d, g_seg(p, vec2f(0.0, -0.2), vec2f(0.0, -0.68)));
+    d = min(d, g_seg(p, vec2f(-0.21, -0.47), vec2f(0.0, -0.68)));
+    d = min(d, g_seg(p, vec2f(0.21, -0.47), vec2f(0.0, -0.68)));
+    d -= 0.01;
   } else {
     // Capacitor: two plates with leads, straight through.
     d = g_seg(p, vec2f(0.0, 0.66), vec2f(0.0, 0.14));
@@ -222,6 +232,7 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
   else if (state == 2) { glow = 0.6; glyphK = 0.9; }
   else if (state == 3) { glow = 1.15; glyphK = 1.6; energy = 1.0; }
   let dim = state == 4;
+  let spent = state == 5;
 
   // Dim-locked gems are dead stone: desaturated, dark, glyph engraved rather than lit.
   if (dim) {
@@ -264,8 +275,11 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
   var body = base * (0.07 + 0.55 * inner) * facetVar * (0.7 + 0.6 * cloud);
   body = mix(body, base * 0.05, smoothstep(0.82, 1.0, f.rho) * 0.75);   // dark girdle band
   // Capacitor is frosted ice: milkier body, softer glyph.
+  // glyph-truth: less milk and a cooler blue than before, so a Capacitor in stock reads as
+  // available ice, not as the pale, washed-out look of a gem that is used up.
   if (kind == 5) {
-    body = mix(body, vec3f(engine_luma(body)) * 1.3 + base * 0.08, 0.35 * veil + 0.15);
+    body = mix(body, vec3f(engine_luma(body)) * 1.2 + base * 0.06, 0.18 * veil + 0.06);
+    body *= vec3f(0.5, 0.82, 1.35);
   }
 
   // Facet edges catch the light; the girdle has a thin bright rim.
@@ -273,7 +287,8 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
   let edgeLine = 1.0 - smoothstep(0.0, edgeW, f.edge);
   let girdle = exp(-pow((f.sdf / pxUnit + 1.6) / 1.2, 2.0));
 
-  let glyphCol = mix(base, vec3f(1.0), 0.5 + 0.2 * energy) * glyphK;
+  var glyphCol = mix(base, vec3f(1.0), 0.5 + 0.2 * energy) * glyphK;
+  if (kind == 5) { glyphCol *= vec3f(0.78, 0.94, 1.12); }
   // A dark halo behind the stroke so the glyph stands off the coloured body.
   let halo = 1.0 - smoothstep(lw * 1.2, lw * 3.0, g_glyph(gp, kind));
   var col = body * (1.0 - halo * select(0.65, 0.0, dim));
@@ -294,13 +309,20 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32) -> f32 {
     col *= 1.0 - (1.0 - smoothstep(0.03, 0.06, dg)) * 0.6;
   }
 
+  // Spent (a tray gem with none left): the same gem, dimmed and a little greyed, its glyph
+  // still drawn, so every kind keeps its own cut, colour and wiring.
+  let spentK = select(1.0, 0.16, spent);
+  if (spent) {
+    col = mix(col, vec3f(engine_luma(col)), 0.35) * 0.42;
+  }
+
   var o: FragOut;
   o.color = vec4f(col, alpha);
   let em = base * (inner * 0.32 + veil * 0.1) * glow + gl * glyphCol * glow * 0.55 +
     mix(base, vec3f(1.0), 0.3) * exp(-r2 * 14.0) * energy * 0.6 + specW * 0.2;
   // Normalise by brightness so pale gems (capacitor) don't out-bloom saturated ones.
   let lumK = 0.35 / max(engine_luma(base), 0.35);
-  o.emissive = vec4f(em * in.emissive * alpha * lumK, alpha);
+  o.emissive = vec4f(em * in.emissive * alpha * lumK * spentK, alpha);
   return o;
 }
 `;

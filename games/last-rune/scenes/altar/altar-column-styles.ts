@@ -3,8 +3,8 @@
  * `placeAltarChrome`), in CSS px. Appended last to the altar sheet (altar-styles.ts).
  *
  * - `top`: the head. The title (and "Holding X" under it) over the tray; one slot ring per
- *   tray gem and a count badge on each gem's lower-right corner, placed over the gems the
- *   canvas draws (altar-column.ts `placeHead`). A used-up gem is a dimmed silhouette with a
+ *   tray gem and a count badge centred under each gem (off its glyph), placed by the gems the
+ *   canvas draws (altar-column.ts `placeHead`). A used-up gem is a dimmed copy of itself with a
  *   "×0" badge in every room.
  * - `cardLane`: the cards, one component. Text at the card's full width, 14 px in the game's
  *   serif; the teach card's "New here · n of m" and its button on a footer row under the text;
@@ -68,11 +68,13 @@ ${HEAD} .lr-altar-slot[data-teach]:not([data-empty]):not([data-held]) {
 @keyframes lr-col-breathe { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 [data-reduced-motion] ${HEAD} .lr-altar-slot { animation: none !important; }
 
-/* The count: a badge on the gem's lower-right corner, the same in every room. */
+/* The count: a badge centred under the gem, off its glyph (glyph-truth), the same in every room.
+   16 px tall (layout PH.countH). */
 ${HEAD} .lr-altar-count {
-  position: absolute; transform: translate(-100%, -50%); display: flex; align-items: center; gap: 0;
-  min-width: 0; padding: 0 5px; border-radius: 9px; white-space: nowrap; text-align: center;
-  font: 700 13px/1.3 ${SERIF}; letter-spacing: 0; color: #f4e6c4;
+  position: absolute; transform: translateX(-50%); display: flex; align-items: center; gap: 0;
+  box-sizing: border-box; height: 16px; min-width: 0; padding: 0 5px; border-radius: 8px;
+  white-space: nowrap; text-align: center;
+  font: 700 13px/14px ${SERIF}; letter-spacing: 0; color: #f4e6c4;
   background: rgba(20,16,12,0.94); border: 1px solid rgba(232,192,106,0.6); box-shadow: 0 1px 4px rgba(0,0,0,0.7);
 }
 ${HEAD} .lr-altar-count .lr-n { font: inherit; letter-spacing: inherit; }
