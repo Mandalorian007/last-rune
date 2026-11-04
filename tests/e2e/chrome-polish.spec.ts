@@ -114,6 +114,9 @@ for (const vp of PHONES) {
       await page.evaluate(() => (window as G).__game.openSettings());
       await expect(page.locator('.lr-settings')).toBeVisible();
       await waitFrames(page, 4);
+      // polish-10: the title's Play never shows through or beside the open sheet.
+      if (await page.locator('.lr-title-menu').isVisible())
+        problems.push('settings: the title menu still shows under the sheet');
       const xBox = () =>
         page.evaluate(() => {
           const r = document

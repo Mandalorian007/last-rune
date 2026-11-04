@@ -92,7 +92,26 @@ async function comparePngs(page: Page, a: Buffer, b: Buffer) {
           Math.abs(da[i + 2]! - db[i + 2]!);
         if (dd > 90) changed++;
       }
-      return { changed: changed / (da.length / 4), satA: sat(da, w), satB: sat(db, w) };
+      // Mean luma over the same middle disc (0..255).
+      const lum = (d: Uint8ClampedArray, w: number) => {
+        let s = 0;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          const px = (i / 4) % w;
+          const py = Math.floor(i / 4 / w);
+          if (Math.hypot(px - w / 2, py - w / 2) > w * 0.3) continue;
+          s += 0.2126 * d[i]! + 0.7152 * d[i + 1]! + 0.0722 * d[i + 2]!;
+          n++;
+        }
+        return s / n;
+      };
+      return {
+        changed: changed / (da.length / 4),
+        satA: sat(da, w),
+        satB: sat(db, w),
+        lumA: lum(da, w),
+        lumB: lum(db, w),
+      };
     },
     { a: a.toString('base64'), b: b.toString('base64') },
   );
@@ -109,6 +128,53 @@ test.describe('phone', () => {
   const ID: MachineId = 'press-unit-4';
   const P = puzzleFor(ID);
   const HALF = P.design.intended.slice(0, Math.floor(P.design.intended.length / 2));
+
+  test('the first altar: paging the teach card keeps the gem in hand; setting it down ends the hold', async ({
+    page,
+  }) => {
+    // polish-10 (blind review 10, Android): "the first gem drops the hold". On phones the hold
+    // ends by design when a gem is set down (mobile-5-board); the teach card must never end it.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(DEV_URL);
+    await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+      timeout: 30_000,
+    });
+    await page.evaluate(() => {
+      const g = (window as G).__game;
+      g.save.update((d: G) => {
+        d.settings.captionSpeed = 'instant';
+      });
+      g.flow.newGame();
+      g.fuse.hush();
+      g.flow.openPuzzle('intake-desk');
+    });
+    await expect(page.locator('.lr-altar-tip:not([hidden]) .lr-info-next')).toBeVisible();
+    await page.waitForFunction(() => !!(window as G).__altarLayout && !!(window as G).__altarView);
+    const L = await page.evaluate(() => (window as G).__altarLayout);
+    const css = await toCss(page);
+    const s = L.tray[0];
+    const slot = css(s.x, s.y);
+    await page.touchscreen.tap(slot.x, slot.y);
+    await page.waitForFunction(() => !!(window as G).__altarView?.held);
+    await expect(page.locator('.lr-altar-holding')).toBeVisible();
+    // Page the card while holding: the gem stays in hand.
+    const next = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
+    if (await next.isVisible()) {
+      await next.tap();
+      await waitFrames(page, 6);
+      expect(await page.evaluate(() => !!(window as G).__altarView.held)).toBe(true);
+      await expect(page.locator('.lr-altar-holding')).toBeVisible();
+    }
+    // Set it down: the hold ends (the next tap on the tray takes another).
+    const first = puzzleFor('intake-desk').design.intended[0]!;
+    const c = css(
+      L.left + L.margin + L.pitch * (first.cell.x + 0.5),
+      L.top + L.margin + L.pitch * (first.cell.y + 0.5),
+    );
+    await page.touchscreen.tap(c.x, c.y);
+    await page.waitForFunction(() => !(window as G).__altarView?.held);
+    await expect(page.locator('.lr-altar-holding')).toBeHidden();
+  });
 
   test('the held Split stays vivid in its tray slot and Turn visibly turns it', async ({
     page,
@@ -257,6 +323,32 @@ test.describe('desktop', () => {
     const after = await look();
     expect(after.state).toBe('ghost');
     expect(after.rot).toBe((before.rot + 1) % 4);
+
+    // polish-10 (blind review 10): the ghost must not read as placed. It is see-through (the
+    // dark socket shows through it) with a dashed rim; set down, the same gem at the same turn
+    // is solid. So the ghost's middle is clearly darker than the placed gem's.
+    const r = Math.ceil((L.pitch * at.k) / 2);
+    const clip = { x: at.x - r, y: at.y - r, width: 2 * r, height: 2 * r };
+    await waitFrames(page, 6);
+    const ghostPng = await page.screenshot({ clip });
+    await page.mouse.down();
+    await page.mouse.up();
+    await page.waitForFunction(
+      (c) =>
+        (window as G).__altarView.board.some(
+          (b: G) => b.cell.x === c.x && b.cell.y === c.y && !b.hidden,
+        ),
+      want,
+    );
+    // Off the board (the gem still in hand follows the pointer, far from this socket).
+    await page.mouse.move(4, 360, { steps: 3 });
+    await waitFrames(page, 20);
+    const placedPng = await page.screenshot({ clip });
+    const cmp = await comparePngs(page, ghostPng, placedPng);
+    expect(cmp.changed, 'ghost and placed gem look different').toBeGreaterThan(0.08);
+    expect(cmp.lumA, 'the ghost is see-through, darker than the placed gem').toBeLessThan(
+      cmp.lumB * 0.8,
+    );
   });
 
   test('an Amplify the bolt passes already doubled draws idle, unlike a working one', async ({

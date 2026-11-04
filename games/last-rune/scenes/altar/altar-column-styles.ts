@@ -82,7 +82,11 @@ ${HEAD} .lr-altar-count {
 ${HEAD} .lr-altar-count .lr-n { font: inherit; letter-spacing: inherit; }
 ${HEAD} .lr-altar-count[data-held] { color: #fff6dd; border-color: #ffd77a; box-shadow: 0 0 0 1px #ffd77a; }
 ${HEAD} .lr-altar-count[data-empty] {
-  opacity: 1; color: #a89a80; text-decoration: none; background: rgba(14,12,10,0.9); border-color: rgba(168,154,128,0.45);
+  opacity: 1; color: #a89a80; background: rgba(14,12,10,0.9); border-color: rgba(168,154,128,0.45);
+}
+/* polish-10: spent reads at a glance: the "×0" is struck through. */
+${HEAD} .lr-altar-count[data-empty] .lr-n {
+  text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: #e8c06a;
 }
 
 /* dense-board-4: on a dense board the badge is set at the 14 px floor (layout PH.countDense). */

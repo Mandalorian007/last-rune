@@ -268,6 +268,8 @@ for (const vp of PHONES) {
               slotSeen: !!ss && ss.display !== 'none' && ss.visibility !== 'hidden',
               tick: after !== 'none' && after !== 'normal' && after !== '""',
               gem: { size: view.tray[i]?.size ?? 0, state: view.tray[i]?.state ?? '' },
+              full: view.layout.tray[i]?.size ?? 0,
+              struck: getComputedStyle(c.querySelector('.lr-n') ?? c).textDecorationLine,
             };
           });
         });
@@ -286,6 +288,10 @@ for (const vp of PHONES) {
           // glyph-truth: a dimmed copy of the real icon (the `spent` gem state), every kind alike.
           if (!(c.gem.size > 0) || c.gem.state !== 'spent')
             problems.push(`${tag}: no dimmed copy (${c.gem.state} ${c.gem.size})`);
+          // polish-10: full size, so the spent gem is still recognisably itself, and the "×0"
+          // struck through so it reads as spent.
+          if (c.gem.size !== c.full) problems.push(`${tag}: shrunk (${c.gem.size} of ${c.full})`);
+          if (!c.struck.includes('line-through')) problems.push(`${tag}: "×0" not struck`);
           g.forEach((o, j) => {
             if (j !== i && hit(c.box, o.box)) problems.push(`${tag}: overlaps count ${j + 1}`);
           });
