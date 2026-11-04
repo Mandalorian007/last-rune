@@ -15,9 +15,11 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:engine": "pnpm --filter @thunderclap/engine test:e2e",
-    "test:e2e:desktop": "pnpm --filter @thunderclap/host-electron test:e2e",
+    "test:e2e:desktop": "pnpm --filter @thunderclap/host-electron test:e2e && node scripts/desktop/e2e.mjs",
     "desktop:dev": "pnpm --filter @thunderclap/host-electron dev",
-    "desktop:build": "pnpm --filter @thunderclap/host-electron dist",
+    "desktop:build": "node scripts/desktop/build.mjs",
+    "desktop:build:shell": "pnpm --filter @thunderclap/host-electron dist",
+    "desktop:icon": "node scripts/desktop/icon.mjs",
     "engine:release": "node scripts/engine-release.mjs",
     "baseline": "playwright test -c scripts/baseline/playwright.config.ts",
     "package:itch": "node scripts/package-itch.mjs",
@@ -34,7 +36,8 @@
     "puzzle": "tsx tools/puzzle.ts"
   },
   "dependencies": {
-    "@thunderclap/engine": "workspace:*"
+    "@thunderclap/engine": "workspace:*",
+    "@thunderclap/host-electron": "workspace:*"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

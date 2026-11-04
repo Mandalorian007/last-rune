@@ -31,7 +31,7 @@ setDefaultHost(host); // or pass it to createGame / the game's ctx
 host.window?.close(); // a desktop-only Quit entry
 ```
 
-Wiring Last Rune to this is ws/last-rune-desktop's job.
+Last Rune does exactly this in one file, `games/last-rune/boot-host.ts`. It uses a dynamic import, so the web build never loads this package. Its settings show Quit only when `host.window` exists.
 
 ## The bridge: `window.thunderclap`
 
@@ -91,7 +91,7 @@ The versioning stays `engine/save`'s, unchanged. Moving existing saves would be 
 
 - **No network at runtime.** The session cancels every request that is not the page's own origin (`app://bundle`, or the local dev server and its HMR socket in `desktop:dev`), `data:`, `blob:` or `devtools:`. Every `app://` response also carries a CSP with `connect-src 'self'`, `script-src 'self'` and no inline script. Spellcheck is off, so no dictionaries are downloaded.
 - **Local files only.** `app://bundle/<path>` serves files from `out/renderer` (inside the asar), with a path guard (`bundleFile`). Unknown routes fall back to `index.html`.
-- **No new windows, webviews, or navigation away.** Permission prompts are denied, except HTML fullscreen.
+- **No new windows, webviews, or navigation away.** A new-window request for a plain https URL from the page itself opens in the system browser through `shell.openExternal`, under the same rule as the bridge. That covers a `target="_blank"` link, such as the engine's link widget on a click or Enter. Every other new-window request is refused. Permission prompts are denied, except HTML fullscreen.
 - **DevTools only when unpackaged.** On macOS the app has a minimal menu (app, edit, window). Elsewhere there is no menu bar.
 - `TC_RENDERER_URL`, `TC_RENDERER_DIR`, `TC_USER_DATA` and `TC_GPU_SWITCHES` are honoured only when unpackaged.
 
@@ -102,8 +102,9 @@ From the repo root:
 | Command | What it does |
 |---|---|
 | `pnpm desktop:dev` | Builds main and preload, serves `harness/` with Vite on 127.0.0.1:5199, and opens it in Electron with hot reload. `pnpm desktop:dev --url http://localhost:5173` uses a dev server you already run instead |
-| `pnpm desktop:build` | Builds `out/` and packages for this OS into `dist/desktop/`. Flags: `--mac`, `--win`, `--linux`; `--dir` (unpacked only); `--renderer <dir>` (package another built web app, such as a game's `dist/`, instead of the harness) |
-| `pnpm test:e2e:desktop` | Builds `out/` and runs `e2e/shell.spec.ts` with Playwright's Electron driver |
+| `pnpm desktop:build` | The Last Rune desktop app (`scripts/desktop/build.mjs`); run it after `pnpm build`. Draws the icon, then runs this package's `dist` with `--renderer dist` and the game's identity |
+| `pnpm desktop:build:shell` | This package's `dist`: builds `out/` and packages for this OS into `dist/desktop/`. Flags: `--mac`, `--win`, `--linux`; `--dir` (unpacked only); `--renderer <dir>` (package another built web app, such as a game's `dist/`, instead of the harness; any `dist/desktop/` inside it is skipped) |
+| `pnpm test:e2e:desktop` | Builds `out/` and runs `e2e/shell.spec.ts` with Playwright's Electron driver, then Last Rune's `tests/desktop/` (`scripts/desktop/e2e.mjs`) |
 | `pnpm check:host-electron` | Typecheck, lint and unit tests (also part of `pnpm check`) |
 
 Electron downloads its binary on first use, not at install. electron-builder downloads its own copy when packaging. Both downloads happen at build time only.
@@ -118,9 +119,17 @@ The build is unsigned: no certificate, key or notarisation credential is used or
 | Windows | NSIS installer (`.exe`) and `.zip` (x64). Unsigned, so SmartScreen warns |
 | Linux | `.AppImage` and `.tar.gz` (x64) |
 
-The identity defaults to `ThunderClap` / `dev.thunderclap.shell`. A game sets its own with `TC_PRODUCT_NAME` and `TC_APP_ID`. No icon is set yet, so the build uses Electron's default icon. A procedural icon is for ws/last-rune-desktop.
+The identity defaults to `ThunderClap` / `dev.thunderclap.shell`, with Electron's default icon. A game sets its own identity with these variables:
 
-The CI job `desktop` in `.github/workflows/ci.yml` builds all three on `ubuntu-latest`, `macos-latest` and `windows-latest` and uploads them as artefacts. It is non-blocking until Gate 4.
+- `TC_PRODUCT_NAME` and `TC_APP_ID`;
+- `TC_APP_VERSION`;
+- `TC_ICON`: an absolute path to a PNG of at least 512x512. electron-builder makes the `.icns` and `.ico` from it.
+
+Artefacts are named `<product name, spaces as dashes>-<version>-<os>-<arch>.<ext>`.
+
+Last Rune (`pnpm desktop:build`) is packaged as "The Last Rune", `com.thunderclap.lastrune`, with the game's version. Its icon is drawn by `scripts/desktop/icon.mjs` into `build/desktop/icon.png`, which is not committed.
+
+The CI job `desktop` in `.github/workflows/ci.yml` builds Last Rune for all three on `ubuntu-latest`, `macos-latest` and `windows-latest` and uploads them as artefacts. It is non-blocking until Gate 4.
 
 ## Open questions
 

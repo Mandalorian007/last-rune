@@ -11,7 +11,7 @@
 // certificate in the local keychain is not picked up.
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, Platform } from 'electron-builder';
 import config from '../electron-builder.config.mjs';
@@ -36,7 +36,17 @@ const r = spawnSync(
   { stdio: 'inherit' },
 );
 if (r.status !== 0) process.exit(r.status ?? 1);
-if (renderer) cpSync(resolve(renderer), join(pkg, 'out/renderer'), { recursive: true });
+// A game's dist/ may also hold earlier desktop builds (dist/desktop/): never package those.
+const outputDir = resolve(pkg, config.directories.output);
+if (renderer) {
+  cpSync(resolve(renderer), join(pkg, 'out/renderer'), {
+    recursive: true,
+    filter: (src) => {
+      const p = resolve(src);
+      return p !== outputDir && !p.startsWith(`${outputDir}${sep}`);
+    },
+  });
+}
 
 process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false';
 

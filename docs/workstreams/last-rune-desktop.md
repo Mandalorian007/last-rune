@@ -24,3 +24,34 @@ Plan: [../engine/refactor-plan.md](../engine/refactor-plan.md), "Phase 4" → ws
 - Before reporting, run `pnpm check`, `pnpm build`, `pnpm baseline`, `pnpm test:e2e`, `pnpm test:e2e:engine`, `pnpm test:e2e:desktop` and a macOS `pnpm desktop:build`.
 
 ## Log
+- 2026-11-03: Last Rune runs in the desktop shell (D-042, Phase 4), on `ws/last-rune-desktop`.
+  - **Boot seam:** `games/last-rune/boot-host.ts` is the only game file that imports `@thunderclap/host-electron`.
+    - When `window.thunderclap` exists, it dynamically imports the package, builds `createElectronHost()`, sets it as the default host, and `main.ts` passes it to `createGame({ host })`.
+    - Otherwise it returns undefined and `createGame` makes its usual web host.
+    - The web bundle changes only by the seam: `index-*.js` gains a few lines, and a 1.2 kB chunk (`src-*.js`, the Electron host) is emitted but never fetched in a browser. The root `package.json` gains `@thunderclap/host-electron: workspace:*`.
+  - **Quit entry:** `ui/settings-panel.ts` adds one "Quit game" button to the Done row, only when `host.window` exists. It flushes the save, then calls `host.window.close()`. The deps type widens to `Pick<Host, 'copyText' | 'window'>`, and `ui/styles.ts` gets one CSS line that sets Quit at the far left. Nothing else in the panel changed (for port-chrome's merge).
+  - **Bug found and fixed in the shell (links):**
+    - A mouse click or Enter on the engine's link widget is a native `target="_blank"` anchor. The shell's `setWindowOpenHandler` denied it, so the Ko-fi and Discord links did nothing on desktop.
+    - Fix in `packages/host-electron/src/main/main.ts`: a new-window request for a plain https URL (`safeExternalHttps`) from our own page now goes to `shell.openExternal`. Everything is still denied as a window.
+    - The shell's e2e now asserts this.
+  - **Fullscreen:** the game has a fullscreen button only on phones. On desktop, fullscreen is the window's own (macOS menu, green button). The e2e checks that the bridge's `fullscreen.set` works and the canvas fills the fullscreen window.
+  - **Desktop build:**
+    - `pnpm desktop:build` is now Last Rune (`scripts/desktop/build.mjs`) and needs `pnpm build` first. It sets the product "The Last Rune", app id `com.thunderclap.lastrune` and version 1.0.0 (from the root `package.json`).
+    - The harness build moved to `pnpm desktop:build:shell`.
+    - New env vars in `electron-builder.config.mjs`: `TC_APP_VERSION` and `TC_ICON`. Artefact names use dashes.
+    - `dist.mjs` no longer copies a `dist/desktop/` inside `--renderer` into the app.
+  - **Icon:** `scripts/desktop/icon.mjs` (`pnpm desktop:icon`) draws a 1024 px PNG from signed distance fields (supersampled 4x4) with a dependency-free PNG encoder.
+    - The picture uses the game palette: a cyan faceted channel gem with a rune on its table, a wire through it ending in gold studs, slate stone and a gold rim, on Apple's 824 px tile grid.
+    - The output is deterministic and goes to `build/desktop/icon.png`, which is not committed. electron-builder makes the `.icns` and `.ico` from it.
+    - Unit tests: `scripts/desktop/icon.test.ts`.
+  - **Tests:**
+    - `games/last-rune/boot-host.test.ts` (3 tests, fake bridge).
+    - `tests/desktop/last-rune.spec.ts`, Playwright Electron driver against the prod `dist/` in the unpackaged shell. `pnpm test:e2e:desktop` runs the shell smoke (5), then these (2):
+      1. Title → hall → intake-desk solved by keyboard → solve card, with the save written. Settings → Quit closes the app. A relaunch on the same userData shows Continue with `intake-desk` solved, and there are no console errors.
+      2. A Ko-fi click opens through `shell.openExternal` (stubbed) with no new window. Copy link reaches the system clipboard. Fullscreen fills the screen.
+  - **CI:** the `desktop` job runs `pnpm build`, then `pnpm desktop:build` per OS, and uploads `the-last-rune-desktop-<os>`. It is still `continue-on-error`. The Electron e2e is still not in CI.
+  - **Open questions:**
+    - Should desktop have its own fullscreen toggle (F11 or a Settings entry)? Today only the OS window controls offer it.
+    - Should the Quit entry also be on the title screen?
+    - The icon needs a user and PM look.
+    - The ~1.2 kB chunk name `src-*.js` comes from the package entry path; it can be renamed with a Vite `chunkFileNames` rule if wanted.
