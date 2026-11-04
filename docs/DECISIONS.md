@@ -268,3 +268,4 @@ Format: `D-NNN · date · decision · why · who`.
     - with `--tag` only, it creates `engine-v<version>`;
     - it never pushes.
   - Game releases need a tag only if they have a GitHub Release; that is the user's call per release.
+  - Existing tags (user, 2026-11-03): `engine-v0.1` deleted, as no release used it; `v1.0.0` and `alpha-1` are kept because they back GitHub Releases. The engine at v1.0 is simply `v1.0.0`.
