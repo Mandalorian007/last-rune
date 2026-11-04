@@ -104,21 +104,18 @@ describe('arrival card pages (teach-4)', () => {
 });
 
 describe('gauge dot and Channel lines (teach-4)', () => {
-  it('says what the dot means, red over lit, only to whoever is being taught', () => {
-    const base = { reached: true, over: false, teachReach: true, teachOver: false };
+  it('says what the dot means, only to whoever is being taught', () => {
+    const base = { reached: true, teachReach: true };
     expect(lampLine(base)).toBe('reach');
     expect(lampLine({ ...base, teachReach: false })).toBeNull();
     expect(lampLine({ ...base, reached: false })).toBeNull();
-    expect(lampLine({ ...base, over: true, teachOver: true })).toBe('over');
-    expect(lampLine({ ...base, over: true, teachOver: false })).toBe('reach');
-    // The real semantics: lit = reaches (not an amount); red = the Capacitor overshoots.
+    // The real semantics: lit = reaches (not an amount). teach-8 (D-043): no red forecast.
     expect(LAMP_LINE.reach).toMatch(/reaches/);
     expect(LAMP_LINE.reach).not.toMatch(/\d/);
-    expect(LAMP_LINE.over).toMatch(/Red dot/);
-    expect(LAMP_LINE.over).toMatch(/trip/);
+    expect(LAMP_LINE.reach).not.toMatch(/red|trip/i);
     // teach-5: the legend names all three looks and never an amount. teach-6: none is "no
     // dot" (the hollow ring read as 0), and lit never promises enough (D-043).
-    expect(DOT_LEGEND.map((r) => r.look)).toEqual(['off', 'on', 'red']);
+    expect(DOT_LEGEND.map((r) => r.look)).toEqual(['off', 'on']);
     for (const r of DOT_LEGEND) expect(r.text).not.toMatch(/\d|enough|exact|hollow|ring/i);
     expect(DOT_LEGEND[0]!.text).toMatch(/^No dot/);
     expect(LAMP_LINE.reach).not.toMatch(/hollow/);

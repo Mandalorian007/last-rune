@@ -189,11 +189,6 @@ ${LANE} > .lr-altar-hint .lr-dot-ok::before {
    row has no dot: its words start where the others' do. */
 ${LANE} > .lr-altar-hint .lr-dot-row { display: block; padding-left: 16px; text-indent: -16px; }
 ${LANE} > .lr-altar-hint .lr-dot-row[data-look='off'] { text-indent: 0; }
-${LANE} > .lr-altar-hint .lr-need-lamp[data-look='red'],
-${LANE} > .lr-altar-hint .lr-need-lamp[data-red='true'] {
-  background: radial-gradient(circle at 40% 35%, #fff0ea 0 25%, #ff7a5c 60%, #d8341c);
-  box-shadow: 0 0 0 1px #ffd6cc, 0 0 6px 2px rgba(255,90,60,0.85);
-}
 ${LANE} > .lr-altar-tip .lr-info-foot {
   order: 1; position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between;
   gap: 8px; margin: 2px -10px 0; padding: 1px 10px; min-width: 0; float: none;

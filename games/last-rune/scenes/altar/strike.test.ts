@@ -4,7 +4,7 @@ import { PUZZLES, puzzleFor } from '../../content/puzzles';
 import { type Placement, type PuzzleDef, simulate } from '../../rules';
 import { altarDims } from '../../rules/model';
 import type { GemKind } from '../../rules/types';
-import { capacitorBeats, capBeatText, planOver } from './circuit-model';
+import { capacitorBeats, capBeatText } from './circuit-model';
 import { anchorOf, cellAt, computeLayout, DESIGN_H, DESIGN_W } from './layout';
 import {
   alsoMissed,
@@ -312,21 +312,15 @@ describe('hints come from the room (altar-truth)', () => {
     expect(hint).not.toMatch(/Amplify/);
   });
 
-  it("the Capacitor's plan warns when it lets out more than the machine takes", () => {
+  it("the Capacitor's plan says the rule, never this board's numbers (D-043)", () => {
     const p = puzzleFor('capacitor-bay');
     const res = simulate(p, BAY_OVER);
     const beats = capacitorBeats(p, BAY_OVER, res);
-    const over = planOver(beats, res);
     const i = beats.findIndex((b) => b.kind === 'release');
-    expect(over.beats.get(i)).toBe(8);
     // teach-8: the plan says the rule, never this board's numbers (D-043); results keep them.
     expect(capBeatText(beats[i]!, p.pulses, true)).toBe('Strike 2: lets out both.');
     expect(capBeatText(beats[0]!, p.pulses, true)).toBe('Strike 1: stores, sends nothing.');
     expect(capBeatText(beats[i]!, p.pulses)).toBe('Strike 2: 8 + 8 → 16');
-    expect([...over.machines].map((j) => res.machines[j]!.need)).toEqual([8]);
-    // The intended solve warns nowhere.
-    const ok = simulate(p, p.design.intended);
-    expect(planOver(capacitorBeats(p, p.design.intended, ok), ok).machines.size).toBe(0);
   });
 
   it('with no room, names no gem at all', () => {

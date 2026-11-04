@@ -233,7 +233,7 @@ export class AltarScene implements GameScene {
   /** teach-4: real gem pictures for the arrival card's in→out figures, made when first drawn. */
   pictures: GemPortraits | null = null;
   /** teach-4: who is told what the gauge dots mean (`lampLine`), and whether they have been. */
-  lampTeach = { reach: false, over: false };
+  lampTeach = { reach: false };
   /** teach-4: where Turn was just taught, why it stays dim for a Channel (`straightLine`). */
   straightTeach = false;
   /** Phones: the arrival card's page, one new piece at a time; the player turns it (Next ›). */
@@ -334,9 +334,8 @@ export class AltarScene implements GameScene {
       this.teachTray = new Set(this.news.tray);
       this.turnTeach = turnTeaches(this.news);
       this.firstMulti = firstMultiStrike(this.puzzle, solved);
-      const newKinds = [...this.news.fixed.map((f) => f.gem), ...this.news.tray];
       // teach-5: the dot's legend shows the first time a dot lights, once per game.
-      this.lampTeach = { reach: this.ctx.flow.dotDue(), over: newKinds.includes('capacitor') };
+      this.lampTeach = { reach: this.ctx.flow.dotDue() };
       // Only where Turn is first taught (the Bend in the tray): the lane is roomy there.
       this.straightTeach = this.turnTeach.has('bend');
       this.guide = guideHops(

@@ -255,28 +255,3 @@ export function capBeatText(b: CapBeat, pulses: number, plan = false): string {
   if (b.kind === 'release') return `${n}${b.stored} + ${b.incoming} → ${b.out}`;
   return `${n}stores ${b.stored}${b.pulse >= pulses - 1 ? ', never let out' : ''}`;
 }
-
-/**
- * The plan's over-charge (altar-truth): where a Capacitor's preview already shows a number,
- * a release bigger than a machine takes must read as a warning, and so must that gauge. For
- * each release beat (by index) that over-fills a machine on its strike, the need it passes;
- * and the machines it over-fills. Machines with no number on show are left alone (D-040
- * addendum 5: gauges show no amount before Strike).
- */
-export function planOver(
-  beats: readonly CapBeat[],
-  sim: SimResult,
-): { beats: Map<number, number>; machines: Set<number> } {
-  const out = { beats: new Map<number, number>(), machines: new Set<number>() };
-  beats.forEach((b, i) => {
-    if (b.kind !== 'release') return;
-    sim.machines.forEach((m, j) => {
-      const got = m.readings[b.pulse] ?? 0;
-      if (got > m.need && b.out > m.need) {
-        if (!out.beats.has(i)) out.beats.set(i, m.need);
-        out.machines.add(j);
-      }
-    });
-  });
-  return out;
-}

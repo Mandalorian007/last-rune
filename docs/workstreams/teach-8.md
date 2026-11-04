@@ -103,3 +103,14 @@ I rechecked the rule against sim.ts: each strike, an unwoken gauge reads that st
   - hall-mid (720): 0.34%.
   - desktop-1080 capacitor-bay-empty showed a one-off 79.6% (first try), then 0.29% on retry: a load glitch.
   - The baseline ran before the Control Booth card was added, so Control Booth will differ a little more.
+
+### 2026-11-04: PM decisions applied (D-045; planOver cut)
+- I merged main into ws/teach-8 (glyph-truth-4 and polish-10). There were no conflicts. codex.ts keeps both my copy and glyph-truth-4's diagram code.
+- (a) `codex.taught` is approved as D-045. The PM writes the DECISIONS entry.
+- (b) The pre-Strike forecast is removed (D-043):
+  - `planOver` is deleted. Nothing sets `data-warn` any more, and its CSS is gone.
+  - The "Red dot: this gauge will trip." line is gone (`LAMP_LINE.over`, `lampTeach.over`).
+  - The dot legend's red row is gone. The legend now reads: "The dot on a gauge: No dot: no charge yet · Lit: charge reaches it".
+  - Results after Strike are unchanged.
+  - Updated tests: strike.test, teach.test, capacitor.spec (asserts no `[data-warn]` and no "trip" before Strike) and mobile-teach.spec (legend rows `['off','on']`).
+- (c) The Again pages are approved.

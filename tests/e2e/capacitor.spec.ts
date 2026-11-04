@@ -74,15 +74,13 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
   const cap = page.locator('.lr-altar-cap');
   await expect(cap).toHaveCount(1);
   await expect(cap).toHaveAttribute('data-plan', '');
-  // altar-truth: the release is more than the 8 the machine takes, so its line warns, and so
-  // does that gauge.
   await expect(cap.locator('.lr-cap-line')).toHaveText([
     'Strike 1: stores, sends nothing.',
     'Strike 2: lets out both.',
   ]);
-  await expect(cap.locator('.lr-cap-line[data-warn]')).toHaveCount(1);
-  await expect(page.locator('.lr-altar-need[data-warn]')).toHaveCount(1);
-  await expect(page.locator('.lr-altar-need[data-warn]')).toContainText('8');
+  // teach-8 (D-043): even over-feeding, nothing warns before Strike: no red line, no red gauge.
+  await expect(page.locator('.tc-overlay [data-warn]')).toHaveCount(0);
+  await expect(page.locator('.lr-altar-hint')).not.toContainText(/trip/i);
 
   // During strike 1 only its line shows; strike 2's line arrives with strike 2. Strike 1 lasts
   // well under a second of game time, too short for one-after-another polls from the test on a
