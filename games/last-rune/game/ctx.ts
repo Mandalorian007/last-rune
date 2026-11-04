@@ -16,6 +16,7 @@ import { type AudioEngine, recipes } from '@thunderclap/engine/audio';
 import type { Scene } from '@thunderclap/engine/core';
 import {
   deviceTraits,
+  type FillWidthOptions,
   prefersReducedMotion,
   watchReducedMotion,
 } from '@thunderclap/engine/platform';
@@ -37,7 +38,7 @@ import {
 import { PHONE_WORDS_PER_CARD } from '../content/lines';
 import { storyTier } from '../rules/progression';
 import type { MachineId } from '../rules/types';
-import type { ViewContext, ViewCue, ViewFactories } from '../scenes/views';
+import { TITLE_UPRIGHT, type ViewContext, type ViewCue, type ViewFactories } from '../scenes/views';
 import { CHROME_LAYOUT, createGameChrome } from '../ui/chrome';
 import { Codex } from '../ui/codex';
 import { Fuse } from '../ui/fuse';
@@ -58,11 +59,15 @@ export const DESIGN_H = 1080;
  * screen. Hall: any phone fills the width (mobile-5-chrome); the hall scene's camera then zooms
  * out about the doorway band and widens the wall (scenes/hall/hall-frame.ts), so every doorway
  * stays whole with no side bars. Title: the name (with a clear margin above it) down to the
- * candles.
+ * candles; upright (chrome-polish-3) it fills its frame's height instead and crops the sides
+ * about the storm cell and FUSE (the view draws the name over that part, `TITLE_UPRIGHT`).
  */
-const FILL_BANDS: Record<string, { minVisible: number; focusY: number }> = {
-  title: { minVisible: 760, focusY: 505 },
+const FILL_BANDS: Record<string, FillWidthOptions> = {
+  title: { minVisible: 760, focusY: 505, ...TITLE_UPRIGHT },
   hall: { minVisible: 667, focusY: 544 },
+  // The journal (chrome-polish-3): as wide as the head (y 34) and FUSE's plate (to y 1001)
+  // allow; what bars remain are the desk's own dark wood (ui/chrome.ts DESK_BARS).
+  journal: { minVisible: 1000, focusY: 528 },
   // The altar (mobile-5-board): the board and its column lay out inside the visible band
   // (layout.ts phoneLayout), so wide phones trade dead side bars for a bigger board.
   puzzle: { minVisible: 860, focusY: 540 },

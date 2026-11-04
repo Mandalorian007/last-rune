@@ -65,7 +65,10 @@ export const ENDING_LAYOUT = {
  * card is a centred plate, so the clipboard rests further right and higher: right of the
  * plate's buttons and wholly inside the visible band (ctx FILL_BANDS.ending).
  */
-export const PHONE_CLIP = { ...ENDING_LAYOUT.clip, x: 1760, y: 790 } as const;
+// chrome-polish-3 (Gate 2 review 5: "the clipboard is cut off bottom-right"): it was wholly on
+// screen but pressed into the corner and into the canvas's dark edge, so it read as cut. It
+// now rests further in, with a wider margin (phoneClipRest).
+export const PHONE_CLIP = { ...ENDING_LAYOUT.clip, x: 1735, y: 780 } as const;
 
 export interface ClipRest {
   readonly x: number;
@@ -87,11 +90,11 @@ export interface VisibleBand {
 
 /**
  * Phones (mobile-7-ending): the clipboard's rest, moved in (never out) so the whole board,
- * rotated, sits at least `marginCss` CSS px inside the visible band on every phone.
+ * rotated, sits at least `marginCss` CSS px (24: clear of the canvas's dark edge) inside the visible band on every phone.
  */
 export function phoneClipRest(
   band: VisibleBand,
-  marginCss = 12,
+  marginCss = 24,
   C: ClipRest = PHONE_CLIP,
 ): ClipRest {
   const s = Math.abs(Math.sin(C.rot));

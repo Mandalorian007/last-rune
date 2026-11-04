@@ -209,8 +209,6 @@ export function openSettings(deps: SettingsPanelDeps): void {
     ariaLabel: 'Close settings',
   });
   const sound = h('section', null, h('h3', null, 'Sound'), ...volumes);
-  const comfort = h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed);
-  const gfx = h('section', null, h('h3', null, 'Graphics'), graphics);
   const saveSection = h(
     'section',
     null,
@@ -221,7 +219,6 @@ export function openSettings(deps: SettingsPanelDeps): void {
     note,
   );
   const col = (...kids: HTMLElement[]) => h('div', { class: 'lr-settings-col' }, ...kids);
-  const done = button('Done', () => ui.stack.pop('programmatic'), { variant: 'primary' });
   // Desktop only: a game window needs its own way out. Progress is saved first.
   const win = deps.host.window;
   const quit = win
@@ -236,6 +233,8 @@ export function openSettings(deps: SettingsPanelDeps): void {
     : null;
 
   if (!phone) {
+    const comfort = h('section', null, h('h3', null, 'Comfort'), text, motion, flashes, speed);
+    const gfx = h('section', null, h('h3', null, 'Graphics'), graphics);
     // Two columns so the whole panel, Done included, fits a 720p screen at 100% text.
     const cols = h(
       'div',
@@ -247,7 +246,12 @@ export function openSettings(deps: SettingsPanelDeps): void {
       'div',
       { class: 'lr-settings' },
       cols,
-      h('div', { class: 'lr-row lr-settings-done' }, quit, done),
+      h(
+        'div',
+        { class: 'lr-row lr-settings-done' },
+        quit,
+        button('Done', () => ui.stack.pop('programmatic'), { variant: 'primary' }),
+      ),
     );
     ui.stack.push({
       content,
@@ -270,6 +274,10 @@ export function openSettings(deps: SettingsPanelDeps): void {
     h('p', null, 'Erases machines and journal pages. Settings stay.'),
     resetBtn,
   );
+  // chrome-polish-3: Reduce flashes is a picture setting, so it joins Graphics; the two tabs
+  // then run about as tall as each other and neither is half empty.
+  const comfort = h('section', null, h('h3', null, 'Comfort'), text, motion, speed);
+  const gfx = h('section', null, h('h3', null, 'Graphics'), graphics, flashes);
   const pages = [
     { label: 'Sound & Comfort', cols: [col(sound), col(comfort)] },
     { label: 'Graphics & Save', cols: [col(gfx, danger), col(saveSection)] },
@@ -314,11 +322,29 @@ export function openSettings(deps: SettingsPanelDeps): void {
   };
   // mobile-5-chrome: the fold falls on a whole row, so no header or control is cut in half
   // under the footer; the thumb says there is more.
+  const scroll = h('div', { class: 'lr-settings-scroll' }, ...pages.map((p) => p.body), rail);
+  // chrome-polish-3: the tab area is as tall as the taller tab (or the screen allows), so the
+  // panel, its title and its ✕ hold still when the tab changes.
+  const lock = () => {
+    scroll.style.height = '';
+    let tallest = 0;
+    for (const p of pages) {
+      const was = p.body.hidden;
+      p.body.hidden = false;
+      p.body.style.maxHeight = '';
+      for (const q of pages) if (q !== p) q.body.hidden = true;
+      tallest = Math.max(tallest, p.body.scrollHeight);
+      p.body.hidden = was;
+    }
+    for (const p of pages) p.body.hidden = p.body !== cols;
+    scroll.style.height = `${Math.ceil(tallest)}px`;
+  };
   const fold = () => {
     if (!cols.isConnected) {
       refold.disconnect();
       return;
     }
+    lock();
     cols.style.maxHeight = '';
     const avail = cols.clientHeight;
     if (cols.scrollHeight - avail > 4) {
@@ -363,8 +389,9 @@ export function openSettings(deps: SettingsPanelDeps): void {
       { class: 'lr-settings-tabs', role: 'tablist', 'aria-label': 'Settings pages' },
       ...pages.map((p) => p.tab),
     ),
-    h('div', { class: 'lr-settings-scroll' }, ...pages.map((p) => p.body), rail),
-    h('div', { class: 'lr-row lr-settings-done' }, quit, done),
+    scroll,
+    // One way out on phones: the ✕ (chrome-polish-3). Quit stays for a desktop shell.
+    quit ? h('div', { class: 'lr-row lr-settings-done' }, quit) : null,
   );
   ui.stack.push({
     content,

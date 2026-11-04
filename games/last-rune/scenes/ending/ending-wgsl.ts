@@ -25,13 +25,22 @@ fn rot2e(a: f32) -> mat2x2f {
   return mat2x2f(c, s, -s, c);
 }
 
-fn tri_sd(p: vec2f, r: f32) -> f32 {
-  // Equilateral triangle, pointing up, circumradius r.
-  let k = sqrt(3.0);
-  var q = vec2f(abs(p.x) - r * 0.866, p.y + r * 0.5);
-  if (q.x + k * q.y > 0.0) { q = vec2f(q.x - k * q.y, -k * q.x - q.y) / 2.0; }
-  q.x -= clamp(q.x, -2.0 * r * 0.866, 0.0);
-  return -length(q) * sign(q.y);
+fn seg_e(p: vec2f, a: vec2f, b: vec2f) -> f32 {
+  let pa = p - a;
+  let ba = b - a;
+  return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
+}
+
+fn last_rune_e(q: vec2f, r: f32) -> f32 {
+  // The Last Rune, stroke for stroke as the hall's seal draws it (hall-shaders.ts rune_glyph):
+  // a stave, two crossing branches, a hooked foot, a small ring. y points up.
+  var d = seg_e(q, vec2f(0.0, -0.62 * r), vec2f(0.0, 0.62 * r));
+  d = min(d, seg_e(q, vec2f(0.0, 0.2 * r), vec2f(0.38 * r, 0.52 * r)));
+  d = min(d, seg_e(q, vec2f(0.0, 0.2 * r), vec2f(-0.38 * r, 0.52 * r)));
+  d = min(d, seg_e(q, vec2f(0.0, -0.18 * r), vec2f(0.32 * r, -0.4 * r)));
+  d = min(d, seg_e(q, vec2f(0.32 * r, -0.4 * r), vec2f(0.32 * r, -0.62 * r)));
+  d = min(d, abs(length(q - vec2f(0.0, -0.05 * r)) - 0.16 * r));
+  return d;
 }
 
 @fragment fn fs_main(in: VSOut) -> FragOut {
@@ -67,21 +76,17 @@ fn tri_sd(p: vec2f, r: f32) -> f32 {
     let stroke = (1.0 - smoothstep(0.06, 0.12, abs(cf - (h - 0.5) * 0.3)))
       * step(0.76 + h * 0.03, r) * (1.0 - step(0.86 - h * 0.04, r));
     let tick = (1.0 - smoothstep(0.02, 0.06, abs(cf))) * step(0.885, r) * (1.0 - step(0.9, r));
-    // Central sigil: the Builder's mark. An open triangle (a door's lintel and jambs), a stave
-    // through it, a short crossbar, three dots for the three gem colours.
+    // Central sigil: the Last Rune itself, the same glyph the hall's seal carries (chrome-polish-3:
+    // the climax showed a different mark, a triangle and cross), and three dots for the gems.
     let q = rot2e(-t * 0.02) * p;
-    let s1 = abs(tri_sd(q - vec2f(0.0, 0.04), 0.36)) - 0.013;
-    let gap = step(0.08, abs(q.x)) + step(q.y, 0.12);
-    let tri = s1 + (1.0 - min(gap, 1.0)) * 0.2;
-    let stave = max(abs(q.x) - 0.012, abs(q.y + 0.02) - 0.38);
-    let bar = max(abs(q.y - 0.14) - 0.012, abs(q.x) - 0.12);
+    let glyph = last_rune_e(vec2f(q.x, -q.y), 0.56) - 0.016;
     var dots = 1.0;
     for (var i = 0; i < 3; i++) {
       let a0 = 1.5708 + f32(i) * 2.0944;
-      dots = min(dots, length(q - vec2f(cos(a0), -sin(a0)) * 0.33) - 0.03);
+      dots = min(dots, length(q - vec2f(cos(a0), -sin(a0)) * 0.41) - 0.025);
     }
     let ring = abs(r - 0.47) - 0.01;
-    let sig = 1.0 - smoothstep(0.0, 0.01, min(min(min(tri, stave), min(bar, dots)), ring));
+    let sig = 1.0 - smoothstep(0.0, 0.01, min(min(glyph, dots), ring));
     let lines = max(max(rim, max(band2, band3)), max(max(stroke, tick), sig));
     // Engraving reads dark when cold, bright when lit.
     col = mix(col * (1.0 - lines * 0.55), col + hot * lines * 0.9, ign);
@@ -149,7 +154,7 @@ fn tri_sd(p: vec2f, r: f32) -> f32 {
     let core = vec3f(1.0, 0.93, 0.78);
     let edge = vec3f(1.0, 0.68, 0.28);
     let rim = 1.0 - smoothstep(0.0, 14.0, abs(dd));
-    // Thin the door's body over the disc centre so the Builder's mark reads through it.
+    // Thin the door's body over the disc centre so the Last Rune reads through it.
     let veil = mix(0.28, 1.0, smoothstep(50.0, 210.0, length(in.world - vec2f(960.0, 540.0))));
     col = (core * inside * rays * 0.62 * veil + edge * (halo + rim * 0.7)) * bright * (0.5 + 0.5 * fadeTop);
     emi = col * 0.55 * veil;
