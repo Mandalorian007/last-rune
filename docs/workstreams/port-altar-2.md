@@ -60,8 +60,18 @@ Decisions: D-026, D-027, D-039, D-040 (+addenda), D-041 (+addenda 1–3).
   a first try at 50 px broke mobile-strike). Screenshot
   `docs/design/screens/local/port-altar-2/se-capacitor-bay-arrival.png`. Pitch table identical
   on all 64 rows.
-- **Gates.** `pnpm check` (559 unit) and `pnpm build` pass. `pnpm baseline`: 129 passed, 0 px
-  changed. Full `pnpm test:e2e`: 112 passed, 3 failed under load: the SE moments pair (the
-  real bug above, fixed) and full-run 13-16, which passes alone (full-run 6/6, 16 machines,
-  keyboard press counts held). `pnpm test:e2e:engine`: 272 passed, 2 gesture-timing failures
-  under load; gestures.spec passes 66/66 alone. `pnpm test:e2e:desktop`: all passed.
+- **e2e-flakes follow-up (PM).** Merged main (ws/e2e-flakes). No altar spec still presses F
+  then Enter (the four F sites wait on state or use `strikeToVerdict`). New `settled(page,
+  selector)` in helpers.ts: waits until the matched boxes are unchanged for 2 frames.
+  altar-labels: the 1 s wall-clock wait is gone; it waits for FUSE's arrival caption where the
+  altar has an arrival line (`machineLine(id, 'arrive')`; the final altar has none), then
+  `settled` on the audited boxes; the 200 ms after closing waits for the altar to go. Runs in
+  ~7 s, was ~20. mobile-budget:430: no wall-clock waits, no F/Enter, no finger held before a
+  drag (taps only); its frame-count waits before each `measure` are now `settled`.
+- **Gates.** Final, on the branch with main merged: `pnpm check` and `pnpm build` pass;
+  `pnpm baseline` 129 passed, twice (render noise of a few px at most, varying between runs and
+  including the untouched title; an earlier run on a3c8ee8 was 0 px everywhere);
+  `pnpm test:e2e` 116 passed, 0 failed (full-run 16/16 with its keyboard press counts);
+  `pnpm test:e2e:engine` 274 passed; `pnpm test:e2e:desktop` 7 passed. Before the SE fix, a full
+  run had caught the SE moments pair (fixed above); the full-run 13-16 and two engine gesture
+  failures in that run were load flakes that pass alone.

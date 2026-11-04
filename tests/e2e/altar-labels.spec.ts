@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { machineLine } from '../../games/last-rune/content/lines';
 import { auditAltar, playOrder } from './altar-audit';
-import { DEV_URL } from './helpers';
+import { DEV_URL, settled } from './helpers';
+
+/** What the audit measures. */
+const AUDITED =
+  '.lr-altar-need, .lr-altar-actions, .lr-altar-title, .lr-altar-tip:not([hidden]), .tc-caption:not([hidden]), .lr-altar-count, .lr-hud button';
 
 // Every altar, as a player first meets it, at the tightest layout (1280×720, 150% text): the
 // storm's "Gives" card and each machine's "Needs" card are up, no label collides with another
@@ -48,8 +53,11 @@ test('altar labels clear at 1280×720, 150% text', async ({ page }) => {
     );
     await expect(page.locator('.lr-altar')).toBeVisible();
     await page.mouse.move(2, 2);
-    // The arrival line and the new-gem card are both up a second in.
-    await page.waitForTimeout(1000);
+    // The arrival line, where the altar has one, is up (and the new-gem card, which shows from the first frame where
+    // there is one), then the audited boxes hold still for 2 frames: game time, not wall time.
+    if (machineLine(id, 'arrive'))
+      await expect(page.locator('.tc-caption:not([hidden])')).not.toHaveText('');
+    await settled(page, AUDITED);
     await expect(page.locator('.lr-altar-storm')).toBeVisible();
     await expect(page.locator('.lr-altar-need:not(.lr-altar-storm)')).not.toHaveCount(0);
     await expect(page.locator('.lr-altar-actions .lr-gold-button[data-ready]')).toHaveCount(0);
@@ -59,7 +67,7 @@ test('altar labels clear at 1280×720, 150% text', async ({ page }) => {
       // biome-ignore lint/suspicious/noExplicitAny: dev handle
       (window as any).__game.flow.closePuzzle();
     });
-    await page.waitForTimeout(200);
+    await expect(page.locator('.lr-altar')).toHaveCount(0);
   }
   expect(problems).toEqual({});
 });

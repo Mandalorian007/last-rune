@@ -167,3 +167,28 @@ export async function strikeToVerdict(page: Page): Promise<void> {
     { polling: 'raf', timeout: 30_000 },
   );
 }
+
+/**
+ * Waits until every element matching `selector` has the same box (whole CSS px) for 2
+ * frames running: a layout that has finished moving, on game frames rather than wall time.
+ */
+export async function settled(page: Page, selector: string): Promise<void> {
+  await page.waitForFunction(
+    (sel) => {
+      const w = window as unknown as { __tcSettle?: { key: string; same: number } };
+      const key = [...document.querySelectorAll(sel)]
+        .map((el) => {
+          const r = el.getBoundingClientRect();
+          return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}`;
+        })
+        .join(';');
+      const st = w.__tcSettle;
+      w.__tcSettle = { key, same: st && st.key === key ? st.same + 1 : 0 };
+      if (w.__tcSettle.same < 2) return false;
+      w.__tcSettle = undefined;
+      return true;
+    },
+    selector,
+    { polling: 'raf', timeout: 30_000 },
+  );
+}
