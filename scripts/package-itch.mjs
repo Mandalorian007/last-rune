@@ -42,6 +42,8 @@ function walk(dir) {
   const out = [];
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
+    // dist/desktop/ holds the Electron builds (`pnpm desktop:build`); never the web upload.
+    if (e.isDirectory() && dir === distDir && e.name === 'desktop') continue;
     if (e.isDirectory()) out.push(...walk(p));
     else if (e.isFile()) out.push(p);
   }
