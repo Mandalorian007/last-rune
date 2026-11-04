@@ -44,6 +44,37 @@ export const DESK_LAYOUT = {
   candle: { x: 566, y: 520, height: 176 },
 } as const;
 
+/** The quill on phones: upright enough to keep clear of the page list (design px x ≤ 498). */
+const PHONE_QUILL = { ...DESK_LAYOUT.quill, h: 330, rot: -0.08 } as const;
+
+/** The quill standing in the inkwell: its size and rotation, and its centre (design px). */
+function quillPose(phone: boolean) {
+  const q = phone ? PHONE_QUILL : DESK_LAYOUT.quill;
+  const nibX = DESK_LAYOUT.inkwell.x + 4;
+  const nibY = DESK_LAYOUT.inkwell.y - 26;
+  return { q, qx: nibX + (q.h / 2) * Math.sin(q.rot), qy: nibY - (q.h / 2) * Math.cos(q.rot) };
+}
+
+/**
+ * The quill's drawn box, axis-aligned (design px), for the e2e layout checks: the feather as
+ * desk-wgsl draws it (its vane reaches 0.26 of the sprite's width left of the shaft and curls
+ * out to the sprite's right edge; the rest of the sprite is empty), rotated.
+ */
+export function quillBox(phone: boolean): { l: number; t: number; r: number; b: number } {
+  const { q, qx, qy } = quillPose(phone);
+  const up = { x: Math.sin(q.rot), y: -Math.cos(q.rot) };
+  const right = { x: Math.cos(q.rot), y: Math.sin(q.rot) };
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (const u of [-q.w * 0.26, q.w * 0.5]) {
+    for (const v of [-q.h / 2, q.h / 2]) {
+      xs.push(qx + u * right.x + v * up.x);
+      ys.push(qy + u * right.y + v * up.y);
+    }
+  }
+  return { l: Math.min(...xs), t: Math.min(...ys), r: Math.max(...xs), b: Math.max(...ys) };
+}
+
 const LONG_TEXT = 170;
 
 /**
@@ -65,6 +96,10 @@ interface SlipView {
 export class JournalScene implements GameScene {
   readonly name = 'journal';
   private ctx!: GameCtx;
+  /** The quill's drawn box as this device draws it (design px): e2e layout checks. */
+  quillBox(): { l: number; t: number; r: number; b: number } {
+    return quillBox(!!this.ctx.viewContext.phone?.());
+  }
   private art!: DeskArt;
   private model!: JournalModel;
   private current: number | null = null;
@@ -185,7 +220,8 @@ export class JournalScene implements GameScene {
     // The stack of slips (found pages are paper; blank slots barely there). Phones list the
     // found pages as paper rows in the DOM instead (mobile-3-chrome), so none are drawn here.
     const st = L.stack;
-    const slips = this.ctx.viewContext.phone?.() ? [] : this.slips;
+    const phone = !!this.ctx.viewContext.phone?.();
+    const slips = phone ? [] : this.slips;
     for (const s of slips) {
       const x = st.x + st.w / 2 + s.pull;
       const y = s.y + st.h / 2;
@@ -220,11 +256,9 @@ export class JournalScene implements GameScene {
     // Inkwell and quill (the quill stands in the well, leaning left).
     const iw = L.inkwell;
     art.shadow(frame, iw.x + 10, iw.y + 50, iw.w * 0.9, 30, 14, 0.75);
-    const q = L.quill;
-    const nibX = iw.x + 4;
-    const nibY = iw.y - 26;
-    const qx = nibX + (q.h / 2) * Math.sin(q.rot);
-    const qy = nibY - (q.h / 2) * Math.cos(q.rot);
+    // Phones (chrome-polish-3): the quill stands straighter and shorter, clear of the page
+    // list beside it.
+    const { q, qx, qy } = quillPose(phone);
     art.prop(frame, PROP.inkwell, iw.x, iw.y, iw.w, iw.h, 0, 1);
     art.prop(frame, PROP.quill, qx, qy, q.w, q.h, q.rot, 5);
     // The candle flame draws last so it sits above everything.

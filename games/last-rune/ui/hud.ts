@@ -327,11 +327,53 @@ export class Hud {
         el.style.setProperty('--lr-door-max', `${Math.round(d.maxWidth)}px`);
         if (d.status === 'locked') el.append(lockIcon(doc));
         if (d.status === 'solved') el.append(h('span', { class: 'lr-door-tick' }, '\u2713'));
-        el.append(h('span', { class: 'lr-door-name' }, d.name));
+        // A short last word (Conveyor A, Cell II, Unit 4) never stands alone on a line: it
+        // keeps to the word before it (a nowrap pair, so the text itself is unchanged).
+        const tail = /^(.*?)(\S+ \S{1,2})$/.exec(d.name);
+        el.append(
+          h(
+            'span',
+            { class: 'lr-door-name' },
+            tail ? tail[1] : d.name,
+            tail ? h('span', { style: { whiteSpace: 'nowrap' } }, tail[2]) : null,
+          ),
+        );
         return el;
       }),
     );
+    this.spreadPlates(list);
     this.placeTag();
+  }
+
+  /**
+   * Neighbours in a row that would touch (a plate is never narrower than its longest word) step
+   * apart, each by half the overlap, so every plate keeps a clear gap and stays under its door.
+   */
+  private spreadPlates(list: readonly DoorPlate[]): void {
+    const els = [...this.doorLayer.querySelectorAll<HTMLElement>('.lr-door')];
+    const items = els.map((el, i) => ({ el, x: list[i]!.x, y: list[i]!.y, w: el.offsetWidth }));
+    const rows = new Map<number, typeof items>();
+    for (const it of items) {
+      const k = Math.round(it.y / 8);
+      const row = rows.get(k) ?? [];
+      row.push(it);
+      rows.set(k, row);
+    }
+    const GAP = 14;
+    for (const row of rows.values()) {
+      row.sort((a, b) => a.x - b.x);
+      for (let pass = 0; pass < 4; pass++) {
+        for (let i = 1; i < row.length; i++) {
+          const a = row[i - 1]!;
+          const b = row[i]!;
+          const over = a.x + a.w / 2 + GAP - (b.x - b.w / 2);
+          if (over <= 0) continue;
+          a.x -= over / 2;
+          b.x += over / 2;
+        }
+      }
+      for (const it of row) it.el.style.left = `${Math.round(it.x)}px`;
+    }
   }
 
   set visible(v: boolean) {

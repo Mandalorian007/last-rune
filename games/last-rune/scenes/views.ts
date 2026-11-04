@@ -86,7 +86,18 @@ export type HallViewFactory = (vc: ViewContext) => HallView;
 export interface TitleViewFrame extends ViewFrame {
   /** True once the player has a save (Continue shown). */
   readonly returning: boolean;
+  /**
+   * An upright phone (chrome-polish-3): the picture fills its frame's height and shows only the
+   * design's `TITLE_UPRIGHT` slice, so the view draws the name smaller, over that slice.
+   */
+  readonly upright?: boolean;
 }
+
+/**
+ * The title's slice on an upright phone (a fill band's side crop, `FillWidthOptions`): at least
+ * this much of the design's width, centred on the storm cell and FUSE's strolls.
+ */
+export const TITLE_UPRIGHT = { minVisibleWidth: 900, focusX: 560 } as const;
 
 export interface TitleView {
   /** The view draws the game's name itself; the scene keeps its DOM heading for screen readers only. */

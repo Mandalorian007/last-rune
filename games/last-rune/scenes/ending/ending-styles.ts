@@ -40,7 +40,7 @@ const CSS = /* css */ `
   transform: rotate(-1.2deg) translateY(10px); opacity: 0; transition: opacity 1200ms ease, transform 1200ms ease;
 }
 .tc-overlay .lr-end-safety[data-in] { opacity: 1; transform: rotate(-1.2deg); }
-.tc-overlay .lr-end-safety small { display: block; font-family: var(--tc-font-ui); font-size: 18px; letter-spacing: 3px; text-transform: uppercase; color: #7a5a30; margin-bottom: 6px; }
+.tc-overlay .lr-end-safety small { display: block; font-family: var(--tc-font-display); font-size: 18px; letter-spacing: 3px; text-transform: uppercase; color: #7a5a30; margin-bottom: 6px; }
 .tc-overlay .lr-end-credits { position: absolute; z-index: 0; left: 0; right: 0; top: 650px; text-align: center; color: #fff4d8; text-shadow: 0 1px 3px #2a1400, 0 2px 14px #2a1400aa; }
 /* A soft dark backing so the credits read over the gold flood (fades in with the credits). */
 .tc-overlay .lr-end-credits::before {
@@ -52,7 +52,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-end-credits div { opacity: 0; transform: translateY(14px); transition: opacity 1000ms ease, transform 1000ms ease; margin-bottom: 26px; }
 .tc-overlay .lr-end-credits div[data-in] { opacity: 1; transform: none; }
 .tc-overlay .lr-end-credits div[data-out] { opacity: 0; transform: translateY(-14px); }
-.tc-overlay .lr-end-credits small { display: block; font-family: var(--tc-font-ui); font-size: 20px; letter-spacing: 4px; text-transform: uppercase; color: #ffe2a0; opacity: 0.85; }
+.tc-overlay .lr-end-credits small { display: block; font-family: var(--tc-font-display); font-size: 20px; letter-spacing: 4px; text-transform: uppercase; color: #ffe2a0; opacity: 0.85; }
 .tc-overlay .lr-end-credits span { font-family: var(--tc-font-display); font-size: 40px; }
 
 /* ── End card ──────────────────────────────────────────────────────────── */

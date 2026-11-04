@@ -40,7 +40,7 @@ export class TitleScene implements GameScene {
   private chatter = new ChatterClock();
   /** Phones: the menu, links and Full screen in their regions (ui/chrome.ts). */
   private unplace: () => void = () => {};
-  private fullscreen: { element: HTMLElement; destroy(): void } | null = null;
+  private fullscreen: { element: HTMLElement; possible: boolean; destroy(): void } | null = null;
 
   enter(ctx: GameCtx): void {
     this.ctx = ctx;
@@ -112,6 +112,7 @@ export class TitleScene implements GameScene {
     reduceFlashes: false,
     speaking: false,
     returning: false,
+    upright: false,
   };
 
   private frameState(): TitleViewFrame {
@@ -121,7 +122,19 @@ export class TitleScene implements GameScene {
     s.reduceFlashes = this.ctx.settings.reduceFlashes;
     s.speaking = this.ctx.fuse.speaking;
     s.returning = this.returning;
+    s.upright = this.upright();
     return s;
+  }
+
+  /** An upright phone: the picture is a side-cropped slice (`TITLE_UPRIGHT`, ui/chrome.ts). */
+  private upright(): boolean {
+    const chrome = this.ctx.chrome;
+    const up = !!chrome?.active && chrome.layout.formFactor === 'phone-portrait';
+    const title = this.dom?.querySelector<HTMLElement>('.lr-title');
+    if (title && title.hasAttribute('data-upright') !== up) {
+      title.toggleAttribute('data-upright', up);
+    }
+    return up;
   }
 
   /** One idle line, from the bag, with the card kept clear of the menu. */
@@ -181,7 +194,8 @@ export class TitleScene implements GameScene {
     const q = (sel: string) => dom.querySelector<HTMLElement>(sel);
     const widgets = [
       {
-        el: this.fullscreen.element,
+        // Never placed where it can't work, so its row collapses (chrome-polish-3).
+        el: this.fullscreen.possible ? this.fullscreen.element : null,
         place: { default: 'top' as const },
         order: 0,
         id: 'lr-fullscreen',

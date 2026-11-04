@@ -125,6 +125,11 @@ ${C} .lr-codex-page h3 { font-size: 18px; padding-bottom: 3px; padding-right: 40
 ${C} .lr-codex-page .lr-status, ${C} .lr-codex-page .lr-new { font-size: 11px; padding: 0 6px; letter-spacing: 1px; vertical-align: 0; margin: 0; }
 ${C} .lr-codex-status { font-size: 12px; margin: 3px 0 6px; }
 ${C} .lr-plate { width: 88px; height: 88px; }
+/* chrome-polish-3: the charge chips and ✕ marks sized to the small plate, so none is cropped
+   by its edge. */
+${C} .lr-plate-chip { font-size: 12px; line-height: 1.1; border-width: 1.5px; padding: 0 0.3em; box-shadow: 0 0 5px rgb(80 180 255 / 0.45); }
+${C} .lr-plate-nogo { width: 15px; height: 15px; border-width: 1.5px; }
+${C} .lr-plate-nogo::before, ${C} .lr-plate-nogo::after { width: 8px; height: 2px; }
 ${C} .lr-niche { width: 84px; height: 84px; }
 ${C} .lr-margin {
   align-self: center; padding: 2px 0 2px 8px; font-size: 13px; line-height: 1.35;
@@ -154,7 +159,7 @@ ${C} .lr-panel-x:active { background: rgb(232 192 106 / 0.3); }
    so nothing is ever cut off; every row is a thumb tall; choices are segmented toggles. */
 ${C} .tc-panel.lr-settings-host {
   display: flex; flex-direction: column; overflow: hidden; width: 100%; max-height: 100%;
-  padding: 6px 6px 0 14px; box-sizing: border-box;
+  padding: 6px 6px 10px 14px; box-sizing: border-box;
 }
 ${C} .lr-settings-host .tc-panel-title { flex: none; margin: 0; font-size: 16px; line-height: 36px; }
 ${C} .lr-settings { width: auto; flex: 1 1 auto; min-height: 0; gap: 0; outline: none; }
@@ -243,11 +248,15 @@ ${C} .lr-codex-page[data-more] { mask-image: linear-gradient(#000 calc(100% - 20
 ${C} .lr-hud .lr-hud-menu { position: relative; flex-direction: column; gap: 0; height: 44px; }
 ${C} .lr-hud .lr-hud-menu > span { font-size: 18px; line-height: 1; }
 ${C} .lr-hud-menu-label { display: block; font: 600 12px/1 var(--tc-font-display, serif); letter-spacing: 0.3px; margin-top: 1px; }
+/* chrome-polish-3: the game's toast look (dark card, gold rule, cream serif), not a salmon
+   sticker; under Menu, flush with its right edge, so it stays inside the rail and the screen. */
 ${C} .lr-hud-menu-new {
-  position: absolute; top: calc(100% + 3px); right: 0; width: 44px; box-sizing: border-box;
-  padding: 2px 0; border-radius: 6px; text-align: center;
-  font: italic 700 12px/1.05 var(--tc-font-body, serif); color: #2a1206; background: #ffb27a;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.7);
+  position: absolute; top: calc(100% + 4px); left: auto; right: 0; transform: none;
+  width: max-content; min-width: 100%; box-sizing: border-box; padding: 2px 1px 3px; border-radius: 6px;
+  text-align: center; white-space: nowrap; letter-spacing: 0;
+  font: 400 12px/1.05 var(--tc-font-body, serif); color: #f4e6c4; background: rgb(20 14 9 / 0.94);
+  border: 1px solid rgb(232 192 106 / 0.45); border-top: 2px solid #e8c06a;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.7);
 }
 ${C} .lr-hud-menu-new[hidden], ${C} .lr-hud[data-open] .lr-hud-menu-new { display: none; }
 /* FUSE's card carries his name (his portrait is hidden on phones), except at an altar, where
@@ -290,13 +299,6 @@ ${C} .lr-codex-status { font-size: 12px; }
 ${C} .lr-codex-page .lr-status, ${C} .lr-codex-page .lr-new, ${C} .lr-margin b {
   font-size: 12px; letter-spacing: 0.6px;
 }
-/* Title: FUSE's card keeps off the logo; its top corners sit under the subtitle
-   (title-scene sets --lr-title-cap-top). Ko-fi and Copy link sit on a dark band of their own. */
-${C} .lr-title-links .tc-link-row {
-  padding: 4px; border-radius: 24px; background: rgb(8 6 4 / 0.86);
-  box-shadow: 0 0 10px 4px rgb(8 6 4 / 0.7);
-}
-${C} .lr-title-links :is(.lr-title-coffee, .tc-link-copy) { background: rgb(28 18 12 / 0.95); }
 
 /* Settings: two tabs in the title row ("Sound & Comfort", "Graphics & Save"), each a whole
    view; no "Graphics & Save ▾" jump. */
@@ -348,19 +350,16 @@ ${C} .lr-hud[data-open]::before {
 ${C} .lr-hud-note { font-size: 12px; line-height: 1.15; }
 /* New journal pages: one badge on the Menu button's lower edge (no separate dot). */
 ${C} .lr-hud .lr-hud-menu[data-unread]::after { display: none; }
-${C} .lr-hud-menu-new {
-  top: calc(100% + 4px); left: auto; right: -4px; width: auto; min-width: calc(100% + 8px);
-  white-space: nowrap; padding: 2px 1px; border-radius: 7px; border: 1px solid #5a2a0c;
-  font: 700 12px/1.1 var(--tc-font-body, serif); font-style: normal; letter-spacing: -0.2px;
-}
-/* Title: Play and Settings lead; the coffee and Copy link are quiet text links (still a
-   36 px tap each). */
-${C} .lr-title-links .tc-link-row { padding: 0 2px; background: rgb(8 6 4 / 0.55); box-shadow: 0 0 8px 3px rgb(8 6 4 / 0.45); }
+/* Title: Play and Settings lead; the coffee and Copy link are two small dark pills of their own
+   (chrome-polish-3: no shared band, whose rounded end read as a stray dark circle, and solid
+   enough that the candle glow behind them never washes them out). Still a 36 px tap each. */
+${C} .lr-title-links .tc-link-row { padding: 0; background: none; box-shadow: none; border-radius: 0; }
 ${C} .lr-title-links :is(.lr-title-coffee, .tc-link-copy) {
-  min-height: 36px; padding: 0 8px; font-size: 12px; font-weight: 400;
-  color: #cdbd9a; background: transparent; border-color: transparent; box-shadow: none;
+  min-height: 36px; padding: 0 12px; font-size: 12.5px; font-weight: 400; border-radius: 18px;
+  color: #f4e6c4; background: rgb(14 9 6 / 0.9); border: 1px solid rgb(232 192 106 / 0.45);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.6);
 }
-${C} .lr-title-links :is(.lr-title-coffee, .tc-link-copy):hover { color: #f4e6c4; text-decoration: underline; }
+${C} .lr-title-links :is(.lr-title-coffee, .tc-link-copy):hover { color: #fff3d6; border-color: rgb(232 192 106 / 0.8); }
 /* Settings: each segment a 36 px tap. */
 ${C} .lr-seg button { min-height: 36px; }
 /* Every button and link keeps a 44 px hit area (an invisible ::before; see phone-styles). */
@@ -407,6 +406,9 @@ ${CL} .tc-region[data-region="bottom"] :is(.lr-title-menu, .tc-link.lr-title-lin
 
 /* ── FUSE's caption, docked in its lane: his name leads the line. ─────────── */
 ${C} .tc-caption[data-docked] { box-sizing: border-box; }
+/* Title, landscape (chrome-polish-3): the lane runs right of the storm cell (design x ≤ 740 of
+   1920, under 40% of the width) and FUSE's strolls, so his line never covers either. */
+${CL}:has(.lr-title-menu) .tc-caption[data-docked] { width: auto; margin-left: 41%; }
 
 /* ── The journal's ✕ sits at the top of the right rail, like the ☰. ─────────── */
 ${C} .lr-j-x { position: relative; inset: auto; display: grid; background: rgb(255 255 255 / 0.1); border: 1px solid rgb(232 192 106 / 0.5); border-radius: 50%; }
@@ -430,7 +432,7 @@ ${C}:has(.tc-panel-host[data-modal="true"]) .lr-hud { visibility: hidden; }
 
 /* Settings on an upright phone: the tabs get their own row under the title, and each tab
    becomes one column with each choice under its label. */
-${CP} .lr-settings-host { padding: 6px 6px 0 12px; }
+${CP} .lr-settings-host { padding: 6px 6px 10px 12px; }
 ${CP} .lr-settings-tabs { position: static; transform: none; align-self: center; margin: 2px 0 6px; }
 ${CP} .lr-settings-tab { padding: 0 12px; }
 ${CP} .lr-settings-cols { grid-template-columns: 1fr; }
