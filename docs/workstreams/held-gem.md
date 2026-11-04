@@ -40,3 +40,11 @@ Read `glyph-truth-2.md`, `glyph-truth-3.md` and `dense-board-3.md` (logs) first.
     - codex-diagram.test: arrowheads = outs, ports = ins.
     - `amp-idle.test.ts` is new.
   - **For the PM / teach-7.** The Split card copy "Charge in at the plain end" no longer matches the glyph, which now has a round port on its input side. Suggest "Charge in at the round port".
+  - **Merged main (57f16cf, teach-7 + polish-9).** It merged cleanly. The new Gate copy ("Both ports, same strike: the sum leaves by the arrow." / "Ports: ...") matches the Gate glyph: 2 round ports and 1 out-arrow. The Split copy in `content/codex.ts` (rule and chip) still says "plain end", which is still open for teach-7. The loupe ghost still works with polish-9's `spare`: the SE aim shots for lift-shaft and the-last-rune show the ghost in the loupe. A straight gem's ghost lies along the socket's run (`heldFace`), as it lands.
+  - **Gates (after the merge).**
+    - `pnpm check` is green (vitest 607 passed, 2 skipped), and so are `check:boundaries` and `build`.
+    - Targeted e2e is 42/42: held-gem, glyph-truth 1/2/3, altar-column, dense-board and gauge-needle.
+    - The full `pnpm test:e2e` is 195 passed, 20 skipped, 0 failed.
+    - `SHOTS=held-gem` is 17/17.
+    - Flakes before the merge, both passed alone with `--workers=1` or on rerun: `dense-board.spec.ts › se › dense boards se`, and `shots.spec.ts › android › ending android` (a trace ENOENT under a concurrent run).
+  - **Baseline (no update run).** 125 of 129 differ, all pixel diffs between 0.11% and 2.6%. That is expected: the wall stone (no tool marks, bites kept to the block edges) sits behind every screen, which covers title, hall, settings, codex and ending. The altars also change through flush blocked cells, the port and arrow glyphs and the Codex ports. The largest diffs are crane and relay-tower at 2.6%. The PM should regenerate after review.
