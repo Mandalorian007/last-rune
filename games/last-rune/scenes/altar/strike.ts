@@ -438,8 +438,16 @@ export function failHead(m: MachineResult, outcome: 'over' | 'under'): string {
 }
 
 /**
+ * teach-6: a multi-strike gauge's second line, and the verdict's: "in either strike" (blind
+ * review 8: "in one strike" read as every strike, at least one, or never over).
+ */
+export function needNote(pulses: number): string {
+  return pulses === 2 ? 'in either strike' : 'in any one strike';
+}
+
+/**
  * Phones, multi-strike altars: what each strike gave the machine the verdict is about, and
- * what it needs: "Got 0, then 8; needs 20 in one strike." Short enough that the verdict's Try
+ * what it needs: "Got 0, then 8; needs 20 in either strike." Short enough that the verdict's Try
  * line still fits an SE's lane under it (port-altar-3). Empty on a one-strike altar (the
  * gauge's "got" says it all).
  */
@@ -447,7 +455,7 @@ export function strikesLine(m: MachineResult, pulses: number): string {
   if (pulses < 2 || m.readings.length === 0) return '';
   const r = m.readings;
   const got = r.length > 1 ? `${r.slice(0, -1).join(', ')}, then ${r[r.length - 1]}` : `${r[0]}`;
-  return `Got ${got}; needs ${m.need} in one strike.`;
+  return `Got ${got}; needs ${m.need} ${needNote(pulses)}.`;
 }
 
 /**

@@ -74,6 +74,15 @@ export const circuitMethods = {
    * says what it means (moments.ts `lampLine`): the lit dot on the first altar until its first
    * strike, the red dot while the plan warns on the first Capacitor altar.
    */
+  /** teach-6: the dot legend's "Got it": it retires now, once per game, as a Strike would. */
+  retireDotLegend(this: AltarScene): void {
+    if (!this.lampTeach.reach) return;
+    this.lampTeach.reach = false;
+    this.ctx.flow.tellDot();
+    this.updateLampLine();
+    this.arrangeColumn();
+  },
+
   updateLampLine(this: AltarScene): void {
     if (!this.view.layout.phone) return;
     const t = this.lampTeach;

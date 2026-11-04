@@ -81,28 +81,33 @@ export function straightLine(kind: GemKind | undefined | null): string | null {
 
 /**
  * teach-4: what the dot on a "Needs" pill means, said once where it first changes. The dot
- * (altar-readout.ts `setNeed`) is an empty ring until the route as built reaches that gauge
- * (reach.ts), then lit cyan; it never says how much. It turns red when a Capacitor's plan lets
- * out more than that gauge needs (circuit-model.ts `planOver`): Strike would trip it.
+ * (altar-readout.ts `setNeed`) shows once the route as built reaches that gauge (reach.ts), lit
+ * cyan; it never says how much. It turns red when a Capacitor's plan lets out more than that
+ * gauge needs (circuit-model.ts `planOver`): Strike would trip it. teach-6: before the route
+ * reaches a gauge it shows no mark at all (blind review 8 read the hollow ring as "0").
  */
 export type LampLine = 'reach' | 'over';
 /**
  * teach-5: `reach` is the dot's legend, shown once per game the first time a dot lights
  * (`DOT_LEGEND` draws it, a real dot on each row); `over` is the short reminder on the first
- * Capacitor altar, where the red dot first shows.
+ * Capacitor altar, where the red dot first shows. teach-6: the legend comes up even with a gem
+ * in hand (it takes the gem card's place) and has its own "Got it" (altar-column.ts).
  */
 export const LAMP_LINE: Record<LampLine, string> = {
   reach:
-    'The dot on a gauge: hollow, no charge reaches it yet; lit, charge reaches it; red, it will trip.',
+    'The dot on a gauge: no dot, no charge yet; lit, charge reaches it; red, Strike would trip it.',
   over: 'Red dot: this gauge will trip.',
 };
-/** The legend's rows, each led by the dot as the gauge draws it. Never an amount (D-043). */
+/**
+ * The legend's rows, each led by the dot as the gauge draws it ('off' has none, as on the
+ * gauge). Never an amount and never "enough" (D-043): a lit dot means reach, not a promise.
+ */
 export const DOT_LEGEND_HEAD = 'The dot on a gauge:';
 export const DOT_LEGEND: readonly { readonly look: 'off' | 'on' | 'red'; readonly text: string }[] =
   [
-    { look: 'off', text: 'no charge reaches it yet' },
-    { look: 'on', text: 'charge reaches it' },
-    { look: 'red', text: 'it will trip' },
+    { look: 'off', text: 'No dot: no charge yet' },
+    { look: 'on', text: 'Lit: charge reaches it' },
+    { look: 'red', text: 'Red: Strike would trip it' },
   ];
 
 /**

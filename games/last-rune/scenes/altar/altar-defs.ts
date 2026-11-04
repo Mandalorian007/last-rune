@@ -131,21 +131,39 @@ export const FIRST_MISS_LINE = 'A miss costs nothing. Strike as often as you lik
  * teach-4: the first altar that strikes more than once explains Strike's count and "in one
  * strike" before its pieces (blind review 6: players learned multi-strike by failing).
  * teach-5: under "Strike ×2", in plain words: one tap, both strikes, one after the other; a
- * miss resets for free.
+ * miss resets for free. teach-6: it names the marks beside "Strike ×2" (blind review 8 read
+ * them as "00"); the card's title shows the same marks.
  */
 export function strikesRule(pulses: number): string {
   const n = pulses === 2 ? 'two' : String(pulses);
-  return `One tap sends ${n} strikes, one after the other. A miss resets for free.`;
+  return `One tap sends ${n} strikes, each lighting a mark. A miss resets for free.`;
 }
 /**
- * teach-5: the first Amplify card. Its picture shows 4 in, 8 out; the line under it shows what
- * "once per path" means, with the picture's numbers (the codex's "Doubled already: 8 stays 8").
+ * teach-6: what "in either strike" on a gauge means, on its own page after the strikes page
+ * (blind review 8: "in one strike" read as every strike, at least one, or never over). The rule
+ * as the sim reads it: a gauge wakes on the first strike that brings exactly its number; a
+ * strike that brings more before then trips it. Words only, never a live number (D-043).
+ */
+export const EITHER_NAME = 'Either strike';
+export function eitherRule(pulses: number): string {
+  const of = pulses === 2 ? 'one of the two strikes' : 'any one strike';
+  return `A gauge wakes when ${of} brings exactly its number. A strike that brings more trips it.`;
+}
+/**
+ * teach-5: the first Amplify card. Its picture shows 4 in, 8 out; the line under it says what
+ * "once per path" means. teach-6: in words ("8 → 8" read as a typo).
  */
 export const AMPLIFY_ONCE = 'Doubles the charge, once per path.';
-export const AMPLIFY_AGAIN = 'A second Amplify on the same path: 8 → 8.';
-/** teach-4: the Capacitor's two strikes, with this altar's charge (before FUSE's joke). */
+export const AMPLIFY_AGAIN = "A second Amplify doesn't double again.";
+/**
+ * teach-4: the Capacitor's two strikes, with this altar's charge (before FUSE's joke).
+ * teach-6: each line says the whole strike (blind review 8: "Strike 1: stores 8 →" dangled).
+ */
 export function capacitorStrip(charge: number): [string, string] {
-  return [`Strike 1: stores ${charge} →`, `Strike 2: lets out ${charge} + ${charge}`];
+  return [
+    `Strike 1: keeps ${charge}, sends nothing.`,
+    `Strike 2: sends ${charge} + ${charge} = ${charge * 2}.`,
+  ];
 }
 
 export const SLOT_ACTIONS = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6'] as const;

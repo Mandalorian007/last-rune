@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { CODEX } from '../../content/codex';
 import { puzzleFor } from '../../content/puzzles';
 import { MACHINE_IDS } from '../../rules/types';
-import { capacitorStrip, GOAL_RULE, strikesRule } from './altar-defs';
+import { AMPLIFY_AGAIN, capacitorStrip, eitherRule, GOAL_RULE, strikesRule } from './altar-defs';
 import { DOT_LEGEND, HINT_SLOTS, LAMP_LINE, lampLine, pickHint, straightLine } from './moments';
-import { firstMultiStrike, hasPicture, newGems, teachPages } from './teach';
+import { firstMultiStrike, gateSides, hasPicture, newGems, teachPages } from './teach';
 
 const solvedBefore = (id: (typeof MACHINE_IDS)[number]) =>
   MACHINE_IDS.slice(0, MACHINE_IDS.indexOf(id)).map((m) => puzzleFor(m));
@@ -25,10 +25,19 @@ describe('arrival card pages (teach-4)', () => {
       first: false,
       firstMulti: true,
     });
-    expect(pages.map((p) => p.kind)).toEqual(['strikes', 'gem']);
+    // teach-6: "in either strike" gets its own page after the strikes page.
+    expect(pages.map((p) => p.kind)).toEqual(['strikes', 'either', 'gem']);
     // teach-5: one tap, two strikes, one after the other; a miss resets for free.
-    expect(strikesRule(2)).toMatch(/One tap sends two strikes, one after the other/);
+    expect(strikesRule(2)).toMatch(/One tap sends two strikes/);
     expect(strikesRule(2)).toMatch(/miss resets for free/);
+    // teach-6: it names the marks beside "Strike ×2".
+    expect(strikesRule(2)).toMatch(/each lighting a mark/);
+    // teach-6: the rule as the sim reads it (rules/sim.ts): exactly, in one of the strikes;
+    // more trips it. Words only, never a number (D-043).
+    expect(eitherRule(2)).toBe(
+      'A gauge wakes when one of the two strikes brings exactly its number. A strike that brings more trips it.',
+    );
+    expect(eitherRule(2)).not.toMatch(/\d/);
   });
 
   it('pictures Gate, Split, Amplify and Capacitor where each is first met, fixed on the board', () => {
@@ -47,9 +56,28 @@ describe('arrival card pages (teach-4)', () => {
     expect(GOAL_RULE).toMatch(/Strike any time/);
     expect(GOAL_RULE).toMatch(/a miss costs nothing/);
     expect(GOAL_RULE).toMatch(/exactly/);
-    expect(capacitorStrip(8)).toEqual(['Strike 1: stores 8 →', 'Strike 2: lets out 8 + 8']);
+    // teach-6: each line says its whole strike (blind review 8: "stores 8 →" dangled).
+    expect(capacitorStrip(8)).toEqual([
+      'Strike 1: keeps 8, sends nothing.',
+      'Strike 2: sends 8 + 8 = 16.',
+    ]);
+    // teach-6: Amplify's second line in words ("8 → 8" read as a typo).
+    expect(AMPLIFY_AGAIN).toBe("A second Amplify doesn't double again.");
     // The strip agrees with the codex: it holds the first charge and lets out both.
     expect(CODEX.capacitor.chip).toMatch(/lets out both/);
+  });
+
+  it("names a fixed Gate's sides as its picture shows them (teach-6)", () => {
+    // rot 0: in from the west and east, out north, charge from the south is lost (rules.md).
+    expect(gateSides(0)).toBe(
+      'Feed it from left and right in the same strike; the sum leaves at the top. From below: lost.',
+    );
+    // Relay Tower's Gate: turned once, in from top and bottom, out right, lost from the left.
+    expect(gateSides(1)).toBe(
+      'Feed it from above and below in the same strike; the sum leaves to the right. From the left: lost.',
+    );
+    expect(gateSides(2)).toMatch(/at the bottom\. From above: lost\.$/);
+    expect(gateSides(3)).toMatch(/to the left\. From the right: lost\.$/);
   });
 });
 
@@ -66,9 +94,12 @@ describe('gauge dot and Channel lines (teach-4)', () => {
     expect(LAMP_LINE.reach).not.toMatch(/\d/);
     expect(LAMP_LINE.over).toMatch(/Red dot/);
     expect(LAMP_LINE.over).toMatch(/trip/);
-    // teach-5: the legend names all three looks, hollow, lit and red, and never an amount.
+    // teach-5: the legend names all three looks and never an amount. teach-6: none is "no
+    // dot" (the hollow ring read as 0), and lit never promises enough (D-043).
     expect(DOT_LEGEND.map((r) => r.look)).toEqual(['off', 'on', 'red']);
-    for (const r of DOT_LEGEND) expect(r.text).not.toMatch(/\d/);
+    for (const r of DOT_LEGEND) expect(r.text).not.toMatch(/\d|enough|exact|hollow|ring/i);
+    expect(DOT_LEGEND[0]!.text).toMatch(/^No dot/);
+    expect(LAMP_LINE.reach).not.toMatch(/hollow/);
   });
 
   it('gives the lamp line a slot below "Holding" and above the how-to', () => {

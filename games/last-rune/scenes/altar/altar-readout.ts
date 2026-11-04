@@ -11,7 +11,7 @@ import type { AltarScene } from './altar-scene';
 import { type CapBeat, capBeatText, planOver } from './circuit-model';
 import { cellCenter } from './layout';
 import { keepTogether } from './nowrap';
-import { strikeLabel } from './strike';
+import { needNote, strikeLabel } from './strike';
 
 export const readoutMethods = {
   /**
@@ -309,12 +309,14 @@ export const readoutMethods = {
         : null;
     this.lampEls[i] = lamp;
     el.toggleAttribute('data-lamp', !!lamp);
+    el.toggleAttribute('data-multi', this.puzzle.pulses > 1);
     const kids: (HTMLElement | string)[] = [
       h('span', { class: 'lr-need-row' }, lamp, 'Needs ', h('b', null, String(need))),
     ];
     // Multi-strike: each strike is read on its own; the strikes never add up at the machine.
+    // teach-6: "in either strike" (one of them, exactly; the arrival card says more trips it).
     if (got === null && this.puzzle.pulses > 1)
-      kids.push(h('span', { class: 'lr-need-note' }, 'in\u00a0one\u00a0strike'));
+      kids.push(h('span', { class: 'lr-need-note' }, keepTogether(needNote(this.puzzle.pulses))));
     if (got !== null) {
       kids.push(h('span', { class: 'lr-need-got' }, 'got ', h('b', null, String(got))));
       const rs = this.strikeReadings[i] ?? [];

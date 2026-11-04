@@ -69,7 +69,7 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
   await expect(page.locator('.lr-altar-storm .lr-storm-strikes')).toHaveText('2 strikes');
   await expect(page.locator('.lr-altar-storm .lr-strike-pips i')).toHaveCount(2);
   await expect(page.locator('.lr-altar-actions .lr-strike-pips i')).toHaveCount(2);
-  await expect(page.locator('.lr-altar-need').first()).toContainText('in one strike');
+  await expect(page.locator('.lr-altar-need').first()).toContainText('in either strike');
   // The plan read-out at the ice: what it keeps, then what it lets out.
   const cap = page.locator('.lr-altar-cap');
   await expect(cap).toHaveCount(1);

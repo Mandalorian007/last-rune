@@ -12,7 +12,7 @@
  */
 import { gemNudge } from '../../content/lines';
 import { isRotational, type PuzzleDef } from '../../rules';
-import type { Cell, GemKind } from '../../rules/types';
+import type { Cell, Dir, GemKind } from '../../rules/types';
 
 export interface NewGems {
   /** New kinds that sit fixed on this altar, with the first such socket. */
@@ -96,6 +96,7 @@ export type TeachPage =
   | { kind: 'gem'; gem: GemKind; how: 'fixed' | 'tray' | 'turns' }
   | { kind: 'goal' }
   | { kind: 'strikes' }
+  | { kind: 'either' }
   | { kind: 'ring' };
 
 /** The phone arrival card's pages, in order: the goal, the strikes, each new piece, the ring. */
@@ -105,7 +106,8 @@ export function teachPages(
 ): TeachPage[] {
   return [
     ...(at.first ? [{ kind: 'goal' } as const] : []),
-    ...(at.firstMulti ? [{ kind: 'strikes' } as const] : []),
+    // teach-6: what "in either strike" on the gauges means gets a page of its own.
+    ...(at.firstMulti ? [{ kind: 'strikes' } as const, { kind: 'either' } as const] : []),
     ...rows.map((r) => ({ kind: 'gem' as const, gem: r.gem, how: r.how })),
     ...(at.first ? [{ kind: 'ring' } as const] : []),
   ];
@@ -120,7 +122,7 @@ export function firstMultiStrike(p: PuzzleDef, solved: readonly PuzzleDef[]): bo
  * Gems whose first card carries a picture of the charge going in and out (teach-4): the ones a
  * sentence alone did not teach (blind review 6), on the page where each is first met, fixed on
  * the board. Later pages (it turns, it is in the tray) are short lanes with no room and no need.
- * teach-5: Amplify too (4 in → 8 out, then "a second Amplify on the same path: 8 → 8").
+ * teach-5: Amplify too (4 in → 8 out, then "A second Amplify doesn't double again.").
  */
 export const PICTURED: ReadonlySet<GemKind> = new Set<GemKind>([
   'gate',
@@ -128,6 +130,29 @@ export const PICTURED: ReadonlySet<GemKind> = new Set<GemKind>([
   'amplify',
   'capacitor',
 ]);
+
+const TURN: readonly Dir[] = ['N', 'E', 'S', 'W'];
+const FROM: Record<Dir, string> = { N: 'above', E: 'the right', S: 'below', W: 'the left' };
+const OUT: Record<Dir, string> = {
+  N: 'at the top',
+  E: 'to the right',
+  S: 'at the bottom',
+  W: 'to the left',
+};
+
+/**
+ * teach-6: a fixed Gate's rule with its sides named as its picture shows them (rules.md: rot 0
+ * takes charge from the west and east and sends the sum north; charge from the south is lost).
+ * Turned once: "Feed it from above and below in the same strike; the sum leaves to the right.
+ * From the left: lost."
+ */
+export function gateSides(rot: number): string {
+  const side = (d: Dir) => TURN[(((TURN.indexOf(d) + rot) % 4) + 4) % 4]!;
+  const out = side('N');
+  const ins = out === 'N' || out === 'S' ? 'left and right' : 'above and below';
+  const back = FROM[side('S')];
+  return `Feed it from ${ins} in the same strike; the sum leaves ${OUT[out]}. From ${back}: lost.`;
+}
 
 export function hasPicture(page: TeachPage): boolean {
   return page.kind === 'gem' && page.how === 'fixed' && PICTURED.has(page.gem);

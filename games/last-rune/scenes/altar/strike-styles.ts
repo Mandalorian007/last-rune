@@ -18,13 +18,14 @@ export const STRIKE_CSS = /* css */ `
 /* mobile-7-strike ─ Strike and the verdict at a glance (D-040 addendum 5) ─────────────── */
 /* Strike itself stands at the foot of the right rail on the chrome (altar-chrome.ts). */
 
-/* The reach lamp: dark and hollow until the charge path reaches the gauge, then lit cyan, the
-   colour of the route. */
+/* The reach lamp: lit cyan, the colour of the route, once the charge path reaches the gauge.
+   teach-6: no mark at all before then (blind review 8 read the hollow ring as a zero). */
 ${A} .lr-need-lamp {
   display: inline-block; flex: none; width: ${cpx(10)}; height: ${cpx(10)}; margin: 0 ${cpx(5)} 0 0;
   border-radius: 50%; vertical-align: 0.05em; background: #1b1915; box-shadow: inset 0 0 0 ${cpx(1.5)} #8f826b;
   transition: background 200ms, box-shadow 200ms;
 }
+${A} .lr-altar-need .lr-need-lamp:not([data-on]) { display: none; }
 ${A} .lr-need-lamp[data-on] {
   background: radial-gradient(circle at 40% 35%, #effdff 0 25%, #5fe6ff 60%, #1fb5e0);
   box-shadow: 0 0 0 1px #d6fbff, 0 0 ${cpx(7)} ${cpx(2)} rgba(63,224,255,0.85);
@@ -39,10 +40,13 @@ ${A} .lr-altar-need[data-lamp] .lr-need-row { display: inline-flex; align-items:
 /* Hide the leftover "Strike 1: 2: " parts if any, and keep "got" as one compact line. */
 ${A} .lr-altar-need .lr-need-strikes { display: none; }
 ${A} .lr-altar-need:is([data-align="up"], [data-align="down"]) .lr-need-got { display: inline; }
-${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not(:has(.lr-need-note)) {
+/* teach-6: a multi-strike altar's north/south card stays stacked after Strike ("Needs 8 / got
+   16"), as its east/west cards are; the layout already gave it two lines (blind review 8 read
+   the two layouts as two kinds of reading). One-strike north/south cards have one line. */
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not([data-multi]):not(:has(.lr-need-note)) {
   flex-direction: row; align-items: baseline; gap: ${cpx(4)};
 }
-${A} .lr-altar-need:is([data-align="up"], [data-align="down"]) .lr-need-got::before { content: '· '; color: #bfae8a; }
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not([data-multi]) .lr-need-got::before { content: '· '; color: #bfae8a; }
 
 /* The verdict: headline, each strike's reading in words, then the cause or the next step. */
 ${A} .lr-altar-verdict .lr-verdict-strikes {

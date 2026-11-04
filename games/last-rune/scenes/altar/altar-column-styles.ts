@@ -144,6 +144,11 @@ ${LANE} > .lr-altar-tip .lr-fig-nogo::before, ${LANE} > .lr-altar-tip .lr-fig-no
   border-radius: 1px; transform: translate(-50%, -50%) rotate(45deg);
 }
 ${LANE} > .lr-altar-tip .lr-fig-nogo::after { transform: translate(-50%, -50%) rotate(-45deg); }
+/* teach-6: the strikes card's title wears the Strike button's marks, unlit, in the card's gold. */
+${LANE} > .lr-altar-tip .lr-info-pips { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: 0; }
+${LANE} > .lr-altar-tip .lr-info-pips i {
+  display: block; width: 9px; height: 9px; box-sizing: border-box; border: 2px solid #e8c06a; border-radius: 50%;
+}
 /* The Capacitor's two strikes, each on its own line, never broken mid-way. */
 ${LANE} > .lr-altar-tip .lr-info-strip { display: block; color: #a8ccf5; }
 ${LANE} > .lr-altar-tip .lr-info-strip > span { display: block; white-space: nowrap; }
@@ -154,16 +159,30 @@ ${LANE} > .lr-altar-hint .lr-need-lamp {
   box-shadow: 0 0 0 1px #d6fbff, 0 0 6px 2px rgba(63,224,255,0.85);
 }
 /* teach-5: the dot's legend, once per game: a short head, then one row per look of the dot. */
-${LANE} > .lr-altar-hint[data-legend] { text-wrap: wrap; text-align: left; padding: 4px 8px; }
+${LANE} > .lr-altar-hint[data-legend] { text-wrap: wrap; text-align: left; padding: 2px 8px 3px; }
 /* card-fit: the legend never stacks with another card. It waits for a gem's card, the verdict or
    a live read-out (altar-column.ts arrangeColumn), and the Capacitor plan waits for it. */
 ${LANE} > .lr-altar-hint[data-legend][data-wait] { display: none; }
 ${LANE}:has(> .lr-altar-hint[data-legend]:not([data-wait])) > .lr-altar-cap[data-plan] { display: none; }
-${LANE} > .lr-altar-hint .lr-dot-head { display: block; color: #c9b995; font-size: 13px; }
-${LANE} > .lr-altar-hint .lr-dot-row { display: block; white-space: nowrap; }
-${LANE} > .lr-altar-hint .lr-need-lamp[data-look='off'] {
-  background: #1b1915; box-shadow: inset 0 0 0 1.5px #8f826b;
+/* teach-6: the legend outranks a gem's chip; the chip waits until it retires (arrangeColumn). */
+${LANE} > .lr-altar-tip[data-yield] { display: none; }
+${LANE} > .lr-altar-hint[data-legend] { pointer-events: auto; }
+${LANE} > .lr-altar-hint .lr-dot-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  color: #c9b995; font-size: 13px;
 }
+${LANE} > .lr-altar-hint .lr-dot-ok {
+  position: relative; flex: none; min-width: 0; min-height: 20px; padding: 0 10px;
+  font: 600 13px/1 var(--tc-font-display, serif); border-radius: 8px; border-width: 1px;
+}
+/* A 44 px hit area round the small button. */
+${LANE} > .lr-altar-hint .lr-dot-ok::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%);
+}
+/* Each row hangs from its dot, so a narrow column wraps it under its words, never cut. The 'off'
+   row has no dot: its words start where the others' do. */
+${LANE} > .lr-altar-hint .lr-dot-row { display: block; padding-left: 16px; text-indent: -16px; }
+${LANE} > .lr-altar-hint .lr-dot-row[data-look='off'] { text-indent: 0; }
 ${LANE} > .lr-altar-hint .lr-need-lamp[data-look='red'],
 ${LANE} > .lr-altar-hint .lr-need-lamp[data-red='true'] {
   background: radial-gradient(circle at 40% 35%, #fff0ea 0 25%, #ff7a5c 60%, #d8341c);

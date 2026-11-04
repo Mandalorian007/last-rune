@@ -13,6 +13,8 @@ import {
   AMPLIFY_AGAIN,
   AMPLIFY_ONCE,
   capacitorStrip,
+  EITHER_NAME,
+  eitherRule,
   GEM_NAME,
   GOAL_NAME,
   GOAL_RULE,
@@ -30,7 +32,7 @@ import { introButton, pickInfo } from './moments';
 import { keepTogether } from './nowrap';
 import { legalSockets } from './socket-looks';
 import { strikeLabel } from './strike';
-import { firstSentence, hasPicture, type TeachPage, teachPages } from './teach';
+import { firstSentence, gateSides, hasPicture, type TeachPage, teachPages } from './teach';
 
 /** teach-4: the in→out picture on a Gate's or Split's first card, CSS px square. */
 const FIG_PX = 72;
@@ -389,8 +391,23 @@ export const infoMethods = {
     if (p.kind === 'ring') return row('ring', RING_NAME, null, rule(RING_RULE));
     if (p.kind === 'strikes') {
       const n = this.puzzle.pulses;
-      return row('strikes', keepTogether(strikeLabel(n, 'edit')), null, rule(strikesRule(n)));
+      // teach-6: the title wears the same unlit marks as the Strike button, so "a mark lights
+      // as each one fires" points at something the player can see.
+      const marks = h(
+        'span',
+        { class: 'lr-info-pips', 'aria-hidden': 'true' },
+        ...Array.from({ length: n }, () => h('i')),
+      );
+      return h(
+        'div',
+        { class: 'lr-info-row', 'data-how': 'strikes' },
+        h('b', null, keepTogether(strikeLabel(n, 'edit')), marks),
+        ' ',
+        rule(strikesRule(n)),
+      );
     }
+    if (p.kind === 'either')
+      return row('either', EITHER_NAME, null, rule(eitherRule(this.puzzle.pulses)));
     const fig = hasPicture(p) ? this.gemFigure(p.gem, p.how === 'fixed') : null;
     if (fig && p.gem === 'capacitor') {
       // The Capacitor's lesson is its two strikes, with this altar's own charge (teach-4).
@@ -419,7 +436,24 @@ export const infoMethods = {
         h('span', { class: 'lr-info-eg' }, keepTogether(AMPLIFY_AGAIN)),
       );
     }
+    if (fig && p.gem === 'gate') {
+      // teach-6: the Gate's sides named as the picture shows them, this altar's way round
+      // (blind review 8: "both sides of the arrow" was read as head and tail).
+      return row(
+        p.how,
+        GEM_NAME[p.gem],
+        fig,
+        rule(`${FIXED_NOTE} ${gateSides(this.shownRot(p.gem))}`),
+      );
+    }
     return row(p.how, GEM_NAME[p.gem], fig, rule(this.chipRule(p, true)));
+  },
+
+  /** The quarter turns a fixed gem of this kind shows on this altar (its picture's turn). */
+  shownRot(this: AltarScene, gem: GemKind): number {
+    const cell = this.news.fixed.find((f) => f.gem === gem)?.cell;
+    const shown = cell ? this.view.gemAt(cell) : undefined;
+    return shown ? ((Math.round(shown.rotTarget) % 4) + 4) % 4 : 0;
   },
 
   /**
@@ -429,12 +463,10 @@ export const infoMethods = {
    */
   gemFigure(this: AltarScene, gem: GemKind, fixed: boolean): HTMLElement {
     const d = GEM_DIAGRAMS[gem];
-    const cell = fixed ? this.news.fixed.find((f) => f.gem === gem)?.cell : undefined;
     // A built-in gem's picture is turned as that gem shows on this altar: its rule turn, or for
     // a straight gem the run it lies along (glyph-truth-2: the Capacitor card ran upright while
     // the board's ice lay across). Tray gems are drawn upright, as in the tray and the Codex.
-    const shown = cell ? this.view.gemAt(cell) : undefined;
-    const rot = shown ? ((Math.round(shown.rotTarget) % 4) + 4) % 4 : 0;
+    const rot = fixed ? this.shownRot(gem) : 0;
     const small = gem === 'capacitor';
     this.pictures ??= createGemPortraits(this.ctx.renderer);
     const pic = this.pictures.canvas(gem, small ? CAP_FIG_PX : FIG_PX);
