@@ -225,6 +225,35 @@ export const circuitMethods = {
       this.dom.append(el);
       this.chipEls.push(el);
     }
+    // teach-7 (D-040 add. 10, B): phones, what a Capacitor stored on strike 1 stays on the board
+    // ("stores 8", ice-blue, on the seam beside the gem) through the rest of the strike and the
+    // result, so strike 1 is seen to happen. Desktop has its Capacitor read-out on the board.
+    if (!phone) return;
+    res.trace.forEach((seg, i) => {
+      if (seg.end !== 'store') return;
+      anchorOf(L, seg.to, b);
+      // Above the gem unless it sits on the top row, where the chip goes below.
+      const dy = (seg.to.y > 0 ? -0.5 : 0.5) * L.pitch;
+      const px = Math.round(chipPx * 0.75);
+      const el = h(
+        'div',
+        {
+          class: 'lr-altar-chip',
+          'data-store': '',
+          hidden: true,
+          style: {
+            left: `${b.x}px`,
+            top: `${b.y + dy}px`,
+            fontSize: scalePxCss(px),
+            lineHeight: `calc(${scalePxCss(px)} + 6px)`,
+          },
+        },
+        `stores ${seg.charge}`,
+      );
+      this.chips.push({ seg: i, pulse: seg.pulse, from: seg.from, to: seg.to, charge: seg.charge });
+      this.dom.append(el);
+      this.chipEls.push(el);
+    });
   },
 
   clearChips(this: AltarScene): void {
@@ -240,8 +269,12 @@ export const circuitMethods = {
     for (let i = 0; i < this.chips.length; i++) {
       const c = this.chips[i]!;
       const seg = tl.segments[c.seg]!;
-      const show = c.pulse === this.pulse && this.st >= seg.t0;
       const el = this.chipEls[i]!;
+      // A stored charge stays shown once it has landed, through later strikes and the result.
+      const show =
+        el.dataset.store !== undefined
+          ? this.pulse > c.pulse || (c.pulse === this.pulse && this.st >= seg.t1)
+          : c.pulse === this.pulse && this.st >= seg.t0;
       if (el.hidden === show) el.hidden = !show;
     }
   },

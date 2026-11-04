@@ -139,15 +139,19 @@ export function strikesRule(pulses: number): string {
   return `One tap sends ${n} strikes, each lighting a mark. A miss resets for free.`;
 }
 /**
- * teach-6: what "in either strike" on a gauge means, on its own page after the strikes page
- * (blind review 8: "in one strike" read as every strike, at least one, or never over). The rule
- * as the sim reads it: a gauge wakes on the first strike that brings exactly its number; a
- * strike that brings more before then trips it. Words only, never a live number (D-043).
+ * What the gauge's "on strike 1 or 2" means, on its own page after the strikes page (teach-6;
+ * blind review 8 read "in one strike", and blind review 9 "in either strike", as every strike or
+ * as one of them). teach-7: the page is named for the gauge's words and says one is enough. The
+ * rule as the sim reads it: a gauge wakes on the first strike that brings exactly its number; a
+ * strike that brings more before then trips it. No amount, ever (D-043): the only digits are
+ * the strikes' own numbers.
  */
-export const EITHER_NAME = 'Either strike';
+export function eitherName(pulses: number): string {
+  return pulses === 2 ? 'Strike 1 or 2' : 'Any strike';
+}
 export function eitherRule(pulses: number): string {
-  const of = pulses === 2 ? 'one of the two strikes' : 'any one strike';
-  return `A gauge wakes when ${of} brings exactly its number. A strike that brings more trips it.`;
+  const of = pulses === 2 ? 'strike 1 or strike 2' : 'any strike';
+  return `A gauge wakes when ${of} brings exactly its number; one is enough. A strike that brings more trips it.`;
 }
 /**
  * teach-5: the first Amplify card. Its picture shows 4 in, 8 out; the line under it says what
@@ -158,10 +162,11 @@ export const AMPLIFY_AGAIN = "A second Amplify doesn't double again.";
 /**
  * teach-4: the Capacitor's two strikes, with this altar's charge (before FUSE's joke).
  * teach-6: each line says the whole strike (blind review 8: "Strike 1: stores 8 →" dangled).
+ * teach-7: "stores", not "keeps" (blind review 9: jargon), the word the board's tag uses.
  */
 export function capacitorStrip(charge: number): [string, string] {
   return [
-    `Strike 1: keeps ${charge}, sends nothing.`,
+    `Strike 1: stores ${charge}, sends nothing.`,
     `Strike 2: sends ${charge} + ${charge} = ${charge * 2}.`,
   ];
 }

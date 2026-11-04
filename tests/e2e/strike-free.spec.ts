@@ -17,7 +17,7 @@ type G = any;
 
 const DIR = process.env.SHOTS ?? '';
 const ORDER = playOrder();
-/** Capacitor Bay's first try (capacitor.spec): strike 1 keeps 8, strike 2 lets out 16 into 8. */
+/** Capacitor Bay's first try (capacitor.spec): strike 1 stores 8, strike 2 lets out 16 into 8. */
 const BAY_FIRST_TRY = [
   { cell: { x: 4, y: 5 }, gem: 'channel', rot: 0 },
   { cell: { x: 4, y: 4 }, gem: 'channel', rot: 0 },

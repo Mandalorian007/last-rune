@@ -146,6 +146,11 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-chip[data-state="exact"] { border-color: #3fe0ff; color: #dff9ff; }
 .tc-overlay .lr-altar-chip[data-state="under"] { border-color: #ffb03f; color: #ffe1b0; box-shadow: 0 0 12px rgba(255,176,63,0.5); }
 .tc-overlay .lr-altar-chip[data-state="over"] { border-color: #ff5a3c; color: #ffd7cc; box-shadow: 0 0 14px rgba(255,90,60,0.6); }
+/* teach-7: what a Capacitor stored on strike 1, kept on the board (phones). */
+.tc-overlay .lr-altar-chip[data-store] {
+  min-width: 0; padding: 0 7px; white-space: nowrap; font-family: var(--tc-font-ui); letter-spacing: 0;
+  color: #dff4ff; border-color: rgba(170,225,255,0.9); background: rgba(14,26,38,0.92); box-shadow: 0 0 10px rgba(140,210,255,0.45);
+}
 @keyframes lr-chip-in { from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } to { opacity: 1; } }
 
 /* Preview chips: the charge into and out of a new gem on the route, before the first strike. */
@@ -239,7 +244,7 @@ const CSS = /* css */ `
   animation: lr-altar-pop 260ms var(--tc-easing) both;
 }
 .tc-overlay .lr-altar-verdict[hidden] { display: none; }
-.tc-overlay .lr-altar-verdict .lr-verdict-story {
+.tc-overlay .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-also) {
   display: block; max-width: 640px; margin: 4px auto 0; white-space: normal; font-family: var(--tc-font-body, serif);
   font-size: 20px; line-height: 1.3; letter-spacing: 0; color: #e8dcc0;
 }

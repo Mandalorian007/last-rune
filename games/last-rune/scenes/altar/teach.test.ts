@@ -25,19 +25,20 @@ describe('arrival card pages (teach-4)', () => {
       first: false,
       firstMulti: true,
     });
-    // teach-6: "in either strike" gets its own page after the strikes page.
+    // teach-6: "on strike 1 or 2" (teach-7) gets its own page after the strikes page.
     expect(pages.map((p) => p.kind)).toEqual(['strikes', 'either', 'gem']);
     // teach-5: one tap, two strikes, one after the other; a miss resets for free.
     expect(strikesRule(2)).toMatch(/One tap sends two strikes/);
     expect(strikesRule(2)).toMatch(/miss resets for free/);
     // teach-6: it names the marks beside "Strike ×2".
     expect(strikesRule(2)).toMatch(/each lighting a mark/);
-    // teach-6: the rule as the sim reads it (rules/sim.ts): exactly, in one of the strikes;
-    // more trips it. Words only, never a number (D-043).
+    // teach-7: the rule as the sim reads it (rules/sim.ts): exactly, on strike 1 or strike 2;
+    // more trips it. It names strikes by number only, never an amount (D-043).
     expect(eitherRule(2)).toBe(
-      'A gauge wakes when one of the two strikes brings exactly its number. A strike that brings more trips it.',
+      'A gauge wakes when strike 1 or strike 2 brings exactly its number; one is enough. A strike that brings more trips it.',
     );
-    expect(eitherRule(2)).not.toMatch(/\d/);
+    expect(eitherRule(2).replace(/strike \d/g, '')).not.toMatch(/\d/);
+    expect(eitherRule(3)).toMatch(/any strike/);
   });
 
   it('pictures Gate, Split, Amplify and Capacitor where each is first met, fixed on the board', () => {
@@ -58,7 +59,7 @@ describe('arrival card pages (teach-4)', () => {
     expect(GOAL_RULE).toMatch(/exactly/);
     // teach-6: each line says its whole strike (blind review 8: "stores 8 →" dangled).
     expect(capacitorStrip(8)).toEqual([
-      'Strike 1: keeps 8, sends nothing.',
+      'Strike 1: stores 8, sends nothing.',
       'Strike 2: sends 8 + 8 = 16.',
     ]);
     // teach-6: Amplify's second line in words ("8 → 8" read as a typo).
@@ -68,16 +69,16 @@ describe('arrival card pages (teach-4)', () => {
   });
 
   it("names a fixed Gate's sides as its picture shows them (teach-6)", () => {
-    // rot 0: in from the west and east, out north, charge from the south is lost (rules.md).
+    // teach-7: the one Gate sentence (codex chip, codex rule, FUSE), then where this Gate's
+    // ports are. rot 0: in from the west and east, out north (rules.md).
     expect(gateSides(0)).toBe(
-      'Feed it from left and right in the same strike; the sum leaves at the top. From below: lost.',
+      'Both ports, same strike: the sum leaves by the arrow. Ports: left and right.',
     );
-    // Relay Tower's Gate: turned once, in from top and bottom, out right, lost from the left.
-    expect(gateSides(1)).toBe(
-      'Feed it from above and below in the same strike; the sum leaves to the right. From the left: lost.',
-    );
-    expect(gateSides(2)).toMatch(/at the bottom\. From above: lost\.$/);
-    expect(gateSides(3)).toMatch(/to the left\. From the right: lost\.$/);
+    expect(gateSides(0).startsWith(CODEX.gate.chip)).toBe(true);
+    // Relay Tower's Gate: turned once, in from top and bottom, out right.
+    expect(gateSides(1)).toMatch(/ Ports: above and below\.$/);
+    expect(gateSides(2)).toMatch(/ Ports: left and right\.$/);
+    expect(gateSides(3)).toMatch(/ Ports: above and below\.$/);
   });
 });
 

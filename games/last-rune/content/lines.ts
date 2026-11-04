@@ -819,7 +819,7 @@ const DEFS: Def[] = [
     gem: 'capacitor',
     tier: 3,
     source: N,
-    text: "Keeps a charge for later. Ice keeps things. That's what ice is for.",
+    text: "Stores a charge for later. Ice stores things. That's what ice is for.",
   },
 
   // ── Altar: exact solves and idle nudges (written for the altar; same voice) ──

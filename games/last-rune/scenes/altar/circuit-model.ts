@@ -239,8 +239,8 @@ export function capacitorBeats(
 }
 
 /**
- * One line of a Capacitor's read-out: "Strike 1: keeps 8", "Strike 2: 8 + 8 → 16". A bolt
- * kept on the altar's last strike never comes out, and the line says so. teach-5: a release over
+ * One line of a Capacitor's read-out: "Strike 1: stores 8", "Strike 2: 8 + 8 → 16". A bolt
+ * stored on the altar's last strike never comes out, and the line says so (teach-7: "stores"). teach-5: a release over
  * the gauge's need says so in one short line, "Strike 2 sends 16; needs 8."
  */
 export function capBeatText(b: CapBeat, pulses: number, over?: number): string {
@@ -248,7 +248,7 @@ export function capBeatText(b: CapBeat, pulses: number, over?: number): string {
   if (b.kind === 'release' && over !== undefined)
     return `Strike ${b.pulse + 1} sends ${b.out}; needs ${over}.`;
   if (b.kind === 'release') return `${n}${b.stored} + ${b.incoming} → ${b.out}`;
-  return `${n}keeps ${b.stored}${b.pulse >= pulses - 1 ? ', never let out' : ''}`;
+  return `${n}stores ${b.stored}${b.pulse >= pulses - 1 ? ', never let out' : ''}`;
 }
 
 /**
