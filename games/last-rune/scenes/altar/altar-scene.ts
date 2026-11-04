@@ -19,8 +19,9 @@
  * Flow hooks: `savePlacements` on every change, `recordAttempt` on every strike,
  * `completePuzzle` on exact (swaps to the solve moment), `closePuzzle` on back.
  */
+import { Gestures } from '@thunderclap/engine/input';
 import type { Frame, RGBA } from '@thunderclap/engine/render';
-import { button, h, Loupe, type Rect, scalePxCss } from '@thunderclap/engine/ui';
+import { button, h, type Rect, scalePxCss } from '@thunderclap/engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
@@ -132,16 +133,9 @@ interface Press {
 
 /** A touch held this long on a placed gem shows its card and selects it for ↻ (no pick-up). */
 const HOLD_SECS = 0.45;
-/** While a finger drags a gem, it aims this many CSS px above the fingertip, in plain sight. */
-const LIFT_CSS = 56;
 /** Touch: how long the held gem's card stays up after the pick (no hover to keep it). */
 const TOUCH_CARD_SECS = 2.5;
 const SVG_NS = 'http://www.w3.org/2000/svg';
-/** Phones: under this socket pitch (CSS px) a finger aiming a gem gets the loupe. */
-const LOUPE_PITCH_CSS = 44;
-/** The loupe: diameter (CSS px) and magnification. */
-const LOUPE_SIZE = 128;
-const LOUPE_MAG = 2.5;
 
 /** Where a gem on the info card is: hovered in the tray, on the board, fixed, or newly turnable. */
 type InfoHow = 'tray' | 'turnsTray' | 'board' | 'boardTurns' | 'fixed' | 'turns';
@@ -344,7 +338,8 @@ export class AltarScene implements GameScene {
   /** Frames left in which avoidTray re-measures after enter. */
   private settleFrames = 4;
   /** Phones: the magnifier over the board while a finger aims a gem (made on first use). */
-  private loupe: Loupe | null = null;
+  /** Touch aim, lift, snap and the loupe (engine Gestures `magnify`), linked while the altar is up. */
+  private gestures: Gestures | null = null;
   /** Board gem the keyboard cursor last announced. */
   private focusKey = '';
 
@@ -503,6 +498,7 @@ export class AltarScene implements GameScene {
     }
 
     ensureAltarStyles(ctx.ui.root.ownerDocument);
+    this.linkGestures();
     this.buildDom();
     this.refreshHud();
     this.frame = this.frameKey();
@@ -556,6 +552,9 @@ export class AltarScene implements GameScene {
     this.hum = null;
     if (this.announceTimer !== null) clearTimeout(this.announceTimer);
     this.teardownView();
+    this.ctx.input.setGestures(null);
+    this.gestures?.destroy();
+    this.gestures = null;
     if (this.postSnapshot) this.ctx.post.set(this.postSnapshot as typeof this.ctx.post.settings);
     this.ctx.particles.clear();
     emitPuzzleEvent({
@@ -574,8 +573,6 @@ export class AltarScene implements GameScene {
   /** The board's view and every DOM label on it (exit, and a phone relayout). */
   private teardownView(): void {
     this.view.dispose();
-    this.loupe?.destroy();
-    this.loupe = null;
     this.dom.remove();
     this.chipEls.length = 0;
     this.previewChipEls.length = 0;
@@ -3035,7 +3032,6 @@ export class AltarScene implements GameScene {
     this.updateTurnBadge();
     this.updateTurnButton();
     this.updateCrowd();
-    this.updateLoupe();
     // The keyboard cursor, for tests and tools (the gold ring is drawn on the GPU).
     const ck = `${this.cursor.x},${this.cursor.y}`;
     if (ck !== this.cursorKey) {
@@ -3050,64 +3046,32 @@ export class AltarScene implements GameScene {
   private readonly aimable = (c: Cell) => !this.board.isBlocked(c) && !this.board.fixedAt(c);
 
   /**
-   * Phones, small sockets: while a finger holds a gem down on the board, a round loupe beside
-   * it shows the socket under the aim point, 2.5× bigger, with the target ringed. It fades
-   * when the finger lifts. Mouse, keyboard and big boards never see it.
+   * Touch aiming (engine Gestures `magnify`): while a finger holds a gem it aims at the nearest
+   * socket the gem may go in, 56 CSS px above the fingertip while it drags, and on small sockets
+   * (under 44 CSS px) a loupe beside the finger shows that socket, ringed. Mouse, pen and
+   * keyboard never aim; nor does a finger with nothing in hand.
    */
-  private updateLoupe(): void {
-    const dev = this.ctx.device;
-    const input = this.ctx.input;
-    const p = input.pointer;
-    const L = this.view.layout;
-    const press = this.press;
-    const lift = press?.dragging ? LIFT_CSS * dev.cssPx : 0;
-    const want =
-      dev.phone &&
-      p.type !== 'mouse' &&
-      !this.keyboard &&
-      !!this.hand &&
-      !!press &&
-      input.held('select') &&
-      (press.dragging || press.origin === 'aim') &&
-      L.pitch / dev.cssPx < LOUPE_PITCH_CSS &&
-      (!!this.hoverCell || !!cellAt(L, p.x, p.y - lift));
-    if (!want) {
-      if (this.loupe?.visible) {
-        this.loupe.hide();
-        delete this.dom.dataset.loupe;
-      }
-      return;
-    }
-    if (!this.loupe) {
-      this.loupe = new Loupe(this.ctx.surface.canvas, {
-        size: LOUPE_SIZE,
-        zoom: LOUPE_MAG,
+  private linkGestures(): void {
+    const ctx = this.ctx;
+    const L = () => this.view.layout;
+    this.gestures = new Gestures({
+      magnify: {
+        pitch: () => L().pitch / ctx.device.cssPx,
+        when: () => !!this.hand && !this.keyboard && this.mode === 'edit',
+        snap: (x, y) => {
+          const cell = snapCell(L(), x, y, this.aimable);
+          if (!cell) return null;
+          const c = { x: 0, y: 0 };
+          cellCenter(L(), cell, c);
+          return { x: c.x, y: c.y, r: L().pitch * 0.52, data: cell };
+        },
+        over: (x, y) => !!cellAt(L(), x, y),
+        toClient: (x, y) => ctx.surface.logicalToClient(x, y),
+        source: ctx.surface.canvas,
         className: 'lr-loupe',
-      });
-    }
-    const r = this.ctx.ui.root.getBoundingClientRect();
-    const k = r.width / 1920;
-    const cx = (x: number) => r.left + x * k;
-    const cy = (y: number) => r.top + y * k;
-    const fx = cx(p.x);
-    const ax = fx;
-    const ay = cy(p.y - lift);
-    // Above the aim point and off to the side of the finger, towards the middle of the screen.
-    const win = this.dom.ownerDocument.defaultView ?? window;
-    const half = LOUPE_SIZE / 2;
-    const side = fx > win.innerWidth / 2 ? -1 : 1;
-    const at = {
-      x: Math.min(win.innerWidth - half - 4, Math.max(half + 4, fx + side * (half + 28))),
-      y: Math.min(win.innerHeight - half - 4, Math.max(half + 4, ay - half * 0.6)),
-    };
-    let ring: { x: number; y: number; r: number } | null = null;
-    if (this.hoverCell) {
-      const c = { x: 0, y: 0 };
-      cellCenter(L, this.hoverCell, c);
-      ring = { x: cx(c.x), y: cy(c.y), r: L.pitch * k * 0.52 };
-    }
-    this.loupe.show({ focus: { x: ax, y: ay }, at, ring });
-    this.dom.dataset.loupe = this.hoverCell ? `${this.hoverCell.x},${this.hoverCell.y}` : '';
+      },
+    });
+    ctx.input.setGestures(this.gestures);
   }
 
   private updateEdit(_dt: number): void {
@@ -3120,17 +3084,19 @@ export class AltarScene implements GameScene {
       this.lastPointer.y = p.y;
       if (p.inside) this.keyboard = false;
     }
-    // A finger has no hover: between touches nothing is under it. While it drags a gem, it
-    // aims a little above the fingertip so the gem and its socket stay in sight.
+    // A finger has no hover: between touches nothing is under it. A finger holding a gem aims
+    // through Gestures `magnify` (linkGestures): lifted while it drags, snapped to a socket.
     const finger = p.type !== 'mouse';
-    const lift = finger && this.press?.dragging ? LIFT_CSS * this.ctx.device.cssPx : 0;
+    const aim = finger ? (this.gestures?.aim ?? null) : null;
     const live =
       p.inside && !this.keyboard && (!finger || input.held('select') || input.released('select'));
-    // A finger holding a gem snaps to the nearest socket it could go in (layout snapCell).
     const aimAt = (x: number, y: number) =>
-      finger && this.hand ? snapCell(L, x, y, this.aimable) : cellAt(L, x, y);
-    this.hoverCell = live ? aimAt(p.x, p.y - lift) : null;
-    this.hoverSlot = live && !lift ? traySlotAt(L, p.x, p.y) : -1;
+      aim ? ((aim.target?.data as Cell | undefined) ?? null) : cellAt(L, x, y);
+    this.hoverCell = live ? aimAt(p.x, p.y) : null;
+    this.hoverSlot = live && !aim?.lifted ? traySlotAt(L, p.x, p.y) : -1;
+    if (aim?.loupe)
+      this.dom.dataset.loupe = this.hoverCell ? `${this.hoverCell.x},${this.hoverCell.y}` : '';
+    else delete this.dom.dataset.loupe;
 
     // ── Pointer ──
     // Phones: a tap while a gem's full card is open only closes it.
@@ -3238,7 +3204,7 @@ export class AltarScene implements GameScene {
         // On release: the socket under the aim point; anywhere else keeps the gem in hand.
         if (this.hoverCell && this.hand) this.placeHand(this.hoverCell);
       } else if (press.dragging) {
-        const cell = aimAt(p.x, p.y - lift);
+        const cell = aimAt(p.x, p.y);
         if (press.origin === 'board' && this.hand?.from) {
           if (cell) this.placeHand(cell);
           else {
@@ -4013,10 +3979,11 @@ export class AltarScene implements GameScene {
         pt.y += L.pitch * 0.12;
       }
     } else {
-      pt.x = p.x;
-      pt.y = p.y;
+      // A dragging finger carries the gem at its aim point, lifted above the fingertip.
+      const aim = p.type !== 'mouse' ? this.gestures?.aim : null;
+      pt.x = aim ? aim.x : p.x;
+      pt.y = aim ? aim.y : p.y;
       const finger = p.type !== 'mouse';
-      if (finger && this.press?.dragging) pt.y -= LIFT_CSS * this.ctx.device.cssPx;
       if (this.keyboard || !p.inside || (finger && !this.press?.dragging)) {
         const i = L.tray.findIndex((s) => s.gem === hand.kind);
         const s = L.tray[Math.max(0, i)]!;
