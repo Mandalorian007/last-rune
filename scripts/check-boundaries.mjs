@@ -7,6 +7,9 @@
 //   2. Inside packages/engine/src, nothing imports a game (`@game/*`, games/) or any path that
 //      leaves the package.
 //   3. games/*/rules/ imports nothing from the engine (architecture.md rule 2).
+//   4. packages/host-electron (ws/host-electron) reaches the engine only through its exports map,
+//      imports no game, and no relative path leaves the package. Outside it, the package is
+//      reached only through its own exports map. The engine never imports it.
 //
 // Exit 1 and print every violation as `file:line  specifier  reason`.
 import { readdirSync, readFileSync } from 'node:fs';
@@ -19,8 +22,15 @@ const engineSrc = join(engineDir, 'src');
 const PKG = '@thunderclap/engine';
 
 const exportsMap = JSON.parse(readFileSync(join(engineDir, 'package.json'), 'utf8')).exports ?? {};
-const allowedSubpaths = new Set(
-  Object.keys(exportsMap).map((k) => (k === '.' ? PKG : `${PKG}/${k.replace(/^\.\//, '')}`)),
+const subpaths = (pkg, map) =>
+  new Set(Object.keys(map).map((k) => (k === '.' ? pkg : `${pkg}/${k.replace(/^\.\//, '')}`)));
+const allowedSubpaths = subpaths(PKG, exportsMap);
+
+const hostDir = join(root, 'packages', 'host-electron');
+const HOST_PKG = '@thunderclap/host-electron';
+const hostSubpaths = subpaths(
+  HOST_PKG,
+  JSON.parse(readFileSync(join(hostDir, 'package.json'), 'utf8')).exports ?? {},
 );
 
 const CODE = /\.(m?[jt]s|tsx?)$/;
@@ -31,6 +41,7 @@ const SKIP_DIRS = new Set([
   '.git',
   'test-results',
   'playwright-report',
+  'out',
 ]);
 
 /** @param {string} dir @returns {string[]} */
@@ -113,10 +124,48 @@ for (const file of outsideFiles) {
       }
       continue;
     }
+    if (spec === HOST_PKG || spec.startsWith(`${HOST_PKG}/`)) {
+      if (!hostSubpaths.has(spec.split('?')[0])) {
+        report(
+          file,
+          line,
+          spec,
+          `not in the host-electron exports map (${[...hostSubpaths].join(', ')})`,
+        );
+      } else if (isRules) {
+        report(file, line, spec, 'rules/ must not import a host');
+      }
+      continue;
+    }
     const t = target(file, spec);
     if (t && inside(t, engineDir)) {
       report(file, line, spec, `reaches into packages/engine; import from '${PKG}/<module>'`);
+    } else if (t && inside(t, hostDir)) {
+      report(file, line, spec, `reaches into packages/host-electron; import from '${HOST_PKG}'`);
     }
+  }
+}
+
+// packages/host-electron: the engine by its exports map only, no game, nothing outside itself.
+const hostFiles = walk(hostDir);
+for (const file of hostFiles) {
+  for (const { spec, line } of importsOf(readFileSync(file, 'utf8'))) {
+    if (spec === '@game' || spec.startsWith('@game/') || /(^|\/)games\//.test(spec)) {
+      report(file, line, spec, 'host-electron must never import a game');
+      continue;
+    }
+    if (spec === '@engine' || spec.startsWith('@engine/')) {
+      report(file, line, spec, `old alias; import from '${PKG}/<module>'`);
+      continue;
+    }
+    if (spec === PKG || spec.startsWith(`${PKG}/`)) {
+      if (!allowedSubpaths.has(spec.split('?')[0])) {
+        report(file, line, spec, 'not in the engine exports map');
+      }
+      continue;
+    }
+    const t = target(file, spec);
+    if (t && !inside(t, hostDir)) report(file, line, spec, 'leaves packages/host-electron');
   }
 }
 
@@ -124,6 +173,10 @@ for (const file of walk(engineSrc)) {
   for (const { spec, line } of importsOf(readFileSync(file, 'utf8'))) {
     if (spec === '@game' || spec.startsWith('@game/') || /(^|\/)games\//.test(spec)) {
       report(file, line, spec, 'the engine must never import a game');
+      continue;
+    }
+    if (spec.startsWith('@thunderclap/')) {
+      report(file, line, spec, 'the engine must never import a host or another package');
       continue;
     }
     const t = target(file, spec);
@@ -138,5 +191,5 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(
-  `check-boundaries: ok (${outsideFiles.length} game/tooling files, engine exports: ${[...allowedSubpaths].length})`,
+  `check-boundaries: ok (${outsideFiles.length} game/tooling files, ${hostFiles.length} host-electron files, engine exports: ${[...allowedSubpaths].length})`,
 );

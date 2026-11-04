@@ -2,6 +2,7 @@
 #   engine:     @thunderclap/engine typecheck + lint + unit tests (packages/engine).
 #   engine-e2e: engine platform e2e on the harness matrix (D-041 addendum 2).
 #   game:       game typecheck + lint + import-boundary check + unit tests, production build, itch zip.
+#   desktop:    unsigned Electron builds on Linux, macOS and Windows (non-blocking, ws/host-electron).
 # No secrets are used or needed. Nothing is uploaded to itch.io (see docs/shipping-itch.md).
 name: CI
 
@@ -39,6 +40,9 @@ jobs:
 
       # typecheck + lint + unit tests of packages/engine only.
       - run: pnpm check:engine
+
+      # The same for packages/host-electron (noun-free, unit tests only; no Electron binary).
+      - run: pnpm check:host-electron
 
   engine-e2e:
     # Engine platform e2e (D-041 addendum 2): the harness smoke on the viewport/device/iframe
@@ -110,5 +114,50 @@ jobs:
         with:
           name: itch-zip
           path: build/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  desktop:
+    # Unsigned desktop builds of the Electron shell (D-041 Phase 4, ws/host-electron), one per
+    # OS, as artefacts. Non-blocking until Gate 4. Build-time downloads only (the Electron and
+    # packaging-tool binaries); no signing material is used or needed.
+    name: desktop build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: --linux
+          - os: macos-latest
+            target: --mac
+          - os: windows-latest
+            target: --win
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Writes dist/desktop/ (packages/host-electron/electron-builder.config.mjs).
+      - run: pnpm desktop:build ${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.os }}
+          path: |
+            dist/desktop/*.dmg
+            dist/desktop/*.zip
+            dist/desktop/*.exe
+            dist/desktop/*.AppImage
+            dist/desktop/*.tar.gz
           if-no-files-found: error
           retention-days: 14
