@@ -418,6 +418,12 @@ const PH = {
    * "Needs 20 · got 16").
    */
   sideCardW: 84,
+  /**
+   * fit-9: on a multi-strike altar the widest is the note, "Needs 20 / in either strike"
+   * (93.8 CSS px; teach-6). Taken at 84, the gutter was too narrow for it and the card dropped
+   * under the edge column's rings.
+   */
+  sideCardW2: 95,
   /** The source's card ("Gives 16 per strike") never shows a "got". */
   sideGivesW: 68,
   /** dense-board-2: a dense board's inset from the visible band's top and bottom. */
@@ -561,6 +567,7 @@ function phoneFit(
   // so the fit leaves them out.
   const trim = dense ? carvedEdges(cols, rows, blocked) : { l: 0, r: 0, t: 0, b: 0 };
   const labelW = (p.pulses > 1 ? PH.labelW2 : PH.labelW1) * c;
+  const sideCardW = p.pulses > 1 ? PH.sideCardW2 : PH.sideCardW;
   /** Half a north/south gauge's drawn width (as `spot` measures it) at a pitch. */
   const halfAt = (storm: boolean, pitch: number) =>
     storm ? 0.24 * stormSizeAt(pitch) : 0.45 * machineSizeAt(pitch);
@@ -616,7 +623,7 @@ function phoneFit(
   /**
    * dense-board-2: the gutter a west/east gauge needs when its Gives/Needs card can hang under
    * it over carved stone (wall, on a phone's hugged slab) instead of in a gutter of its own, or
-   * 0 when it cannot. The card is taken at its widest (`PH.sideCardW`, two lines) and pushed to
+   * 0 when it cannot. The card is taken at its widest (`sideCardW`, two lines) and pushed to
    * the canvas side as the label placement does (`placePhoneLabels`): against the canvas edge
    * under a west gauge, against the column under an east one. Like that placement, it drops
    * once, past any ring it would cover; it must then cover no ring, drop at most
@@ -632,7 +639,7 @@ function phoneFit(
     const size = q.storm ? stormSizeAt(pitch) : machineSizeAt(pitch);
     const half = q.storm ? 0.29 * size : 0.45 * size;
     const gutter = off + half + edge;
-    const cw = (q.storm ? PH.sideGivesW : PH.sideCardW) * c;
+    const cw = (q.storm ? PH.sideGivesW : sideCardW) * c;
     const ch = PH.label2 * c;
     // Slab coordinates: (0, 0) is the slab's top-left corner.
     const W = cols * pitch + 2 * sm;
@@ -689,7 +696,7 @@ function phoneFit(
         // dense-board-3: `wide`, a card that cannot hang over carved stone gets a gutter wide
         // enough to hang clear of the edge column's rings (to within 2 CSS px), against the
         // canvas edge (west) or the column (east), instead of dropping under them.
-        const cw = (q.storm ? PH.sideGivesW : PH.sideCardW) * c;
+        const cw = (q.storm ? PH.sideGivesW : sideCardW) * c;
         const clearW = cw + edge + 2 * c - sm - 0.12 * pitch - (s === 1 ? PH.colGap * c : 0);
         v[s] = Math.max(
           v[s],
