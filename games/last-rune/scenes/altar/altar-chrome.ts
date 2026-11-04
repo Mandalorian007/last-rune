@@ -187,4 +187,11 @@ ${ALL}:disabled {
   border: 1px solid #8f826b; color: #8f826b; box-shadow: none;
 }
 ${ALL}:disabled :is(.lr-ph-ico, b) { color: #8f826b; }
+/* Short phones (an iPhone SE, 320 px under the browser bars): the held header pushes the tray
+   and lane lower (ws/port-altar-2 review), so the foot buttons sit 2 px lower and Strike stands
+   56 px tall (D-040's floor). A teach card under a two-row tray then clears Strike by 8 px. */
+@media (max-height: 330px) {
+  ${TURN}, ${STRIKE} { bottom: 4px; }
+  ${STRIKE} { height: 56px; }
+}
 `;

@@ -371,7 +371,7 @@ const PH = {
   slotMax: 46,
   slotGap: 8,
   countH: 18,
-  titleH: 30,
+  titleH: 26,
   badge: 26,
   /** FUSE's bubble / the hint sit this far above the canvas bottom (clear of Strike, 64 px). */
   bubbleUp: 68,
