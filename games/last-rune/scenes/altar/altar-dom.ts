@@ -342,7 +342,11 @@ export const domMethods = {
       this.slotEls = L.tray.map(() => h('div', { class: 'lr-altar-slot', 'aria-hidden': 'true' }));
       this.head = h(
         'div',
-        { class: 'lr-altar-head', 'data-dense': band.dense ? '' : null },
+        {
+          class: 'lr-altar-head',
+          'data-dense': band.dense ? '' : null,
+          'data-slim': band.slim ? '' : null,
+        },
         this.titleEl,
         ...this.slotEls,
         ...this.counts,

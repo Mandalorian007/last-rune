@@ -46,6 +46,10 @@ ${HEAD} .lr-altar-holding {
   text-shadow: none; box-shadow: 0 1px 5px rgba(0,0,0,0.7);
 }
 ${HEAD} .lr-altar-holding[hidden] { display: none; }
+/* dense-board-4: the slim strip is ~100 px; its title (and "Holding Capacitor") may reach a
+   little past the strip into the open stone either side, and the pill packs tighter. */
+${HEAD}[data-slim] .lr-altar-title { left: -14px; right: -14px; }
+${HEAD}[data-slim] .lr-altar-holding { gap: 4px; padding: 0 6px 0 4px; }
 ${HEAD} .lr-altar-holding b { color: #fff6dd; font-weight: 700; }
 ${HEAD} .lr-altar-holding i {
   flex: none; width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 4px currentColor;
