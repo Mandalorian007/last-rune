@@ -718,7 +718,7 @@ export class EndingScene implements GameScene {
     this.idleFrom = this.time;
   }
 
-  /** Skip straight to the end card (replays only). */
+  /** Skip straight to the end card (any viewing, teach-5). */
   skip(): void {
     if (!this.skippable || this._phase === 'end-card' || this._phase === 'post-credits') return;
     this.gen++;

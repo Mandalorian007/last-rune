@@ -95,6 +95,11 @@ const Flags = s.object({
    * test). Optional so older saves still validate (missing = not yet said).
    */
   missTold: s.optional(s.boolean()),
+  /**
+   * teach-5: the gauge dot's legend (hollow, lit, red) has been shown once. Optional so older
+   * saves still validate (missing = not yet shown).
+   */
+  dotTold: s.optional(s.boolean()),
 });
 
 export const SaveV1 = s.object({

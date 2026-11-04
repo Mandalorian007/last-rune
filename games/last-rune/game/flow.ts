@@ -215,6 +215,18 @@ export class GameFlow<S> {
     });
   }
 
+  /** teach-5: the gauge dot's legend shows once per game, the first time a dot lights. */
+  dotDue(): boolean {
+    return !this.save.get().flags.dotTold;
+  }
+
+  /** The dot legend was shown and the player struck; never again this game. */
+  tellDot(): void {
+    this.save.update((d) => {
+      d.flags.dotTold = true;
+    });
+  }
+
   /**
    * The bolt landed at exactly full charge: restore the machine, file the
    * journal pages, and swap the puzzle for the solve moment.

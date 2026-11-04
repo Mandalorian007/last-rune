@@ -14,7 +14,7 @@ describe('keepTogether (teach-4: no mid-expression wraps)', () => {
     expect(show(keepTogether('Needs 20'))).toBe('Needs_20');
     expect(show(keepTogether('needs 8 in one strike.'))).toBe('needs_8 in_one_strike.');
     expect(show(keepTogether(' 1 of 2'))).toBe(' 1_of_2');
-    expect(show(keepTogether('Strike (2 left)'))).toBe('Strike_(2_left)');
+    expect(show(keepTogether('Strike ×2'))).toBe('Strike_×2');
     expect(show(keepTogether('Gives 8 per strike'))).toBe('Gives_8_per_strike');
   });
 

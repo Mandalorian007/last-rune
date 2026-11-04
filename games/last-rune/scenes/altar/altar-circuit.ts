@@ -77,7 +77,11 @@ export const circuitMethods = {
   updateLampLine(this: AltarScene): void {
     if (!this.view.layout.phone) return;
     const t = this.lampTeach;
-    if (this.mode !== 'edit' && this.hintLines.lamp === LAMP_LINE.reach) t.reach = false;
+    // teach-5: the legend shows until the strike after it first shows, once per game.
+    if (this.mode !== 'edit' && this.hintLines.lamp === LAMP_LINE.reach && t.reach) {
+      t.reach = false;
+      this.ctx.flow.tellDot();
+    }
     const which =
       this.mode === 'edit'
         ? lampLine({

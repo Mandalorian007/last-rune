@@ -78,7 +78,7 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
   // so does that gauge.
   await expect(cap.locator('.lr-cap-line')).toHaveText([
     'Strike 1: keeps 8',
-    'Strike 2: 8 + 8 → 16, over the 8 needed',
+    'Strike 2 sends 16; needs 8.',
   ]);
   await expect(cap.locator('.lr-cap-line[data-warn]')).toHaveCount(1);
   await expect(page.locator('.lr-altar-need[data-warn]')).toHaveCount(1);

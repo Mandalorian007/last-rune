@@ -130,11 +130,19 @@ export const FIRST_MISS_LINE = 'A miss costs nothing. Strike as often as you lik
 /**
  * teach-4: the first altar that strikes more than once explains Strike's count and "in one
  * strike" before its pieces (blind review 6: players learned multi-strike by failing).
+ * teach-5: under "Strike ×2", in plain words: one tap, both strikes, one after the other; a
+ * miss resets for free.
  */
 export function strikesRule(pulses: number): string {
-  const all = pulses === 2 ? 'both' : `all ${pulses}`;
-  return `One tap fires ${all}. Each gauge needs its amount in one strike.`;
+  const n = pulses === 2 ? 'two' : String(pulses);
+  return `One tap sends ${n} strikes, one after the other. A miss resets for free.`;
 }
+/**
+ * teach-5: the first Amplify card. Its picture shows 4 in, 8 out; the line under it shows what
+ * "once per path" means, with the picture's numbers (the codex's "Doubled already: 8 stays 8").
+ */
+export const AMPLIFY_ONCE = 'Doubles the charge, once per path.';
+export const AMPLIFY_AGAIN = 'A second Amplify on the same path: 8 → 8.';
 /** teach-4: the Capacitor's two strikes, with this altar's charge (before FUSE's joke). */
 export function capacitorStrip(charge: number): [string, string] {
   return [`Strike 1: stores ${charge} →`, `Strike 2: lets out ${charge} + ${charge}`];

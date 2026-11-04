@@ -333,7 +333,8 @@ export class AltarScene implements GameScene {
       this.turnTeach = turnTeaches(this.news);
       this.firstMulti = firstMultiStrike(this.puzzle, solved);
       const newKinds = [...this.news.fixed.map((f) => f.gem), ...this.news.tray];
-      this.lampTeach = { reach: solved.length === 0, over: newKinds.includes('capacitor') };
+      // teach-5: the dot's legend shows the first time a dot lights, once per game.
+      this.lampTeach = { reach: this.ctx.flow.dotDue(), over: newKinds.includes('capacitor') };
       // Only where Turn is first taught (the Bend in the tray): the lane is roomy there.
       this.straightTeach = this.turnTeach.has('bend');
       this.guide = guideHops(

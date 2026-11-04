@@ -164,6 +164,18 @@ describe('GameFlow', () => {
     expect(f.flow.firstMissDue()).toBe(true);
   });
 
+  it('explains the gauge dot once per game, and again after New Game (teach-5)', () => {
+    const f = setup();
+    f.flow.start();
+    f.flow.newGame();
+    expect(f.flow.dotDue()).toBe(true);
+    f.flow.tellDot();
+    expect(f.flow.dotDue()).toBe(false);
+    expect(f.save.get().flags.dotTold).toBe(true);
+    f.flow.newGame();
+    expect(f.flow.dotDue()).toBe(true);
+  });
+
   it('play time counts only outside the title and commits in batches', () => {
     const f = setup();
     f.flow.start();

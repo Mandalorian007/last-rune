@@ -11,7 +11,14 @@ import { type AltarColumn, placeAltarChrome } from './altar-chrome';
 import { GEM_NAME, type HintMode, hintLine, SVG_NS, timesWord } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { TRAY_CENTER_X } from './layout';
-import { type HintSlot, LAMP_LINE, phoneHint, pickHint } from './moments';
+import {
+  DOT_LEGEND,
+  DOT_LEGEND_HEAD,
+  type HintSlot,
+  LAMP_LINE,
+  phoneHint,
+  pickHint,
+} from './moments';
 import { keepTogether } from './nowrap';
 
 export const domMethods = {
@@ -48,6 +55,20 @@ export const domMethods = {
     const key = other ? `slot:${other}` : `${mode}${turns ? '+' : ''}`;
     if (key === this.hintMode) return;
     this.hintMode = key;
+    if (other && slot === 'lamp' && other === LAMP_LINE.reach) {
+      // teach-5: the dot's legend, once per game: each row led by the dot as the gauge draws it.
+      const dot = (look: string) =>
+        h('i', { class: 'lr-need-lamp', dataset: { look }, 'aria-hidden': 'true' });
+      this.hint.replaceChildren(
+        h('span', { class: 'lr-dot-head' }, DOT_LEGEND_HEAD),
+        ...DOT_LEGEND.map((r) => h('span', { class: 'lr-dot-row' }, dot(r.look), r.text)),
+      );
+      this.hint.dataset.mode = 'slot';
+      this.hint.dataset.legend = '';
+      this.avoidTray();
+      return;
+    }
+    delete this.hint.dataset.legend;
     if (other) {
       // teach-4: the gauge-dot line starts with the dot it explains, lit as on the gauge.
       const dot =

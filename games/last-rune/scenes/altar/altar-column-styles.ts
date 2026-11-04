@@ -153,6 +153,14 @@ ${LANE} > .lr-altar-hint .lr-need-lamp {
   background: radial-gradient(circle at 40% 35%, #effdff 0 25%, #5fe6ff 60%, #1fb5e0);
   box-shadow: 0 0 0 1px #d6fbff, 0 0 6px 2px rgba(63,224,255,0.85);
 }
+/* teach-5: the dot's legend, once per game: a short head, then one row per look of the dot. */
+${LANE} > .lr-altar-hint[data-legend] { text-wrap: wrap; text-align: left; padding: 4px 8px; }
+${LANE} > .lr-altar-hint .lr-dot-head { display: block; color: #c9b995; font-size: 13px; }
+${LANE} > .lr-altar-hint .lr-dot-row { display: block; white-space: nowrap; }
+${LANE} > .lr-altar-hint .lr-need-lamp[data-look='off'] {
+  background: #1b1915; box-shadow: inset 0 0 0 1.5px #8f826b;
+}
+${LANE} > .lr-altar-hint .lr-need-lamp[data-look='red'],
 ${LANE} > .lr-altar-hint .lr-need-lamp[data-red='true'] {
   background: radial-gradient(circle at 40% 35%, #fff0ea 0 25%, #ff7a5c 60%, #d8341c);
   box-shadow: 0 0 0 1px #ffd6cc, 0 0 6px 2px rgba(255,90,60,0.85);
@@ -162,6 +170,16 @@ ${LANE} > .lr-altar-tip .lr-info-foot {
   gap: 8px; margin: 2px -10px 0; padding: 1px 10px; min-width: 0; float: none;
   background: rgba(20,16,12,0.98); border-top: 1px solid rgba(232,192,106,0.28);
 }
+/* teach-5: a pictured page leads with its picture. The picture, "New here" and the button make a
+   head row, and the words run the card's full width under it. */
+${LANE} > .lr-altar-tip[data-fig] .lr-info-foot {
+  order: -1; position: relative; bottom: auto; align-items: center; margin: -2px -10px 2px; padding: 2px 10px 3px 6px;
+  background: none; border-top: 0; border-bottom: 1px solid rgba(232,192,106,0.28);
+}
+${LANE} > .lr-altar-tip[data-fig] .lr-info-foot .lr-fig { float: none; flex: none; margin: 0; zoom: 0.8; }
+/* A short lane: the picture shrinks so the words still fit without a scroll (altar-column). */
+${LANE} > .lr-altar-tip[data-fig][data-tight] .lr-info-foot { padding-top: 1px; padding-bottom: 1px; margin-bottom: 1px; }
+${LANE} > .lr-altar-tip[data-fig][data-tight] .lr-info-foot .lr-fig { zoom: 0.62; }
 ${LANE} > .lr-altar-tip .lr-info-page {
   flex: 1 1 auto; min-width: 0; margin: 0; white-space: normal; text-align: left;
   font: 13px/1.2 ${SERIF}; letter-spacing: 0; color: #c9b995;
@@ -253,6 +271,9 @@ ${CL}:has(.lr-altar-head):has(.lr-hud[data-open])::before {
 }
 .tc-overlay:has(.lr-altar) .lr-hud-scrim { background: transparent; }
 ${CL}:has(.lr-altar-head) .lr-hud[data-open]::before { top: 36px; }
+/* teach-5 (06-menu-altar): the list's panel sits over the lane, so the hint it would cut in
+   half ("Tap a gem, ther…") steps out while the list is open and comes back when it closes. */
+${CL}:has(.lr-altar-head):has(.lr-hud[data-open]) .lr-altar-hint { visibility: hidden; }
 
 /* The teach leader (in the scaled overlay, over the board). */
 .tc-overlay .lr-teach-leader polyline { fill: none; stroke-linejoin: round; }

@@ -323,6 +323,11 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-solve-card h2 { margin: 0; font-family: var(--tc-font-display); font-size: 42px; line-height: 1.1; letter-spacing: 1px; }
 .tc-overlay .lr-solve-card .lr-solve-sub { margin: 6px 0 0; font-size: 24px; opacity: 0.8; }
+/* teach-5: what the gauge got, "Got 8 ✓", as a small dark pill ahead of the line. */
+.tc-overlay .lr-solve-card .lr-solve-got {
+  display: inline-block; padding: 0 0.45em; border-radius: 999px; white-space: nowrap;
+  background: #2a1906; color: #ffe6a6; font-weight: 700;
+}
 .tc-overlay .lr-solve-grant {
   margin: 20px 0 0; display: flex; align-items: center; gap: 16px;
   font-family: var(--tc-font-display); font-size: 36px; animation: lr-solve-in 500ms var(--tc-easing) both;

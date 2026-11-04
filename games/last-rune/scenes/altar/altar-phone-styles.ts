@@ -46,7 +46,7 @@ ${A} .lr-altar-need:is([data-align="up"], [data-align="down"]) .lr-need-strikes 
 ${A} .lr-altar-storm .lr-strike-pips { display: none; }
 
 /* Strike: full gold whenever it can fire (it glows once the route reaches a machine); a
-   multi-strike altar says "×2", then "1/2", in words not pips. */
+   multi-strike altar says "Strike ×2", and its pips light as each strike fires (teach-5). */
 .tc-overlay .lr-strike-n { display: none; }
 
 /* Solve moment: card, journal page and Continue fill the altar's column and the free right

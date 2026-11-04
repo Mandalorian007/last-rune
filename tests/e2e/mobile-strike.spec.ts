@@ -6,7 +6,7 @@ import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-7-strike (D-040 addendum 5), on four phones (browser bars showing, the iPhone's notch
 // insets emulated):
-//  1. Strike says what a tap does, on one line: "Strike (2 left)" before a two-strike run,
+//  1. Strike says what a tap does, on one line: "Strike ×2" (two unlit pips) before a two-strike run,
 //     "Try again" after a fail. It is ≥56 CSS px tall and ≥12 CSS px inside the play area.
 //  2. Before Strike each gauge shows a lamp (on or off, no number) that agrees with the path;
 //     Strike glows ("ready") when every lamp is lit.
@@ -94,7 +94,13 @@ async function strikeRead(page: Page) {
     const r = b.getBoundingClientRect();
     const app = document.getElementById('app')!.getBoundingClientRect();
     const lines = w ? w.getClientRects().length : 0;
+    // teach-5: the pips beside the label, one per strike; how many show and how many are lit.
+    const pips = [...b.querySelectorAll<HTMLElement>('.lr-strike-pips > i')].filter(
+      (p) => p.getBoundingClientRect().width > 0,
+    );
     return {
+      pips: pips.length,
+      lit: pips.filter((p) => p.hasAttribute('data-lit')).length,
       word: (w?.textContent ?? '').replace(/\u00a0/g, ' '),
       lines,
       h: r.height,
@@ -146,7 +152,11 @@ for (const vp of PHONES) {
         'data-phone',
         '',
       );
-      problems.push(...strikeProblems('bay, before', await strikeRead(page), 'Strike (2 left)'));
+      const before = await strikeRead(page);
+      problems.push(...strikeProblems('bay, before', before, 'Strike ×2'));
+      // teach-5: two pips beside "Strike ×2", none lit until a strike fires.
+      if (before.pips !== 2 || before.lit !== 0)
+        problems.push(`bay, before: ${before.pips} pips showing, ${before.lit} lit (want 2, 0)`);
       const lamps = async () =>
         page.evaluate(() => ({
           on: [...document.querySelectorAll('.lr-altar-need .lr-need-lamp')].map((l) =>
@@ -182,7 +192,20 @@ for (const vp of PHONES) {
         problems.push('bay, first try: Strike glows with a gauge unreached');
 
       // 3. The two-strike fail: compact card, each strike in words, "Try again".
+      // teach-5: while the run fires, the Strike pips light one per strike (1, then 2).
+      await page.evaluate(() => {
+        const b = document.querySelector('[data-action="strike"]')!;
+        const seen: number[] = [];
+        (window as G).__pipsSeen = seen;
+        new MutationObserver(() => {
+          const n = b.querySelectorAll('.lr-strike-pips > i[data-lit]').length;
+          if (n && seen[seen.length - 1] !== n) seen.push(n);
+        }).observe(b, { subtree: true, attributes: true, attributeFilter: ['data-lit'] });
+      });
       await strike(page);
+      const seen = await page.evaluate(() => (window as G).__pipsSeen as number[]);
+      if (JSON.stringify(seen) !== '[1,2]')
+        problems.push(`bay strike: pips lit ${JSON.stringify(seen)}, not one then two`);
       const v = await page.evaluate(() => ({
         verdict: (document.querySelector('.lr-altar-verdict')?.textContent ?? '').replace(
           /\u00a0/g,
@@ -203,7 +226,9 @@ for (const vp of PHONES) {
       if (!v.cards.some((c) => /^Needs 8 · ?got 16$/.test(c.replace(/ got/, ' · got'))))
         problems.push(`bay fail: card reads "${v.cards.join('|')}", not "Needs 8 · got 16"`);
       if (v.lamps) problems.push('bay fail: lamps still showing after Strike');
-      problems.push(...strikeProblems('bay, after', await strikeRead(page), 'Try again'));
+      const after = await strikeRead(page);
+      problems.push(...strikeProblems('bay, after', after, 'Try again'));
+      if (after.pips !== 0) problems.push(`bay, after: ${after.pips} pips beside "Try again"`);
 
       // 4. An empty socket: the plain headline.
       await open(page, 'relay-tower', []);
