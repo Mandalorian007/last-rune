@@ -77,6 +77,7 @@ const COMMIT_EVERY = 10;
 export class GameFlow<S> {
   private _state: FlowState = 'boot';
   private _machine: MachineId | null = null;
+  private _journalFrom: 'hall' | 'puzzle' = 'hall';
   private pendingPlay = 0;
   private lastMoment: SolveMoment | null = null;
   private readonly listeners = new Set<FlowListener>();
@@ -255,17 +256,37 @@ export class GameFlow<S> {
 
   // ── Journal ──────────────────────────────────────────────────────────────
 
-  /** Hall → journal desk. Returns false if not in the hall or no journal scene is wired. */
+  /**
+   * Hall or altar → journal desk. From an altar the puzzle stays on the stack underneath
+   * (paused), so closing returns to the same board. Returns false if not in the hall or a
+   * puzzle, or no journal scene is wired.
+   */
   openJournal(): boolean {
-    if (this._state !== 'hall' || !this.scenes.journal) return false;
+    if ((this._state !== 'hall' && this._state !== 'puzzle') || !this.scenes.journal) return false;
+    this._journalFrom = this._state;
     this.stack.push(this.scenes.journal());
-    this.set('journal', null);
+    // The machine stays set while the desk is over an altar (null over the hall).
+    this.set('journal', this._machine);
     return true;
   }
 
-  /** Journal desk → hall. */
+  /** Where the open journal goes back to: the hall, or the altar it was opened over. */
+  get journalFrom(): 'hall' | 'puzzle' {
+    return this._journalFrom;
+  }
+
+  /** Journal desk → whatever it was opened over (the hall, or the same altar). */
   closeJournal(): void {
     if (this._state !== 'journal') return;
+    const from = this._journalFrom;
+    this._journalFrom = 'hall';
+    if (from === 'puzzle') {
+      // The state first, so the chrome is the altar's again (the desk's docked caption gone)
+      // before the altar rebuilds its rails in `resume`, as it is when the pop is deferred.
+      this.set('puzzle', this._machine);
+      this.stack.pop();
+      return;
+    }
     this.stack.pop();
     this.set('hall', null);
   }

@@ -395,18 +395,35 @@ export class Hud {
     const away = (e: Event) => {
       if (!this.root.contains(e.target as Node)) this.menu(false);
     };
+    // Esc closes the list and nothing else: the key never reaches the scene (in the hall it
+    // would open Settings, at an altar it would leave), and focus goes back to the ☰.
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.menu(false);
+      this.menuBtn.focus();
+    };
     doc.addEventListener('pointerdown', away, true);
-    this.offOutside = () => doc.removeEventListener('pointerdown', away, true);
+    doc.addEventListener('keydown', esc, true);
+    this.offOutside = () => {
+      doc.removeEventListener('pointerdown', away, true);
+      doc.removeEventListener('keydown', esc, true);
+    };
   }
 
-  /** Show or hide the Journal button; `unread` > 0 marks it (new pages on the desk). */
-  journalShown(shown: boolean, unread = 0): void {
+  /**
+   * Show or hide the Journal button; `unread` > 0 marks it (new pages on the desk). `tag`:
+   * phones may also say so in words beside the ☰ (the hall); at an altar the dot alone, so
+   * the board's column keeps its room.
+   */
+  journalShown(shown: boolean, unread = 0, tag = true): void {
     const b = this.journalBtn;
     if (!b) return;
     b.hidden = !shown;
     b.toggleAttribute('data-unread', unread > 0);
     this.menuBtn.toggleAttribute('data-unread', shown && unread > 0);
-    this.menuNew.hidden = !(shown && unread > 0);
+    this.menuNew.hidden = !(tag && shown && unread > 0);
     // Phones: a tag beside the ☰ that says where the new page is (one line).
     this.menuNew.textContent = unread > 1 ? 'New pages in journal' : 'New page in journal';
     this.menuBtn.setAttribute(

@@ -96,7 +96,7 @@ export interface SceneFactories {
   puzzle(machine: MachineId): GameScene;
   /** Hook for the solve moment (replaces the puzzle; popping returns to the hall). */
   solve(moment: SolveMoment): GameScene;
-  /** The journal desk (story-scenes), pushed over the hall. */
+  /** The journal desk (story-scenes), pushed over the hall or an altar. */
   journal(): GameScene;
   /** The ending (story-scenes); replaces the final solve moment. */
   ending(moment: SolveMoment): GameScene;
@@ -339,12 +339,20 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
       fuse.hush();
       doOpenSettings();
     },
-    journal: () => {
-      sfx('ui.click');
-      fuse.hush();
-      flow.openJournal();
-    },
+    journal: () => openJournal(),
   });
+  // The desk opens from the hall or over an altar (the board waits underneath, paused). An
+  // altar mid-strike says no (`canPause`): the bolt and its verdict play out first.
+  const openJournal = () => {
+    const top = stack.top as (GameScene & { canPause?(): boolean }) | undefined;
+    if (flow.state === 'puzzle' && top?.canPause?.() === false) {
+      sfx('ui.deny');
+      return;
+    }
+    sfx('ui.click');
+    fuse.hush();
+    flow.openJournal();
+  };
   const unreadPages = () => {
     const j = save.get().journal;
     return j.found.filter((p) => !j.read.includes(p)).length;
@@ -360,7 +368,7 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
     if (state !== 'puzzle') fuse.avoid(null);
     hud.visible = state === 'hall' || state === 'puzzle' || state === 'solve';
     hud.root.dataset.scene = state;
-    hud.journalShown(state === 'hall', unreadPages());
+    hud.journalShown(state === 'hall' || state === 'puzzle', unreadPages(), state === 'hall');
     hud.plate(null);
   });
 
@@ -381,10 +389,8 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
   // ── Frame and lifecycle hooks ──────────────────────────────────────────
   hooks.update = (dt) => {
     if (!ui.stack.hasModal && flow.state !== 'ending') {
-      if (input.pressed('journal') && flow.state === 'hall') {
-        sfx('ui.click');
-        fuse.hush();
-        flow.openJournal();
+      if (input.pressed('journal') && (flow.state === 'hall' || flow.state === 'puzzle')) {
+        openJournal();
       } else if (input.pressed('codex')) {
         sfx('ui.click');
         fuse.hush();

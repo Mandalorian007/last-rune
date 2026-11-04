@@ -9,8 +9,8 @@
  * DOM overlay carries all text, in design px over the same coordinates.
  *
  * Input: ←/→ (or the ink arrows) turn pages, click a slip to open it,
- * Esc / J / "Back to the hall" closes. Pages are marked read as they open; the
- * "new" seals stay up until the desk is closed.
+ * Esc / J / "Back to the hall" (or "Back to the altar", over an altar) closes. Pages are
+ * marked read as they open; the "new" seals stay up until the desk is closed.
  */
 import type { Frame } from '@thunderclap/engine/render';
 import { h } from '@thunderclap/engine/ui';
@@ -572,7 +572,7 @@ export class JournalScene implements GameScene {
           },
         },
       },
-      'Back to the hall',
+      this.ctx.flow.journalFrom === 'puzzle' ? 'Back to the altar' : 'Back to the hall',
       h('kbd', { 'aria-hidden': 'true' }, 'Esc'),
     );
     back.dataset.action = 'journal-back';
