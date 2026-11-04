@@ -314,6 +314,7 @@ export const domMethods = {
     this.dom.toggleAttribute('data-picked', this.picked);
     const band = L.phone;
     this.dom.toggleAttribute('data-phone', !!band);
+    this.dom.toggleAttribute('data-dense', !!band?.dense);
     let col: AltarColumn | null = null;
     if (band) {
       // port-altar-3: the column right of the board is a region on the CSS-px chrome
@@ -323,10 +324,25 @@ export const domMethods = {
       this.verdict.style.maxWidth = '';
       delete this.verdict.dataset.narrow;
       this.lane = h('div', { class: 'lr-altar-lane' }, this.tip, this.verdict, this.hint);
+      this.ruleTab = null;
+      if (band.slim) {
+        // dense-board-4: the slim column folds the held gem's card behind a tab (arrangeColumn).
+        const tab = button(
+          h('span', null, h('b', { 'aria-hidden': 'true' }, '?'), ' Rule'),
+          (e) => {
+            (e.currentTarget as HTMLElement).blur();
+            this.ruleTapped();
+          },
+          { className: 'lr-rule-tab', ariaLabel: 'Show the held gem\u2019s rule' },
+        );
+        tab.hidden = true;
+        this.ruleTab = tab;
+        this.lane.prepend(tab);
+      }
       this.slotEls = L.tray.map(() => h('div', { class: 'lr-altar-slot', 'aria-hidden': 'true' }));
       this.head = h(
         'div',
-        { class: 'lr-altar-head' },
+        { class: 'lr-altar-head', 'data-dense': band.dense ? '' : null },
         this.titleEl,
         ...this.slotEls,
         ...this.counts,

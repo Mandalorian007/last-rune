@@ -148,6 +148,10 @@ ${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not([data-multi])
   flex-direction: row; align-items: baseline; gap: ${cpx(6)};
 }
 ${P} .lr-solve[data-phone] .lr-page-note, ${P} .lr-solve[data-phone] .lr-page-note b { font-size: ${tpx(12)}; }
+/* dense-board-4: a dense board's Gives/Needs cards at the 14 px floor (D-039). A slimmer side
+   padding and a hair of tracking keep them as wide as their 13 px budget (layout labelW*). */
+${A}[data-dense] .lr-altar-need { font-size: ${tpx(14)}; padding-left: ${cpx(3)}; padding-right: ${cpx(3)}; letter-spacing: -0.015em; }
+${A}[data-dense] .lr-altar-need :is(.lr-need-note, .lr-storm-row, .lr-need-got, .lr-need-got b, .lr-need-strikes) { font-size: ${tpx(14)}; }
 
 /* The arrival card points at what it teaches: a gold line from the card to a fixed gem, ringed
    (altar-dom leader, in the scaled overlay over the board). */

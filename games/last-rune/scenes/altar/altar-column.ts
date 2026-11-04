@@ -354,7 +354,10 @@ export const columnMethods = {
     // cut both short), and the Capacitor plan steps aside for it (CSS) until it retires.
     const wait = other && legend;
     // teach-6: while it shows it is the column's card, so FUSE waits too (his line cut it).
-    const cardUp = other || legend;
+    // dense-board-4: on a slim column the Rule tab (a gem in hand) owns the lane too; a short
+    // lane under a tall tray holds no tab and FUSE's line both, so FUSE waits.
+    const tab = this.updateRuleTab(legend);
+    const cardUp = other || legend || tab;
     this.holdFuse(cardUp);
     if (wait !== this.hint.hasAttribute('data-wait')) this.hint.toggleAttribute('data-wait', wait);
     // teach-5: a picture-first card that does not fit its lane (a short lane under a tall tray)
@@ -392,6 +395,38 @@ export const columnMethods = {
       if (cap.element.style.getPropertyValue('--lr-cap-tail') !== `${tail}px`)
         cap.element.style.setProperty('--lr-cap-tail', `${tail}px`);
     }
+  },
+
+  /**
+   * dense-board-4: the slim column's Rule tab stands while a gem is in hand and no teach card,
+   * verdict or legend owns the lane (first-sight teaching wins); open, the gem's card is pinned.
+   */
+  updateRuleTab(this: AltarScene, legend: boolean): boolean {
+    const tab = this.ruleTab;
+    if (!tab) return false;
+    const open = !!this.infoPin && !!this.hand && this.infoPin.gem === this.hand.kind;
+    const teach = !this.tip.hidden && this.tip.dataset.source === 'intro';
+    // Open, the card has the lane and the next tap anywhere closes it, so the tab steps aside.
+    const show =
+      !!this.hand && !open && this.mode !== 'strike' && this.verdict.hidden && !legend && !teach;
+    if (tab.hidden === show) tab.hidden = !show;
+    if (open !== tab.hasAttribute('data-open')) {
+      tab.toggleAttribute('data-open', open);
+      tab.setAttribute('aria-expanded', String(open));
+    }
+    return show;
+  },
+
+  /** dense-board-4: the Rule tab opens the held gem's card, or closes it. */
+  ruleTapped(this: AltarScene): void {
+    const hand = this.hand;
+    if (this.infoPin || !hand) this.infoPin = null;
+    else {
+      this.infoPin = { gem: hand.kind, how: this.turnTeach.has(hand.kind) ? 'turnsTray' : 'tray' };
+      this.ruleOpen = true;
+    }
+    this.updateInfo();
+    this.arrangeColumn();
   },
 
   /** Freeze FUSE's caption while a card owns the column; release it when none does. */

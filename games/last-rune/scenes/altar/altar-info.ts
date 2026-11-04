@@ -213,12 +213,17 @@ export const infoMethods = {
     let slot = strike ? -1 : this.hoverSlot;
     // A finger has no hover: the held gem's card shows for a moment after the pick, then
     // steps aside so the gem in hand (and its turn) stays in sight above the tray.
-    const cardOff = this.touch && !this.keyboard && this.time - this.handAt > TOUCH_CARD_SECS;
+    // dense-board-4: a slim column never flashes it; its card waits behind the Rule tab.
+    const cardOff =
+      (this.touch && !this.keyboard && this.time - this.handAt > TOUCH_CARD_SECS) ||
+      !!L.phone?.slim;
     if (slot < 0 && this.hand && !this.hand.from && !strike && !overPlaced && !cardOff) {
       slot = L.tray.findIndex((t) => t.gem === this.hand!.kind);
     }
     if (strike) this.infoPin = null;
     const pin = this.infoPin;
+    // dense-board-4: the Rule tab's card is the chip (a long press still pins the full card).
+    if (!pin) this.ruleOpen = false;
     const s = !pin && slot >= 0 ? L.tray[slot] : undefined;
     const focus =
       !strike && (!this.hand || overPlaced)
@@ -246,7 +251,7 @@ export const infoMethods = {
     });
     if (source === 'pin' && pin) {
       rows = [pin];
-      key = `p${pin.gem}${pin.how}`;
+      key = `p${pin.gem}${pin.how}${this.ruleOpen ? 'r' : ''}`;
     } else if (source === 'teach') {
       rows = news;
       key = L.phone ? `intro${introAt}` : 'intro';
@@ -286,7 +291,7 @@ export const infoMethods = {
     this.tip.dataset.source = intro ? 'intro' : key[0] === 't' ? 'tray' : 'board';
     // Phones: a chip, each row its gem's name and first whole sentence (never cut mid-rule);
     // a long-press pins the full card.
-    const chip = !!L.phone && !key.startsWith('p');
+    const chip = !!L.phone && (!key.startsWith('p') || key.endsWith('r'));
     // Phones: the arrival card's pages (teach-4: the goal and the strikes too, and a picture of
     // the charge going in and out on a Gate's, Split's or Capacitor's first card).
     const pageEls = intro && chip ? pages.map((p) => this.pageEl(p)) : null;

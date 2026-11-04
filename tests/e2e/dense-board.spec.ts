@@ -38,6 +38,23 @@ const DENSE: readonly MachineId[] = [
 ];
 /** Boards the loupe must cover on every phone. */
 const LOUPE: readonly MachineId[] = ['the-last-rune', 'lift-shaft'];
+/**
+ * dense-board-4: each dense board's pitch floor (CSS px) per phone: no board smaller than it
+ * stood before the slim column, and on the SE the Archive gains the room the slim
+ * column frees (it goes slim: four gem kinds or fewer; nothing else may shrink).
+ */
+const FLOOR: Record<string, Partial<Record<MachineId, number>>> = {
+  se: {
+    archive: 40,
+    'control-booth': 39.5,
+    'lift-shaft': 35.5,
+    'capacitor-bay': 38,
+    'roof-array': 46,
+  },
+  iphone: { archive: 46.5, 'control-booth': 47.5, 'lift-shaft': 38, 'capacitor-bay': 41 },
+  promax: { archive: 51.5, 'control-booth': 51, 'lift-shaft': 43.5, 'capacitor-bay': 46.5 },
+  android: { archive: 48.5, 'control-booth': 48.5, 'lift-shaft': 40.5, 'capacitor-bay': 44 },
+};
 
 // biome-ignore lint/suspicious/noExplicitAny: dev handle
 type G = any;
@@ -147,6 +164,35 @@ for (const vp of PHONES) {
         }
         if (LOUPE.includes(id)) {
           expect(pitch, `${vp.name} ${id}: the loupe shows`).toBeLessThan(LOUPE_BELOW);
+        }
+        const floor = FLOOR[vp.name]?.[id];
+        if (floor)
+          expect(pitch, `${vp.name} ${id} pitch floor (CSS px)`).toBeGreaterThanOrEqual(floor);
+        // dense-board-4: a dense board's ×N badges and Gives/Needs cards meet the 14 px floor.
+        if (L.phone?.dense) {
+          // Rendered size (CSS px): the computed size times its overlay's scale.
+          const small = await page.evaluate(() => {
+            const ov = document.querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!;
+            const k = ov.getBoundingClientRect().width / (ov.offsetWidth || 1);
+            return [
+              ...document.querySelectorAll<HTMLElement>(
+                '.lr-altar-count, .lr-altar-count *, .lr-altar-need, .lr-altar-need *',
+              ),
+            ]
+              .filter(
+                (e) =>
+                  e.getClientRects().length > 0 &&
+                  [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim()),
+              )
+              .map((e) => ({
+                text: e.textContent?.trim().slice(0, 20),
+                px:
+                  Number.parseFloat(getComputedStyle(e).fontSize) *
+                  (e.closest('.tc-overlay[data-units="css"]') ? 1 : k),
+              }))
+              .filter((q) => q.px < 13.95);
+          });
+          expect(small, `${vp.name} ${id}: text under 14px`).toEqual([]);
         }
         // Each socket's hit area is its whole cell: a point just inside any corner is that cell.
         const blocked = new Set(puzzleFor(id).blocked.map((b) => `${b.x},${b.y}`));
@@ -395,3 +441,72 @@ for (const vp of PHONES) {
     });
   });
 }
+
+// dense-board-4: on the SE the Archive goes slim. The tray is a strip, the hint card is behind a
+// "Rule" tab while a gem is held; the tab opens the card and the next tap (or placing) closes it.
+// A first-sight teaching card is never hidden behind the tab.
+test.describe('slim column', () => {
+  test.use({
+    viewport: { width: 667, height: 320 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 1,
+  });
+
+  test('the Rule tab opens and closes the held gem’s card; teaching wins', async ({ page }) => {
+    await boot(page, 0);
+    const { L } = await open(page, 'archive');
+    expect(L.phone?.slim, 'Archive on the SE is slim').toBe(true);
+    const at = await toClient(page);
+    const tab = page.locator('.lr-rule-tab');
+    // A first-sight teaching card is up: the tab stays away while it shows.
+    const teach = await page.evaluate(() => {
+      const t = document.querySelector<HTMLElement>('.lr-altar-tip');
+      return !!t && !t.hidden && t.dataset.source === 'intro';
+    });
+    if (teach) await expect(tab).toBeHidden();
+    await page.evaluate(() => (window as G).__game.fuse.hush());
+    await waitFrames(page, 3);
+    await expect(tab).toBeHidden();
+    const slot = L.tray[0]!;
+    const s = at(slot.x, slot.y);
+    await page.touchscreen.tap(s.x, s.y);
+    await page.waitForFunction(() => !!(window as G).__altarView?.held);
+    await expect(tab).toBeVisible();
+    const tb = (await tab.boundingBox())!;
+    expect(tb.height, 'the tab is a 44 px target').toBeGreaterThanOrEqual(43.5);
+    await tab.tap();
+    await expect(tab).toBeHidden();
+    await expect(page.locator('.lr-altar-tip')).toBeVisible();
+    // The next tap anywhere closes the card; the gem stays held.
+    const blocked = new Set(puzzleFor('archive').blocked.map((b) => `${b.x},${b.y}`));
+    const fixed = new Set(puzzleFor('archive').fixed.map((f) => `${f.cell.x},${f.cell.y}`));
+    const c = { x: 0, y: 0 };
+    // A tap on the card itself closes it (in the column, it sets the gem back); nothing is
+    // placed. Pick the gem up again: the tab is back, the card folded.
+    const card = (await page.locator('.lr-altar-tip').boundingBox())!;
+    await page.touchscreen.tap(card.x + card.width / 2, card.y + card.height / 2);
+    await expect(page.locator('.lr-altar-tip')).toBeHidden();
+    expect(((await readSave(page))?.puzzles.archive?.placements ?? []).length).toBe(0);
+    if (!(await page.evaluate(() => !!(window as G).__altarView?.held))) {
+      await page.touchscreen.tap(s.x, s.y);
+      await page.waitForFunction(() => !!(window as G).__altarView?.held);
+    }
+    await expect(tab).toBeVisible();
+    await expect(page.locator('.lr-altar-tip')).toBeHidden();
+    // Open it again, then tap a socket: the tap closes the card and places the gem.
+    await tab.tap();
+    await expect(page.locator('.lr-altar-tip')).toBeVisible();
+    let free = { x: 0, y: 0 };
+    for (let y = 0; y < L.rows; y++)
+      for (let x = 0; x < L.cols; x++)
+        if (!blocked.has(`${x},${y}`) && !fixed.has(`${x},${y}`)) free = { x, y };
+    cellCenter(L, free, c);
+    const f = at(c.x, c.y);
+    await page.touchscreen.tap(f.x, f.y);
+    await expect
+      .poll(async () => ((await readSave(page))?.puzzles.archive?.placements ?? []).length)
+      .toBeGreaterThan(0);
+    await expect(page.locator('.lr-altar-tip')).toBeHidden();
+  });
+});

@@ -85,6 +85,9 @@ ${HEAD} .lr-altar-count[data-empty] {
   opacity: 1; color: #a89a80; text-decoration: none; background: rgba(14,12,10,0.9); border-color: rgba(168,154,128,0.45);
 }
 
+/* dense-board-4: on a dense board the badge is set at the 14 px floor (layout PH.countDense). */
+${HEAD}[data-dense] .lr-altar-count { height: 15px; padding: 0 5px; border-radius: 8px; font: 700 14px/13px ${SERIF}; }
+
 /* ── The cards ─────────────────────────────────────────────────────────── */
 ${CL} .tc-region[data-region="cardLane"]:has(> .lr-altar-lane) { gap: 6px; padding-top: 2px; padding-bottom: 8px; }
 ${LANE} {
@@ -310,6 +313,22 @@ ${CL}:has(.lr-altar-head):has(.lr-hud[data-open]) .lr-altar-hint { visibility: h
    Strike goes grey like the rest of the altar's controls. */
 ${CL}:has(.lr-altar-head):has(.lr-hud[data-open]) .tc-caption { visibility: hidden; }
 ${CL}:has(.lr-altar-head):has(.lr-hud[data-open]) [data-action="strike"] { filter: saturate(0.1) brightness(0.55); }
+
+/* dense-board-4: the slim column's Rule tab. The held gem's card folds behind it; a tap opens
+   it, the next tap (or setting the gem down) closes it. 44 px tall, at the lane's top. */
+${LANE} > .lr-rule-tab {
+  flex: none; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px; min-width: 44px; margin: 0; padding: 0 14px; box-sizing: border-box;
+  pointer-events: auto; border-radius: 22px; border: 1px solid rgba(232,192,106,0.7);
+  background: rgba(20,16,12,0.94); color: #f4e6c4; box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  font: 600 15px/1 ${SERIF}; letter-spacing: 0.3px;
+}
+${LANE} > .lr-rule-tab[hidden] { display: none; }
+${LANE} > .lr-rule-tab b {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: #e8c06a; color: #1a120a; font: 700 14px/1 ${SERIF};
+}
+${LANE} > .lr-rule-tab[data-open] { border-color: #ffd77a; box-shadow: 0 0 0 1px #ffd77a, 0 2px 8px rgba(0,0,0,0.6); }
 
 /* The teach leader (in the scaled overlay, over the board). */
 .tc-overlay .lr-teach-leader polyline { fill: none; stroke-linejoin: round; }
