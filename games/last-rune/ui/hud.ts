@@ -9,7 +9,7 @@
  * bar); a tap opens them as a short list, picking one or tapping elsewhere closes it. The ☰
  * carries the journal's "new pages" dot. Off phones the ☰ is hidden (CSS) and nothing changes.
  */
-import { h, NO_RESTORE_FOCUS_ATTR, type Rect } from '@engine/ui';
+import { h, NO_RESTORE_FOCUS_ATTR, type Rect } from '@thunderclap/engine/ui';
 import { type Bounds, clampInto, cost, type Obstacle, pickSpot } from './place';
 
 /** A door's plate on a phone (mobile-5-chrome): screen design px, centre x and plate top. */

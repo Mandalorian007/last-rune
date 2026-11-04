@@ -10,8 +10,8 @@
  *   filled width (`hall-frame.ts`), and each door wears a plate saying what it is. The model's
  *   positions are world px; the pointer and the HUD convert through the frame.
  */
-import type { Frame } from '@engine/render';
-import type { Rect } from '@engine/ui';
+import type { Frame } from '@thunderclap/engine/render';
+import type { Rect } from '@thunderclap/engine/ui';
 import { type FuseLine, hallLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { progressOf } from '../../game/save';

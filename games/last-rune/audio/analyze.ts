@@ -3,7 +3,7 @@
  * edges of one-shots, loop seams, tails cut short. Pure maths on Float32Arrays, used by the
  * Node unit tests, the in-browser render check (`render-check.ts`) and the audio demo.
  */
-import { dbToGain, gainToDb } from '@engine/audio';
+import { dbToGain, gainToDb } from '@thunderclap/engine/audio';
 
 export interface SoundMetrics {
   /** Seconds. */

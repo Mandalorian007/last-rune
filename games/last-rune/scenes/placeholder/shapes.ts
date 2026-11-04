@@ -10,7 +10,7 @@ import {
   type Material,
   type Renderer,
   type RGBA,
-} from '@engine/render';
+} from '@thunderclap/engine/render';
 import type { SocketColour } from '../../rules/progression';
 
 /** Socket colours as linear RGBA (pitch palette). */

@@ -10,8 +10,8 @@
  * A pad press is not a user gesture, so a new-tab link is opened with `window.open` and checked:
  * if the browser blocks it, the link's copy field appears instead (engine `activateLink`).
  */
-import type { Input } from '@engine/input';
-import { activateLink, focusableWithin } from '@engine/ui';
+import type { Input } from '@thunderclap/engine/input';
+import { activateLink, focusableWithin } from '@thunderclap/engine/ui';
 import type { Action } from '../game/actions';
 
 /** What a tick of menu input did: moved focus, clicked the focused control, or nothing. */

@@ -15,7 +15,7 @@ pnpm build      # production build → dist/
 ```
 
 ## Layout
-- `engine/`: the ThunderClap engine (no game-specific code)
+- `packages/engine/`: the ThunderClap engine, `@thunderclap/engine` (no game-specific code; see its `ARCHITECTURE.md`)
 - `games/last-rune/`: the game: rules, content, scenes, procedural art, shaders
 - `docs/`: plan, status, decisions, design specs, architecture
 

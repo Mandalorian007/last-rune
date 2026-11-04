@@ -9,8 +9,8 @@
  * page.append(portraits.canvas('split', 200)); // a fresh <canvas>, 200 CSS px square
  * ```
  */
-import { PostStack } from '@engine/post';
-import { type Renderer, SnapshotRenderer } from '@engine/render';
+import { PostStack } from '@thunderclap/engine/post';
+import { type Renderer, SnapshotRenderer } from '@thunderclap/engine/render';
 import { GEM_KINDS, type GemKind } from '../rules/types';
 import { addGemLight, type GemInstance, GemRenderer } from './materials/gems';
 import { LIGHT_HEIGHT, LightSet } from './materials/lights';

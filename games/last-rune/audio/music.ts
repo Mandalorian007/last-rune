@@ -4,8 +4,8 @@
  * a short look-ahead against the audio clock so timing is sample-accurate even when the main
  * thread stutters. Silent and idle while audio is locked.
  */
-import type { AudioEngine, Voice } from '@engine/audio';
-import { rng } from '@engine/audio';
+import type { AudioEngine, Voice } from '@thunderclap/engine/audio';
+import { rng } from '@thunderclap/engine/audio';
 import {
   barSeconds,
   eventChance,

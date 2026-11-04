@@ -7,7 +7,7 @@
  * (conduits, socket veils), socket overlays, props (storm, machines), gem shadows/pools, gems, held gem, bolts, candle flames,
  * FUSE, particles.
  */
-import type { Frame, RGBA } from '@engine/render';
+import type { Frame, RGBA } from '@thunderclap/engine/render';
 import type { CandleInstance } from '../../art/materials/candles';
 import { addGemLight, type GemInstance, type GemState } from '../../art/materials/gems';
 import { LightSet } from '../../art/materials/lights';

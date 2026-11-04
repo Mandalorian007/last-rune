@@ -10,8 +10,8 @@
  *
  * Replace it in main.ts: `puzzle: (id) => new AltarScene(id)`.
  */
-import type { Frame } from '@engine/render';
-import { button, h } from '@engine/ui';
+import type { Frame } from '@thunderclap/engine/render';
+import { button, h } from '@thunderclap/engine/ui';
 import { machineLine, reactionLine } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { progressOf } from '../../game/save';

@@ -10,8 +10,8 @@
  *   it; mobile-7-hall).
  */
 
-import type { CaptionCard, Corner, Rect } from '@engine/ui';
-import { h } from '@engine/ui';
+import type { CaptionCard, Corner, Rect } from '@thunderclap/engine/ui';
+import { h } from '@thunderclap/engine/ui';
 import { cardsOf, type FuseLine } from '../content/lines';
 
 export type PortraitFactory = () => Node;

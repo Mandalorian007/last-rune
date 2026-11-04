@@ -8,7 +8,7 @@
  *
  * Keys inside the book: ←/→ turn the spread, Esc closes (engine/ui panel stack).
  */
-import { button, h, type PanelHandle, type PanelStack } from '@engine/ui';
+import { button, h, type PanelHandle, type PanelStack } from '@thunderclap/engine/ui';
 import type { GameSave } from '../game/save';
 import { markCodexSeen, metGems, progressOf } from '../game/save';
 import type { GemKind } from '../rules/types';

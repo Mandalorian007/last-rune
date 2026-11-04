@@ -1,4 +1,4 @@
-import { rng } from '@engine/audio';
+import { rng } from '@thunderclap/engine/audio';
 import { describe, expect, it } from 'vitest';
 import { BANK } from './bank';
 import { fuseBlip, fuseModeForTier, newFuseState, vowelFor } from './fuse';

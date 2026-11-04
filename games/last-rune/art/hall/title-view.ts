@@ -9,7 +9,7 @@
  * Shares the hall's baked stone, window material and FUSE rig (per-renderer kit), so going
  * title → hall → title never rebakes or leaks.
  */
-import type { DrawParams, Frame, Renderer } from '@engine/render';
+import type { DrawParams, Frame, Renderer } from '@thunderclap/engine/render';
 import type { FuseSpot, TitleView, TitleViewFrame, ViewContext } from '../../scenes/views';
 import { HALL_WINDOW_UNIFORM_FLOATS } from '../../shaders/hall-shaders';
 import { type CandleInstance, CandleRenderer } from '../materials/candles';

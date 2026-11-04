@@ -1,8 +1,8 @@
 // Entry point: mount the letterboxed canvas, bring up WebGPU, build the GameCtx
 // and boot into the title. Fatal screens (no WebGPU, device lost) come from
 // engine/platform. Dev routes: `?demo=render|art|props`, `?nogpu`.
-import { boot } from '@engine/platform';
-import { installGpuErrorLogging } from '@engine/render';
+import { boot } from '@thunderclap/engine/platform';
+import { installGpuErrorLogging } from '@thunderclap/engine/render';
 import { createGameCtx, type GameCtx, type SceneFactories } from './game/ctx';
 import { AltarScene } from './scenes/altar/altar-scene';
 import { SolveScene } from './scenes/altar/solve-scene';

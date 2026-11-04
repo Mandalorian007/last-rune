@@ -3,7 +3,7 @@
  * Apply with `post.set(POST_PRESETS.altar)`. Each preset sets every section, so switching
  * scenes never leaks settings from the previous one.
  */
-import type { PostSettingsPatch } from '@engine/post';
+import type { PostSettingsPatch } from '@thunderclap/engine/post';
 
 export type PostPresetName = 'title' | 'hall' | 'altar' | 'codex' | 'journal' | 'ending';
 

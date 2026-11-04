@@ -5,7 +5,7 @@
  * with a weight (a door's name plate counts more than its art). Every candidate is first slid
  * inside the bounds; the one that covers least wins, the earlier one on a tie.
  */
-import type { Rect } from '@engine/ui';
+import type { Rect } from '@thunderclap/engine/ui';
 
 export interface Obstacle {
   readonly rect: Rect;

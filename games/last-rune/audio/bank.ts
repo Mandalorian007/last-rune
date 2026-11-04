@@ -14,7 +14,7 @@ import {
   type OutputBus,
   pluck,
   type SoundSpec,
-} from '@engine/audio';
+} from '@thunderclap/engine/audio';
 import { GEM_KINDS, type GemKind } from '../rules/types';
 import type { ReverbOptions } from './post';
 import { GEM_VOICES, gemHz } from './theory';

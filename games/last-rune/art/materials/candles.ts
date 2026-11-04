@@ -10,8 +10,8 @@
  *   candles.drawBodies(frame, list);     // one batch
  *   candles.drawFlames(frame, list);     // one batch of halos + one of flames
  */
-import { valueNoise1 } from '@engine/fx';
-import type { DrawParams, Frame, Material, Renderer, RGBA } from '@engine/render';
+import { valueNoise1 } from '@thunderclap/engine/fx';
+import type { DrawParams, Frame, Material, Renderer, RGBA } from '@thunderclap/engine/render';
 import { CANDLE_WGSL, FLAME_WGSL, GLOW_WGSL } from '../../shaders/candle-wgsl';
 import { LIGHT_HEIGHT, LIGHT_SET_FLOATS, type LightSet } from './lights';
 import { LINEAR } from './palette';

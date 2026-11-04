@@ -2,7 +2,7 @@
  * The game's input bindings (engine/input has none of its own).
  * Esc while a panel is open is consumed by engine/ui's panel stack and never reaches `cancel`.
  */
-import type { Bindings } from '@engine/input';
+import type { Bindings } from '@thunderclap/engine/input';
 
 export type Action =
   | 'select' // primary pointer button / tap

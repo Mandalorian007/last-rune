@@ -11,8 +11,10 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run --passWithNoTests",
+    "test:engine": "pnpm --filter @thunderclap/engine test",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:engine": "pnpm --filter @thunderclap/engine test:e2e",
     "baseline": "playwright test -c scripts/baseline/playwright.config.ts",
     "package:itch": "node scripts/package-itch.mjs",
     "itch:sim": "node scripts/itch-sim/serve.mjs",
@@ -20,8 +22,14 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "fix": "biome check --write .",
-    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "check": "pnpm check:engine && pnpm check:game",
+    "check:engine": "pnpm --filter @thunderclap/engine check",
+    "check:game": "pnpm typecheck && pnpm lint && pnpm check:boundaries && pnpm test",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
     "puzzle": "tsx tools/puzzle.ts"
+  },
+  "dependencies": {
+    "@thunderclap/engine": "workspace:*"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

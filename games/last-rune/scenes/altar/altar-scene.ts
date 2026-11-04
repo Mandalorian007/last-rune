@@ -19,8 +19,8 @@
  * Flow hooks: `savePlacements` on every change, `recordAttempt` on every strike,
  * `completePuzzle` on exact (swaps to the solve moment), `closePuzzle` on back.
  */
-import type { Frame, RGBA } from '@engine/render';
-import { button, h, Loupe, type Rect } from '@engine/ui';
+import type { Frame, RGBA } from '@thunderclap/engine/render';
+import { button, h, Loupe, type Rect } from '@thunderclap/engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';

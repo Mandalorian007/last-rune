@@ -3,7 +3,14 @@
  * Each surface bakes its albedo + normal/height/AO once (GPU, at creation) and is lit every
  * frame by the scene's LightSet. Draw cost: one textured quad.
  */
-import type { DrawParams, Frame, Material, Renderer, RGBA, Texture } from '@engine/render';
+import type {
+  DrawParams,
+  Frame,
+  Material,
+  Renderer,
+  RGBA,
+  Texture,
+} from '@thunderclap/engine/render';
 import {
   LIT_SURFACE_WGSL,
   SOCKET_WGSL,

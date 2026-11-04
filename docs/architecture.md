@@ -1,18 +1,22 @@
 # Architecture
 
-Based on pitch §6. Two top-level code folders:
+Based on pitch §6, reshaped by D-041 (Phase 1, ws/workspace). The repo is a pnpm workspace: the root package is the game and its tooling, and the engine is the workspace package `@thunderclap/engine` that the game depends on (`workspace:*`). Its contracts and the planned target are in [packages/engine/ARCHITECTURE.md](../packages/engine/ARCHITECTURE.md).
 
 ```
-engine/                 # ThunderClap engine. Knows NOTHING about gems/machines/FUSE.
-  core/                 # loop (fixed-step update + render), time, events, ecs-lite (only if needed)
-  render/               # WebGPU device/context, sprite+mesh batch, material system, render targets
-  post/                 # bloom, volumetric fog, god rays, vignette, colour grade
-  fx/                   # GPU particles, trails, light flicker, emissive pulse
-  input/                # pointer, keys, gamepad → action map (bindings supplied by the game)
-  audio/                # WebAudio buses (master/music/sfx/ui), one-shots, loops, synth helpers
-  ui/                   # DOM overlay stack, panels, buttons, toasts, theme tokens (CSS vars)
-  save/                 # versioned localStorage slots + migrations
-  platform/             # canvas mount, DPR/resize, letterbox, WebGPU capability check, itch boot
+packages/engine/        # @thunderclap/engine. Knows NOTHING about gems/machines/FUSE.
+  package.json          # "exports" map = the public API (./audio, ./core, ... ./ui, ./testing)
+  ARCHITECTURE.md       # contracts, today vs planned
+  CHANGELOG.md
+  src/
+    core/               # loop (fixed-step update + render), time, events, ecs-lite (only if needed)
+    render/             # WebGPU device/context, sprite+mesh batch, material system, render targets
+    post/               # bloom, volumetric fog, god rays, vignette, colour grade
+    fx/                 # GPU particles, trails, light flicker, emissive pulse
+    input/              # pointer, keys, gamepad → action map (bindings supplied by the game)
+    audio/              # WebAudio buses (master/music/sfx/ui), one-shots, loops, synth helpers
+    ui/                 # DOM overlay stack, panels, buttons, toasts, theme tokens (CSS vars)
+    save/               # versioned localStorage slots + migrations
+    platform/           # canvas mount, DPR/resize, letterbox, WebGPU capability check, itch boot
 games/last-rune/
   rules/                # gems, charge sim, solver, capability graph (PURE TS, no DOM/GPU)
   content/              # machines.json, lines.json, journal/, puzzles/
@@ -24,9 +28,9 @@ games/last-rune/
 
 ## Rules
 
-1. **Promotion rule:** code goes in `engine/` only if this game uses it, the next game plausibly would, and its API has **zero game nouns**. If it says "gem" or "machine", it stays in `games/last-rune/`.
-2. **Dependency direction:** `games/*` → `engine/*`. Never the reverse. `games/last-rune/rules/` imports nothing from `engine/` or the DOM. It must run in Node for tests and the solver.
-3. **Import aliases:** `@engine/*` and `@game/*` (set in `tsconfig.json` and `vite.config.ts`).
+1. **Promotion rule:** code goes in `packages/engine/` only if this game uses it, the next game plausibly would, and its API has **zero game nouns**. If it says "gem" or "machine", it stays in `games/last-rune/`.
+2. **Dependency direction:** `games/*` → `@thunderclap/engine`. Never the reverse. `games/last-rune/rules/` imports nothing from the engine or the DOM. It must run in Node for tests and the solver.
+3. **Imports:** the game reaches the engine only through its exports map, `@thunderclap/engine/<module>` (e.g. `@thunderclap/engine/render`); there is no `@engine/*` alias any more. Inside the engine, modules import each other by relative path. `@game/*` is the game's alias (`tsconfig.json`, `vite.config.ts`). `pnpm check:boundaries` (`scripts/check-boundaries.mjs`, part of `pnpm check`) enforces all of this plus rule 2.
 4. **Data-driven content:** machines, puzzles, lines and journal entries are JSON/TS data validated by tests, not hardcoded in scenes.
 5. **No runtime frameworks** (D-008). Runtime deps need PM approval and a DECISIONS entry.
 
@@ -56,13 +60,13 @@ Must export at minimum:
 - `puzzles/`: owned by **rules-puzzles**: one `PuzzleDef` per machine, filename `<machineId>.ts`.
 
 ### C5 · Engine render API (owned by engine-render)
-A small, documented surface in `engine/render/README.md`: create renderer on a canvas, frame begin/end, draw sprites/quads/meshes with materials (custom WGSL allowed for game shaders), emissive channel for bloom, render-target management, post stack config (bloom, fog, god rays, vignette, grade), particle emitters. A game shader must be able to plug in as a material without touching engine code.
+A small, documented surface in `packages/engine/src/render/README.md`: create renderer on a canvas, frame begin/end, draw sprites/quads/meshes with materials (custom WGSL allowed for game shaders), emissive channel for bloom, render-target management, post stack config (bloom, fog, god rays, vignette, grade), particle emitters. A game shader must be able to plug in as a material without touching engine code.
 
 ### C6 · Engine systems API (owned by engine-systems)
-`engine/input` (action map), `engine/audio` (buses, synth one-shots), `engine/ui` (overlay stack mounted over the canvas, theme tokens), `engine/save` (versioned slots, migrations, quota/blocked-storage safe). Each module has a README with usage.
+`@thunderclap/engine/input` (action map), `/audio` (buses, synth one-shots), `/ui` (overlay stack mounted over the canvas, theme tokens), `/save` (versioned slots, migrations, quota/blocked-storage safe); sources in `packages/engine/src/<module>/`. Each module has a README with usage.
 
 ### C7 · Scene contract (adopted, as built by engine-render)
-`Scene<Ctx, Frame>` in `engine/core`: `enter(ctx)`, `exit()`, `pause()`, `resume()`, `update(dt)` (fixed 60 Hz), `render(frame, alpha)`, `transparent` flag (overlays render over the scene below). `SceneStack` ops (`push/pop/replace/clear`) are deferred while updating/rendering. One shared game `Ctx` holds `renderer`, `post`, `surface`, `particles` + engine-systems' `input`, `audio`, `ui`, `save`. Template: `games/last-rune/scenes/_demo/render-demo.ts`. Draw order = submission order (no depth); scenes order their own draws.
+`Scene<Ctx, Frame>` in `@thunderclap/engine/core`: `enter(ctx)`, `exit()`, `pause()`, `resume()`, `update(dt)` (fixed 60 Hz), `render(frame, alpha)`, `transparent` flag (overlays render over the scene below). `SceneStack` ops (`push/pop/replace/clear`) are deferred while updating/rendering. One shared game `Ctx` holds `renderer`, `post`, `surface`, `particles` + engine-systems' `input`, `audio`, `ui`, `save`. Template: `games/last-rune/scenes/_demo/render-demo.ts`. Draw order = submission order (no depth); scenes order their own draws.
 
 ## Runtime shape
 - Logical design space **1920×1080**, letterboxed 16:9 into whatever the iframe gives us (itch embed 960×540 + fullscreen). Render at device pixel ratio, capped for perf.

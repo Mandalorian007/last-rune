@@ -13,8 +13,14 @@
  * the save.
  */
 
-import type { StorageLike } from '@engine/save';
-import { createSaveStore, type Infer, type Migrations, type SaveStore, s } from '@engine/save';
+import type { StorageLike } from '@thunderclap/engine/save';
+import {
+  createSaveStore,
+  type Infer,
+  type Migrations,
+  type SaveStore,
+  s,
+} from '@thunderclap/engine/save';
 import { puzzleFor } from '../content/puzzles';
 import { type ProgressState, parseProgressState } from '../rules/progression';
 import { GEM_KINDS, type GemKind, MACHINE_IDS, type MachineId } from '../rules/types';

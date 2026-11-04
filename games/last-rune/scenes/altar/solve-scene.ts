@@ -10,9 +10,9 @@
  * The scene rebuilds the altar from the saved placements (the altar scene saved them just
  * before `completePuzzle`), so it stands alone and works for any puzzle.
  */
-import type { EmitParams } from '@engine/fx';
-import type { Frame, RGBA } from '@engine/render';
-import { button, h } from '@engine/ui';
+import type { EmitParams } from '@thunderclap/engine/fx';
+import type { Frame, RGBA } from '@thunderclap/engine/render';
+import { button, h } from '@thunderclap/engine/ui';
 import { createGemPortraits, type GemPortraits } from '../../art/gem-portraits';
 import type { GemInstance } from '../../art/materials/gems';
 import { POST_PRESETS } from '../../art/materials/post-presets';

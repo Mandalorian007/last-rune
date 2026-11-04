@@ -12,8 +12,8 @@
  * Esc / J / "Back to the hall" closes. Pages are marked read as they open; the
  * "new" seals stay up until the desk is closed.
  */
-import type { Frame } from '@engine/render';
-import { h } from '@engine/ui';
+import type { Frame } from '@thunderclap/engine/render';
+import { h } from '@thunderclap/engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { DeskArt } from './desk-art';

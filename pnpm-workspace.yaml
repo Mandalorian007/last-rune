@@ -1,0 +1,4 @@
+# The root package is the game (Last Rune) and its tooling; the engine is a workspace package
+# the game depends on (D-041, docs/workstreams/workspace.md).
+packages:
+  - packages/*

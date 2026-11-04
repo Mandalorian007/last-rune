@@ -3,7 +3,14 @@
  * contacts, electric snaps, held tones and loop beds. Each returns plain layers, so the bank
  * stays declarative and every spec can be validated in Node.
  */
-import { type Envelope, type Layer, loopSafeFreq, pluck, rng, type SoundSpec } from '@engine/audio';
+import {
+  type Envelope,
+  type Layer,
+  loopSafeFreq,
+  pluck,
+  rng,
+  type SoundSpec,
+} from '@thunderclap/engine/audio';
 import { type GemVoice, rateForSemis } from './theory';
 
 /** Hold envelope for loop layers (the loop fold hides the 5 ms attack). */

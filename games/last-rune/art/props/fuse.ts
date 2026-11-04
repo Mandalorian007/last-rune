@@ -11,8 +11,8 @@
  * fuse.draw(frame, lights);
  * ```
  */
-import { flicker, valueNoise1 } from '@engine/fx';
-import type { DrawParams, Frame, Material, Renderer } from '@engine/render';
+import { flicker, valueNoise1 } from '@thunderclap/engine/fx';
+import type { DrawParams, Frame, Material, Renderer } from '@thunderclap/engine/render';
 import { FUSE_MATERIAL_WGSL, FUSE_UNIFORM_FLOATS } from '../../shaders/fuse-shaders';
 import { PROP_LIGHT_FLOATS, type PropLightSource } from './lighting';
 import { prop } from './palette';

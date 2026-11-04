@@ -12,10 +12,10 @@
  * Directed by an async script over scene-time waits. A generation token makes
  * skip / exit cancel it cleanly. Skippable only after the first viewing.
  */
-import type { Voice } from '@engine/audio';
-import type { PostSettingsPatch } from '@engine/post';
-import type { DrawParams, Frame, Material, RGBA } from '@engine/render';
-import { externalLink, h } from '@engine/ui';
+import type { Voice } from '@thunderclap/engine/audio';
+import type { PostSettingsPatch } from '@thunderclap/engine/post';
+import type { DrawParams, Frame, Material, RGBA } from '@thunderclap/engine/render';
+import { externalLink, h } from '@thunderclap/engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import { Fuse as FuseProp } from '../../art/props/fuse';
 import { createFusePortrait, type FusePortrait } from '../../art/props/fuse-portrait';

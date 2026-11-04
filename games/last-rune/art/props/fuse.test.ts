@@ -1,5 +1,5 @@
-import { Renderer } from '@engine/render';
-import { createFakeDevice, fakeRendererGpu } from '@engine/render/fake-gpu';
+import { Renderer } from '@thunderclap/engine/render';
+import { createFakeDevice, fakeRendererGpu } from '@thunderclap/engine/testing';
 import { describe, expect, it } from 'vitest';
 import { Fuse } from './fuse';
 
