@@ -261,3 +261,10 @@ Format: `D-NNN · date · decision · why · who`.
     - Gate 1 requires the engine harness.
     - Gate 2 requires the mobile-* platform checks to be engine-owned.
     - The D-040 blind screenshot review stays a product check.
+- **Addendum 3 (2026-11-03, user):** "I don't really want tags on the repo, but maybe engine could have a cut release option that tags on the repo."
+  - No routine tags. Gates are logged in STATUS, not tagged; the plan's per-gate `engine-v0.2.0-alpha.1` / `engine-v0.2.0` tags are dropped.
+  - Engine releases go through `pnpm engine:release <version> [--tag] [--dry]` (`scripts/engine-release.mjs`):
+    - it runs the checks, bumps `packages/engine/package.json`, dates the CHANGELOG and commits;
+    - with `--tag` only, it creates `engine-v<version>`;
+    - it never pushes.
+  - Game releases need a tag only if they have a GitHub Release; that is the user's call per release.
