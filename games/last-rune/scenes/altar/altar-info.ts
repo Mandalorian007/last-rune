@@ -3,24 +3,37 @@
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
 import { button, h } from '@thunderclap/engine/ui';
+import { createGemPortraits } from '../../art/gem-portraits';
 import { codexEntry, FIXED_NOTE, FIXED_NOTE_FULL, YOURS_NOTE } from '../../content/codex';
 import { gemNudge, TEACH_NUDGE } from '../../content/lines';
-import { isRotational } from '../../rules';
-import type { Cell, GemKind } from '../../rules/types';
+import { isRotational, stormCharge } from '../../rules';
+import type { Cell, Dir, GemKind } from '../../rules/types';
+import { chipAt, diagramSvg, fizzleAt, GEM_DIAGRAMS, turnSide } from '../../ui/codex-diagram';
 import {
+  capacitorStrip,
   GEM_NAME,
+  GOAL_NAME,
+  GOAL_RULE,
   INFO_TAG,
   INTRO_FADE,
   type InfoHow,
   RING_NAME,
   RING_RULE,
+  strikesRule,
   TEACH_IDLE,
   TOUCH_CARD_SECS,
 } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { introButton, pickInfo } from './moments';
+import { keepTogether } from './nowrap';
 import { legalSockets } from './socket-looks';
-import { firstSentence } from './teach';
+import { strikeLabel } from './strike';
+import { firstSentence, hasPicture, type TeachPage, teachPages } from './teach';
+
+/** teach-4: the in→out picture on a Gate's or Split's first card, CSS px square. */
+const FIG_PX = 72;
+/** The Capacitor's picture beside its two-strike strip: smaller, no number chips. */
+const CAP_FIG_PX = 46;
 
 export const infoMethods = {
   /** FUSE's nudge for a gem's first appearance (never interrupting). */
@@ -72,13 +85,23 @@ export const infoMethods = {
     return this.board.serialise().some((q) => q.gem === gem);
   },
 
-  /** The arrival card's pages on a phone: each new piece, and the gold ring on the first altar. */
+  /**
+   * The arrival card's pages on a phone (teach-4): the goal on the first altar, the strikes on
+   * the first multi-strike altar, each new piece, and the gold ring on the first altar. Big
+   * screens show every new piece and the ring on one card.
+   */
   introPages(this: AltarScene): number {
-    return this.introRows().length + (this.teachCell ? 1 : 0);
+    return this.view.layout.phone
+      ? this.teachPages().length
+      : this.introRows().length + (this.teachCell ? 1 : 0);
+  },
+
+  teachPages(this: AltarScene): TeachPage[] {
+    return teachPages(this.introRows(), { first: !!this.teachCell, firstMulti: this.firstMulti });
   },
 
   /** What this altar introduces, for the arrival card and the briefing. */
-  introRows(this: AltarScene): { gem: GemKind; how: InfoHow }[] {
+  introRows(this: AltarScene): { gem: GemKind; how: 'fixed' | 'tray' | 'turns' }[] {
     return [
       ...this.news.fixed.map((f) => ({ gem: f.gem, how: 'fixed' as const })),
       ...this.news.tray.map((gem) => ({ gem, how: 'tray' as const })),
@@ -201,14 +224,18 @@ export const infoMethods = {
     const onBoard = focus ? (this.board.at(focus) ?? fixedHere) : undefined;
     // Phones: the arrival card outranks a gem's tip (moments.ts); only a long-press pin wins.
     // With a gem in hand the card names that gem or none (`pickInfo`, D-040 addendum 5).
-    const teachUp = this.introLeft > 0 && !strike;
-    const introAt = Math.min(this.introPageIdx, this.introPages() - 1);
+    const introAt = Math.max(0, Math.min(this.introPageIdx, this.introPages() - 1));
     const news = this.introRows();
+    const pages = L.phone ? this.teachPages() : [];
+    const onPage = pages[introAt];
+    // teach-4: a goal, strikes or ring page names no gem, so a gem in hand takes the card.
+    const teachUp =
+      this.introLeft > 0 && !strike && !(L.phone && this.hand && onPage?.kind !== 'gem');
     const source = pickInfo({
       pin: !!pin,
       phone: !!L.phone,
       teachUp,
-      teachGems: L.phone ? (news[introAt] ? [news[introAt].gem] : []) : news.map((r) => r.gem),
+      teachGems: L.phone ? (onPage?.kind === 'gem' ? [onPage.gem] : []) : news.map((r) => r.gem),
       held: this.hand?.kind ?? null,
       slot: s?.gem ?? null,
       board: focus && onBoard ? onBoard.gem : null,
@@ -247,16 +274,19 @@ export const infoMethods = {
       return;
     }
     this.tipKey = key;
-    if (rows.length === 0) {
+    const intro = key.startsWith('intro');
+    if (rows.length === 0 && !(intro && pages.length > 0)) {
       this.tip.hidden = true;
       return;
     }
-    const intro = key.startsWith('intro');
     this.tip.dataset.source = intro ? 'intro' : key[0] === 't' ? 'tray' : 'board';
     // Phones: a chip, each row its gem's name and first whole sentence (never cut mid-rule);
     // a long-press pins the full card.
     const chip = !!L.phone && !key.startsWith('p');
-    const items = [
+    // Phones: the arrival card's pages (teach-4: the goal and the strikes too, and a picture of
+    // the charge going in and out on a Gate's, Split's or Capacitor's first card).
+    const pageEls = intro && chip ? pages.map((p) => this.pageEl(p)) : null;
+    const items = pageEls ?? [
       ...rows.map((r) => {
         const tag = this.tagOf(r.how);
         return h(
@@ -265,7 +295,11 @@ export const infoMethods = {
           h('b', null, GEM_NAME[r.gem]),
           tag ? h('span', { class: 'lr-info-tag', 'data-how': r.how }, tag) : null,
           ' ',
-          h('span', { class: 'lr-info-rule' }, chip ? this.chipRule(r, intro) : this.infoRule(r)),
+          h(
+            'span',
+            { class: 'lr-info-rule' },
+            chip ? keepTogether(this.chipRule(r, intro)) : this.infoRule(r),
+          ),
           // The worked example, with real numbers (the codex's line; mobile-7-teach).
           // Phones, on a long-press card only: chips and the teach card stay within their line
           // budgets (an SE has no room). Desktop and iPad tips keep their v1.0 look (D-041).
@@ -309,7 +343,7 @@ export const infoMethods = {
         'span',
         { class: 'lr-info-page' },
         'New here',
-        n > 1 ? h('span', { class: 'lr-info-of' }, ` ${i + 1} of ${n}`) : null,
+        n > 1 ? h('span', { class: 'lr-info-of' }, keepTogether(` ${i + 1} of ${n}`)) : null,
       );
       this.tip.replaceChildren(h('div', { class: 'lr-info-foot' }, page, next), items[i]!);
     } else this.tip.replaceChildren(...items);
@@ -330,5 +364,91 @@ export const infoMethods = {
     this.tip.hidden = false;
     this.tipSlotX = slotX;
     this.placeTip(L);
+  },
+
+  /** One page of a phone's arrival card (teach-4). */
+  pageEl(this: AltarScene, p: TeachPage): HTMLElement {
+    const row = (how: string, name: string, fig: HTMLElement | null, ...rest: Node[]) =>
+      h('div', { class: 'lr-info-row', 'data-how': how }, fig, h('b', null, name), ' ', ...rest);
+    const rule = (text: string) => h('span', { class: 'lr-info-rule' }, keepTogether(text));
+    if (p.kind === 'goal') return row('goal', GOAL_NAME, null, rule(GOAL_RULE));
+    if (p.kind === 'ring') return row('ring', RING_NAME, null, rule(RING_RULE));
+    if (p.kind === 'strikes') {
+      const n = this.puzzle.pulses;
+      return row('strikes', keepTogether(strikeLabel(n, 'edit')), null, rule(strikesRule(n)));
+    }
+    const fig = hasPicture(p) ? this.gemFigure(p.gem, p.how === 'fixed') : null;
+    if (fig && p.gem === 'capacitor') {
+      // The Capacitor's lesson is its two strikes, with this altar's own charge (teach-4).
+      const [one, two] = capacitorStrip(stormCharge(this.puzzle.storm.strength));
+      return row(
+        p.how,
+        GEM_NAME[p.gem],
+        fig,
+        rule(p.how === 'fixed' ? FIXED_NOTE : ''),
+        h(
+          'span',
+          { class: 'lr-info-strip' },
+          h('span', null, keepTogether(one)),
+          ' ',
+          h('span', null, keepTogether(two)),
+        ),
+      );
+    }
+    return row(p.how, GEM_NAME[p.gem], fig, rule(this.chipRule(p, true)));
+  },
+
+  /**
+   * teach-4: the gem as the codex draws it (the real gem material, `art/gem-portraits.ts`),
+   * turned the way it sits on this altar, with the charge going in and out. A Gate or Split
+   * shows the numbers on its arrows (4 in, 2 and 2 out); the Capacitor's numbers are its strip.
+   */
+  gemFigure(this: AltarScene, gem: GemKind, fixed: boolean): HTMLElement {
+    const d = GEM_DIAGRAMS[gem];
+    const cell = fixed ? this.news.fixed.find((f) => f.gem === gem)?.cell : undefined;
+    const rot = cell
+      ? (this.puzzle.fixed.find((f) => f.cell.x === cell.x && f.cell.y === cell.y)?.rot ?? 0)
+      : 0;
+    const small = gem === 'capacitor';
+    this.pictures ??= createGemPortraits(this.ctx.renderer);
+    const pic = this.pictures.canvas(gem, small ? CAP_FIG_PX : FIG_PX);
+    if (pic) pic.className = 'lr-fig-gem';
+    const bolt = h('div', { class: 'lr-fig-bolt' });
+    bolt.innerHTML = diagramSvg(d);
+    const turned = h(
+      'div',
+      { class: 'lr-fig-turn', style: { transform: `rotate(${rot * 90}deg)` } },
+      pic ?? h('div', { class: 'lr-fig-gem lr-fig-gem--css' }),
+      bolt,
+    );
+    const at = (side: Dir, place: (s: Dir) => { left: number; top: number }) => {
+      const q = place(turnSide(side, rot));
+      return { left: `${q.left}%`, top: `${q.top}%` };
+    };
+    const chip = (side: Dir, charge: string, kind: 'in' | 'out') =>
+      h('span', { class: 'lr-fig-chip', dataset: { kind }, style: at(side, chipAt) }, charge);
+    const ins = d.ins.map((a) => a.charge).join(' and ');
+    const outs = d.outs.map((a) => a.charge).join(' and ');
+    return h(
+      'div',
+      {
+        class: 'lr-fig',
+        role: 'img',
+        'aria-label': small
+          ? `${GEM_NAME[gem]}: charge goes in, and comes out a strike later.`
+          : `${GEM_NAME[gem]}: ${ins} in, ${outs} out.`,
+        dataset: { gem, small: String(small) },
+      },
+      turned,
+      ...(small
+        ? []
+        : [
+            ...d.ins.map((a) => chip(a.side, a.charge, 'in')),
+            ...d.outs.map((a) => chip(a.side, a.charge, 'out')),
+            ...d.fizzle.map((side) =>
+              h('span', { class: 'lr-fig-nogo', style: at(side, fizzleAt) }),
+            ),
+          ]),
+    );
   },
 };

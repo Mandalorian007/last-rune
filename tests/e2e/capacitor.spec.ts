@@ -93,7 +93,7 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
     const tick = () => {
       const label = document.querySelector('.lr-altar-storm .lr-storm-strikes')?.textContent;
       const lines = [...document.querySelectorAll('.lr-altar-cap .lr-cap-line:not([hidden])')]
-        .map((l) => l.textContent)
+        .map((l) => (l.textContent ?? '').replace(/\u00a0/g, ' '))
         .join(' / ');
       const text = `${label} | ${lines}`;
       if (w.__capSeen.at(-1) !== text) w.__capSeen.push(text);
