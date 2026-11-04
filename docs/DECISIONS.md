@@ -269,3 +269,14 @@ Format: `D-NNN · date · decision · why · who`.
     - it never pushes.
   - Game releases need a tag only if they have a GitHub Release; that is the user's call per release.
   - Existing tags (user, 2026-11-03): `engine-v0.1` deleted, as no release used it; `v1.0.0` and `alpha-1` are kept because they back GitHub Releases. The engine at v1.0 is simply `v1.0.0`.
+
+## D-042: Desktop host is Electron, not Tauri; desktop saves stay in localStorage (2026-11-03, PM)
+- **Electron over Tauri.**
+  - Electron ships its own Chromium, so desktop WebGPU behaves the same as Chrome on the web.
+  - Tauri would use the OS webview: WKWebView on macOS, WebView2 on Windows and WebKitGTK on Linux. WebKitGTK has no usable WebGPU.
+  - Cost: about 110 MiB per download (the macOS dmg is 114 MiB).
+- **Storage.** The desktop build keeps saves in the page's `localStorage` on a fixed `app://bundle` origin, following the user's "storage is browser only for now". A file backend in `userData` is an open question for the user.
+- **Local only.** Pages are served from `app://bundle` with a CSP. Every off-origin request is cancelled; links open only through `shell.openExternal`, and only for https.
+- **Signing.** Builds are unsigned (user-confirmed under D-041).
+- **Still open:** notarisation, the Linux AppImage sandbox under AppArmor, running the Electron e2e on Linux CI, and test runs of the Windows and Linux builds on real machines.
+- Source: docs/workstreams/host-electron.md.
