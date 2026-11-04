@@ -29,7 +29,7 @@ import { machineLine, type reactionLine } from '../../content/lines';
 import { puzzleFor } from '../../content/puzzles';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { BoltOutcome } from '../../game/flow';
-import { progressOf } from '../../game/save';
+import { markTaught, progressOf, taughtGems } from '../../game/save';
 import type { Placement, PuzzleDef, SimResult } from '../../rules';
 import type { Cell, GemKind, MachineId } from '../../rules/types';
 import { codexPages } from '../../ui/codex-data';
@@ -216,7 +216,7 @@ export class AltarScene implements GameScene {
   strikeReadings: number[][] = [];
 
   // First-appearance teaching
-  news: NewGems = { fixed: [], tray: [], turns: [] };
+  news: NewGems = { fixed: [], tray: [], turns: [], remind: [] };
   /** New fixed gems still pulsing (until hovered, turned, or the first strike). */
   teachFixed: { gem: GemKind; cell: Cell }[] = [];
   /** Stubs on the sides each new fixed gem joins (see `guideHops`). */
@@ -233,7 +233,7 @@ export class AltarScene implements GameScene {
   /** teach-4: real gem pictures for the arrival card's in→out figures, made when first drawn. */
   pictures: GemPortraits | null = null;
   /** teach-4: who is told what the gauge dots mean (`lampLine`), and whether they have been. */
-  lampTeach = { reach: false, over: false };
+  lampTeach = { reach: false };
   /** teach-4: where Turn was just taught, why it stays dim for a Channel (`straightLine`). */
   straightTeach = false;
   /** Phones: the arrival card's page, one new piece at a time; the player turns it (Next ›). */
@@ -336,14 +336,13 @@ export class AltarScene implements GameScene {
     }
     if (!save.progress.solved.includes(this.machine)) {
       const solved = save.progress.solved.map((id) => puzzleFor(id as MachineId));
-      this.news = newGems(this.puzzle, solved);
+      this.news = newGems(this.puzzle, solved, taughtGems(save));
       this.teachFixed = this.news.fixed.map((f) => ({ gem: f.gem, cell: f.cell }));
       this.teachTray = new Set(this.news.tray);
       this.turnTeach = turnTeaches(this.news);
       this.firstMulti = firstMultiStrike(this.puzzle, solved);
-      const newKinds = [...this.news.fixed.map((f) => f.gem), ...this.news.tray];
       // teach-5: the dot's legend shows the first time a dot lights, once per game.
-      this.lampTeach = { reach: this.ctx.flow.dotDue(), over: newKinds.includes('capacitor') };
+      this.lampTeach = { reach: this.ctx.flow.dotDue() };
       // Only where Turn is first taught (the Bend in the tray): the lane is roomy there.
       this.straightTeach = this.turnTeach.has('bend');
       this.guide = guideHops(
@@ -369,6 +368,13 @@ export class AltarScene implements GameScene {
           ? Number.POSITIVE_INFINITY
           : INTRO_SECS;
     this.introPageIdx = 0;
+    // teach-8: the new gems' cards are up; they are taught here, whatever order the hall is
+    // played in (an altar met later does not teach them again; this one does until solved).
+    const taught = [...this.news.fixed.map((f) => f.gem), ...this.news.tray];
+    if (this.introLeft > 0 && taught.length > 0)
+      ctx.save.update((d) => {
+        markTaught(d, taught, this.machine);
+      });
     this.announce(this.briefing());
 
     this.updateHint(); // also keeps the caption off the tray and the hint

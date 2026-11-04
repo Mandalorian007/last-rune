@@ -388,7 +388,11 @@ export const runMethods = {
         if (shown.has(k)) continue;
         shown.add(k);
         anchorOf(L, f.cell, pt);
-        const tag = this.addTag(pt.x, pt.y - L.pitch * 0.38, causeText(f.cause));
+        const tag = this.addTag(
+          pt.x,
+          pt.y - L.pitch * 0.38,
+          causeText(f.cause, this.puzzle.pulses),
+        );
         if (!this.placeClear(tag, pt.y - L.pitch * 0.38, pt.y + L.pitch * 0.38, placed)) continue;
         placed.push(tag);
         count++;

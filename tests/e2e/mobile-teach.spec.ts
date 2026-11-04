@@ -456,15 +456,15 @@ test.describe('the dot legend (se)', () => {
     await dismissCard(page);
     await expect(legend).toBeVisible();
     await expect(legend).toContainText('The dot on a gauge:');
-    // teach-6: three rows; "No dot" draws none (the gauge shows none), lit and red draw theirs.
+    // teach-6: "No dot" draws none (the gauge shows none). teach-8 (D-043): no red row.
     const rows = await legend
       .locator('.lr-dot-row')
       .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.look));
-    expect(rows).toEqual(['off', 'on', 'red']);
+    expect(rows).toEqual(['off', 'on']);
     const looks = await legend
       .locator('.lr-need-lamp')
       .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.look));
-    expect(looks).toEqual(['on', 'red']);
+    expect(looks).toEqual(['on']);
     // Never an amount, never "enough" (D-043).
     expect(await legend.textContent()).not.toMatch(/\d|enough|exact/i);
     expect(await page.evaluate(() => !!(window as G).__game.save.get().flags.dotTold)).toBe(false);

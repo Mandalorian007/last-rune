@@ -6,12 +6,19 @@ import { h } from '@thunderclap/engine/ui';
 import type { BoltOutcome } from '../../game/flow';
 import { type SimResult, stormCharge } from '../../rules';
 import { getMachine } from '../../rules/progression';
-import { listText, OUTCOME_WORD, RING_NAME, RING_RULE, timesWord } from './altar-defs';
+import {
+  listText,
+  ONE_STRIKE_RULE,
+  OUTCOME_WORD,
+  RING_NAME,
+  RING_RULE,
+  timesWord,
+} from './altar-defs';
 import type { AltarScene } from './altar-scene';
-import { type CapBeat, capBeatText, planOver } from './circuit-model';
+import { type CapBeat, capBeatText } from './circuit-model';
 import { cellCenter } from './layout';
 import { keepTogether } from './nowrap';
-import { needNote, strikeLabel } from './strike';
+import { needNote, readingsText, strikeLabel } from './strike';
 
 export const readoutMethods = {
   /**
@@ -71,19 +78,11 @@ export const readoutMethods = {
     sim: SimResult | null,
     live: boolean,
   ): void {
-    // altar-truth: in the plan, a release over a machine's need reads as a warning, and so
-    // does that gauge (the plan already shows the number).
-    const over = !live && sim ? planOver(beats, sim) : null;
-    this.needs.forEach((n, i) => {
-      n?.toggleAttribute('data-warn', !!over?.machines.has(i));
-    });
+    // teach-8 (D-043): before Strike the plan says the rule only; no gauge or line warns.
     const key =
       (live ? 'L' : 'P') +
       beats
-        .map(
-          (b, i) =>
-            `${b.cell.x},${b.cell.y}:${b.pulse}${b.kind}${b.stored}+${b.incoming}${over?.beats.get(i) ?? ''}`,
-        )
+        .map((b) => `${b.cell.x},${b.cell.y}:${b.pulse}${b.kind}${b.stored}+${b.incoming}`)
         .join(';');
     if (key === this.capKey) return;
     this.capKey = key;
@@ -118,15 +117,10 @@ export const readoutMethods = {
       const x = side === 'left' ? pt.x - off : side === 'right' ? pt.x + off : pt.x;
       const y = side === 'above' ? pt.y - off : side === 'below' ? pt.y + off : pt.y;
       const lines = list.map((b) => {
-        const need = over?.beats.get(beats.indexOf(b));
         const el = h(
           'span',
-          {
-            class: 'lr-cap-line',
-            'data-kind': b.kind,
-            ...(need === undefined ? {} : { 'data-warn': '' }),
-          },
-          keepTogether(capBeatText(b, this.puzzle.pulses, need)),
+          { class: 'lr-cap-line', 'data-kind': b.kind },
+          keepTogether(capBeatText(b, this.puzzle.pulses, !live)),
         );
         if (live) el.hidden = true;
         this.capLines.push(el);
@@ -251,9 +245,13 @@ export const readoutMethods = {
         : `${needs.length} machines need exactly ${listText(needs.map(String))}.`;
     const strikes = p.pulses > 1 ? `, ${p.pulses} strikes` : '';
     const gives = stormCharge(p.storm.strength);
-    const intro = this.introRows().map((r) => `New: ${this.infoText(r)}`);
+    const intro = this.introRows().map(
+      (r) => `${r.again ? 'Reminder' : 'New'}: ${this.infoText(r)}`,
+    );
+    // teach-8: a multi-strike altar says its rule in the gauge's and the teach page's words.
+    const rule = p.pulses > 1 ? ` ${ONE_STRIKE_RULE}` : '';
     return [
-      `${getMachine(this.machine).name} altar. Storm ×${p.storm.strength} gives ${gives}${strikes}. ${ask}`,
+      `${getMachine(this.machine).name} altar. Storm ×${p.storm.strength} gives ${gives}${strikes}. ${ask}${rule}`,
       ...intro,
       ...(this.teachCell ? [`${RING_NAME}: ${RING_RULE}`] : []),
     ].join(' ');
@@ -268,7 +266,7 @@ export const readoutMethods = {
       const reads = this.strikeReadings[i] ?? [];
       const got =
         this.puzzle.pulses > 1 && reads.length > 0
-          ? `strikes gave ${listText(reads.map(String))}`
+          ? readingsText(reads)
           : `got ${this.lastReading(m)}`;
       if (multi || this.puzzle.pulses > 1) {
         const who = multi ? `Machine ${i + 1}` : 'The machine';
@@ -345,9 +343,12 @@ export const readoutMethods = {
                 : 'under';
         return h('b', { 'data-state': state }, String(r));
       };
-      const parts: (HTMLElement | string)[] = ['got '];
+      // teach-8 (D-040 add. 11, A): each number names its strike, "strike 1: 0 · 2: 16 ✕"
+      // (blind review 10: "got 0, then 16 ✕" didn't say which strike failed). The word
+      // "strike" once, then the strikes' numbers, so it stays one line at SE size.
+      const parts: (HTMLElement | string)[] = [];
       seen.forEach((r, k) => {
-        if (k > 0) parts.push(k === seen.length - 1 ? ', then ' : ', ');
+        parts.push(k === 0 ? `strike ${k + 1}: ` : ` · ${k + 1}: `);
         parts.push(num(r, k));
       });
       const last = seen.at(-1);

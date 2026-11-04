@@ -95,9 +95,7 @@ export const circuitMethods = {
       this.mode === 'edit'
         ? lampLine({
             reached: this.lampEls.some((el) => !!el?.hasAttribute('data-on')),
-            over: this.needs.some((n) => !!n?.hasAttribute('data-warn')),
             teachReach: t.reach,
-            teachOver: t.over,
           })
         : null;
     this.setHintLine('lamp', which ? LAMP_LINE[which] : null);

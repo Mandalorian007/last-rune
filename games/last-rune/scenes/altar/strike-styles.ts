@@ -30,12 +30,6 @@ ${A} .lr-need-lamp[data-on] {
   background: radial-gradient(circle at 40% 35%, #effdff 0 25%, #5fe6ff 60%, #1fb5e0);
   box-shadow: 0 0 0 1px #d6fbff, 0 0 ${cpx(7)} ${cpx(2)} rgba(63,224,255,0.85);
 }
-/* altar-truth: the Capacitor's plan shows more than this gauge takes: the lamp warns red. */
-${A} .lr-altar-need[data-warn] { border-color: #ff6a4d; }
-${A} .lr-altar-need[data-warn] .lr-need-lamp[data-on] {
-  background: radial-gradient(circle at 40% 35%, #fff0ea 0 25%, #ff7a5c 60%, #d8341c);
-  box-shadow: 0 0 0 1px #ffd6cc, 0 0 ${cpx(7)} ${cpx(2)} rgba(255,90,60,0.85);
-}
 ${A} .lr-altar-need[data-lamp] .lr-need-row { display: inline-flex; align-items: center; }
 /* Hide the leftover "Strike 1: 2: " parts if any, and keep "got" as one compact line. */
 ${A} .lr-altar-need .lr-need-strikes { display: none; }

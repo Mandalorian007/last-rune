@@ -89,7 +89,6 @@ export const domMethods = {
           ? h('i', {
               class: 'lr-need-lamp',
               'data-on': '',
-              'data-red': String(other === LAMP_LINE.over),
               'aria-hidden': 'true',
             })
           : null;

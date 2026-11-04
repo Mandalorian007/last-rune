@@ -240,38 +240,18 @@ export function capacitorBeats(
 
 /**
  * One line of a Capacitor's read-out: "Strike 1: stores 8", "Strike 2: 8 + 8 → 16". A bolt
- * stored on the altar's last strike never comes out, and the line says so (teach-7: "stores"). teach-5: a release over
- * the gauge's need says so in one short line, "Strike 2 sends 16; needs 8."
+ * stored on the altar's last strike never comes out, and the line says so (teach-7: "stores").
+ * The numbers are results, shown as each strike lands; the plan before Strike (`plan`) says only
+ * the rule, "Strike 1: stores, sends nothing." / "Strike 2: lets out both." (teach-8).
  */
-export function capBeatText(b: CapBeat, pulses: number, over?: number): string {
+export function capBeatText(b: CapBeat, pulses: number, plan = false): string {
   const n = `Strike ${b.pulse + 1}: `;
-  if (b.kind === 'release' && over !== undefined)
-    return `Strike ${b.pulse + 1} sends ${b.out}; needs ${over}.`;
+  // teach-8 (D-040 add. 11, A): before Strike, the rule and no numbers about this board (blind
+  // review 10: "Strike 2 sends 16; needs 8" nearly solved the puzzle and is a forecast, D-043).
+  if (plan) {
+    if (b.kind === 'release') return `${n}lets out both.`;
+    return `${n}${b.pulse >= pulses - 1 ? 'stores, never lets out.' : 'stores, sends nothing.'}`;
+  }
   if (b.kind === 'release') return `${n}${b.stored} + ${b.incoming} → ${b.out}`;
   return `${n}stores ${b.stored}${b.pulse >= pulses - 1 ? ', never let out' : ''}`;
-}
-
-/**
- * The plan's over-charge (altar-truth): where a Capacitor's preview already shows a number,
- * a release bigger than a machine takes must read as a warning, and so must that gauge. For
- * each release beat (by index) that over-fills a machine on its strike, the need it passes;
- * and the machines it over-fills. Machines with no number on show are left alone (D-040
- * addendum 5: gauges show no amount before Strike).
- */
-export function planOver(
-  beats: readonly CapBeat[],
-  sim: SimResult,
-): { beats: Map<number, number>; machines: Set<number> } {
-  const out = { beats: new Map<number, number>(), machines: new Set<number>() };
-  beats.forEach((b, i) => {
-    if (b.kind !== 'release') return;
-    sim.machines.forEach((m, j) => {
-      const got = m.readings[b.pulse] ?? 0;
-      if (got > m.need && b.out > m.need) {
-        if (!out.beats.has(i)) out.beats.set(i, m.need);
-        out.machines.add(j);
-      }
-    });
-  });
-  return out;
 }

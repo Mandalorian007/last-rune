@@ -4,7 +4,16 @@
  */
 import { button, h } from '@thunderclap/engine/ui';
 import { createGemPortraits } from '../../art/gem-portraits';
-import { codexEntry, FIXED_NOTE, FIXED_NOTE_FULL, YOURS_NOTE } from '../../content/codex';
+import {
+  CAP_CHIP_ONE,
+  CAP_ONE_STRIKE,
+  codexEntry,
+  FIXED_NOTE,
+  FIXED_NOTE_FULL,
+  GATE_CHIP_ONE,
+  GATE_RULE_ONE,
+  YOURS_NOTE,
+} from '../../content/codex';
 import { gemNudge, TEACH_NUDGE } from '../../content/lines';
 import { isRotational, stormCharge } from '../../rules';
 import type { Cell, Dir, GemKind } from '../../rules/types';
@@ -32,7 +41,15 @@ import { introButton, pickInfo } from './moments';
 import { keepTogether } from './nowrap';
 import { legalSockets } from './socket-looks';
 import { strikeLabel } from './strike';
-import { firstSentence, gateSides, hasPicture, type TeachPage, teachPages } from './teach';
+import {
+  firstSentence,
+  gateSides,
+  hasPicture,
+  type TeachPage,
+  type TeachRow,
+  teachPages,
+  teachRows,
+} from './teach';
 
 /** teach-4: the in→out picture on a Gate's or Split's first card, CSS px square. */
 const FIG_PX = 72;
@@ -105,12 +122,16 @@ export const infoMethods = {
   },
 
   /** What this altar introduces, for the arrival card and the briefing. */
-  introRows(this: AltarScene): { gem: GemKind; how: 'fixed' | 'tray' | 'turns' }[] {
-    return [
-      ...this.news.fixed.map((f) => ({ gem: f.gem, how: 'fixed' as const })),
-      ...this.news.tray.map((gem) => ({ gem, how: 'tray' as const })),
-      ...this.news.turns.map((gem) => ({ gem, how: 'turns' as const })),
-    ];
+  introRows(this: AltarScene): TeachRow[] {
+    return teachRows(this.news);
+  },
+
+  /** The socket of this altar's built-in gem of this kind, if its card teaches one (teach-8). */
+  teachCellOf(this: AltarScene, gem: GemKind): Cell | undefined {
+    return (
+      this.news.fixed.find((f) => f.gem === gem)?.cell ??
+      this.news.remind.find((f) => f.gem === gem)?.cell
+    );
   },
 
   /** One gem's card text: what it does, and whether it is fixed or turns. */
@@ -135,7 +156,13 @@ export const infoMethods = {
   },
 
   infoRule(this: AltarScene, r: { gem: GemKind; how: InfoHow }): string {
-    const rule = this.rules[r.gem] ?? '';
+    // teach-8: an altar that strikes once says the Gate's rule without "same strike".
+    const rule =
+      r.gem === 'gate' && this.puzzle.pulses <= 1
+        ? `${GATE_RULE_ONE} Charge at the back: lost.`
+        : r.gem === 'capacitor' && this.puzzle.pulses <= 1
+          ? `${this.rules[r.gem] ?? ''} ${CAP_ONE_STRIKE}`
+          : (this.rules[r.gem] ?? '');
     // Restate what it does: a newcomer meeting it in the tray may not remember the codex.
     if (r.how === 'turns') return `${firstSentence(rule)} Yours to place now; turn it to fit.`;
     // A Capacitor's first sentence (it stores) is only half of it: the release is the point.
@@ -152,7 +179,13 @@ export const infoMethods = {
    * place Channels" (mobile-7-teach).
    */
   chipRule(this: AltarScene, r: { gem: GemKind; how: InfoHow }, intro = false): string {
-    const line = codexEntry(r.gem).chip;
+    const one = this.puzzle.pulses <= 1;
+    const line =
+      r.gem === 'gate' && one
+        ? GATE_CHIP_ONE
+        : r.gem === 'capacitor' && one
+          ? CAP_CHIP_ONE
+          : codexEntry(r.gem).chip;
     if (r.how === 'turns') return `${line} Turn to fit.`;
     // The arrival card's gold line already shows which gem; it says just "Built in." so the card
     // fits an SE. A tap on the gem says the whole line.
@@ -351,7 +384,8 @@ export const infoMethods = {
       const page = h(
         'span',
         { class: 'lr-info-page' },
-        'New here',
+        // teach-8: a piece taught at another altar, first in the player's hand here.
+        pages[i]?.kind === 'gem' && pages[i].again ? 'Again' : 'New here',
         n > 1 ? h('span', { class: 'lr-info-of' }, keepTogether(` ${i + 1} of ${n}`)) : null,
       );
       // teach-5: a pictured page (Gate, Split, Amplify, Capacitor) leads with its picture, in a
@@ -418,10 +452,16 @@ export const infoMethods = {
         null,
         rule(eitherRule(this.puzzle.pulses)),
       );
-    const fig = hasPicture(p) ? this.gemFigure(p.gem, p.how === 'fixed') : null;
+    const fixed = p.how === 'fixed';
+    const fig = hasPicture(p) ? this.gemFigure(p.gem, fixed) : null;
+    // teach-8: pictured pages are not always fixed gems (a Gate first in the hand, a reminder).
+    const built = (text: string) => (fixed ? `${FIXED_NOTE} ${text}` : text);
+    const turn = p.how === 'turns' ? ' Turn to fit.' : '';
     if (fig && p.gem === 'capacitor') {
       // The Capacitor's lesson is its two strikes, with this altar's own charge (teach-4).
       const [one, two] = capacitorStrip(stormCharge(this.puzzle.storm.strength));
+      // teach-8: on an altar that strikes once there is no strike 2; the card says what that means.
+      if (this.puzzle.pulses <= 1) return row(p.how, GEM_NAME[p.gem], fig, rule(CAP_ONE_STRIKE));
       return row(
         p.how,
         GEM_NAME[p.gem],
@@ -437,12 +477,12 @@ export const infoMethods = {
       );
     }
     if (fig && p.gem === 'amplify') {
-      // teach-5: the picture says 4 → 8; the line under it says what "once per path" means.
+      // teach-5: the picture says 4 → 8; the line under it says a second one doesn't double.
       return row(
         p.how,
         GEM_NAME[p.gem],
         fig,
-        rule(`${FIXED_NOTE} ${AMPLIFY_ONCE}`),
+        rule(built(AMPLIFY_ONCE)),
         h('span', { class: 'lr-info-eg' }, keepTogether(AMPLIFY_AGAIN)),
       );
     }
@@ -453,7 +493,7 @@ export const infoMethods = {
         p.how,
         GEM_NAME[p.gem],
         fig,
-        rule(`${FIXED_NOTE} ${gateSides(this.shownRot(p.gem))}`),
+        rule(built(`${gateSides(fixed ? this.shownRot(p.gem) : 0, this.puzzle.pulses)}${turn}`)),
       );
     }
     return row(p.how, GEM_NAME[p.gem], fig, rule(this.chipRule(p, true)));
@@ -461,7 +501,7 @@ export const infoMethods = {
 
   /** The quarter turns a fixed gem of this kind shows on this altar (its picture's turn). */
   shownRot(this: AltarScene, gem: GemKind): number {
-    const cell = this.news.fixed.find((f) => f.gem === gem)?.cell;
+    const cell = this.teachCellOf(gem);
     const shown = cell ? this.view.gemAt(cell) : undefined;
     return shown ? ((Math.round(shown.rotTarget) % 4) + 4) % 4 : 0;
   },

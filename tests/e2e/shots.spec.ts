@@ -117,6 +117,8 @@ async function seed(
         d.settings.captionSpeed = 'instant';
         d.progress.solved = solved;
         d.puzzles = puzzles;
+        // teach-8: each altar as a player meets it in play order (no cards taught out of order).
+        d.codex.taught = {};
         if (journal) {
           d.journal.found = journal.found;
           d.journal.read = journal.read;
@@ -498,7 +500,7 @@ for (const vp of PHONES) {
       await page.evaluate(() => (window as G).__game.fuse.hush());
       await shot(page, '13-capacitor-bay-before');
       await strike(page);
-      await expect(page.locator('.lr-altar-verdict')).toContainText('then 16');
+      await expect(page.locator('.lr-altar-verdict')).toContainText('Strike 2: 16.');
       await shot(page, '13-capacitor-bay-multi');
 
       // A solve: the Furnace really solved, under its solve card.

@@ -120,9 +120,17 @@ const CAUSE_TEXT: Record<FizzleCause, string> = {
   spent: 'Gem already used this strike',
 };
 
+/**
+ * teach-8: "on the same strike" only where there is more than one strike (blind review 10:
+ * it confused players in one-strike rooms like Relay Tower and Foundry).
+ */
+function oneStrike(text: string, pulses: number): string {
+  return pulses > 1 ? text : text.replace(' on the same strike', '');
+}
+
 /** Short UI label for a fizzle cause. */
-export function causeText(c: FizzleCause): string {
-  return CAUSE_TEXT[c];
+export function causeText(c: FizzleCause, pulses = 2): string {
+  return oneStrike(CAUSE_TEXT[c], pulses);
 }
 
 function gemOn(p: PuzzleDef, placements: readonly Placement[], c: Cell): Placement | undefined {
@@ -237,6 +245,7 @@ const CAUSE_HINT: Record<FizzleCause, string> = {
   ground: 'Try: lead the charge to the machine before it runs off the altar.',
   blocked: 'Try: route around the carved stone.',
   'odd-split': 'Try: feed the Split an even charge.',
+  // One-strike altars drop "on the same strike" (`oneStrike`, teach-8).
   'gate-alone': "Try: feed the Gate's other port on the same strike.",
   spent: 'Try: give each path its own gems. A gem carries charge once per strike.',
 };
@@ -284,6 +293,8 @@ export interface HintRoom {
   readonly beats: readonly CapBeat[];
   /** The machine the verdict is about, if any. */
   readonly machine?: MachineResult;
+  /** Strikes per Strike on this altar (teach-8: the Gate's Try line says "same strike" only past 1). */
+  readonly pulses?: number;
 }
 
 /** Gem kinds on this altar: fixed in place, or in the tray at the start. */
@@ -321,6 +332,7 @@ export function hintRoom(
     gems: roomGems(p),
     path: pathGems(p, placements, result),
     beats,
+    pulses: p.pulses,
     ...(machine ? { machine } : {}),
   };
 }
@@ -381,7 +393,7 @@ export function nextStep(
   const first = rootCause(causes);
   // A finger has no R key or wheel: name the on-screen Turn control instead.
   if (first === 'facing' && touch) return 'Try: turn the gem at the red mark (↻ Turn).';
-  if (first) return CAUSE_HINT[first];
+  if (first) return oneStrike(CAUSE_HINT[first], room?.pulses ?? 2);
   if (outcome === 'under') return underStep(room);
   return 'Try: lay gems from the storm to the machine.';
 }
@@ -394,7 +406,7 @@ export function nextStep(
 export function strikeStory(pulses: number, result: SimResult, beats: readonly CapBeat[]): string {
   if (pulses < 2 || result.outcome === 'exact' || result.outcome === 'dead') return '';
   if (beats.length === 0)
-    return result.pulsesRun > 1 ? 'Each strike is read on its own: strikes never add up.' : '';
+    return result.pulsesRun > 1 ? 'Each strike is checked on its own: strikes never add up.' : '';
   const parts: string[] = [];
   for (let i = 0; i < result.pulsesRun; i++) {
     const said = beats
@@ -438,44 +450,58 @@ export function failHead(m: MachineResult, outcome: 'over' | 'under'): string {
 }
 
 /**
- * A multi-strike gauge's second line, and the verdict's. teach-6 said "in either strike"; blind
- * review 9 read that as "in each strike" or "in one of them" (and blind review 8 read "in one
- * strike" the same ways). teach-7 (D-040 add. 10): name the strikes, "on strike 1 or 2", or
- * "on any strike" with three or more. The sim's rule: the first strike that brings exactly the
- * need wakes the gauge; a strike that brings more before then trips it.
+ * A multi-strike gauge's second line, and the verdict's. Three phrases failed blind review
+ * ("in one strike", "in either strike", "on strike 1 or 2": read as "on both" or "on either",
+ * and nobody could tell whether the other strike may be anything). teach-8 (D-040 add. 11):
+ * "on one strike", for any count of strikes, with the rule said once in plain words where
+ * Strike ×2 is taught (`ONE_STRIKE_RULE`). The sim's rule (rules/sim.ts): each strike, a gauge
+ * that hasn't woken reads that strike alone; exactly its number wakes it (later strikes don't
+ * count), more trips it, less does nothing.
  */
-export function needNote(pulses: number): string {
-  return pulses === 2 ? 'on strike 1 or 2' : 'on any strike';
+export function needNote(_pulses: number): string {
+  return 'on one strike';
 }
 
-/** "0", "0, then 16", "0, 4, then 16": what each strike brought, in order. */
+/** teach-8: "strike 1: 0, strike 2: 16": what each strike brought, each one named. */
 export function readingsText(rs: readonly number[]): string {
   if (rs.length <= 1) return `${rs[0] ?? 0}`;
-  return `${rs.slice(0, -1).join(', ')}, then ${rs[rs.length - 1]}`;
+  return rs.map((r, i) => `strike ${i + 1}: ${r}`).join(', ');
 }
 
 /**
  * Phones, multi-strike altars: what each strike gave the machine the verdict is about, and
- * what it needs: "Got 0, then 8; needs 20 on strike 1 or 2." Short enough that the verdict's
- * Try line still fits an SE's lane under it (port-altar-3). Empty on a one-strike altar (the
- * gauge's "got" says it all).
+ * what it needs: "Strike 1: 0 · 2: 4. Needs 8 on one strike." (as the gauge's card reads it, short
+ * enough to leave the Try line room on an SE). teach-8: each number
+ * names its strike (blind review 10: "got 0, then 16" didn't say which strike failed). Empty
+ * on a one-strike altar (the gauge's "got" says it all).
  */
 export function strikesLine(m: MachineResult, pulses: number): string {
   if (pulses < 2 || m.readings.length === 0) return '';
-  return `Got ${readingsText(m.readings)}; needs ${m.need} ${needNote(pulses)}.`;
+  // A trip names the strike that tripped it, "Strike 2: 16. Needs 8 on one strike." (the card
+  // shows every strike; an SE's verdict keeps room for its Try line).
+  const trip = m.outcome === 'over' ? m.readings.findIndex((r) => r > m.need) : -1;
+  if (trip >= 0)
+    return `Strike ${trip + 1}: ${m.readings[trip]}. Needs ${m.need} ${needNote(pulses)}.`;
+  const each = m.readings.map((r, i) => (i === 0 ? `Strike 1: ${r}` : `${i + 1}: ${r}`));
+  return `${each.join(' \u00b7 ')}. Needs ${m.need} ${needNote(pulses)}.`;
 }
 
 /**
  * teach-7 (D-040 add. 10): the verdict names every gauge that missed, not just the one it is
  * about (blind review 9: Capacitor Bay's top gauge, "Needs 2 got 0", went unmentioned). The
  * numbers name each gauge, as its card does: "Also missed: Needs 2, got nothing." Several:
- * "Also missed: Needs 2, got nothing; Needs 6, got 4." Empty when only `main` missed.
+ * "Also missed: Needs 2, got nothing; Needs 6 (strike 1: 4, strike 2: 0)." Empty when only
+ * `main` missed.
  */
 export function alsoMissed(ms: readonly MachineResult[], main: number): string {
   const rest = ms.filter((m, i) => i !== main && m.outcome !== 'exact');
   if (rest.length === 0) return '';
   const one = (m: MachineResult) =>
-    `Needs ${m.need}, got ${m.readings.every((r) => r === 0) ? 'nothing' : readingsText(m.readings)}`;
+    m.readings.every((r) => r === 0)
+      ? `Needs ${m.need}, got nothing`
+      : m.readings.length > 1
+        ? `Needs ${m.need} (${readingsText(m.readings)})`
+        : `Needs ${m.need}, got ${readingsText(m.readings)}`;
   return `Also missed: ${rest.map(one).join('; ')}.`;
 }
 

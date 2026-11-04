@@ -188,9 +188,6 @@ const CSS = /* css */ `
 .tc-overlay .lr-cap-line[data-kind="release"] { color: #fff6dd; }
 .tc-overlay .lr-cap-line[data-now] { color: #ffffff; text-shadow: 0 0 8px rgba(160,220,255,0.9); font-weight: 600; }
 /* altar-truth: the plan lets out more than a machine takes: the line and that gauge warn. */
-.tc-overlay .lr-cap-line[data-warn] { color: #ff9c86; font-weight: 600; }
-.tc-overlay .lr-altar-cap:has(.lr-cap-line[data-warn]) { border-color: #ff6a4d; }
-.tc-overlay .lr-altar-need[data-warn] { border-color: #ff6a4d; box-shadow: 0 0 18px rgba(255,90,60,0.55); }
 
 /* Preview: a wrong-facing gem turns the bolt away here (a small ✕ on its rim). */
 .tc-overlay .lr-altar-nogo {
