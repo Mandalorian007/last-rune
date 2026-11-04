@@ -671,6 +671,7 @@ export class EndingScene implements GameScene {
     const joinLink = join
       ? externalLink({
           url: join.href,
+          host: this.ctx.host,
           content: join.label,
           labels: {
             ...linkLabels('the ThunderClap Gaming invite'),
@@ -685,6 +686,7 @@ export class EndingScene implements GameScene {
     const coffee = this.card.coffee;
     const coffeeLink = coffee
       ? coffeeLinkWidget(coffee, {
+          host: this.ctx.host,
           cls: 'lr-end-coffee',
           wrap: 'lr-end-links',
           action: 'ending-coffee',

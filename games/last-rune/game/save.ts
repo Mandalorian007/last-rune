@@ -13,6 +13,7 @@
  * the save.
  */
 
+import type { Host } from '@thunderclap/engine/host';
 import type { StorageLike } from '@thunderclap/engine/save';
 import {
   createSaveStore,
@@ -148,6 +149,9 @@ export const MIGRATIONS: Migrations = {};
 export type GameSave = SaveStore<SaveData>;
 
 export interface GameSaveOptions {
+  /** Where the save lives (`host.storage`). Default: the engine's default (web) host. */
+  host?: Pick<Host, 'storage'>;
+  /** A fixed storage instead of the host's (tests); `null` keeps it in memory. */
   storage?: StorageLike | null;
   debounceMs?: number;
   autoFlush?: boolean;

@@ -1,21 +1,15 @@
 /// <reference types="@webgpu/types" />
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { type BrowserContext, expect, type Locator, type Page, test } from '@playwright/test';
+import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { DISCORD_INVITE_URL, KOFI_URL, LINK_COPY_TEXT } from '../../games/last-rune/content/ending';
-import {
-  DEV_URL,
-  ITCH_GAME_ORIGIN,
-  ITCH_SIM_URL,
-  itchGameFrame,
-  trackProblems,
-  waitForBoot,
-} from './helpers';
+import { DEV_URL, trackProblems } from './helpers';
 
 // Copy link beside every outbound link (title Ko-fi; end card Join and Ko-fi), for when a
-// browser blocks the new tab. Covers: the clipboard gets the right URL; a refused or missing
-// clipboard shows a selected read-only field instead; a pad press whose window.open is
-// blocked shows the same field; and nothing opens or copies without the player acting.
+// browser blocks the new tab. Covers the product: each Copy link copies its own URL, with Last
+// Rune's wording, placement and arrow-key order. How copying and opening work (refused or
+// missing clipboard, execCommand fallback, a blocked pad open, itch's iframe, nothing opening on
+// its own) is the engine's host, tested once in packages/engine/e2e/host.spec.ts (D-041).
 //
 // LINK_COPY_SHOTS=<dir> also saves first-time-player screenshots of each state.
 
@@ -33,14 +27,14 @@ interface GameHandle {
   save: { update(fn: (d: any) => void): void; flush(): void };
 }
 
-type Setup = { clipboard?: 'ok' | 'reject' | 'missing'; exec?: 'fail'; popup?: 'blocked' };
+type Setup = { popup?: 'blocked' };
 
 /**
- * Stubs before the game loads: a controllable standard gamepad (`__pad`), window.open
- * recording calls (and returning null when `popup: 'blocked'`), and the clipboard mode.
+ * Stubs before the game loads: a controllable standard gamepad (`__pad`) and window.open
+ * recording calls (and returning null when `popup: 'blocked'`, for the opt-in screenshots).
  */
 async function prepare(context: BrowserContext, page: Page, setup: Setup): Promise<void> {
-  // Granted in every mode so the test can read the clipboard back; the stubs below refuse writes.
+  // Granted so the test can read the clipboard back.
   await context.grantPermissions(['clipboard-read', 'clipboard-write'], {
     origin: new URL(DEV_URL).origin,
   });
@@ -65,13 +59,6 @@ async function prepare(context: BrowserContext, page: Page, setup: Setup): Promi
       if (s.popup === 'blocked') return null;
       return realOpen(url, ...(rest as [string?, string?]));
     }) as typeof window.open;
-    if (s.clipboard === 'reject') {
-      navigator.clipboard.writeText = () =>
-        Promise.reject(new DOMException('Write permission denied.', 'NotAllowedError'));
-    } else if (s.clipboard === 'missing') {
-      Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
-    }
-    if (s.exec === 'fail') document.execCommand = () => false;
   }, setup);
 }
 
@@ -170,18 +157,6 @@ async function shot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: join(SHOTS, `${name}.png`) });
 }
 
-/** The fallback field is shown, says `message`, holds `url`, and has it all selected. */
-async function expectFallback(fallback: Locator, message: string, url: string): Promise<void> {
-  await expect(fallback).toBeVisible();
-  await expect(fallback.locator('label')).toHaveText(message);
-  const field = fallback.locator('input');
-  await expect(field).toHaveValue(url);
-  await expect(field).toHaveAttribute('readonly', '');
-  await expect(field).toBeFocused();
-  const sel = await field.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd]);
-  expect(sel).toEqual([0, url.length]);
-}
-
 async function clipboardText(page: Page): Promise<string> {
   return page.evaluate(() => navigator.clipboard.readText());
 }
@@ -193,24 +168,11 @@ function popupsOf(page: Page): string[] {
 }
 
 test.describe('Copy link', () => {
-  test('title: Copy link puts the Ko-fi URL on the clipboard, and nothing opens on its own', async ({
-    context,
-    page,
-  }) => {
+  test('title: Copy link puts the Ko-fi URL on the clipboard', async ({ context, page }) => {
     test.setTimeout(60_000);
     const problems = trackProblems(page);
-    const popups = popupsOf(page);
     await prepare(context, page, {});
     await gotoTitle(page);
-    await page.waitForTimeout(1000);
-    // Nothing on the clipboard, nothing opened, before the player does anything.
-    expect(
-      await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened),
-    ).toEqual([]);
-    expect(popups).toEqual([]);
-    await page.evaluate(() => navigator.clipboard.writeText('untouched'));
-    await page.waitForTimeout(500);
-    expect(await clipboardText(page)).toBe('untouched');
 
     const copy = page.locator('[data-action="title-coffee-copy"]');
     await expect(copy).toBeVisible();
@@ -240,79 +202,6 @@ test.describe('Copy link', () => {
     await expect(copy).toBeFocused();
     await page.keyboard.press('ArrowUp');
     await expect(page.locator('a.lr-title-coffee')).toBeFocused();
-
-    await page.waitForTimeout(500);
-    expect(popups).toEqual([]);
-    expect(
-      await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened),
-    ).toEqual([]);
-    expect(problems).toEqual([]);
-  });
-
-  test('title: a refused clipboard and a failed execCommand show the link in a selected field', async ({
-    context,
-    page,
-  }) => {
-    test.setTimeout(60_000);
-    const problems = trackProblems(page);
-    await prepare(context, page, { clipboard: 'reject', exec: 'fail' });
-    await gotoTitle(page);
-    const fallback = page.locator('[data-action="title-coffee-fallback"]');
-    await expect(fallback).toBeHidden();
-    await page.locator('[data-action="title-coffee-copy"]').click();
-    await expectFallback(fallback, LINK_COPY_TEXT.copyBlocked, KOFI_URL);
-    // Close (or Escape) puts it away and focus back on Copy link.
-    await page.locator('[data-action="title-coffee-close"]').click();
-    await expect(fallback).toBeHidden();
-    await expect(page.locator('[data-action="title-coffee-copy"]')).toBeFocused();
-    await page.locator('[data-action="title-coffee-copy"]').click();
-    await expect(fallback).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(fallback).toBeHidden();
-    // Still on the title: pressing Copy did not start the game.
-    expect(
-      await page.evaluate(() => (window as unknown as { __game: GameHandle }).__game.flow.state),
-    ).toBe('title');
-    expect(problems).toEqual([]);
-  });
-
-  test('title: a refused writeText still copies through execCommand', async ({ context, page }) => {
-    test.setTimeout(60_000);
-    const problems = trackProblems(page);
-    await prepare(context, page, { clipboard: 'reject' });
-    await gotoTitle(page);
-    // Read back through the real clipboard (the stub only replaced writeText).
-    const copy = page.locator('[data-action="title-coffee-copy"]');
-    await copy.click();
-    await expect(copy).toHaveText(LINK_COPY_TEXT.copied);
-    expect(await clipboardText(page)).toBe(KOFI_URL);
-    await expect(page.locator('[data-action="title-coffee-fallback"]')).toBeHidden();
-    await expect(copy).toBeFocused();
-    expect(problems).toEqual([]);
-  });
-
-  test('title: gamepad A on Ko-fi with the new tab blocked shows the copy field', async ({
-    context,
-    page,
-  }) => {
-    test.setTimeout(60_000);
-    const problems = trackProblems(page);
-    await prepare(context, page, { popup: 'blocked' });
-    await gotoTitle(page);
-    const link = page.locator('a.lr-title-coffee');
-    await link.focus();
-    await padPress(page, 0);
-    await expect
-      .poll(() => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened))
-      .toEqual([KOFI_URL]);
-    await expectFallback(
-      page.locator('[data-action="title-coffee-fallback"]'),
-      LINK_COPY_TEXT.popupBlocked,
-      KOFI_URL,
-    );
-    expect(
-      await page.evaluate(() => (window as unknown as { __game: GameHandle }).__game.flow.state),
-    ).toBe('title');
     expect(problems).toEqual([]);
   });
 
@@ -369,95 +258,6 @@ test.describe('Copy link', () => {
     expect(page.url()).toBe(DEV_URL);
     expect(problems).toEqual([]);
   });
-
-  test('end card: no clipboard API, and a blocked pad open, both show the field', async ({
-    context,
-    page,
-  }) => {
-    test.setTimeout(90_000);
-    const problems = trackProblems(page);
-    await prepare(context, page, { clipboard: 'missing', exec: 'fail', popup: 'blocked' });
-    await gotoEndCard(page);
-
-    await page.locator('[data-action="ending-coffee-copy"]').click();
-    await expectFallback(
-      page.locator('[data-action="ending-coffee-fallback"]'),
-      LINK_COPY_TEXT.copyBlocked,
-      KOFI_URL,
-    );
-
-    await page.locator('a.lr-end-join').focus();
-    await padPress(page, 0);
-    await expect
-      .poll(() => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened))
-      .toEqual([DISCORD_INVITE_URL]);
-    await expectFallback(
-      page.locator('[data-action="ending-join-fallback"]'),
-      LINK_COPY_TEXT.popupBlocked,
-      DISCORD_INVITE_URL,
-    );
-    // Back is still on screen and reachable.
-    const back = page.locator('.lr-end-back');
-    await expect(back).toBeInViewport();
-    expect(problems).toEqual([]);
-  });
-});
-
-// itch's game iframe has no clipboard-write in its allow list, so Chromium refuses writeText
-// there (https://github.com/itchio/itch.io/issues/1202). Copy must still land, via execCommand,
-// or else show the field. itch-sim uses itch's exact allow list.
-test("itch embed: Copy link still copies the Ko-fi URL inside itch's iframe", async ({
-  context,
-  page,
-}) => {
-  test.setTimeout(90_000);
-  const problems = trackProblems(page);
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'], {
-    origin: new URL(ITCH_SIM_URL).origin,
-  });
-  // Record what writeText did in the game frame (it is expected to be refused there).
-  await page.addInitScript(() => {
-    if (!navigator.clipboard?.writeText) return;
-    const real = navigator.clipboard.writeText.bind(navigator.clipboard);
-    const w = window as unknown as { __writeText?: string };
-    navigator.clipboard.writeText = (t: string) =>
-      real(t).then(
-        () => {
-          w.__writeText = 'ok';
-        },
-        (e: unknown) => {
-          w.__writeText = 'refused';
-          throw e;
-        },
-      );
-  });
-  await page.goto(`${ITCH_SIM_URL}/?autoload=1`);
-  const frame = await itchGameFrame(page);
-  expect(new URL(frame.url()).origin).toBe(ITCH_GAME_ORIGIN);
-  await waitForBoot(frame);
-  const copy = frame.locator('[data-action="title-coffee-copy"]');
-  await expect(copy).toBeVisible({ timeout: 30_000 });
-  await page.evaluate(() => navigator.clipboard.writeText('untouched'));
-  await copy.click();
-
-  const fallback = frame.locator('[data-action="title-coffee-fallback"]');
-  await expect
-    .poll(
-      async () => (await fallback.isVisible()) || (await copy.textContent())?.includes('Copied'),
-    )
-    .toBe(true);
-  // Chromium exposes the frame's policy, so writeText is not even tried (no policy error);
-  // where it is tried, it is refused. Either way the copy went another route.
-  expect(await frame.evaluate(() => (window as { __writeText?: string }).__writeText)).not.toBe(
-    'ok',
-  );
-  if (await fallback.isVisible()) {
-    await expect(fallback.locator('input')).toHaveValue(KOFI_URL);
-  } else {
-    await expect(copy).toHaveText(LINK_COPY_TEXT.copied);
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(KOFI_URL);
-  }
-  expect(problems).toEqual([]);
 });
 
 // First-time-player screenshots of every state (only with LINK_COPY_SHOTS set).

@@ -20,14 +20,14 @@ interface GameHandle {
   save: { update(fn: (d: any) => void): void };
 }
 
-test('the ending plays to the end card; the ThunderClap Gaming link opens only on a click', async ({
+test('the ending plays to the end card with the ThunderClap Gaming and Ko-fi links', async ({
   page,
 }) => {
   test.setTimeout(300_000);
+  // That a link opens only on a click is an engine host check (packages/engine/e2e/host.spec.ts);
+  // here the ending itself never navigates or phones out.
   const problems = trackProblems(page);
-  const popups: string[] = [];
   const offsite: string[] = [];
-  page.on('popup', (p) => popups.push(p.url()));
   page.on('request', (r) => {
     const u = new URL(r.url());
     if (u.protocol.startsWith('http') && !['127.0.0.1', 'localhost'].includes(u.hostname)) {
@@ -136,9 +136,8 @@ test('the ending plays to the end card; the ThunderClap Gaming link opens only o
   await expect(coffee).toBeFocused();
   await expect(page.locator('.lr-end-back')).toBeVisible();
 
-  // Nothing navigated, opened a window or phoned out on its own.
+  // Nothing navigated or phoned out on its own.
   await page.waitForTimeout(1000);
-  expect(popups).toEqual([]);
   expect(navigations).toEqual([]);
   expect(offsite).toEqual([]);
 

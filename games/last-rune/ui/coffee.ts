@@ -4,6 +4,7 @@
  * player's action. No third-party widget, script, iframe or remote image; the cup icon is
  * drawn here as inline SVG.
  */
+import type { Host } from '@thunderclap/engine/host';
 import {
   type ExternalLink,
   type ExternalLinkLabels,
@@ -54,6 +55,8 @@ export function linkLabels(name: string): ExternalLinkLabels {
 export function coffeeLinkWidget(
   link: EndingButton,
   opts: {
+    /** Opens and copies the link (`ctx.host`). */
+    host: Host;
     cls: string;
     wrap: string;
     action: string;
@@ -65,6 +68,7 @@ export function coffeeLinkWidget(
 ): ExternalLink | null {
   return externalLink({
     url: link.href,
+    host: opts.host,
     content: [cupIcon(), h('span', null, link.label)],
     labels: { ...linkLabels("ThunderSoap's Ko-fi"), ...(opts.copy ? { copy: opts.copy } : {}) },
     linkClass: opts.cls,

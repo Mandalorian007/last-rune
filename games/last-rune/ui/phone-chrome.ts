@@ -4,13 +4,8 @@
  * for browsers that allow it (never iPhone Safari, which has no element fullscreen; never an
  * iframe without `allowfullscreen`).
  */
-import {
-  type DeviceMode,
-  fullscreenAvailable,
-  isFullscreen,
-  toggleFullscreen,
-  watchFullscreen,
-} from '@thunderclap/engine/platform';
+import type { HostFullscreen } from '@thunderclap/engine/host';
+import type { DeviceMode } from '@thunderclap/engine/platform';
 import { button, createRotateCard, h } from '@thunderclap/engine/ui';
 
 /** The rotate card's words (game copy) and the game's colours for it. */
@@ -42,10 +37,15 @@ export interface PhoneChrome {
 }
 
 /**
- * `hudLayer`: the overlay layer the Full screen button lives in. The rotate card shows when the
- * screen is upright on a phone in hand (see `createRotateCard`).
+ * `hudLayer`: the overlay layer the Full screen button lives in. `fullscreen`: the host's
+ * (`ctx.host.fullscreen`). The rotate card shows when the screen is upright on a phone in hand
+ * (see `createRotateCard`).
  */
-export function createPhoneChrome(hudLayer: HTMLElement, device: DeviceMode): PhoneChrome {
+export function createPhoneChrome(
+  hudLayer: HTMLElement,
+  device: DeviceMode,
+  fullscreen: HostFullscreen,
+): PhoneChrome {
   const doc = hudLayer.ownerDocument;
   const win = doc.defaultView ?? window;
   if (!doc.querySelector('style[data-lr="phone-chrome"]')) {
@@ -60,7 +60,7 @@ export function createPhoneChrome(hudLayer: HTMLElement, device: DeviceMode): Ph
   const fsBtn = button(
     'Full screen',
     () =>
-      void toggleFullscreen(doc.documentElement, { lockLandscape: true }).then((on) => {
+      void fullscreen.toggle({ lockLandscape: true }).then((on) => {
         if (!on) {
           fsRefused = true;
           update();
@@ -79,12 +79,12 @@ export function createPhoneChrome(hudLayer: HTMLElement, device: DeviceMode): Ph
       fsWanted &&
       device.phone &&
       !fsRefused &&
-      fullscreenAvailable(doc) &&
-      !isFullscreen(doc)
+      fullscreen.available() &&
+      !fullscreen.active()
     );
   };
   const offDevice = device.onChange(update);
-  const offFs = watchFullscreen(update, doc);
+  const offFs = fullscreen.watch(update);
   win.addEventListener('resize', update);
   win.addEventListener('orientationchange', update);
   update();

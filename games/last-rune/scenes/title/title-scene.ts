@@ -169,6 +169,7 @@ export class TitleScene implements GameScene {
     const coffee = coffeeLink();
     const coffeeEl = coffee
       ? coffeeLinkWidget(coffee, {
+          host: ctx.host,
           cls: 'lr-title-coffee',
           wrap: 'lr-title-links',
           action: 'title-coffee',

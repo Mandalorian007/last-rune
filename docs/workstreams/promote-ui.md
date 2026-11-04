@@ -21,7 +21,7 @@ Move what is already generic out of the game and into `@thunderclap/engine`, wit
   - `games/last-rune/ui/menu-nav.ts` → `packages/engine/src/ui/menu-nav.ts`. It is generic over the action names; the default names are `up`, `down`, `confirm`.
   - `games/last-rune/ui/text-scale.ts` → `packages/engine/src/ui/text-scale.ts`. Its tokens are `--tc-text-scale` and `--tc-text-min`. `applyTextScale` now takes a factor (1 = 100%). The game keeps `TEXT_SCALES` and `toTextScale` in a small `ui/text-scale.ts`.
   - `games/last-rune/ui/device-mode.ts` → `packages/engine/src/platform/device-mode.ts`. `--lr-tap` became `--tc-tap-min`.
-  - The rotate card in `ui/phone-chrome.ts` → `packages/engine/src/ui/rotate-card.ts`. The game passes its copy and colours, so the card looks the same. `phone-chrome.ts` keeps only the fullscreen button.
+  - The rotate card in `ui/phone-chrome.ts` → `packages/engine/src/ui/rotate-card.ts`. The game passes its copy and colours, so the card looks the same. `phone-chrome.ts` keeps only the fullscreen button. After merging ws/host, that button goes through `ctx.host.fullscreen` (`createPhoneChrome(hud, device, host.fullscreen)`), not the platform helpers.
   - Every `--lr-*` density, phone and crop variable was renamed to `--tc-*`. No aliases were kept: the values are the same, so no layout changes.
   - Unit tests moved with their modules. The "unknown saved values mean 100%" test stays in the game.
   - New engine e2e page `harness/ui.html` with `e2e/ui.spec.ts`. It covers the test-split promote-ui rows plus a11y focus return and Esc from a focused button. It runs on every top-level row; itch-iframe is skipped because the wrapper embeds the WebGPU page.

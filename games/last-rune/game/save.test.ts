@@ -69,26 +69,6 @@ describe('save schema v1', () => {
     for (let v = 1; v < SAVE_VERSION; v++) expect(MIGRATIONS[v]).toBeTypeOf('function');
   });
 
-  it('round-trips through storage', () => {
-    const st = new MemoryStorage();
-    const a = createGameSave(opts(st));
-    a.update((d) => {
-      d.progress.solved = ['intake-desk', 'furnace'];
-      d.puzzles.furnace = {
-        placements: [{ gem: 'amplify', cell: { x: 2, y: 1 }, rot: 3 }],
-        attempts: 4,
-      };
-      d.settings.captionSpeed = 'fast';
-      return undefined;
-    });
-    a.flush();
-    const b = createGameSave(opts(st));
-    expect(b.status.loadResult).toBe('loaded');
-    expect(b.get().progress.solved).toEqual(['intake-desk', 'furnace']);
-    expect(b.get().puzzles.furnace!.placements[0]!.rot).toBe(3);
-    expect(b.get().settings.captionSpeed).toBe('fast');
-  });
-
   it('repairs unreachable or unknown solves on load', () => {
     const st = new MemoryStorage();
     const raw = defaultSave();
@@ -97,15 +77,6 @@ describe('save schema v1', () => {
     const save = createGameSave(opts(st));
     // furnace needs Bend (intake desk), so it lands after it; junk and the rune drop.
     expect(progressOf(save.get()).solved).toEqual(['intake-desk', 'furnace']);
-  });
-
-  it('recovers from a corrupt save with defaults and a backup', () => {
-    const st = new MemoryStorage();
-    st.setItem(saveKey(SAVE_GAME_ID, 'main'), '{"v":1,"t":1,"d":{"progress":42}}');
-    const save = createGameSave(opts(st));
-    expect(save.status.loadResult).toBe('recovered');
-    expect(save.get()).toEqual(defaultSave());
-    expect(st.getItem(`${saveKey(SAVE_GAME_ID, 'main')}:backup`)).not.toBeNull();
   });
 
   it('rejects bad placements', () => {
@@ -129,26 +100,24 @@ describe('save schema v1', () => {
     expect(d.settings.reducedMotion).toBe('reduce');
   });
 
-  it('export/import round-trips', () => {
+  // Storage round-trips, memory fallback and corrupt-save backups are engine save tests
+  // (packages/engine/src/save, host/web.test.ts); this one keeps the game's fields whole.
+  it('export/import round-trips placements and settings', () => {
     const a = createGameSave(opts(new MemoryStorage()));
     a.update((d) => {
-      d.progress.solved = ['intake-desk'];
+      d.progress.solved = ['intake-desk', 'furnace'];
+      d.puzzles.furnace = {
+        placements: [{ gem: 'amplify', cell: { x: 2, y: 1 }, rot: 3 }],
+        attempts: 4,
+      };
+      d.settings.captionSpeed = 'fast';
       return undefined;
     });
     const text = a.exportString();
     const b = createGameSave(opts(new MemoryStorage()));
     expect(b.importString(text)).toEqual({ ok: true, migrated: false });
-    expect(b.get().progress.solved).toEqual(['intake-desk']);
-  });
-
-  it('works without storage (memory fallback)', () => {
-    const save = createGameSave({ storage: null, debounceMs: 0, autoFlush: false });
-    expect(save.persistent).toBe(false);
-    expect(
-      save.update((d) => {
-        d.progress.solved.push('intake-desk');
-        return undefined;
-      }),
-    ).toBe(true);
+    expect(b.get().progress.solved).toEqual(['intake-desk', 'furnace']);
+    expect(b.get().puzzles.furnace!.placements[0]!.rot).toBe(3);
+    expect(b.get().settings.captionSpeed).toBe('fast');
   });
 });
