@@ -284,3 +284,22 @@ Format: `D-NNN · date · decision · why · who`.
 ### D-041 addendum 4: Gate 2 does not wait on the altar line count (PM, 2026-11-04)
 Two altar ports (port-altar, port-altar-2) moved input, magnify and rails onto the engine with no phone regression, but stopped short of the tray/gem-card/lane column: it is drawn and hit-tested on the canvas in design px and needs its own canvas↔region hand-off. The phone experience is what the user tests, and it is unchanged or better. So Gate 2 (D-040 blind review, real-phone retest, Last Rune 1.1, engine 0.2.0) proceeds now; deleting `phone-styles.ts` and getting `altar-scene.ts` under 2,000 lines move to ws/port-altar-3, scheduled after Gate 2 as refactor debt. Phase 3 (second game) must not start until port-altar-3 lands, so the second game never copies the phone special-cases.
 
+
+### D-040 addendum 6: gate review 5 (Gate 2 blind review, PM, 2026-11-04)
+Blind scores were 6.5 (SE), 6.5 (iPhone), 7 (Pro Max) and 6.5 (Android), average 6.6, so Gate 2 failed. The PM checked the issues against `docs/design/screens/local/gate5/`.
+- **Confirmed majors (all four reviewers unless noted).**
+  - The right column collides with itself. On SE (and on iPhone for Storm Cell II), the teach card puts "New here / Got it" beside the text, so the text wraps one word per line and runs under Strike (`se/10-foundry`). "all placed" under a used-up tray gem is cut by the gem card or drawn over the next gem (`12-press-unit-4-held`, `13-capacitor-bay-*`). Teach leader lines run through gauges and "Needs" labels (`10-capacitor-bay`, `10-relay-tower`).
+  - Two-line goal labels ("Needs 20 / in one strike") spill out of their pills (`10-the-last-rune`).
+  - **Text contradicts the board (D-027).** The over-charge hint is a fixed string, "Skip an Amplify, or halve it with a Split" (`scenes/altar/strike.ts:283`). Capacitor Bay has no Amplify.
+  - Fixed (puzzle) gems still read like your own gems (3 of 4). The D-040 addendum 5 riveted bezel is too faint on Channels and Bends (`10-control-booth`, `10-the-last-rune`).
+  - Turn is never explained: no card says what it rotates.
+- **Majors downgraded by the PM.**
+  - *Sockets under 44 px on The Last Rune, Lift Shaft and Archive.* These boards are limited by height, not width (addendum 5). The magnify loupe (port-altar part 1) provides touch precision, which still screenshots can't show. Call: the board must use all the height and width its region allows. The real-phone retest judges tapping.
+  - *Charge badges inconsistent.* They show on some lit paths and not others. This is a rule-legibility issue: make the rule consistent and visible, or remove it.
+- **PM call: port-altar-3 moves into Gate 2 (reverses part of D-041 addendum 4).** Every confirmed layout major lives in the tray/gem-card/lane overlay that port-altar-3 replaces. A sixth round of patches on `phone-styles.ts` would repeat gate reviews 1–4. The column moves to regions with a card that cannot collide.
+- **Work.**
+  - ws/port-altar-3: the column on regions plus every layout major.
+  - ws/altar-truth: hints, preview, badges, Turn, fixed gems, Undo and copy.
+  - ws/chrome-polish-3: the chrome minors.
+  - Then blind review 6 on a fresh gate6 set.
+- **Gate unchanged:** ≥8/10 average with no blocker or major issue, then the real-phone retest.

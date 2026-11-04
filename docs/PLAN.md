@@ -51,8 +51,10 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 8 | Port title, hall, settings, journal, codex, ending | ws/port-chrome | 2 | 6, 7 | ✅ merged |
 | 9 | Port altar part 1: magnify, altar input on Gestures, chrome polish | ws/port-altar | 2 | 8 | ✅ merged |
 | 9b | Port altar part 2: altar rails on ctx.chrome, phoneFrameFor deleted, review fixes | ws/port-altar-2 | 2 | 9 | ✅ merged |
-| 9c | Port altar part 3: tray/gem card/lane column as a module on regions (canvas↔region hand-off); delete phone-styles.ts; altar-scene.ts < 2,000. Refactor debt, does NOT block Gate 2 / Last Rune 1.1 | ws/port-altar-3 | 2 | 9b | ⏳ after Gate 2 |
-| G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | 🟡 blind review 5 running (gate5: 4 phones × 53 + 4 upright) |
+| 9c | Port altar part 3: right column (tray/gem/teach/verdict cards, FUSE lane) on regions, cards that cannot collide, board fills region; delete phone-styles.ts; altar-scene.ts < 2,000. Pulled into Gate 2 (D-040 add. 6) | ws/port-altar-3 | 2 | 9b | 🔄 running |
+| 9d | Altar truth: hints from the room, over-charge preview, one badge rule, fixed gems unmistakable, Turn taught, Undo, plain copy | ws/altar-truth | 2 | 9b | 🔄 running |
+| 9e | Chrome polish 3: title, portrait title, hall toast/labels, settings, codex, journal, ending | ws/chrome-polish-3 | 2 | 9b | 🔄 running |
+| G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 5 failed 6.5/6.5/7/6.5 (D-040 add. 6) → 9c/9d/9e, then blind review 6 |
 | 10 | Camera + math | ws/camera | 3 | 9 | ⏳ |
 | 11 | Transforms + layer/depth sort | ws/transforms | 3 | 9 | ⏳ |
 | 12 | `render(camera, target)` | ws/render-call | 3 | 10, 11 | ⏳ |
