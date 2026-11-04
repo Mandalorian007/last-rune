@@ -155,7 +155,7 @@ const DEFS: Def[] = [
     beat: 'echo',
     tier: 3,
     source: P,
-    text: 'Press Unit 4 wants a magenta and an amber. Regulation 12. I wrote Regulation 12. I was having a day.',
+    text: 'Press Unit 4 wants a Split and an Amplify. Regulation 12. I wrote Regulation 12. I was having a day.',
   },
   {
     kind: 'hall',
@@ -321,7 +321,7 @@ const DEFS: Def[] = [
     'furnace',
     1,
     'The furnace. Went cold the week Management left. Everything did. Unrelated.',
-    'Amber gem doubles the charge. Stack two and the second one just feels important. Like a deputy foreman.',
+    'An Amplify doubles the charge. Stack two and the second one just feels important. Like a deputy foreman.',
   ),
   ...machineLines(
     'splitter-mill',
@@ -333,7 +333,7 @@ const DEFS: Def[] = [
     'relay-tower',
     1,
     'The relay. Needs two signals at once to pass one. Two signatures. Regulation 9. Nobody remembers who signed.',
-    "Emerald. Good. Regulation 8: don't ask where Management went. Regulation 8 is new. Regulation 8 is for you.",
+    "A Gate. Good. Regulation 8: don't ask where Management went. Regulation 8 is new. Regulation 8 is for you.",
   ),
   ...machineLines(
     'conveyor-a',
@@ -349,7 +349,7 @@ const DEFS: Def[] = [
     when: 'gem:split',
     tier: 1,
     source: P,
-    text: 'Needs a magenta. Regulation 12. Someone wrote Regulation 12 while having a day.',
+    text: 'Needs a Split. Regulation 12. Someone wrote Regulation 12 while having a day.',
   },
   {
     kind: 'locked',
@@ -373,7 +373,7 @@ const DEFS: Def[] = [
     when: 'gem:gate',
     tier: 1,
     source: N,
-    text: 'Foundry. Wants amber and emerald. It cut them both, once. Now it wants them back. Typical foundry.',
+    text: 'Foundry. Wants an Amplify and a Gate. It cut them both, once. Now it wants them back. Typical foundry.',
   },
   {
     kind: 'locked',
@@ -388,8 +388,8 @@ const DEFS: Def[] = [
   ...machineLines(
     'press-unit-4',
     2,
-    'Press Unit 4. Sulking since the committee. The trick is amber before magenta, never after. Not that anyone asked. Nobody asks.',
-    "Amber before magenta. Told you. Didn't tell you. Thought it loudly. Incident report: visitor hears thoughts. Monitoring harder.",
+    'Press Unit 4. Sulking since the committee. The trick is Amplify before Split, never after. Not that anyone asked. Nobody asks.',
+    "Amplify before Split. Told you. Didn't tell you. Thought it loudly. Incident report: visitor hears thoughts. Monitoring harder.",
   ),
   ...machineLines(
     'storm-cell-2',
@@ -443,7 +443,7 @@ const DEFS: Def[] = [
   ...machineLines(
     'foundry',
     2,
-    'Foundry. Where the gems were cut. The magenta ones never came out right. Too proud. Cut them anyway.',
+    'Foundry. Where the gems were cut. The Splits never came out right. Too proud. Cut them anyway.',
     'I cut… the foundry cut six hundred gems. Six hundred and twelve. Why is that a number this unit has.',
   ),
 
@@ -588,28 +588,28 @@ const DEFS: Def[] = [
     capability: 'gem:bend',
     tier: 1,
     source: N,
-    text: 'Amethyst socket. Bends are issued at the front desk. Everything is issued at the front desk.',
+    text: 'Bend socket. Bends are issued at the front desk. Everything is issued at the front desk.',
   },
   {
     kind: 'socket',
     capability: 'gem:split',
     tier: 1,
     source: N,
-    text: "Magenta socket. Splitter Mill. Magenta is a proud colour. It knows it. Don't encourage it.",
+    text: "Split socket. Splitter Mill. Split is a proud gem. It knows it. Don't encourage it.",
   },
   {
     kind: 'socket',
     capability: 'gem:amplify',
     tier: 1,
     source: N,
-    text: "Amber socket. The furnace keeps the amber. The furnace went cold. It's still sulking about it.",
+    text: "Amplify socket. The furnace keeps the Amplifies. The furnace went cold. It's still sulking about it.",
   },
   {
     kind: 'socket',
     capability: 'gem:gate',
     tier: 1,
     source: N,
-    text: 'Emerald socket. The relay hands those out. Two signatures required. Bring a friend. You are the friend.',
+    text: 'Gate socket. The relay hands those out. Two signatures required. Bring a friend. You are the friend.',
   },
   {
     kind: 'socket',
@@ -798,7 +798,7 @@ const DEFS: Def[] = [
     gem: 'split',
     tier: 1,
     source: N,
-    text: "Magenta's proud of this. Don't tell it the halves are smaller.",
+    text: "Split's proud of this. Don't tell it the halves are smaller.",
   },
   {
     kind: 'codex',
@@ -858,14 +858,14 @@ const DEFS: Def[] = [
     nudge: 'amplify',
     tier: 1,
     source: N,
-    text: 'Amber on the altar. Handle it like the meter is watching.',
+    text: 'Amplify on the altar. Handle it like the meter is watching.',
   },
   {
     kind: 'nudge',
     nudge: 'split',
     tier: 1,
     source: N,
-    text: "Magenta's on the altar now. It's been waiting all morning.",
+    text: "Split's on the altar now. It's been waiting all morning.",
   },
   {
     kind: 'nudge',
