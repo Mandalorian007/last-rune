@@ -34,9 +34,7 @@ describe('phone how-to line', () => {
 
   it('teaches Turn the first time a turnable gem is its target (altar-truth)', () => {
     const teaches = new Set(['bend'] as const);
-    expect(turnTeachLine('bend', 'hand', teaches, false)).toBe(
-      '↻ Turn rotates the Bend in your hand.',
-    );
+    expect(turnTeachLine('bend', 'hand', teaches, false)).toBe('↻ Turn rotates the Bend.');
     expect(turnTeachLine('bend', 'placed', teaches, false)).toBe(
       '↻ Turn rotates the Bend you just placed.',
     );

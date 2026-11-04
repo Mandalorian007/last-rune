@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
+import { trayRemaining } from '../../games/last-rune/rules';
 import { type Cell, MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
 import { DEV_URL, settled, waitFrames } from './helpers';
@@ -10,7 +11,10 @@ import { DEV_URL, settled, waitFrames } from './helpers';
 // line, the title, the tray gems and their counts, the Gives/Needs labels, the sockets, Strike
 // and the rail buttons overlap, and every card's text is at least 14 CSS px. Every gem, teach
 // and how-to card fits its lane with no scrolling, and the verdict shows in full: its "Try:" line
-// sits inside the lane, not clipped and not scrolled to (D-027).
+// sits inside the lane, not clipped and not scrolled to (D-027). card-fit: every card in the
+// column (the how-to line, the dot legend and the Capacitor read-outs too) keeps its text in
+// full and stays inside the lane and the column, also mid-play where cards stack (the legend
+// lit by half a design, a gem's card with the Turn line under it).
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0 },
@@ -150,22 +154,62 @@ async function parts(page: Page, blocked: Cell[]): Promise<{ parts: Part[]; smal
   }, blocked);
 }
 
-/** Cards that do not fit: a gem/teach card or the verdict with text past its edge. */
+/**
+ * Cards that do not fit (card-fit): any card in the lane (the gem or teach card, the verdict,
+ * the how-to line or the dot legend, a Capacitor read-out) or FUSE's docked line whose text runs
+ * past its edge, scrolled or not, or that pokes out of the lane or the cards region (the lane
+ * cuts off what pokes out). The verdict's Try line shows in full.
+ */
 async function unfit(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const out: string[] = [];
-    const lane = document.querySelector<HTMLElement>('.lr-altar-lane')?.getBoundingClientRect();
-    for (const el of document.querySelectorAll<HTMLElement>(
-      '.lr-altar-lane > :is(.lr-altar-tip, .lr-altar-verdict)',
-    )) {
-      if (el.offsetHeight === 0) continue;
-      const what = el.classList.contains('lr-altar-tip') ? 'card' : 'verdict';
-      const text = el.textContent?.trim().slice(0, 40);
-      if (el.scrollHeight > el.clientHeight + 1 || el.scrollTop > 0)
-        out.push(`${what} overflows (${el.scrollHeight} > ${el.clientHeight}) "${text}"`);
+    const laneEl = document.querySelector<HTMLElement>('.lr-altar-lane');
+    const lane = laneEl?.getBoundingClientRect();
+    const region = laneEl?.closest('.tc-region')?.getBoundingClientRect();
+    const shown = (el: HTMLElement) => {
+      if (el.closest('[hidden]') || el.offsetHeight === 0) return false;
+      const cs = getComputedStyle(el);
+      return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) >= 0.05;
+    };
+    const cards = [
+      ...document.querySelectorAll<HTMLElement>('.lr-altar-lane > *'),
+      ...document.querySelectorAll<HTMLElement>('.tc-region > .tc-caption[data-docked]'),
+    ];
+    for (const el of cards) {
+      if (!shown(el) || !el.textContent?.trim()) continue;
+      const what = el.className.split(' ')[0];
+      const text = el.textContent.trim().slice(0, 40);
+      // Words inside the card run past their own box (a label under a button, a nowrap row).
+      for (const inner of el.querySelectorAll<HTMLElement>('*')) {
+        const own = [...inner.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim());
+        if (!own || !shown(inner) || getComputedStyle(inner).display === 'inline') continue;
+        if (inner.scrollWidth > inner.clientWidth + 1)
+          out.push(`${what} words past their box "${inner.textContent?.trim().slice(0, 30)}"`);
+      }
       const box = el.getBoundingClientRect();
-      if (lane && (box.top < lane.top - 0.5 || box.bottom > lane.bottom + 0.5))
-        out.push(`${what} outside the lane "${text}"`);
+      // FUSE's line does not scroll (its tail hangs below it): its text stays inside its card.
+      const words = el.querySelector<HTMLElement>('.tc-caption-text');
+      if (words) {
+        const r = words.getBoundingClientRect();
+        if (r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5)
+          out.push(`${what} text past its card "${text}"`);
+      } else if (el.scrollHeight > el.clientHeight + 1 || el.scrollTop > 0)
+        out.push(`${what} clips (${el.scrollHeight} > ${el.clientHeight}) "${text}"`);
+      if (!words && el.scrollWidth > el.clientWidth + 1)
+        out.push(`${what} too wide (${el.scrollWidth} > ${el.clientWidth}) "${text}"`);
+      const inLane = el.parentElement === laneEl;
+      for (const [name, r] of [
+        ['lane', inLane ? lane : undefined],
+        ['column', region],
+      ] as const)
+        if (
+          r &&
+          (box.top < r.top - 0.5 ||
+            box.bottom > r.bottom + 0.5 ||
+            box.left < r.left - 0.5 ||
+            box.right > r.right + 0.5)
+        )
+          out.push(`${what} outside the ${name} "${text}"`);
       const tryLine = el.querySelector<HTMLElement>('.lr-verdict-hint');
       if (tryLine) {
         const r = tryLine.getBoundingClientRect();
@@ -267,6 +311,62 @@ for (const vp of PHONES) {
         await expect(page.locator('.lr-altar-verdict')).toBeVisible({ timeout: 15_000 });
         await check(page, id, `${id} verdict`, problems);
         await page.evaluate(() => (window as G).__game.flow.closePuzzle());
+      }
+      expect(problems).toEqual([]);
+    });
+
+    test(`no card clips mid-play, cards stacked, at ${vp.width}×${vp.height}`, async ({ page }) => {
+      // card-fit: half of each altar's design placed, so a gauge's dot lights and (the dot not
+      // told yet) its legend comes up; then the arrival card over it, the altar at rest, and
+      // each tray gem in hand with its card. No card in the column clips its text.
+      await boot(page, vp.inset);
+      const problems: string[] = [];
+      for (const [at, id] of MACHINE_IDS.entries()) {
+        const pz = puzzleFor(id);
+        const half = pz.design.intended.slice(0, Math.floor(pz.design.intended.length / 2));
+        await page.evaluate(
+          ({ solved, id, half }) => {
+            const g = (window as G).__game;
+            if (g.flow.state === 'puzzle') g.flow.closePuzzle();
+            g.save.update((d: G) => {
+              d.flags.hallIntro = true;
+              d.flags.dotTold = false;
+              d.settings.captionSpeed = 'instant';
+              d.progress.solved = solved;
+              d.puzzles = { [id]: { placements: half, attempts: 0 } };
+            });
+            if (g.flow.state !== 'hall') g.flow.continueGame();
+            g.flow.openPuzzle(id);
+            g.fuse.hush();
+          },
+          { solved: MACHINE_IDS.slice(0, at) as unknown as string[], id, half },
+        );
+        await expect(page.locator('.lr-altar')).toBeVisible();
+        await waitFrames(page, 6);
+        await check(page, id, `${id} mid teach`, problems);
+        for (let i = 0; i < 8; i++) {
+          await page.evaluate(() => (window as G).__game.fuse.hush());
+          const next = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
+          if ((await next.count()) === 0) break;
+          await next.first().tap();
+          await waitFrames(page, 3);
+        }
+        await page.evaluate(() => (window as G).__game.fuse.hush());
+        await check(page, id, `${id} mid open`, problems);
+        const L = await page.evaluate(
+          () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+        );
+        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+        const k = ob.width / 1920;
+        for (const s of L.tray) {
+          if (trayRemaining(pz, half as never, s.gem) <= 0) continue;
+          await page.touchscreen.tap(ob.x + s.x * k, ob.y + s.y * k);
+          await page.waitForFunction((g) => (window as G).__altarView?.held?.kind === g, s.gem);
+          await page.evaluate(() => (window as G).__game.fuse.hush());
+          await check(page, id, `${id} mid holding ${s.gem}`, problems);
+          await page.touchscreen.tap(ob.x + s.x * k, ob.y + s.y * k);
+          await page.waitForFunction(() => !(window as G).__altarView?.held);
+        }
       }
       expect(problems).toEqual([]);
     });
