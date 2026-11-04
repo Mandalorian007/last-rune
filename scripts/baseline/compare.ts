@@ -5,8 +5,8 @@
  * to `docs/design/screens/v1.0/<project>/<name>.png`.
  *
  * Compare: the new screenshot is mapped onto the *baseline's* palette with the same
- * nearest-colour rule the update used, and the indices are compared. An unchanged render maps
- * to exactly the same indices, so an unchanged tree diffs at 0 pixels. A changed pixel counts
+ * nearest-colour rule the update used, and the indices are compared (with `EDGE_SLACK` for
+ * pixels that sat on a band edge and moved a level or two in GPU noise). A changed pixel counts
  * when it lands on a different palette entry, which any visible change does (a moved widget,
  * a different shader, a shifted tone across a gradient's band edges). Changes smaller than a
  * palette step inside a flat band are not seen; that is the price of an 8-bit set.
@@ -34,13 +34,13 @@ export const BASELINE_DIR = resolve(root, 'docs/design/screens/v1.0');
 const OUT_DIR = resolve(root, 'test-results/baseline');
 
 /**
- * Pixels allowed to change before a shot fails, as a fraction of the frame. 0.0005 is about
- * 1,000 px at 1920×1080 and 460 px at 1280×720: well under one changed word of UI text
- * (a 16 px label is ~1,500 px of glyph edges) and far under any layout or shader change,
- * but above the handful of band-edge flips seen between runs under heavy GPU load.
- * `BASELINE_MAX_DIFF` overrides it (0 = exact).
+ * Pixels allowed to change before a shot fails, as a fraction of the frame: 0.1%, about 920 px
+ * at 1280×720 and 2,070 px at 1920×1080. Repeat runs of an unchanged tree measured 0–50 px on
+ * most shots and up to ~1,600 px on a few (FUSE's idle pose and the storm orb a frame apart);
+ * a moved widget, a new panel, a shader or tone change is tens of thousands. README.md has the
+ * measurements. `BASELINE_MAX_DIFF` overrides it (0 = exact).
  */
-export const MAX_DIFF_RATIO = Number(process.env.BASELINE_MAX_DIFF ?? 0.0005);
+export const MAX_DIFF_RATIO = Number(process.env.BASELINE_MAX_DIFF ?? 0.001);
 
 /**
  * Band-edge slack, in RGB distance (0–441). A pixel whose nearest palette entry differs from
@@ -78,7 +78,9 @@ export function countChanged(actual: Rgba, base: Indexed, slack = EDGE_SLACK) {
   return { changed, index };
 }
 
-export async function matchBaseline(png: Buffer, name: string) {
+/** `sceneMax`: a documented per-scene limit (README.md, Tolerance); `BASELINE_MAX_DIFF` wins. */
+export async function matchBaseline(png: Buffer, name: string, sceneMax?: number) {
+  const maxDiff = process.env.BASELINE_MAX_DIFF ? MAX_DIFF_RATIO : (sceneMax ?? MAX_DIFF_RATIO);
   const info = test.info();
   const file = resolve(BASELINE_DIR, info.project.name, `${name}.png`);
   const actual = decodePng(png);
@@ -104,7 +106,7 @@ export async function matchBaseline(png: Buffer, name: string) {
   info.annotations.push({ type: 'baseline', description: line });
   console.log(`  ${line}`);
 
-  if (ratio > MAX_DIFF_RATIO) {
+  if (ratio > maxDiff) {
     const out = resolve(OUT_DIR, info.project.name);
     mkdirSync(out, { recursive: true });
     // Diff: the baseline as dim grey (entries 0–254), changed pixels red (entry 255).
@@ -130,6 +132,6 @@ export async function matchBaseline(png: Buffer, name: string) {
     await info.attach(`${name}-diff`, { body: diffPng, contentType: 'image/png' });
   }
   expect
-    .soft(ratio, `${line}; allowed ${(MAX_DIFF_RATIO * 100).toFixed(3)}%`)
-    .toBeLessThanOrEqual(MAX_DIFF_RATIO);
+    .soft(ratio, `${line}; allowed ${(maxDiff * 100).toFixed(3)}%`)
+    .toBeLessThanOrEqual(maxDiff);
 }

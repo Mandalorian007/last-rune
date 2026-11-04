@@ -40,7 +40,8 @@ export default defineConfig({
   // One GPU, one clock: shots run one page at a time so a busy GPU never races the capture.
   fullyParallel: false,
   workers: Number(process.env.BASELINE_WORKERS ?? 2),
-  retries: 0,
+  // One retry: a real change fails twice; a rare one-off render outlier (README, Tolerance) does not.
+  retries: process.env.BASELINE_UPDATE ? 0 : 1,
   timeout: 120_000,
   reporter: [['list']],
   expect: { timeout: 20_000 },

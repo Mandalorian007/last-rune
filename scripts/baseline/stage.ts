@@ -156,6 +156,12 @@ export async function advance(page: Page, ms: number) {
   for (let t = 0; t < ms; t += FRAME_MS) await page.clock.runFor(Math.min(FRAME_MS, ms - t));
 }
 
+/** Run frames until the game's simulated time reaches `simSeconds`. */
+export async function advanceTo(page: Page, simSeconds: number) {
+  const sim = () => page.evaluate(() => (window as G).__game.loop.time.simTime as number);
+  while ((await sim()) < simSeconds - 1e-6) await page.clock.runFor(FRAME_MS);
+}
+
 /**
  * Advance fake time until `fn` is true in the page, spending as little game time as possible.
  * Boot, the GPU and audio renders are real async work that the fake clock does not drive, so
@@ -196,14 +202,18 @@ export function game<R, A = undefined>(page: Page, fn: (g: G, arg: A) => R, arg?
 
 /** Press a key and let the game read it (input is polled per fixed tick). */
 export async function key(page: Page, k: string) {
+  // Real time after each event, so it has reached the page before the next frame runs (else
+  // which tick reads it depends on load: the fail verdict came out a frame apart).
   await page.keyboard.down(k);
+  await page.waitForTimeout(50);
   await advance(page, FRAME_MS * 3);
   await page.keyboard.up(k);
+  await page.waitForTimeout(50);
   await advance(page, FRAME_MS * 3);
 }
 
 /** The snapshot: a settled frame, then the compare (or a write, under BASELINE_UPDATE). */
-export async function shot(page: Page, name: string) {
+export async function shot(page: Page, name: string, maxDiff?: number) {
   await advance(page, FRAME_MS * 4);
   if (process.env.BASELINE_TRACE) {
     const t = await page.evaluate(() => {
@@ -213,5 +223,5 @@ export async function shot(page: Page, name: string) {
     console.log(`  trace ${name}: frame ${t[0]} sim ${t[1]} random ${t[2]}`);
   }
   const png = await page.screenshot({ animations: 'disabled', caret: 'hide', scale: 'css' });
-  await matchBaseline(png, name);
+  await matchBaseline(png, name, maxDiff);
 }

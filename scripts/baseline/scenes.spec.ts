@@ -9,6 +9,7 @@ import { pagesFound } from '../../games/last-rune/content/journal';
 import { MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import {
   advance,
+  advanceTo,
   type G,
   game,
   intended,
@@ -52,27 +53,30 @@ async function toAltar(page: Page, id: MachineId, seed: SaveSeed) {
 }
 
 test.describe('title and hall', () => {
+  // Shots land between lightning strikes: the title's first strike is at 2.2 s and the hall's at
+  // 3 s, each over in ~1.1 s, and the next is at least 3 s later (art/hall/lightning.ts). A
+  // frame of jitter during a flash would change the whole room's light.
   test('title', async ({ page }) => {
     await stage(page, saveData({ titleKnock: false }));
-    await advance(page, 3000);
+    await advance(page, 4300);
     await shot(page, 'title');
   });
 
   test('title (returning)', async ({ page }) => {
     await stage(page, saveData(midSeed()));
-    await advance(page, 3000);
+    await advance(page, 4300);
     await shot(page, 'title-continue');
   });
 
   test('hall, first visit', async ({ page }) => {
     await toHall(page, { titleKnock: false }, 'new');
-    await advance(page, 4000);
+    await advance(page, 5500);
     await shot(page, 'hall-first');
   });
 
   test('hall, mid-run', async ({ page }) => {
     await toHall(page, midSeed());
-    await advance(page, 3000);
+    await advance(page, 5500);
     await shot(page, 'hall-mid');
   });
 
@@ -130,8 +134,13 @@ test.describe('verdicts', () => {
       const v = document.querySelector<HTMLElement>('.lr-altar-verdict');
       return v && !v.hidden && v.dataset.outcome;
     });
-    await advance(page, 2000);
-    await shot(page, 'verdict-fail');
+    // To a fixed game time, not a fixed delay: which frame the verdict lands on still varies by
+    // one or two, and the idle animations (FUSE, the source orb) follow game time.
+    await advanceTo(page, 7);
+    // Its own limit, 1%: at the same game time, frame and random draws, repeat runs still
+    // differ by up to ~0.5% in the failed strike's smoke over the source and FUSE's idle pose.
+    // The cause wasn't found. 1% still fails on a changed verdict box, board or layout.
+    await shot(page, 'verdict-fail', 0.01);
   });
 
   test('solve card', async ({ page }) => {
