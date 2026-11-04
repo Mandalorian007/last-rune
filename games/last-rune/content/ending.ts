@@ -122,21 +122,18 @@ export const ENDING_SEQUENCE: readonly EndingStep[] = [
 
 export interface PlayStats {
   readonly playSeconds: number;
-  readonly breakersTripped: number;
 }
 
 /**
  * FUSE's closing remark on the player's safety record, for the ending screen
  * under the title card ("He has questions about your safety record").
- * Stands in for the pitch's greeting that referenced play time.
+ * Stands in for the pitch's greeting that referenced play time. It counts no
+ * misses: a miss costs nothing (D-043), so the breakers are only ever reset.
  */
 export function safetyRecordLine(stats: PlayStats): string {
   const mins = Math.max(1, Math.round(stats.playSeconds / 60));
   const time = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
-  const b = Math.max(0, Math.floor(stats.breakersTripped));
-  const breakers =
-    b === 0 ? 'Breakers tripped: none. Suspicious.' : `Breakers tripped: ${b}. Generous.`;
-  const line = `Visitor #4,211. Time on site: ${time}. ${breakers} Monitoring continues.`;
+  const line = `Visitor #4,211. Time on site: ${time}. Breakers reset at no charge. Monitoring continues.`;
   if (wordCount(line) > 20) throw new Error('safety record line too long');
   return line;
 }

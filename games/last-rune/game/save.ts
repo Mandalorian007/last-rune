@@ -75,7 +75,7 @@ const Settings = s.object({
 const Stats = s.object({
   /** Seconds in the hall/puzzles (not the title, not while the tab is hidden). */
   playSeconds: s.number({ min: 0 }),
-  /** Over-charge outcomes (feeds `safetyRecordLine`). */
+  /** Over-charge outcomes. Stats only, never shown (D-043). */
   breakersTripped: s.number({ min: 0, int: true }),
   /** Every bolt fired, any outcome. */
   attempts: s.number({ min: 0, int: true }),
