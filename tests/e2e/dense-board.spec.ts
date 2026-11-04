@@ -17,7 +17,7 @@ import { DEV_URL, readSave, waitFrames } from './helpers';
 // shows on every dense board. No two Gives/Needs cards overlap (dense-board-2). dense-board-3:
 // every gauge on a board is one size, every orb (rings and foot) and gauge is on the screen,
 // every card lies within its own height of its gauge, and the loupe never covers the aimed
-// socket or its eight neighbours.
+// socket or its eight neighbours (polish-9: nor a Gives/Needs card or the open hint card).
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0, rune: 32 },
@@ -306,6 +306,20 @@ for (const vp of PHONES) {
           const cell = await page.locator('.lr-altar').getAttribute('data-loupe');
           const [ax, ay] = (cell ?? '').split(',').map(Number);
           const lb = (await loupe.boundingBox())!;
+          // polish-9: the Gives/Needs cards and the open hint or teach card, as they stand
+          // while the loupe shows.
+          const cards = await page.evaluate(() =>
+            [
+              ...document.querySelectorAll<HTMLElement>(
+                '.lr-altar-need, .lr-altar-hint, .lr-altar-tip',
+              ),
+            ]
+              .filter((e) => !e.hidden && e.getBoundingClientRect().width > 0)
+              .map((e) => {
+                const r = e.getBoundingClientRect();
+                return { cls: e.className, l: r.left, t: r.top, r: r.right, b: r.bottom };
+              }),
+          );
           await touch('touchEnd');
           await waitFrames(page, 3);
           // Start the next aim from the bare board.
@@ -323,6 +337,16 @@ for (const vp of PHONES) {
             Math.max(0, a.y - o.y, o.y - b.y),
           );
           expect(d, `${vp.name} ${id} ${cell}: loupe clear of the 3×3`).toBeGreaterThanOrEqual(r);
+          // polish-9: nor any Gives/Needs card or the open hint card.
+          for (const k of cards) {
+            const dk = Math.hypot(
+              Math.max(0, k.l - o.x, o.x - k.r),
+              Math.max(0, k.t - o.y, o.y - k.b),
+            );
+            expect(dk, `${vp.name} ${id} ${cell}: loupe clear of ${k.cls}`).toBeGreaterThanOrEqual(
+              r - 0.5,
+            );
+          }
           expect(lb.x, `${vp.name} ${id}: loupe on screen`).toBeGreaterThanOrEqual(0);
           expect(lb.y).toBeGreaterThanOrEqual(0);
           expect(lb.x + lb.width).toBeLessThanOrEqual(view.width);

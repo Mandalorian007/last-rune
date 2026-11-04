@@ -4,9 +4,9 @@ import { playOrder } from './altar-audit';
 import { DEV_URL } from './helpers';
 
 // capacitor-clarity: a two-strike altar says so before Strike, the Capacitor reads out what it
-// keeps on strike 1 and lets out on strike 2 (in the plan and as it plays), and the verdict
+// stores on strike 1 and lets out on strike 2 (in the plan and as it plays), and the verdict
 // names the strike and tells what the ice did. Capacitor Bay: storm gives 8, two strikes, a
-// fixed Capacitor at (5,2); the first try (up the lane, one Bend east through the ice) keeps 8
+// fixed Capacitor at (5,2); the first try (up the lane, one Bend east through the ice) stores 8
 // then lets out 16 into a machine needing 8.
 
 const ID: MachineId = 'capacitor-bay';
@@ -69,15 +69,15 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
   await expect(page.locator('.lr-altar-storm .lr-storm-strikes')).toHaveText('2 strikes');
   await expect(page.locator('.lr-altar-storm .lr-strike-pips i')).toHaveCount(2);
   await expect(page.locator('.lr-altar-actions .lr-strike-pips i')).toHaveCount(2);
-  await expect(page.locator('.lr-altar-need').first()).toContainText('in either strike');
-  // The plan read-out at the ice: what it keeps, then what it lets out.
+  await expect(page.locator('.lr-altar-need').first()).toContainText('on strike 1 or 2');
+  // The plan read-out at the ice: what it stores, then what it lets out.
   const cap = page.locator('.lr-altar-cap');
   await expect(cap).toHaveCount(1);
   await expect(cap).toHaveAttribute('data-plan', '');
   // altar-truth: 16 is more than the 8 the machine takes, so the plan says so and warns, and
   // so does that gauge.
   await expect(cap.locator('.lr-cap-line')).toHaveText([
-    'Strike 1: keeps 8',
+    'Strike 1: stores 8',
     'Strike 2 sends 16; needs 8.',
   ]);
   await expect(cap.locator('.lr-cap-line[data-warn]')).toHaveCount(1);
@@ -106,14 +106,14 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
   const verdict = page.locator('.lr-altar-verdict');
   await expect(verdict).toBeVisible({ timeout: 15_000 });
   const seen = await page.evaluate(() => (window as unknown as { __capSeen: string[] }).__capSeen);
-  expect(seen).toContain('Strike 1 of 2 | Strike 1: keeps 8');
+  expect(seen).toContain('Strike 1 of 2 | Strike 1: stores 8');
   expect(seen.some((s) => s.startsWith('Strike 2 of 2 |'))).toBe(true);
-  expect(seen.indexOf('Strike 1 of 2 | Strike 1: keeps 8')).toBeLessThan(
+  expect(seen.indexOf('Strike 1 of 2 | Strike 1: stores 8')).toBeLessThan(
     seen.findIndex((s) => s.startsWith('Strike 2 of 2 |')),
   );
   await expect(verdict).toContainText('Got 16 on strike 2, needs 8: breaker tripped');
   await expect(verdict.locator('.lr-verdict-story')).toHaveText(
-    'Strike 1: the Capacitor kept 8. Strike 2: the Capacitor let out 8 + 8 = 16.',
+    'Strike 1: the Capacitor stored 8. Strike 2: the Capacitor let out 8 + 8 = 16.',
   );
   await expect(cap.locator('.lr-cap-line:not([hidden])')).toHaveCount(2);
 });

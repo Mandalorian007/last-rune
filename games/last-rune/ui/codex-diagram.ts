@@ -57,7 +57,7 @@ export const GEM_DIAGRAMS: Readonly<Record<GemKind, GemDiagram>> = {
     ],
     outs: [{ side: 'N', charge: '8' }],
     fizzle: ['S'],
-    alt: 'Charge of 4 enters from the left and the right in the same strike; 8 leaves out the top. Charge entering the bottom is lost.',
+    alt: 'Charge of 4 enters both ports, left and right, on the same strike; 8 leaves by the arrow at the top. Charge entering the bottom is lost.',
   },
   capacitor: {
     ins: [{ side: 'S', charge: '4' }],

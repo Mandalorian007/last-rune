@@ -12,8 +12,10 @@ import { idleAmpArrivals } from './amp-idle';
 import { capacitorBeats } from './circuit-model';
 import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
 import { anchorOf } from './layout';
+import { needleFor } from './needle';
 import {
   type Arrival,
+  alsoMissed,
   buildTimeline,
   causeHeadline,
   causeText,
@@ -203,7 +205,7 @@ export const runMethods = {
         if (m < 0) break;
         this.readings[m] = (this.readings[m] ?? 0) + a.charge;
         const need = this.puzzle.machines[m]!.need;
-        this.view.machines[m]!.gauge = Math.min(1.25, this.readings[m]! / need);
+        this.view.machines[m]!.gauge = needleFor(this.readings[m]!, need);
         this.setNeed(m, need, this.readings[m]!);
         this.view.machineGlow[m] = 1;
         const col = this.view.machineColor[m]!;
@@ -260,13 +262,19 @@ export const runMethods = {
         el.dataset.state = 'exact';
         this.ctx.sound.sfx.play('machineExact');
       } else if (got > need) {
-        prop.breaker();
+        // polish-9: the needle stays in the red at what arrived once the breaker has tripped.
+        prop.breaker(needleFor(got, need));
         el.dataset.state = 'over';
         this.breaker();
       } else if (got > 0) {
+        // polish-9: the needle rests short of the mark, at what arrived this strike.
+        prop.gauge = needleFor(got, need);
         el.dataset.state = 'under';
         if (i === res.pulsesRun - 1) this.ctx.sound.sfx.play('machineUnder');
-      } else el.dataset.state = 'under';
+      } else {
+        prop.gauge = 0;
+        el.dataset.state = 'under';
+      }
     }
     // Capacitors keep glowing between strikes.
     for (const b of this.view.board)
@@ -347,11 +355,13 @@ export const runMethods = {
       if (o === 'over') {
         const m = ms[over]!;
         const text = say(over, head(m, 'over'));
-        this.showVerdict(text, 'over', story, hint, story ? '' : cause, each(m));
+        const also = alsoMissed(ms, over);
+        this.showVerdict(text, 'over', story, hint, story ? '' : cause, each(m), also);
       } else if (o === 'under') {
         const m = ms[under] ?? ms[0]!;
         const text = say(under, head(m, 'under'));
-        this.showVerdict(text, 'under', story, hint, story ? '' : cause, each(m));
+        const also = alsoMissed(ms, Math.max(0, under));
+        this.showVerdict(text, 'under', story, hint, story ? '' : cause, each(m), also);
       } else {
         // A title and the fix. On a phone the cause is the title ("The charge hit an empty
         // socket"); a separate title line would push the card past its line budget.
@@ -400,7 +410,7 @@ export const runMethods = {
       } else if (line) void this.ctx.fuse.say(line, { interrupt: true });
     }
     // No attempt count anywhere (D-043): a strike is a free test, not a scored try.
-    this.subtitle.textContent = o === 'exact' ? 'Restored' : 'Change anything and try again';
+    this.subtitle.textContent = o === 'exact' ? 'Restored' : 'Change anything and strike again';
     this.updateCapLive();
     const head = this.verdict.firstChild?.textContent ?? '';
     const told = this.verdict.querySelector('.lr-verdict-story')?.textContent;
@@ -410,7 +420,7 @@ export const runMethods = {
         (next ? ` ${next}` : '') +
         (o === 'exact'
           ? ''
-          : `${free ? ` ${FIRST_MISS_LINE}` : ''} Change anything and try again.`),
+          : `${free ? ` ${FIRST_MISS_LINE}` : ''} Change anything and strike again.`),
     );
     this.refreshHud();
   },

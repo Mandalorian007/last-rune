@@ -6,7 +6,7 @@
  * Consistent with `docs/design/rules.md`, written as the player sees it. "Charge" is the one
  * noun for what flows (mobile-6-moments): no bolts, fizzles, stems or arms. Each rule names
  * what the gem's glyph shows (the Bend's bent line, the Split's plain end and arrows, the
- * Gate's side lines and arrow). A 1× storm gives 4 (2× = 8, 4× = 16), and the gauge wants an
+ * Gate's ports and arrow). A 1× storm gives 4 (2× = 8, 4× = 16), and the gauge wants an
  * exact fill. Card limits: `rule` ≤ CODEX_RULE_MAX_WORDS
  * words, `maths` ≤ CODEX_MATHS_MAX_CHARS characters on one line.
  */
@@ -26,7 +26,7 @@ export interface CodexEntry {
   readonly chip: string;
   /**
    * A worked example: one line with real numbers, in the Capacitor read-out's style ("Strike 1:
-   * keeps 4. Strike 2: 4 + 4 → 8."). The codex card, the phone's gem chip and the arrival card
+   * stores 4. Strike 2: 4 + 4 → 8."). The codex card, the phone's gem chip and the arrival card
    * all show it (mobile-7-teach).
    */
   readonly maths: string;
@@ -37,6 +37,14 @@ export const CODEX_MATHS_MAX_CHARS = 44;
 export const CODEX_CHIP_MAX_CHARS = 68;
 
 /** Shown on every card's footer: how charge is counted. */
+/**
+ * teach-7 (D-040 add. 10, D): the Gate in one sentence, the same on the teach card, the gem
+ * chip and the codex (blind review 9 met it worded two ways: "from above and below" on Relay
+ * Tower's card, "both sides beside the arrow" on Foundry's chip). It names what the glyph draws
+ * (ws/held-gem): an inward port on each input side, one arrow out.
+ */
+export const GATE_RULE = 'Both ports, same strike: the sum leaves by the arrow.';
+
 export const CODEX_SPARKS = 'The numbers are charge. A storm gives 4 a strike; 2× gives 8, 4× 16.';
 
 export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
@@ -71,18 +79,19 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
   gate: {
     gem: 'gate',
     name: 'Gate',
-    rule: 'Charge must reach the two sides beside the arrow in one strike; their sum leaves by the arrow. One side alone is lost.',
-    // teach-4: "both sides" alone read as the board's left and right; they are the arrow's sides.
-    // teach-6: "both sides of the arrow" then read as its head and tail: the sides beside it.
-    chip: 'Feed both sides beside the arrow at once; sum goes out.',
+    // teach-4: "both sides" alone read as the board's left and right; teach-6: "both sides of
+    // the arrow" read as its head and tail. teach-7: the inputs are ports, the output the arrow.
+    rule: `${GATE_RULE} One port alone, or charge at the back, is lost.`,
+    chip: GATE_RULE,
     maths: 'In 4 and 4 → out 8. Only one in: lost.',
   },
   capacitor: {
     gem: 'capacitor',
     name: 'Capacitor',
-    rule: 'Keeps the first charge it gets; nothing comes out. Next strike, the new charge pushes both out together, straight on.',
-    chip: 'Holds its first charge; next strike, lets out both.',
-    maths: 'Strike 1: keeps 4. Strike 2: 4 + 4 → 8.',
+    // teach-7: "stores" everywhere (blind review 9: "keeps" was jargon).
+    rule: 'Stores the first charge it gets; nothing comes out. Next strike, the new charge pushes both out together, straight on.',
+    chip: 'Stores its first charge; next strike, lets out both.',
+    maths: 'Strike 1: stores 4. Strike 2: 4 + 4 → 8.',
   },
 };
 

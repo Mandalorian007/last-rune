@@ -118,7 +118,11 @@ export class SolveScene implements GameScene {
     for (const s of socketLooks(!!L0.phone, L0.cols, L0.rows, puzzle.blocked, look.collars)) {
       view.mark(s.x, s.y, s.state, GOLD, 1);
     }
-    for (const mm of view.machines) mm.solve();
+    // polish-9: the charge already arrived; the needle is on the mark from the first frame.
+    for (const mm of view.machines) {
+      mm.solve();
+      mm.settle();
+    }
     view.wake = 1;
 
     this.postSnapshot = structuredClone(ctx.post.settings);

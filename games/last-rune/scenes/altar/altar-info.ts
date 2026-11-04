@@ -13,7 +13,7 @@ import {
   AMPLIFY_AGAIN,
   AMPLIFY_ONCE,
   capacitorStrip,
-  EITHER_NAME,
+  eitherName,
   eitherRule,
   GEM_NAME,
   GOAL_NAME,
@@ -401,13 +401,18 @@ export const infoMethods = {
       return h(
         'div',
         { class: 'lr-info-row', 'data-how': 'strikes' },
-        h('b', null, keepTogether(strikeLabel(n, 'edit')), marks),
+        h('b', null, keepTogether(strikeLabel(n)), marks),
         ' ',
         rule(strikesRule(n)),
       );
     }
     if (p.kind === 'either')
-      return row('either', EITHER_NAME, null, rule(eitherRule(this.puzzle.pulses)));
+      return row(
+        'either',
+        keepTogether(eitherName(this.puzzle.pulses)),
+        null,
+        rule(eitherRule(this.puzzle.pulses)),
+      );
     const fig = hasPicture(p) ? this.gemFigure(p.gem, p.how === 'fixed') : null;
     if (fig && p.gem === 'capacitor') {
       // The Capacitor's lesson is its two strikes, with this altar's own charge (teach-4).

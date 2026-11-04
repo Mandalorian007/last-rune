@@ -281,7 +281,7 @@ export class AltarScene implements GameScene {
   strikeCount: HTMLElement | null = null;
   /**
    * Strike's word (mobile-7-strike). Phones say what a tap does on one line: "Strike",
-   * "Strike (2 left)", "Strike again" while the last strike runs, "Try again" after a fail.
+   * "Strike ×2" on a multi-strike altar, the same after a miss (teach-7: no "Try again").
    */
   strikeWord: HTMLElement | null = null;
   /** Phones: one reach lamp per gauge, before Strike (see reach.ts). */

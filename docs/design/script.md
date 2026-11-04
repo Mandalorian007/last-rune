@@ -803,7 +803,7 @@ A breaker trip always gets an "over" line.
 
 **capacitor**
 
-> Keeps a charge for later. Ice keeps things. That's what ice is for. **[NEW]**  
+> Stores a charge for later. Ice stores things. That's what ice is for. **[NEW]**  
 > <sub>`codex.capacitor` · 13w</sub>
 
 ## At the altar
@@ -865,10 +865,10 @@ depends on them. Source: `content/codex.ts` (rule, chip, maths), `scenes/altar/s
 | Bend | Turns the charge round the corner along its bent line, either way. Charge entering any other side is lost. · chip: Turns the charge along its bent line. Other sides lose it. · `out = in, round the corner` |
 | Split | Charge enters at the plain end and leaves by both arrows, half each. Odd charge, or charge from any other side, is lost. · chip: In at the plain end, half out each arrow. Odd or wrong side: lost. · `4 → 2 + 2 · odd → lost` |
 | Amplify | Doubles the charge, once per path. Charge that has already passed an Amplify, even split since, goes through unchanged. · chip: Doubles the charge, once per path. Already doubled: unchanged. · `4 → 8 · 8 → 8 (already doubled)` |
-| Gate | Takes charge in on both side lines. If both arrive in the same strike, their sum leaves by the arrow. Otherwise it is lost. · chip: Both side lines in one strike: their sum leaves by the arrow. · `out = a + b, only if both arrive` |
-| Capacitor | Keeps the first charge it gets; nothing comes out. Next strike, the new charge pushes both out together, straight on. · chip: Keeps its first charge. Next strike, lets out both together. |
+| Gate | Both ports, same strike: the sum leaves by the arrow. One port alone, or charge at the back, is lost. · chip: Both ports, same strike: the sum leaves by the arrow. · `out = a + b, only if both arrive` (teach-7: one sentence on the codex, the chip and the teach card) |
+| Capacitor | Stores the first charge it gets; nothing comes out. Next strike, the new charge pushes both out together, straight on. · chip: Stores its first charge; next strike, lets out both. |
 | Ring (teach) | A socket the charge must reach. Set a gem there. |
 | Can't turn | Can't turn: charge goes straight through |
-| Causes | Empty socket: charge lost · Carved stone: charge lost · Charge ran off the altar · Turned the wrong way: charge lost · Odd charge can't split: lost · Gate needs charge on both sides · Gem already used this strike |
-| Try lines (changed) | Try: lead the charge to the machine before it runs off the altar. · Try: bring charge into the Gate's other side line too. · Try: give each path its own gems. A gem carries charge once per strike. · (touch) Try: turn the gem at the red mark (↻ Turn). |
+| Causes | Empty socket: charge lost · Carved stone: charge lost · Charge ran off the altar · Turned the wrong way: charge lost · Odd charge can't split: lost · Gate needs both ports fed on the same strike · Gem already used this strike |
+| Try lines (changed) | Try: lead the charge to the machine before it runs off the altar. · Try: feed the Gate's other port on the same strike. · Try: give each path its own gems. A gem carries charge once per strike. · (touch) Try: turn the gem at the red mark (↻ Turn). |
 | Teach card | New here · 1 of 3 · Next › · Got it |

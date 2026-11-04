@@ -7,11 +7,11 @@ import { DEV_URL, waitFrames } from './helpers';
 // mobile-7-strike (D-040 addendum 5), on four phones (browser bars showing, the iPhone's notch
 // insets emulated):
 //  1. Strike says what a tap does, on one line: "Strike ×2" (two unlit pips) before a two-strike run,
-//     "Try again" after a fail. It is ≥56 CSS px tall and ≥12 CSS px inside the play area.
+//     "Strike ×2" after a fail too (teach-7: nothing is lost). It is ≥56 CSS px tall and ≥12 CSS px inside the play area.
 //  2. Before Strike each gauge shows a lamp (on or off, no number) that agrees with the path;
 //     Strike glows ("ready") when every lamp is lit.
 //  3. After a two-strike fail the gauge card stays compact ("Needs 8 · got 16", no per-strike
-//     chips); the verdict tells each strike in words ("Got 0, then 16; needs 8 in either strike.").
+//     chips); the verdict tells each strike in words ("Got 0, then 16; needs 8 on strike 1 or 2.").
 //  4. An empty-socket fail: title "No charge reached the machine", cause "The charge hit …".
 //  5. The solve card covers no gauge and no socket; FUSE's line keeps ≥12 px off it.
 
@@ -23,7 +23,7 @@ const PHONES = [
 ] as const;
 
 const ORDER = playOrder();
-/** Capacitor Bay's first try (capacitor.spec): strike 1 keeps 8, strike 2 lets out 16 into 8. */
+/** Capacitor Bay's first try (capacitor.spec): strike 1 stores 8, strike 2 lets out 16 into 8. */
 const ROW = [
   { cell: { x: 4, y: 5 }, gem: 'channel', rot: 0 },
   { cell: { x: 4, y: 4 }, gem: 'channel', rot: 0 },
@@ -191,7 +191,7 @@ for (const vp of PHONES) {
       if (part.on.every(Boolean) === false && (await strikeRead(page)).ready)
         problems.push('bay, first try: Strike glows with a gauge unreached');
 
-      // 3. The two-strike fail: compact card, each strike in words, "Try again".
+      // 3. The two-strike fail: each strike on the card and in words; Strike reads as before.
       // teach-5: while the run fires, the Strike pips light one per strike (1, then 2).
       await page.evaluate(() => {
         const b = document.querySelector('[data-action="strike"]')!;
@@ -218,17 +218,30 @@ for (const vp of PHONES) {
         chips: document.querySelectorAll('.lr-altar-need .lr-need-strikes').length,
         lamps: document.querySelectorAll('.lr-altar-need .lr-need-lamp').length,
       }));
-      if (!/Got 0, then 16; needs 8 in either strike\./.test(v.verdict))
+      if (!/Got 0, then 16; needs 8 on strike 1 or 2\./.test(v.verdict))
         problems.push(`bay fail: verdict "${v.verdict}"`);
       if (/\b\d: \d/.test(v.cards.join('|')) || v.chips)
         problems.push(`bay fail: strike chips on the card "${v.cards.join('|')}"`);
-      // teach-6: stacked on a multi-strike altar, "Needs 8 / got 16" (read here as one line).
-      if (!v.cards.some((c) => /^Needs 8 · ?got 16$/.test(c.replace(/ got/, ' · got'))))
-        problems.push(`bay fail: card reads "${v.cards.join('|')}", not "Needs 8 · got 16"`);
+      // teach-7: stacked on a multi-strike altar, the card says what each strike brought,
+      // "Needs 8 / got 0, then 16 ✕" (read here as one line).
+      if (!v.cards.some((c) => /^Needs 8 got 0, then 16 ?✕$/.test(c)))
+        problems.push(
+          `bay fail: card reads "${v.cards.join('|')}", not "Needs 8 got 0, then 16 ✕"`,
+        );
       if (v.lamps) problems.push('bay fail: lamps still showing after Strike');
+      // teach-7: nothing is lost by a miss, so Strike reads as before, its marks unlit.
       const after = await strikeRead(page);
-      problems.push(...strikeProblems('bay, after', after, 'Try again'));
-      if (after.pips !== 0) problems.push(`bay, after: ${after.pips} pips beside "Try again"`);
+      problems.push(...strikeProblems('bay, after', after, 'Strike ×2'));
+      if (after.pips !== 2 || after.lit !== 0)
+        problems.push(`bay, after: ${after.pips} pips, ${after.lit} lit (want 2, 0)`);
+      // teach-7: strike 1 is seen to happen: the Capacitor's "stores 8" stays on the board.
+      const stored = await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>('.lr-altar-chip[data-store]')]
+          .filter((el) => !el.hidden)
+          .map((el) => (el.textContent ?? '').replace(/ /g, ' ')),
+      );
+      if (JSON.stringify(stored) !== '["stores 8"]')
+        problems.push(`bay, after: stored chips ${JSON.stringify(stored)}, want ["stores 8"]`);
 
       // 4. An empty socket: the plain headline.
       await open(page, 'relay-tower', []);

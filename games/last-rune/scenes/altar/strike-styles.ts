@@ -49,7 +49,7 @@ ${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not([data-multi])
 ${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not([data-multi]) .lr-need-got::before { content: '· '; color: #bfae8a; }
 
 /* The verdict: headline, each strike's reading in words, then the cause or the next step. */
-${A} .lr-altar-verdict .lr-verdict-strikes {
+${A} .lr-altar-verdict :is(.lr-verdict-strikes, .lr-verdict-also) {
   display: block; margin-top: ${cpx(2)}; font-family: var(--tc-font-ui); font-size: ${tpx(12.5)}; line-height: 1.3;
   letter-spacing: 0; color: #f4e6c4;
 }

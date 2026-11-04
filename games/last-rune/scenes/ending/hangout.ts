@@ -246,9 +246,10 @@ export class Hangout {
     const ch = HANGOUT_CHANNELS.find((c) => c.id === id)!;
     // On phones the header is all the chrome there is (D-040): the channel, the server, and a
     // plain count of other channels with news (information only: nothing here is a control).
+    // polish-9: no emoji between "#" and the name; a lone face there read as a glitch. The
+    // channel's emoji stays in the list and in the channel's start chip.
     this.topEl.replaceChildren(
       h('span', { class: 'lr-hg-hash' }, '#'),
-      h('span', { class: 'lr-emo' }, ch.emoji),
       h('span', { class: 'lr-hg-top-name' }, ch.name),
       h('span', { class: 'lr-hg-top-server' }, HANGOUT_SERVER),
       this.badgeEl,

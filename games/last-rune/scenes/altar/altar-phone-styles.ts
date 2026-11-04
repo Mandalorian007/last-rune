@@ -130,7 +130,17 @@ ${A} .lr-altar-turnmark { display: none !important; }
 ${A} .lr-altar-need { font-size: ${tpx(13)}; color: #f4e6c4; }
 ${A} .lr-altar-need .lr-need-row b { font-size: ${tpx(15)}; }
 ${A} .lr-altar-need :is(.lr-need-note, .lr-storm-row, .lr-need-got, .lr-need-got b, .lr-need-strikes) { font-size: ${tpx(13)}; opacity: 1; }
-${A} .lr-altar-need .lr-need-note { color: #e6d6b2; }
+${A} .lr-altar-need .lr-need-note { color: #e6d6b2; letter-spacing: -0.1px; word-spacing: -0.1em; }
+/* teach-7: after a multi-strike, what each strike brought ("got 0, then 16 ✕"), each number in
+   its own outcome colour (the card's own state colours only the last). */
+${A} .lr-altar-need .lr-need-got[data-each] { white-space: nowrap; }
+${A} .lr-altar-need .lr-need-got[data-each] b { margin-left: 0; }
+${A} .lr-altar-need .lr-need-got[data-each] b[data-state="exact"] { color: #7ff0ff; }
+${A} .lr-altar-need .lr-need-got[data-each] b[data-state="under"] { color: #ffc46a; }
+${A} .lr-altar-need .lr-need-got[data-each] b[data-state="over"] { color: #ff8a6e; }
+${A} .lr-altar-need .lr-need-got[data-each] b[data-state="live"] { color: #f4e6c4; }
+${A} .lr-altar-need .lr-need-mark { font-style: normal; font-weight: 700; margin-left: ${cpx(3)}; color: #7ff0ff; }
+${A} .lr-altar-need .lr-need-mark[data-state="over"] { color: #ff8a6e; }
 ${A} .lr-altar-need .lr-need-strikes .lr-need-strike-lead { font-style: normal; align-self: center; color: #e6d6b2; }
 /* A one-strike north/south card keeps one line after a strike: "Needs 4  got 0" side by side
    (the layout gives it one line of room, and the board fills the height). */
