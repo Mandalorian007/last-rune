@@ -6,6 +6,7 @@ import {
   cellAt,
   cellCenter,
   LOUPE_BELOW,
+  orbExtent,
 } from '../../games/last-rune/scenes/altar/layout';
 import { LOCK_PIP, SOCKET_RADIUS } from '../../games/last-rune/shaders/stone-wgsl';
 import { DEV_URL, readSave, waitFrames } from './helpers';
@@ -13,13 +14,16 @@ import { DEV_URL, readSave, waitFrames } from './helpers';
 // dense-board (D-040 addendum 8): on a phone the densest boards take the room. The Last Rune's
 // sockets are at least a set pitch apart on each realistic phone; every socket's hit area is its
 // whole cell; no lock pip or source orb reaches into a neighbouring cell; and the touch loupe
-// shows on every dense board. No two Gives/Needs cards overlap (dense-board-2).
+// shows on every dense board. No two Gives/Needs cards overlap (dense-board-2). dense-board-3:
+// every gauge on a board is one size, every orb (rings and foot) and gauge is on the screen,
+// every card lies within its own height of its gauge, and the loupe never covers the aimed
+// socket or its eight neighbours.
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0, rune: 32 },
-  { name: 'iphone', width: 844, height: 340, inset: 47, rune: 34 },
-  { name: 'promax', width: 932, height: 380, inset: 59, rune: 38.5 },
-  { name: 'android', width: 915, height: 360, inset: 0, rune: 36 },
+  { name: 'iphone', width: 844, height: 340, inset: 47, rune: 35 },
+  { name: 'promax', width: 932, height: 380, inset: 59, rune: 40 },
+  { name: 'android', width: 915, height: 360, inset: 0, rune: 38 },
 ] as const;
 
 /** The dense boards, and Splitter Mill (its orb once covered a socket). */
@@ -83,6 +87,35 @@ async function open(page: Page, id: MachineId): Promise<{ L: AltarLayout; cssPx:
     () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
   );
   return { L, cssPx: L.phone!.cssPx };
+}
+
+/** Client px of a design-px point, through the scaled overlay. */
+async function toClient(page: Page) {
+  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const k = ob.width / 1920;
+  return (x: number, y: number) => ({ x: ob.x + x * k, y: ob.y + y * k });
+}
+
+/** The gap between two boxes (0 when they touch or overlap). */
+function gap(a: Box, b: Box) {
+  return Math.hypot(Math.max(0, a.l - b.r, b.l - a.r), Math.max(0, a.t - b.b, b.t - a.b));
+}
+type Box = { l: number; t: number; r: number; b: number };
+
+/** Each gauge as drawn (design px): the orb's rings and foot, a cabinet's body and cap. */
+function gaugeBoxes(L: AltarLayout, strength: number): Box[] {
+  const s = L.storm;
+  const oe = orbExtent(s.size, strength);
+  const gy = s.y - 0.048 * s.size;
+  return [
+    { l: s.x - oe.ring, t: gy - oe.ring, r: s.x + oe.ring, b: gy + oe.foot },
+    ...L.machines.map((m) => ({
+      l: m.x - 0.45 * m.size,
+      t: m.y - 0.47 * m.size,
+      r: m.x + 0.45 * m.size,
+      b: m.y + 0.36 * m.size,
+    })),
+  ];
 }
 
 /** Whether a disc reaches into the square of cell (x, y), by more than half a design px. */
@@ -167,6 +200,134 @@ for (const vp of PHONES) {
           return out;
         });
         expect(clash, `${vp.name} ${id}: cards that overlap`).toEqual([]);
+        // dense-board-3: one gauge size on the board; every orb and gauge on the screen.
+        expect(
+          new Set(L.machines.map((m) => m.size)).size,
+          `${vp.name} ${id}: gauge sizes`,
+        ).toBeLessThanOrEqual(1);
+        const at = await toClient(page);
+        const app = (await page.locator('#app').boundingBox())!;
+        const view = page.viewportSize()!;
+        const boxes = gaugeBoxes(L, puzzleFor(id).storm.strength).map((g) => {
+          const a = at(g.l, g.t);
+          const b = at(g.r, g.b);
+          return { l: a.x, t: a.y, r: b.x, b: b.y };
+        });
+        boxes.forEach((g, i) => {
+          const name = `${vp.name} ${id}: ${i ? `gauge ${i}` : 'orb'} on screen`;
+          expect(g.l, name).toBeGreaterThanOrEqual(Math.max(0, app.x) - 0.5);
+          expect(g.r, name).toBeLessThanOrEqual(Math.min(view.width, app.x + app.width) + 0.5);
+          expect(g.t, name).toBeGreaterThanOrEqual(-0.5);
+          expect(g.b, name).toBeLessThanOrEqual(view.height + 0.5);
+        });
+        // Every card within its own height of a gauge, and no two cards on one gauge.
+        const cards = await page.evaluate(() =>
+          [...document.querySelectorAll('.lr-altar-need')]
+            .map((el) => ({ t: el.textContent?.trim() ?? '', r: el.getBoundingClientRect() }))
+            .filter((c) => c.r.width > 0)
+            .map((c) => ({
+              t: c.t,
+              b: { l: c.r.left, t: c.r.top, r: c.r.right, b: c.r.bottom },
+            })),
+        );
+        const owner = new Set<number>();
+        for (const c of cards) {
+          const d = boxes.map((g) => gap(c.b, g));
+          const i = d.indexOf(Math.min(...d));
+          expect(d[i]!, `${vp.name} ${id}: "${c.t}" to its gauge`).toBeLessThanOrEqual(
+            c.b.b - c.b.t,
+          );
+          owner.add(i);
+        }
+        expect(owner.size, `${vp.name} ${id}: one card per gauge`).toBe(cards.length);
+      }
+    });
+
+    test(`dense boards ${vp.name}: the loupe never covers the aimed socket or its neighbours`, async ({
+      page,
+    }) => {
+      await boot(page, vp.inset);
+      for (const id of LOUPE) {
+        const { L } = await open(page, id);
+        await page.evaluate(() => (window as G).__game.fuse.hush());
+        const pz = puzzleFor(id);
+        const at = await toClient(page);
+        const view = page.viewportSize()!;
+        const taken = new Set([
+          ...pz.blocked.map((b) => `${b.x},${b.y}`),
+          ...pz.fixed.map((f) => `${f.cell.x},${f.cell.y}`),
+        ]);
+        // Sockets at the board's four extremes (and its middle) whose finger, 56 CSS px under
+        // the aim, is still on the screen.
+        const free: { x: number; y: number }[] = [];
+        const c = { x: 0, y: 0 };
+        for (let y = 0; y < L.rows; y++)
+          for (let x = 0; x < L.cols; x++) {
+            if (taken.has(`${x},${y}`)) continue;
+            cellCenter(L, { x, y }, c);
+            if (at(c.x, c.y).y + 56 <= view.height - 4) free.push({ x, y });
+          }
+        const by = (f: (q: { x: number; y: number }) => number) =>
+          [...free].sort((a, b) => f(a) - f(b))[0]!;
+        const mx = (L.cols - 1) / 2;
+        const my = (L.rows - 1) / 2;
+        const picks = [
+          by((q) => q.x),
+          by((q) => -q.x),
+          by((q) => q.y),
+          by((q) => -q.y),
+          by((q) => Math.hypot(q.x - mx, q.y - my)),
+        ];
+        const gem = Object.entries(pz.tray).find(([, n]) => (n ?? 0) > 0)![0];
+        const slot = L.tray.find((t) => t.gem === gem)!;
+        const from = at(slot.x, slot.y);
+        const cdp = await page.context().newCDPSession(page);
+        const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+          cdp.send('Input.dispatchTouchEvent', {
+            type,
+            touchPoints: type === 'touchEnd' ? [] : [{ x, y }],
+          });
+        const loupe = page.locator('.lr-loupe');
+        for (const q of new Map(picks.map((p) => [`${p.x},${p.y}`, p])).values()) {
+          cellCenter(L, q, c);
+          const aim = at(c.x, c.y);
+          const end = { x: aim.x, y: aim.y + 56 };
+          await touch('touchStart', from.x, from.y);
+          for (let i = 1; i <= 8; i++) {
+            await touch(
+              'touchMove',
+              from.x + (end.x - from.x) * (i / 8),
+              from.y + (end.y - from.y) * (i / 8),
+            );
+            await waitFrames(page, 1);
+          }
+          await waitFrames(page, 3);
+          await expect(loupe).toHaveAttribute('data-on', '');
+          const cell = await page.locator('.lr-altar').getAttribute('data-loupe');
+          const [ax, ay] = (cell ?? '').split(',').map(Number);
+          const lb = (await loupe.boundingBox())!;
+          await touch('touchEnd');
+          await waitFrames(page, 3);
+          // Start the next aim from the bare board.
+          await open(page, id);
+          await page.evaluate(() => (window as G).__game.fuse.hush());
+          expect(cell, `${vp.name} ${id} ${q.x},${q.y}: aimed`).toBeTruthy();
+          cellCenter(L, { x: ax!, y: ay! }, c);
+          const n = 1.5 * L.pitch;
+          const a = at(c.x - n, c.y - n);
+          const b = at(c.x + n, c.y + n);
+          const r = lb.width / 2;
+          const o = { x: lb.x + r, y: lb.y + r };
+          const d = Math.hypot(
+            Math.max(0, a.x - o.x, o.x - b.x),
+            Math.max(0, a.y - o.y, o.y - b.y),
+          );
+          expect(d, `${vp.name} ${id} ${cell}: loupe clear of the 3×3`).toBeGreaterThanOrEqual(r);
+          expect(lb.x, `${vp.name} ${id}: loupe on screen`).toBeGreaterThanOrEqual(0);
+          expect(lb.y).toBeGreaterThanOrEqual(0);
+          expect(lb.x + lb.width).toBeLessThanOrEqual(view.width);
+          expect(lb.y + lb.height).toBeLessThanOrEqual(view.height);
+        }
       }
     });
 
