@@ -30,7 +30,7 @@
 | M3 | Content complete (wave 3) | ✅ done | All 16 machines playable at the altar; dressed hall with distinct machine silhouettes; Journal, FUSE lines, Ending and Discord door; audio; storm/mist/candles |
 | M3α | **Alpha release: GitHub Pages** | ✅ alpha-1 (2026-11-02) | Pages already deploys on every push (D-023). Alpha = labelled run (`alpha-1`), `VITE_RELEASE_LABEL` on the title, GitHub pre-release, playtest link to the user |
 | M4 | Polish + playtest | ⏳ | Solver-driven full-run playtest, perf pass (incl. integrated GPU), a11y pass, difficulty-fun phase 2, bug bash, user feedback items closed |
-| M5 | **Release: GitHub Pages v1.0** (PM's finish line; desktop + iPad per D-041) | 🟡 Phase 0 | Polished build live on Pages, GitHub Release + `v1.0.0` and `engine-v0.1` tags, itch zip + page copy + devlog draft prepared for the user |
+| M5 | **Release: GitHub Pages v1.0** (PM's finish line; desktop + iPad per D-041) | 🟡 Phase 0 | Polished build live on Pages, GitHub Release + `v1.0.0` tag, itch zip + page copy + devlog draft prepared for the user |
 | — | itch.io launch (manual, with user) | ⏳ | User uploads with PM's runbook; not an agent task (D-012) |
 
 ## Fun and difficulty (continuous, D-021)
@@ -45,7 +45,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 2 | Workspace + `@thunderclap/engine` package + ARCHITECTURE.md | ws/workspace | 1 | 1 | ✅ merged, incl. engine e2e harness |
 | 3 | Host layer (web) | ws/host | 1 | 2 | ✅ merged |
 | 4 | Promote menu-nav, text-scale, device-mode, rotate card (camera2d dropped: addendum 1) | ws/promote-ui | 1 | 2 | ✅ merged |
-| 5 | `createGame()` from game/ctx.ts | ws/create-game | 1 | 3, 4 | 🟡 running |
+| 5 | `createGame()` from game/ctx.ts | ws/create-game | 1 | 3, 4 | ✅ merged · **Gate 1 ✅** (engine 0.2.0-alpha.1 cut, no tag) |
 | 6 | Gestures | ws/gestures | 2 | 5 | ⏳ |
 | 7 | Layout regions + overlay in CSS px | ws/layout | 2 | 5 | ⏳ |
 | 8 | Port title, hall, settings, journal, codex, ending | ws/port-chrome | 2 | 6, 7 | ⏳ |
