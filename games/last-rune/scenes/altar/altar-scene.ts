@@ -20,7 +20,7 @@
  * `completePuzzle` on exact (swaps to the solve moment), `closePuzzle` on back.
  */
 import type { Frame, RGBA } from '@thunderclap/engine/render';
-import { button, h, Loupe, type Rect } from '@thunderclap/engine/ui';
+import { button, h, Loupe, type Rect, scalePxCss } from '@thunderclap/engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltMode, BoltSegment } from '../../art/props/bolt';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
@@ -43,7 +43,6 @@ import { getMachine } from '../../rules/progression';
 import type { Cell, GemKind, MachineId } from '../../rules/types';
 import { codexPages } from '../../ui/codex-data';
 import { CSS_PALETTE } from '../../ui/styles';
-import { scalePxCss } from '../../ui/text-scale';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, DANGER, GOLD } from './altar-view';
 import { BoardState } from './board';
@@ -884,7 +883,7 @@ export class AltarScene implements GameScene {
           left: `${s.x}px`,
           top: L.phone
             ? `${Math.round(s.y + s.size / 2 + L.phone.cssPx)}px`
-            : `calc(${s.y + 40}px - (var(--lr-text-scale, 1) - 1) * 50px)`,
+            : `calc(${s.y + 40}px - (var(--tc-text-scale, 1) - 1) * 50px)`,
         },
       }),
     );
@@ -2333,7 +2332,7 @@ export class AltarScene implements GameScene {
     return this.touch && !this.keyboard ? 'The \u21bb button' : 'R or Q';
   }
 
-  /** The player's last input was a finger (see ui/device-mode.ts). */
+  /** The player's last input was a finger (see engine platform/device-mode.ts). */
   private get touch(): boolean {
     return this.ctx.device.touch;
   }

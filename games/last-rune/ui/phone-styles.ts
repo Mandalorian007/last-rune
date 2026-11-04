@@ -1,13 +1,13 @@
 /**
- * Phone and touch overrides (D-039, mobile-2; flags from ui/device-mode.ts).
+ * Phone and touch overrides (D-039, mobile-2; flags from engine platform/device-mode.ts).
  *
  * - `[data-touch]`: key caps hide (a finger has no keys).
  * - `[data-phone]`: the design is drawn at 0.30–0.35 CSS px per design px. A phone gets its own
  *   layout, board first: chrome is compact icon buttons in the letterbox bars beside the 16:9
- *   canvas (`--lr-bar`), the HUD folds behind one ☰, and every transient card (gem chip, hint,
+ *   canvas (`--tc-bar`), the HUD folds behind one ☰, and every transient card (gem chip, hint,
  *   verdict, FUSE's bubble) keeps to a margin of the screen, never over the board. Text is
- *   12–13 CSS px (`--lr-text-min` floors every scaled size at 12). Controls keep a 44 CSS px
- *   hit area (`--lr-tap`) through an invisible `::before`; drawn boxes stay compact.
+ *   12–13 CSS px (`--tc-text-min` floors every scaled size at 12). Controls keep a 44 CSS px
+ *   hit area (`--tc-tap-min`) through an invisible `::before`; drawn boxes stay compact.
  *
  * Sizes here are written in CSS px through `cpx(n)` (n CSS px in design px) or `tpx(n)` (the
  * same, following Settings → Text size), so they hold on every phone. Overrides use `P`, which
@@ -18,16 +18,16 @@ import { hall7Css } from './phone-hall-styles';
 import { teach7Css } from './teach-styles';
 
 /** n CSS px, as a design-px length (phones only; the variable is unset elsewhere). */
-export const cpx = (n: number) => `calc(var(--lr-css-px, 1px) * ${n})`;
+export const cpx = (n: number) => `calc(var(--tc-css-px, 1px) * ${n})`;
 /** n CSS px of text, grown by Settings → Text size. */
-export const tpx = (n: number) => `calc(var(--lr-css-px, 1px) * ${n} * var(--lr-text-scale, 1))`;
+export const tpx = (n: number) => `calc(var(--tc-css-px, 1px) * ${n} * var(--tc-text-scale, 1))`;
 /** Phone root selector, ranked above every `.tc-overlay .class` rule. */
 export const P = '.tc-overlay[data-phone]:not(#lr-none)';
 /** Touch root selector, same rank. */
 export const T = '.tc-overlay[data-touch]:not(#lr-none)';
 
 /** Left edge of the left bar column / right edge of the right one, 3 CSS px in from the bar's edge. */
-const BAR_IN = `calc(-1 * var(--lr-bar, 0px) + ${cpx(3)})`;
+const BAR_IN = `calc(-1 * var(--tc-bar, 0px) + ${cpx(3)})`;
 /** An edge-column button: 44 CSS px square. */
 const COL = cpx(44);
 
@@ -36,12 +36,12 @@ const A = `${P} .lr-altar[data-phone]`;
 
 /* mobile-3-chrome */
 /** The visible band's top and bottom edges when the art fills the width (D-040; 0 otherwise). */
-const CT = 'var(--lr-crop-t, 0px)';
-const CB = 'var(--lr-crop-b, 0px)';
+const CT = 'var(--tc-crop-t, 0px)';
+const CB = 'var(--tc-crop-b, 0px)';
 const CHROME_CSS = /* css */ `
 /* ── mobile-3-chrome: title, hall and menus (D-040) ─────────────────────────
    Title and hall fill the width (game/ctx.ts FILL_BANDS); the canvas overflows top and bottom by
-   --lr-crop-t/-b design px, so chrome anchored to the design's edges moves in by the crop. */
+   --tc-crop-t/-b design px, so chrome anchored to the design's edges moves in by the crop. */
 ${P} .lr-hud { top: calc(${CT} + ${cpx(4)}); }
 ${P} .tc-caption[data-corner^="bottom"] { bottom: calc(${CB} + var(--tc-caption-margin)); }
 ${P} .tc-caption[data-corner^="top"] { top: calc(${CT} + var(--tc-caption-margin)); }
@@ -167,7 +167,7 @@ ${P} .lr-journal .lr-j-turn {
   box-shadow: 0 ${cpx(2)} ${cpx(6)} rgb(0 0 0 / 0.7); transform: translate(${cpx(-6)}, ${cpx(-4)});
 }
 ${P} .lr-journal .lr-j-back { top: auto; bottom: calc(${CB} + ${cpx(6)}); }
-${P} .lr-journal .lr-j-x { position: absolute; top: ${cpx(6)}; left: auto; right: calc(-1 * var(--lr-bar, 0px) + ${cpx(4)}); pointer-events: auto; }
+${P} .lr-journal .lr-j-x { position: absolute; top: ${cpx(6)}; left: auto; right: calc(-1 * var(--tc-bar, 0px) + ${cpx(4)}); pointer-events: auto; }
 ${P} .lr-journal .lr-panel-x { display: grid; background: rgb(255 255 255 / 0.1); border: 1px solid rgb(232 192 106 / 0.5); border-radius: 50%; }
 
 /* Close ✕ (D-040: Settings, Codex and Journal all close from the top-right corner, plus Esc/Back).
@@ -388,7 +388,7 @@ ${P} .lr-codex-page .lr-status, ${P} .lr-codex-page .lr-new, ${P} .lr-margin b {
 ${P} .lr-j-folio { display: flex; justify-content: center; white-space: nowrap; font-size: ${tpx(13)}; font-weight: 700; color: #3d2818; }
 ${P} .lr-j-folio[hidden] { display: none; }
 ${P} .lr-journal .lr-j-turn[aria-label="Previous page"] { transform: translate(calc(-26px - ${cpx(54)}), ${cpx(-4)}); }
-${P} .lr-journal .lr-j-turn[aria-label="Next page"] { left: auto !important; right: calc(-1 * var(--lr-bar, 0px)); transform: translateY(${cpx(-4)}); }
+${P} .lr-journal .lr-j-turn[aria-label="Next page"] { left: auto !important; right: calc(-1 * var(--tc-bar, 0px)); transform: translateY(${cpx(-4)}); }
 ${P} .lr-j-head p { font-size: ${tpx(12)}; }
 /* Hangout: no "unread" count; nothing there is for the player to open (D-027). */
 ${P} .lr-hg-badge-count { display: none !important; }
@@ -501,8 +501,8 @@ ${P} kbd { display: none !important; }
 :where(.tc-overlay[data-phone]) :where(button, a[href], [role="button"], summary) { position: relative; }
 :where(.tc-overlay[data-phone]) :where(button, a[href], [role="button"], summary)::before {
   content: ''; position: absolute; pointer-events: auto;
-  top: min(0px, calc(50% - var(--lr-tap) / 2)); bottom: min(0px, calc(50% - var(--lr-tap) / 2));
-  left: min(0px, calc(50% - var(--lr-tap) / 2)); right: min(0px, calc(50% - var(--lr-tap) / 2));
+  top: min(0px, calc(50% - var(--tc-tap-min) / 2)); bottom: min(0px, calc(50% - var(--tc-tap-min) / 2));
+  left: min(0px, calc(50% - var(--tc-tap-min) / 2)); right: min(0px, calc(50% - var(--tc-tap-min) / 2));
 }
 ${P} input[type="checkbox"] { width: ${cpx(18)}; height: ${cpx(18)}; }
 
@@ -533,7 +533,7 @@ ${P} .lr-hud[data-scene="solve"] { display: none; }
 ${P} .lr-nameplate { padding: ${cpx(2)} ${cpx(8)}; font-size: ${tpx(12)}; border-radius: ${cpx(6)}; }
 
 /* ── FUSE's caption: a slim bubble, paged by tap (ui/fuse.ts pages it at 12 words) ───────── */
-${P} { --tc-caption-margin: ${cpx(6)}; --tc-caption-max-width: min(${cpx(280)}, var(--lr-third, 100vw)); }
+${P} { --tc-caption-margin: ${cpx(6)}; --tc-caption-max-width: min(${cpx(280)}, var(--tc-third, 100vw)); }
 ${P} .tc-caption {
   gap: ${cpx(6)}; padding: ${cpx(4)} ${cpx(9)}; border-radius: ${cpx(8)}; border-width: 1px;
 }
@@ -542,7 +542,7 @@ ${P} .tc-caption-text { font-size: ${tpx(12.5)}; line-height: 1.3; }
 /* At an altar: beside FUSE in the bottom band, left of the tray (altar-scene phoneCaption). */
 ${P}:has(.lr-altar[data-phone]) .tc-caption {
   left: var(--lr-cap-l) !important; right: auto !important; top: auto !important;
-  bottom: ${cpx(3)} !important; max-width: min(var(--lr-cap-w), var(--lr-third)) !important;
+  bottom: ${cpx(3)} !important; max-width: min(var(--lr-cap-w), var(--tc-third)) !important;
 }
 
 /* ── Panels ─────────────────────────────────────────────────────────────── */
@@ -593,7 +593,7 @@ ${P} .lr-j-head p { font-size: ${tpx(11)}; letter-spacing: 0.5px; margin: 0; }
 ${P} .lr-journal .lr-j-slip::before { display: none; }
 ${P} .lr-j-slip b { min-width: 1.4em; }
 ${P} .lr-journal .lr-j-turn { width: ${cpx(36)}; height: ${cpx(36)}; line-height: ${cpx(32)}; font-size: ${cpx(26)}; background: #ffffff1c; }
-${P} .lr-j-plate { font-size: var(--lr-text-min); padding: 0 ${cpx(10)}; }
+${P} .lr-j-plate { font-size: var(--tc-text-min); padding: 0 ${cpx(10)}; }
 
 /* mobile-3-ending: the ending, hangout and end card on phones live in
    scenes/ending/ending-phone-styles.ts (injected with the ending's own styles). */
@@ -665,7 +665,7 @@ ${P} .lr-altar-verdict .lr-verdict-story, ${P} .lr-altar-verdict .lr-verdict-hin
 /* The verdict has no full stop of its own: a dot keeps it from running into what follows. */
 ${P} .lr-altar-verdict .lr-verdict-story::before, ${P} .lr-altar-verdict .lr-verdict-hint::before { content: ' · '; }
 ${P} .lr-altar-hint {
-  left: var(--lr-info-l) !important; right: auto; width: auto; max-width: min(var(--lr-info-w), var(--lr-third)) !important; min-width: 0;
+  left: var(--lr-info-l) !important; right: auto; width: auto; max-width: min(var(--lr-info-w), var(--tc-third)) !important; min-width: 0;
   padding: ${cpx(2)} ${cpx(6)}; white-space: normal; background: rgba(16,13,10,0.7); border: 0; box-shadow: none;
 }
 ${P} .lr-altar-hint:empty { display: none; }
@@ -712,7 +712,7 @@ ${A} .lr-altar-lane > * {
   transform: none !important; margin: 0; max-width: none !important; box-sizing: border-box;
 }
 /* The chip and the verdict may run on into the right bar (Turn stands in the left bar). */
-${A} .lr-altar-lane :is(.lr-altar-tip, .lr-altar-verdict) { width: min(calc(var(--lr-col-w) + var(--lr-bar, 0px) - ${cpx(3)}), var(--lr-third)); }
+${A} .lr-altar-lane :is(.lr-altar-tip, .lr-altar-verdict) { width: min(calc(var(--lr-col-w) + var(--tc-bar, 0px) - ${cpx(3)}), var(--tc-third)); }
 ${A}:has(.lr-altar-tip:not([hidden])) .lr-altar-lane .lr-altar-verdict { display: none; }
 ${A} .lr-altar-lane .lr-altar-cap {
   white-space: normal; gap: 0; padding: ${cpx(2)} ${cpx(7)} ${cpx(3)}; border-width: 1px; border-radius: ${cpx(7)};
@@ -723,12 +723,12 @@ ${A} .lr-cap-head { font-family: var(--tc-font-ui); font-size: ${tpx(11)}; lette
 /* The hint: one line where FUSE's bubble goes, while he is quiet. */
 ${A} .lr-altar-hint {
   left: var(--lr-bub-l) !important; bottom: var(--lr-bub-b) !important; white-space: nowrap;
-  max-width: min(calc(var(--lr-col-w) + var(--lr-bar, 0px) - ${cpx(3)}), var(--lr-third)) !important;
+  max-width: min(calc(var(--lr-col-w) + var(--tc-bar, 0px) - ${cpx(3)}), var(--tc-third)) !important;
 }
 ${P}:has(.tc-caption:not([hidden]):not([data-suspended])) .lr-altar[data-phone] .lr-altar-hint { visibility: hidden; }
 ${P}:has(.lr-altar[data-phone]) .tc-caption {
   bottom: var(--lr-cap-b) !important;
-  max-width: min(calc(var(--lr-cap-w) + var(--lr-bar, 0px) - ${cpx(3)}), var(--lr-third)) !important;
+  max-width: min(calc(var(--lr-cap-w) + var(--tc-bar, 0px) - ${cpx(3)}), var(--tc-third)) !important;
 }
 ${P}:has(.lr-altar[data-crowd]) .tc-caption { visibility: hidden; }
 
@@ -767,14 +767,14 @@ ${A} .lr-altar-actions .lr-strike-n { display: block; font-family: var(--tc-font
 /* Solve moment: card, journal page and Continue fill the altar's column and the free right
    bar (solve-scene); FUSE speaks beside himself at the column's foot. */
 ${P} .lr-solve[data-phone] {
-  left: var(--lr-col-l); top: ${cpx(4)}; width: calc(var(--lr-col-w) + var(--lr-bar, 0px) - ${cpx(3)}); gap: ${cpx(5)};
+  left: var(--lr-col-l); top: ${cpx(4)}; width: calc(var(--lr-col-w) + var(--tc-bar, 0px) - ${cpx(3)}); gap: ${cpx(5)};
 }
 ${P} .lr-solve[data-phone] .lr-solve-card { padding: ${cpx(5)} ${cpx(9)} ${cpx(6)}; }
 ${P} .lr-solve[data-phone] .lr-page-note { margin: 0 ${cpx(6)}; padding: ${cpx(4)} ${cpx(9)}; }
 ${P} .lr-solve[data-phone] .lr-page-note b { white-space: nowrap; margin-bottom: ${cpx(1)}; }
 ${P}:has(.lr-solve[data-phone]) .tc-caption {
   left: var(--lr-scap-l) !important; right: auto !important; top: auto !important; bottom: ${cpx(3)} !important;
-  max-width: min(calc(var(--lr-scap-w) + var(--lr-bar, 0px) - ${cpx(3)}), var(--lr-third)) !important;
+  max-width: min(calc(var(--lr-scap-w) + var(--tc-bar, 0px) - ${cpx(3)}), var(--tc-third)) !important;
 }
 /* mobile-3-board end */
 
@@ -837,7 +837,7 @@ ${A} .lr-altar-verdict .lr-verdict-story::before, ${A} .lr-altar-verdict .lr-ver
 
 /* Solve: one card, ≥12 CSS px inside the play area; Continue 44 px tall across the card. */
 ${P} .lr-solve[data-phone] {
-  top: ${cpx(8)}; width: calc(var(--lr-col-w) + var(--lr-bar, 0px) - ${cpx(12)}); gap: 0;
+  top: ${cpx(8)}; width: calc(var(--lr-col-w) + var(--tc-bar, 0px) - ${cpx(12)}); gap: 0;
 }
 ${P} .lr-solve[data-phone] .lr-solve-card {
   display: flex; flex-direction: column; gap: ${cpx(4)}; padding: ${cpx(7)} ${cpx(10)} ${cpx(9)};
@@ -866,7 +866,7 @@ ${P} .lr-solve[data-phone] .lr-solve-continue {
    touch the card (solve-scene updateCrowd). */
 ${P}:has(.lr-solve[data-phone]) .tc-caption {
   bottom: ${cpx(8)} !important; overflow: visible;
-  max-width: min(calc(var(--lr-scap-w) + var(--lr-bar, 0px) - ${cpx(12)}), var(--lr-third)) !important;
+  max-width: min(calc(var(--lr-scap-w) + var(--tc-bar, 0px) - ${cpx(12)}), var(--tc-third)) !important;
 }
 ${P}:has(.lr-solve[data-phone]) .tc-caption::after {
   content: ''; position: absolute; left: ${cpx(-5)}; bottom: calc(var(--lr-scap-face, ${cpx(40)}) - ${cpx(8)} - ${cpx(4)});
@@ -878,7 +878,7 @@ ${P}:has(.lr-solve[data-phone][data-crowd]) .tc-caption { visibility: hidden; }
 
 /* mobile-5-board ─ The altar fills a wide phone (D-040 gate review 2) ────────────────────
    The canvas fills the width on the altar and the solve moment too (game/ctx.ts FILL_BANDS),
-   cropping --lr-crop-t/-b design px off the top and bottom: the rail buttons, the title and
+   cropping --tc-crop-t/-b design px off the top and bottom: the rail buttons, the title and
    the solve card move in by the crop (the board and column lay out in the visible band).
    Strike stands 12 CSS px in from the screen's edge. Text: Gives/Needs numbers 15 px, every
    other board label, gem count and the hint 13 px. One rotate control: Turn on the rail, dim
@@ -886,14 +886,14 @@ ${P}:has(.lr-solve[data-phone][data-crowd]) .tc-caption { visibility: hidden; }
 ${P} .lr-altar-actions [data-action="back"] { top: calc(${CT} + ${cpx(4)}); }
 ${P} .lr-altar-actions [data-action="undo"] { top: calc(${CT} + (1080px - ${CT} - ${CB}) * 0.34); }
 ${P} .lr-altar-actions [data-action="clear"] { top: calc(${CT} + (1080px - ${CT} - ${CB}) * 0.34 + ${cpx(52)}); }
-${P} .lr-altar-actions [data-action="strike"] { right: calc(-1 * var(--lr-bar, 0px) + ${cpx(12)}); bottom: calc(${CB} + ${cpx(6)}); }
+${P} .lr-altar-actions [data-action="strike"] { right: calc(-1 * var(--tc-bar, 0px) + ${cpx(12)}); bottom: calc(${CB} + ${cpx(6)}); }
 ${A} .lr-altar-turnbtn { bottom: calc(${CB} + ${cpx(6)}); }
 ${A} .lr-altar-title { top: calc(${CT} + ${cpx(3)}); }
 /* The solve card reaches from the column to 12 px inside the screen's edge (the canvas fills
    the width, so there is no free right bar; Strike and the menu are gone while it shows). */
 ${P} .lr-solve[data-phone] {
   top: calc(${CT} + ${cpx(12)});
-  width: calc(1920px - var(--lr-col-l) + var(--lr-bar, 0px) - ${cpx(12)});
+  width: calc(1920px - var(--lr-col-l) + var(--tc-bar, 0px) - ${cpx(12)});
 }
 ${P}:has(.lr-solve[data-phone]) .tc-caption { bottom: calc(${CB} + ${cpx(8)}) !important; }
 

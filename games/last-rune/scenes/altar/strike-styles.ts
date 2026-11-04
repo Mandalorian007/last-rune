@@ -13,13 +13,13 @@
 import { cpx, P, tpx } from '../../ui/phone-styles';
 
 const A = `${P} .lr-altar[data-phone]`;
-const CB = 'var(--lr-crop-b, 0px)';
+const CB = 'var(--tc-crop-b, 0px)';
 
 export const STRIKE_CSS = /* css */ `
 /* mobile-7-strike ─ Strike and the verdict at a glance (D-040 addendum 5) ─────────────── */
 ${A} .lr-altar-actions [data-action="strike"] {
   width: auto; min-width: ${cpx(64)}; height: ${cpx(58)}; padding: 0 ${cpx(14)};
-  right: calc(-1 * var(--lr-bar, 0px) + ${cpx(12)}); bottom: calc(${CB} + ${cpx(6)});
+  right: calc(-1 * var(--tc-bar, 0px) + ${cpx(12)}); bottom: calc(${CB} + ${cpx(6)});
   font-family: var(--tc-font-display); font-size: ${tpx(15)}; letter-spacing: 0.3px; white-space: nowrap;
 }
 ${A} .lr-altar-actions [data-action="strike"] > span { flex-direction: row; }

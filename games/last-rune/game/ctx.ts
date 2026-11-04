@@ -12,8 +12,11 @@ import { ParticleSystem } from '@thunderclap/engine/fx';
 import { createWebHost, type Host } from '@thunderclap/engine/host';
 import { Input } from '@thunderclap/engine/input';
 import {
+  createDeviceMode,
+  type DeviceMode,
   deviceTraits,
   type GpuContext,
+  PHONE_SCALE,
   prefersReducedMotion,
   type Surface,
   watchLifecycle,
@@ -21,7 +24,7 @@ import {
 } from '@thunderclap/engine/platform';
 import { PostStack } from '@thunderclap/engine/post';
 import { type Frame, Renderer } from '@thunderclap/engine/render';
-import { createOverlay, type Overlay, PadNav } from '@thunderclap/engine/ui';
+import { applyTextScale, createOverlay, type Overlay, PadNav } from '@thunderclap/engine/ui';
 import { createGemPortraits } from '../art/gem-portraits';
 import { cathedralHallView } from '../art/hall/hall-view';
 import { stormTitleView } from '../art/hall/title-view';
@@ -40,13 +43,11 @@ import { storyTier } from '../rules/progression';
 import type { MachineId } from '../rules/types';
 import type { ViewContext, ViewCue, ViewFactories } from '../scenes/views';
 import { Codex } from '../ui/codex';
-import { createDeviceMode, type DeviceMode, PHONE_SCALE } from '../ui/device-mode';
 import { Fuse } from '../ui/fuse';
 import { Hud } from '../ui/hud';
 import { createPhoneChrome } from '../ui/phone-chrome';
 import { openSettings } from '../ui/settings-panel';
 import { ensureGameStyles } from '../ui/styles';
-import { applyTextScale } from '../ui/text-scale';
 import { type Action, BINDINGS } from './actions';
 import { GameFlow, type SolveMoment } from './flow';
 import { GraphicsController } from './graphics';
@@ -106,7 +107,7 @@ export interface GameCtx {
   readonly ui: Overlay;
   /** The page the game runs in (engine/host): links, copying, fullscreen and save storage. */
   readonly host: Host;
-  /** Phone-sized screen and touch input flags (ui/device-mode.ts, D-039). */
+  /** Phone-sized screen and touch input flags (engine platform/device-mode.ts, D-039). */
   readonly device: DeviceMode;
   readonly save: GameSave;
   readonly settings: SettingsController;
@@ -294,7 +295,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
         graphics.setPreference(e.graphics);
         applyParticles();
         surface.root.toggleAttribute('data-reduced-motion', e.reducedMotion);
-        applyTextScale(ui.root, e.textScale, (t) => ui.setTheme(t));
+        applyTextScale(ui.root, e.textScale / 100, (t) => ui.setTheme(t));
       },
     },
     prefersReducedMotion(),
@@ -379,7 +380,7 @@ export function createGameCtx(surface: Surface, gpu: GpuContext, scenes: SceneFa
     return j.found.filter((p) => !j.read.includes(p)).length;
   };
   // Phones: the upright "turn sideways" card, and Full screen on the title (D-039).
-  const phoneChrome = createPhoneChrome(ui.layers.hud, device);
+  const phoneChrome = createPhoneChrome(ui.layers.hud, device, host.fullscreen);
   phoneChrome.showFullscreen(flow.state === 'title' || flow.state === 'boot');
   fillScene = flow.state;
   applyFill();

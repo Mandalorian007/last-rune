@@ -114,9 +114,8 @@ test('intake desk by touch alone: tap gems onto sockets, tap Strike, tap Continu
   const problems = trackProblems(page);
   await boot(page, []);
   await openAltar(page, 'intake-desk');
-  await expect(page.locator('.tc-overlay')).toHaveAttribute('data-touch', '');
-  await expect(page.locator('.tc-overlay')).toHaveAttribute('data-phone', '');
-  // Touch words, no key caps.
+  // Touch words, no key caps. (The data-touch and data-phone flags behind them are the engine's
+  // device mode: packages/engine/e2e/ui.spec.ts.)
   await expect(page.locator('.lr-altar-hint')).toContainText('Tap');
   await expect(page.locator('.lr-altar-actions kbd').first()).toBeHidden();
 
@@ -397,18 +396,8 @@ for (const vp of [
   });
 }
 
-test('upright, the phone shows the turn-sideways card; turning it back hides it', async ({
-  page,
-}) => {
-  await boot(page, []);
-  const card = page.locator('.lr-rotate');
-  await expect(card).toBeHidden();
-  await page.setViewportSize({ width: PHONE.height, height: PHONE.width });
-  await expect(card).toBeVisible();
-  await expect(card).toContainText('Turn your phone sideways');
-  await page.setViewportSize(PHONE);
-  await expect(card).toBeHidden();
-});
+// The upright turn-sideways card is the engine's rotate card, verified on every phone in
+// packages/engine/e2e/ui.spec.ts; the game only supplies its words (ui/phone-chrome.ts).
 
 test('the Last Rune at 667×375: a finger drag from the tray shows the loupe and lands on the meant socket', async ({
   page,

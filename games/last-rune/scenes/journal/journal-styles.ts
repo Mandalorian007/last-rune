@@ -5,7 +5,7 @@
  * (clue 2): the journal pages, the ending's incident report, and the
  * post-credits clipboard all use it. System fonts only, nothing fetched.
  */
-import { scaleFontSizes } from '../../ui/text-scale';
+import { scaleFontSizes } from '@thunderclap/engine/ui';
 
 export const HAND_FONT =
   "'Bradley Hand', 'Segoe Print', 'Ink Free', 'Snell Roundhand', 'Apple Chancery', 'URW Chancery L', 'Comic Neue', cursive";
@@ -68,7 +68,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-j-plate {
   position: absolute; display: flex; align-items: center; justify-content: center; text-align: center; box-sizing: border-box;
   /* FUSE's voice in the game serif. It grows with Text size only as far as three lines still fit the plate. */
-  padding: 0 70px; font-family: var(--tc-font-body); font-size: min(calc(29px * var(--lr-text-scale, 1)), 38px);
+  padding: 0 70px; font-family: var(--tc-font-body); font-size: min(calc(29px * var(--tc-text-scale, 1)), 38px);
   line-height: 1.2; color: #e9d9b4; letter-spacing: 0.2px;
   text-shadow: 0 -1px 0 #000, 0 1px 0 #ffffff1a;
 }

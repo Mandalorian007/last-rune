@@ -2,7 +2,7 @@
  * Altar + solve-moment overlay styles (design px, 1920×1080). Kept with the scene so the
  * shared `ui/styles.ts` stays untouched; injected once per document.
  */
-import { scaleFontSizes } from '../../ui/text-scale';
+import { scaleFontSizes } from '@thunderclap/engine/ui';
 import { STRIKE_CSS } from './strike-styles';
 
 const CSS = /* css */ `
@@ -212,7 +212,7 @@ const CSS = /* css */ `
 /* Touch: the ↻ Turn button, docked right of the tray, and the ↻ mark on the gem it turns. */
 .tc-overlay .lr-altar .lr-altar-turnbtn {
   position: absolute; transform: translate(0, -50%); min-width: 0; padding: 0 22px;
-  min-height: max(72px, var(--lr-tap, 0px)); border-radius: 999px; cursor: pointer; white-space: nowrap;
+  min-height: max(72px, var(--tc-tap-min, 0px)); border-radius: 999px; cursor: pointer; white-space: nowrap;
   font-family: var(--tc-font-display); font-size: 28px; color: #f4e6c4;
   background: rgba(20,16,12,0.92); border: 2px solid rgba(232,192,106,0.85); box-shadow: 0 3px 12px rgba(0,0,0,0.7);
 }
@@ -221,7 +221,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar .lr-altar-turnbtn[hidden], .tc-overlay .lr-altar-turnmark[hidden] { display: none; }
 .tc-overlay .lr-altar-turnmark {
   position: absolute; transform: translate(-30%, -70%); pointer-events: none;
-  width: max(44px, calc(var(--lr-text-min, 0px) * 1.6)); height: max(44px, calc(var(--lr-text-min, 0px) * 1.6)); border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  width: max(44px, calc(var(--tc-text-min, 0px) * 1.6)); height: max(44px, calc(var(--tc-text-min, 0px) * 1.6)); border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-size: 30px; line-height: 1; color: var(--lr-gold);
   background: rgba(20,16,12,0.9); border: 2px solid rgba(232,192,106,0.8); box-shadow: 0 2px 8px rgba(0,0,0,0.6);
 }

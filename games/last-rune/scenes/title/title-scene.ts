@@ -10,13 +10,12 @@
 
 import type { Frame } from '@thunderclap/engine/render';
 import type { Rect } from '@thunderclap/engine/ui';
-import { h } from '@thunderclap/engine/ui';
+import { h, menuNav } from '@thunderclap/engine/ui';
 import { coffeeLink } from '../../content/ending';
 import { beatLine, type FuseLine, titleLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { hasProgress } from '../../game/save';
 import { coffeeLinkWidget } from '../../ui/coffee';
-import { menuNav } from '../../ui/menu-nav';
 import type { TitleView, TitleViewFrame } from '../views';
 import { ChatterClock, ShuffleBag } from './chatter';
 

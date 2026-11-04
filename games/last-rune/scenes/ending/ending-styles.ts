@@ -3,7 +3,7 @@
  * The hangout window (hangout-styles.ts), title card, safety record, credits, end card
  * and the post-credits clipboard. Phones add ending-phone-styles.ts.
  */
-import { scaleFontSizes } from '../../ui/text-scale';
+import { scaleFontSizes } from '@thunderclap/engine/ui';
 import { HAND_FONT } from '../journal/journal-styles';
 import { ENDING_PHONE_CSS } from './ending-phone-styles';
 import { HANGOUT_CSS } from './hangout-styles';
@@ -102,7 +102,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-clip-note p {
   position: absolute; inset: 0; margin: 0; padding: 30px 10px 0; box-sizing: border-box;
   /* A page on a prop: it grows with Text size only as far as it still fits the clipboard. */
-  font-family: var(--lr-hand); font-size: min(calc(24px * var(--lr-text-scale, 1)), 27px); line-height: 1.3; color: #24170f;
+  font-family: var(--lr-hand); font-size: min(calc(24px * var(--tc-text-scale, 1)), 27px); line-height: 1.3; color: #24170f;
   background: linear-gradient(#f3e4c0, #e4cd98); border-radius: 2px; box-shadow: 0 1px 2px #0006;
   backface-visibility: hidden;
 }
