@@ -129,7 +129,7 @@ async function gotoEndCard(page: Page, textScale = 100): Promise<void> {
   }, textScale);
   await expect(page.locator('.lr-end-skip')).toBeVisible({ timeout: 15_000 });
   await page.keyboard.press('Escape');
-  await expect(page.locator('.lr-end-card a.lr-end-join')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.lr-end-card a.lr-end-join')).toBeVisible({ timeout: 30_000 });
   // Let the card finish fading in.
   await page.waitForTimeout(1500);
 }
@@ -155,6 +155,30 @@ async function shot(page: Page, name: string): Promise<void> {
   if (!SHOTS) return;
   mkdirSync(SHOTS, { recursive: true });
   await page.screenshot({ path: join(SHOTS, `${name}.png`) });
+}
+
+/**
+ * Clicks a Copy link button and waits until it has said "Copied!". The label reverts after
+ * 2.2 s of wall-clock time, and on a loaded machine the test's next look at the button could
+ * come after that, so the page records every label the button shows from before the click.
+ */
+async function clickCopy(page: Page, selector: string): Promise<void> {
+  await page.evaluate((sel) => {
+    const el = document.querySelector(sel)!;
+    const seen: string[] = [];
+    (window as unknown as Record<string, unknown>).__copyLabels = seen;
+    new MutationObserver(() =>
+      seen.push((el.textContent ?? '').replace(/\s+/g, ' ').trim()),
+    ).observe(el, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+  }, selector);
+  await page.locator(selector).click();
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __copyLabels: string[] }).__copyLabels))
+    .toContain(LINK_COPY_TEXT.copied);
 }
 
 async function clipboardText(page: Page): Promise<string> {
@@ -187,8 +211,7 @@ test.describe('Copy link', () => {
     expect(cb!.height).toBeLessThanOrEqual(kb!.height);
     expect(cb!.y).toBeGreaterThan(mb!.y + mb!.height);
 
-    await copy.click();
-    await expect(copy).toHaveText(LINK_COPY_TEXT.copied);
+    await clickCopy(page, '[data-action="title-coffee-copy"]');
     expect(await clipboardText(page)).toBe(KOFI_URL);
     await expect(page.locator('.lr-title-links [aria-live="polite"]')).toHaveText(
       LINK_COPY_TEXT.copiedAnnounce,
@@ -230,11 +253,9 @@ test.describe('Copy link', () => {
     expect(jcb.x).toBeGreaterThan(jb.x + jb.width);
     expect(jcb.height).toBeLessThan(jb.height);
 
-    await joinCopy.click();
-    await expect(joinCopy).toHaveText(LINK_COPY_TEXT.copied);
+    await clickCopy(page, '[data-action="ending-join-copy"]');
     expect(await clipboardText(page)).toBe(DISCORD_INVITE_URL);
-    await coffeeCopy.click();
-    await expect(coffeeCopy).toHaveText(LINK_COPY_TEXT.copied);
+    await clickCopy(page, '[data-action="ending-coffee-copy"]');
     expect(await clipboardText(page)).toBe(KOFI_URL);
 
     // Arrow keys walk the card: Back, then Join, its Copy, Ko-fi, its Copy.

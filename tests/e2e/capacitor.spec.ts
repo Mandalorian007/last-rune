@@ -79,18 +79,33 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
     'Strike 2: 8 + 8 → 16',
   ]);
 
+  // During strike 1 only its line shows; strike 2's line arrives with strike 2. Strike 1 lasts
+  // well under a second of game time, too short for one-after-another polls from the test on a
+  // loaded machine, so the page records the storm label and the shown lines every frame.
+  await page.evaluate(() => {
+    const w = window as unknown as { __capSeen: string[] };
+    w.__capSeen = [];
+    const tick = () => {
+      const label = document.querySelector('.lr-altar-storm .lr-storm-strikes')?.textContent;
+      const lines = [...document.querySelectorAll('.lr-altar-cap .lr-cap-line:not([hidden])')]
+        .map((l) => l.textContent)
+        .join(' / ');
+      const text = `${label} | ${lines}`;
+      if (w.__capSeen.at(-1) !== text) w.__capSeen.push(text);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
   await page.keyboard.press('KeyF');
-  // During strike 1 only its line shows; strike 2's line arrives with strike 2.
-  await expect(page.locator('.lr-altar-storm .lr-storm-strikes')).toHaveText('Strike 1 of 2');
-  await expect(cap.locator('.lr-cap-line:not([hidden])')).toHaveText(['Strike 1: keeps 8'], {
-    timeout: 5_000,
-  });
-  await expect(page.locator('.lr-altar-storm .lr-storm-strikes')).toHaveText('Strike 2 of 2', {
-    timeout: 8_000,
-  });
 
   const verdict = page.locator('.lr-altar-verdict');
-  await expect(verdict).toBeVisible({ timeout: 10_000 });
+  await expect(verdict).toBeVisible({ timeout: 15_000 });
+  const seen = await page.evaluate(() => (window as unknown as { __capSeen: string[] }).__capSeen);
+  expect(seen).toContain('Strike 1 of 2 | Strike 1: keeps 8');
+  expect(seen.some((s) => s.startsWith('Strike 2 of 2 |'))).toBe(true);
+  expect(seen.indexOf('Strike 1 of 2 | Strike 1: keeps 8')).toBeLessThan(
+    seen.findIndex((s) => s.startsWith('Strike 2 of 2 |')),
+  );
   await expect(verdict).toContainText('Breaker tripped on strike 2: needs 8, got 16');
   await expect(verdict.locator('.lr-verdict-story')).toHaveText(
     'Strike 1: the Capacitor kept 8. Strike 2: the Capacitor let out 8 + 8 = 16.',

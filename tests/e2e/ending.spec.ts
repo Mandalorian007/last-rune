@@ -23,7 +23,11 @@ interface GameHandle {
 test('the ending plays to the end card with the ThunderClap Gaming and Ko-fi links', async ({
   page,
 }) => {
-  test.setTimeout(300_000);
+  // Each step below waits on the ending's own state, but the ending runs on game time (about
+  // 1.9 min alone). A renderer starved by a full parallel run draws a few frames a second, so
+  // game time can run several times slower than the clock. The game has no speed-up hook, so
+  // the budgets are sized for that: generous, and only spent when the machine is slow.
+  test.setTimeout(600_000);
   // That a link opens only on a click is an engine host check (packages/engine/e2e/host.spec.ts);
   // here the ending itself never navigates or phones out.
   const problems = trackProblems(page);
@@ -74,7 +78,7 @@ test('the ending plays to the end card with the ThunderClap Gaming and Ko-fi lin
 
   // Beyond the door (D-038): the ThunderClap Gaming hangout, with its real channel list.
   const hangout = page.locator('.lr-hg');
-  await expect(hangout).toBeVisible({ timeout: 120_000 });
+  await expect(hangout).toBeVisible({ timeout: 180_000 });
   await expect(hangout.locator('.lr-hg-server')).toHaveText('ThunderClap Gaming');
   const channels = hangout.locator('.lr-hg-ch .lr-hg-name');
   await expect(channels).toHaveCount(14);
@@ -84,12 +88,12 @@ test('the ending plays to the end card with the ThunderClap Gaming and Ko-fi lin
   const fusePosts = hangout.locator('.lr-hg-msg[data-who="fuse"] .lr-hg-text');
   await expect(fusePosts.first()).toContainText(
     'Hello. This unit has arrived somewhere with a great many people in it.',
-    { timeout: 60_000 },
+    { timeout: 120_000 },
   );
   await expect(hangout.locator('.lr-hg-form')).toContainText('Hobbies: Pending');
   await expect(hangout.locator('.lr-hg-ch[data-unread]').first()).toBeAttached();
-  await expect(fusePosts.last()).toHaveText('Day 1.', { timeout: 60_000 });
-  await expect(hangout.locator('.lr-hg-msg[data-pinned]')).toHaveCount(1, { timeout: 30_000 });
+  await expect(fusePosts.last()).toHaveText('Day 1.', { timeout: 120_000 });
+  await expect(hangout.locator('.lr-hg-msg[data-pinned]')).toHaveCount(1, { timeout: 90_000 });
   await expect(hangout.locator('.lr-hg-msg[data-pinned] .lr-hg-react').first()).toContainText('🌱');
   await expect(hangout).not.toContainText(/\bBOT\b/);
   // Screen readers get a short summary, not the whole chat.
@@ -106,11 +110,11 @@ test('the ending plays to the end card with the ThunderClap Gaming and Ko-fi lin
   ]);
   await expect(page.locator('.lr-end-credits')).toContainText('ThunderSoap');
   // The window folds away before the credits.
-  await expect(hangout).toHaveCount(0, { timeout: 30_000 });
+  await expect(hangout).toHaveCount(0, { timeout: 120_000 });
 
   // Then the end card.
   const join = page.locator('.lr-end-card a.lr-end-join');
-  await expect(join).toBeVisible({ timeout: 180_000 });
+  await expect(join).toBeVisible({ timeout: 240_000 });
   await expect(join).toHaveText('Join ThunderClap Gaming');
   await expect(join).toHaveAttribute('href', /^https:\/\/discord\.gg\//);
   await expect(join).toHaveAttribute('target', '_blank');

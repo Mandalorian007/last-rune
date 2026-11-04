@@ -259,8 +259,10 @@ test('the Last Rune at 667×375: a finger drag from the tray shows the loupe and
       touchPoints: type === 'touchEnd' ? [] : [{ x, y }],
     });
   const loupe = page.locator('.lr-loupe');
+  // The first move follows the press at once, as a real drag does: a finger held still for
+  // longPressMs (450 ms, wall clock) is a long-press, and three frames of a loaded page can
+  // take that long, so a wait here made the drag a long-press that never lifts the aim.
   await touch('touchStart', from.x, from.y);
-  await waitFrames(page, 3);
   for (let i = 1; i <= 10; i++) {
     await touch(
       'touchMove',
