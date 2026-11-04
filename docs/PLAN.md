@@ -70,6 +70,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9u | Glyph truth 3: Bend two-armed when lit, Split input end at small size, built-in contrast, carved cells | ws/glyph-truth-3 | 2 | 9s | ✅ merged |
 | 9v | Dense board 3: The Last Rune ≥ 40 px (≥ 34 SE), loupe off the target, labels on their gauges, orbs on screen | ws/dense-board-3 | 2 | 9s | ✅ merged (iPhone 40 not reachable without camera) |
 | 9w | Polish 8: Turn/teach/legend shots, hall label, title FUSE + candles, menu dims Strike, stray diamond | ws/polish-8 | 2 | 9s | ✅ merged |
+| 9x | Fit 9: Last Rune east card vs "in either strike"; FUSE gem names | ws/fit-9 | 2 | 9w | 🔄 running |
 | 9p | Teach 5: "Strike ×2" + pips, diagram-above-text cards, Amplify diagram, Needs-dot legend, solve/ending/menu/title minors (D-040 add. 8) | ws/teach-5 | 2 | G2 r7 | ✅ merged |
 | 9q | Glyph truth 2: Split/Gate inlets at board size, Channels along their run, one tray orientation, disabled Turn/Undo/Clear, one lock badge (D-040 add. 8) | ws/glyph-truth-2 | 2 | G2 r7 | ✅ merged (Channel-across-run was a render bug; `rest-turn.ts`) |
 | G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 7: 7/7/7/7 (D-040 add. 8) → 9o–9s ✅; ❌ blind review 8: 8/7.5/7.5/7.5 (D-040 add. 9) → 9t–9w, then blind review 9 |
