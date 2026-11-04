@@ -50,7 +50,9 @@ interface Box {
   r: number;
   b: number;
 }
-const meets = (a: Box, b: Box) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+/** Overlap by more than half a CSS px (a badge may sit on the glyph box edge; sub-px rounding). */
+const meets = (a: Box, b: Box) =>
+  a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < b.b - 0.5 && b.t < a.b - 0.5;
 
 /** Every count badge's rect against every tray gem's glyph box (CSS px), as drawn now. */
 async function badgeClashes(page: Page, label: string): Promise<string[]> {

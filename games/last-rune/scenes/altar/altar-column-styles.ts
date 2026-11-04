@@ -69,12 +69,12 @@ ${HEAD} .lr-altar-slot[data-teach]:not([data-empty]):not([data-held]) {
 [data-reduced-motion] ${HEAD} .lr-altar-slot { animation: none !important; }
 
 /* The count: a badge centred under the gem, off its glyph (glyph-truth), the same in every room.
-   14 px tall (layout PH.countH). */
+   13 px tall (layout PH.countH). */
 ${HEAD} .lr-altar-count {
   position: absolute; transform: translateX(-50%); display: flex; align-items: center; gap: 0;
-  box-sizing: border-box; height: 14px; min-width: 0; padding: 0 4px; border-radius: 7px;
+  box-sizing: border-box; height: 13px; min-width: 0; padding: 0 4px; border-radius: 7px;
   white-space: nowrap; text-align: center;
-  font: 700 12px/12px ${SERIF}; letter-spacing: 0; color: #f4e6c4;
+  font: 700 12px/11px ${SERIF}; letter-spacing: 0; color: #f4e6c4;
   background: rgba(20,16,12,0.94); border: 1px solid rgba(232,192,106,0.6); box-shadow: 0 1px 4px rgba(0,0,0,0.7);
 }
 ${HEAD} .lr-altar-count .lr-n { font: inherit; letter-spacing: inherit; }
