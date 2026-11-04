@@ -370,3 +370,11 @@ Blind review 7 on `gate7` (main after glyph-truth, teach-4, chrome-polish-4, men
   → ws/teach-5.
 - **Gate unchanged:** an average of at least 8 with no blocker or major issue, then the real-phone retest. ws/one-overlay stays held until these three workstreams have merged and blind review 8 is compiled.
 - **Addendum 8a (PM, on the teach-5 merge):** the ending can be skipped on every viewing, the first included (Skip button and Esc). The rule against skipping the first viewing came from the design doc, not from a user decision. Blind review 7 flagged the missing skip as a phone issue, and a player who can't skip is worse off than one who skips the twist. `docs/design/ending.md` is updated to match.
+- **Addendum 9 (PM, blind review 8, 2026-11-04):** SE 8, iPhone 7.5, Pro Max 7.5, Android 7.5 (avg 7.6). No blockers. Gate 2 not passed (majors remain). Up from 7/7/7/7. Majors and their routes:
+  - (a) Gauge-dot language: only red is captioned in shots; cyan read as "exact"; the hollow ring reads as "0". → ws/teach-6. D-043 holds: the dot means "charge reaches it", no number and no "will be met".
+  - (b) Two-strike rule: "in one strike" is ambiguous; ○○ on Strike is unexplained; the Capacitor card's "stores 8 →" dangles. → ws/teach-6.
+  - (c) Gate card copy and break ("both sides of the arrow"). → ws/teach-6.
+  - (d) A lit Bend reads as a T on the solve screen (the elbow stub glows past the turn). → ws/glyph-truth-3.
+  - (e) Dense boards still tight (The Last Rune on iPhone, Pro Max and Android). The board uses about 55% of the width while the right column is mostly empty; the loupe covers the cells around the target; the "Needs 20" label sits a row from its gauge. → ws/dense-board-3.
+  - (f) Turn is never shown enabled, and 14-* teach shots duplicate 10-*. → shot coverage in ws/polish-8.
+  Minors go to the same streams (Amber/Amplify naming → teach-6; torn carved edges and small-size Split/built-in contrast → glyph-truth-3; source orbs clipped at the bottom → dense-board-3; hall label over "Start here", title FUSE cut, candle over links, Strike lit under the open menu, stray diamond on the solve card → polish-8). Reviewer asks for a "will get N" readout are declined under D-043.

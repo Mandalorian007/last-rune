@@ -66,9 +66,13 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9o | Dense board: board takes the space on phones, hit areas = cells, badges/orb off neighbours, loupe aim shots (D-040 add. 8) | ws/dense-board | 2 | G2 r7 | ✅ merged (SE Last Rune unchanged at 26.4 → 9r) |
 | 9r | Dense board 2: The Last Rune on SE ≥ 32 px (compact side labels, trim carved edges, card lane uses height) | ws/dense-board-2 | 2 | 9o | ✅ merged (SE 26.4 → 32.3) |
 | 9s | Card fit: no clipped card text in the phone column (held card + dot legend) | ws/card-fit | 2 | 9r | ✅ merged |
+| 9t | Teach 6: gauge-dot language (D-043), two-strike wording, ○○ label, Capacitor card, Gate card, Amplify naming | ws/teach-6 | 2 | 9s | 🔄 running |
+| 9u | Glyph truth 3: Bend two-armed when lit, Split input end at small size, built-in contrast, carved cells | ws/glyph-truth-3 | 2 | 9s | 🔄 running |
+| 9v | Dense board 3: The Last Rune ≥ 40 px (≥ 34 SE), loupe off the target, labels on their gauges, orbs on screen | ws/dense-board-3 | 2 | 9s | 🔄 running |
+| 9w | Polish 8: Turn/teach/legend shots, hall label, title FUSE + candles, menu dims Strike, stray diamond | ws/polish-8 | 2 | 9s | 🔄 running |
 | 9p | Teach 5: "Strike ×2" + pips, diagram-above-text cards, Amplify diagram, Needs-dot legend, solve/ending/menu/title minors (D-040 add. 8) | ws/teach-5 | 2 | G2 r7 | ✅ merged |
 | 9q | Glyph truth 2: Split/Gate inlets at board size, Channels along their run, one tray orientation, disabled Turn/Undo/Clear, one lock badge (D-040 add. 8) | ws/glyph-truth-2 | 2 | G2 r7 | ✅ merged (Channel-across-run was a render bug; `rest-turn.ts`) |
-| G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 7: 7/7/7/7 (D-040 add. 8) → 9o–9s, then blind review 8 |
+| G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 7: 7/7/7/7 (D-040 add. 8) → 9o–9s ✅; ❌ blind review 8: 8/7.5/7.5/7.5 (D-040 add. 9) → 9t–9w, then blind review 9 |
 | 9.5 | One overlay: `ctx.ui` in CSS px on every form factor; delete `createCssChrome`, `legacyScale`, `avoid()`; desktop/iPad baselines unchanged. **Phase 3 entry condition** (D-044) | ws/one-overlay | 3 (entry) | 9c | 🔄 running; held from main until blind review 7 is compiled |
 | 10 | Camera + math: matrix `Camera`, `fitRect` fed by `layout.freeRect`; delete `EngineCtx.device`, `fillBands`, `setFill(key)`, `device-mode.ts` (D-044) | ws/camera | 3 | 9.5, G2 | ⏳ |
 | 11 | Transforms + layer/depth sort | ws/transforms | 3 | 9 | ⏳ |
