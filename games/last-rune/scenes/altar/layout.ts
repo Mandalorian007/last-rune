@@ -389,6 +389,19 @@ const PH = {
    */
   label1: 22,
   label2: 35,
+  /** dense-board: the widest a Gives/Needs card runs beside a north/south gauge (one, two lines). */
+  labelW1: 84,
+  labelW2: 100,
+  /**
+   * dense-board: a board of at least `denseCells` cells (8×6 and up) whose socket pitch comes out
+   * under `dense` CSS px (a fingertip) is dense.
+   */
+  dense: 46,
+  denseCells: 48,
+  /** dense-board: an SE's column on a dense board (CSS px), wide enough for a long verdict. */
+  laneDense: 186,
+  /** dense-board: the column on a dense board (two gems a row at `slotMin`). */
+  colDense: 104,
 } as const;
 
 /** A lifted gem rises this far (design px; gems.ts GEM_LIFT_PX) and grows 7%. */
@@ -420,28 +433,94 @@ const PHONE_SLAB = [
   [0.14, 0.1],
 ] as const;
 
+/**
+ * dense-board (D-040 addendum 8): a board whose sockets come out under a finger's width (`PH.dense`)
+ * is fitted again with the column at its narrowest (the tray two to a row at its smallest gems,
+ * the cards in a narrower lane) and its north/south cards sunk over carved stone, and the denser
+ * fit wins when its pitch is bigger. Other boards keep the layout they had.
+ */
 function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
+  const base = phoneFit(p, f, false);
+  const { w, h } = altarDims(p.altar);
+  if (w * h < PH.denseCells || base.pitch / f.cssPx >= PH.dense) return base;
+  const dense = phoneFit(p, f, true);
+  return dense.pitch > base.pitch ? dense : base;
+}
+
+function phoneFit(p: PuzzleDef, f: PhoneFrame, dense: boolean): AltarLayout {
   const c = f.cssPx;
   const { w: cols, h: rows } = altarDims(p.altar);
-  const has = [false, false, false, false];
-  for (const x of [p.storm.at, ...p.machines.map((m) => m.at)]) has[sideOf(x, cols, rows)] = true;
   const edge = PH.edge * c;
   const clear = PH.clear * c;
   const labelH = (p.pulses > 1 ? PH.label2 : PH.label1) * c;
   const machineSizeAt = (pitch: number) =>
     Math.round(Math.min(52 * c, Math.max(40 * c, pitch * 1.2)));
   const stormSizeAt = (pitch: number) => Math.round(Math.min(pitch * 1.9, 92 * c));
-  // How far each side's gauge and card reach past the slab (front face included at S).
-  const reach = (pitch: number): [number, number, number, number] => {
+  const props = [
+    { at: p.storm.at, storm: true },
+    ...p.machines.map((m) => ({ at: m.at, storm: false })),
+  ];
+  const blocked = new Set(p.blocked.map((b) => `${b.x},${b.y}`));
+  const labelW = (p.pulses > 1 ? PH.labelW2 : PH.labelW1) * c;
+  /** Half a north/south gauge's drawn width (as `spot` measures it) at a pitch. */
+  const halfAt = (storm: boolean, pitch: number) =>
+    storm ? 0.24 * stormSizeAt(pitch) : 0.45 * machineSizeAt(pitch);
+  /**
+   * dense-board: the sides (right, left) of a north/south gauge where its card may sink over
+   * the board's edge row, because every cell it would cover there is carved stone (never past
+   * the board's sides).
+   */
+  const sinkSides = (at: Cell, storm: boolean, pitch: number): { r: boolean; l: boolean } => {
+    const side = sideOf(at, cols, rows);
+    if (!dense || (side !== 0 && side !== 2)) return { r: false, l: false };
+    const row = side === 0 ? 0 : rows - 1;
+    const near = (halfAt(storm, pitch) + 4 * c) / pitch;
+    const far = near + labelW / pitch;
+    const clearOf = (lo: number, hi: number) => {
+      // [lo, hi] in cells from the board's left edge; a ring spans 0.38 pitch round its centre.
+      for (let x = Math.floor(lo - 0.5); x <= Math.ceil(hi + 0.5); x++) {
+        if (x + 0.5 + 0.4 <= lo || x + 0.5 - 0.4 >= hi) continue;
+        // Never past the board's side: that is the rail's room, or a west/east gauge's.
+        if (x < 0 || x >= cols || !blocked.has(`${x},${row}`)) return false;
+      }
+      return true;
+    };
+    const mid = at.x + 0.5;
+    return { r: clearOf(mid + near, mid + far), l: clearOf(mid - far, mid - near) };
+  };
+  /**
+   * dense-board: how far past the slab's edge (front face included at S) an N/S orb's centre
+   * stands, so its glass, halo and shell (0.33 of its size) clear the edge row's cells. `inset`
+   * is the slab's margin (plus the front face at S) between the cells and that edge.
+   */
+  const orbOut = (size: number, inset: number) => Math.max(0.084 * size, 0.33 * size - inset);
+  // How far each side's gauge and card reach past the slab (front face included at S). A card
+  // sunk over carved stone (dense-board) reaches only what the edge row does not hold.
+  const reach = (pitch: number, slabAt = 0): [number, number, number, number] => {
     const m = machineSizeAt(pitch);
-    const r = 0.29 * stormSizeAt(pitch); // the orb as drawn, glass and halo
-    const v = Math.max(0.62 * m, 1.4 * r, clear + labelH) + edge;
-    return [
-      has[0] ? v : edge,
-      has[1] ? PH.gutter * c : edge,
-      has[2] ? v : edge,
-      has[3] ? PH.gutter * c : edge,
-    ];
+    const size = stormSizeAt(pitch);
+    const r = 0.29 * size; // the orb as drawn, glass and halo
+    const slab = PHONE_SLAB[1];
+    const sm = Math.round(pitch * PHONE_SLAB[slabAt]![0]);
+    const sf = Math.round(pitch * PHONE_SLAB[slabAt]![1]);
+    const v: [number, number, number, number] = [edge, edge, edge, edge];
+    for (const q of props) {
+      const s = sideOf(q.at, cols, rows);
+      if (s === 1 || s === 3) {
+        v[s] = PH.gutter * c;
+        continue;
+      }
+      const k = sinkSides(q.at, q.storm, pitch);
+      const room =
+        pitch + Math.round(pitch * slab[0]) + (s === 2 ? Math.round(pitch * slab[1]) : 0);
+      const card = k.r || k.l ? Math.max(0, labelH - room) : clear + labelH;
+      // dense-board: an orb at N/S stands far enough out that it never covers the edge row.
+      const orb = q.storm ? orbOut(size, s === 0 ? sm : sm + sf) + r : 0;
+      // A north cabinet stands 0.69 of its size over the slab (its spot: 0.225 + 0.46).
+      const cab = !q.storm && s === 0 ? 0.69 * m : 0.62 * m;
+      v[s] = Math.max(v[s], Math.max(cab, 1.4 * r, orb, card) + edge);
+    }
+    return v;
   };
   // The visible band (mobile-5-board: the canvas crops top and bottom when it fills the width).
   const T = f.top ?? 0;
@@ -455,12 +534,18 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
   const nRows = Math.max(1, Math.ceil(kinds.length / per));
   // Wide phones take the width from the column; a narrow one (an SE) keeps its lane readable.
   const narrow = DESIGN_W / c < PH.wideCss;
-  const colMin = Math.max(per <= 2 ? PH.colMin2 : PH.colMin, narrow ? PH.laneMin : 0) * c;
+  // dense-board: on a wide phone two gems a row need only `colDense`. An SE's dense column keeps
+  // `laneDense`, so a long verdict (cause and a two-line Try) still fits beside the tray.
+  const colMin = !dense
+    ? Math.max(per <= 2 ? PH.colMin2 : PH.colMin, narrow ? PH.laneMin : 0) * c
+    : narrow
+      ? PH.laneDense * c
+      : (per <= 2 ? PH.colDense : PH.colMin) * c;
   const boardRoom = x1 - x0 - colMin - PH.colGap * c;
   const dims = (pitch: number, slab = 0) => {
     const m = Math.round(pitch * PHONE_SLAB[slab]![0]);
     const front = Math.round(pitch * PHONE_SLAB[slab]![1]);
-    const r = reach(pitch);
+    const r = reach(pitch, slab);
     return {
       m,
       front,
@@ -519,10 +604,10 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
         y = cellY(at.y) - sy;
       } else if (side === 0) {
         x = cellX(at.x);
-        y = top - r * 0.35 - sy;
+        y = top - orbOut(size, margin) - sy;
       } else {
         x = cellX(at.x);
-        y = bottom + front + r * 0.35 - sy;
+        y = bottom + front + orbOut(size, margin + front) - sy;
       }
       port = { x, y: y + sy };
     } else {
@@ -552,12 +637,28 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
       y: Math.max(0, Math.min(rows - 1, at.y)),
     };
     const gap = 4 * c;
+    // dense-board: a card sunk over carved stone in the edge row, on the side that is stone.
+    const sink = sinkSides(at, kind === 'storm', pitch);
+    const sunk = sink.r || sink.l;
+    const rightX = Math.round(x + half + gap);
+    const leftX = Math.round(x - half - gap);
     const label: PropSpot['label'] =
       side === 0 || side === 2
         ? {
-            x: Math.round(x + half + gap),
-            alt: Math.round(x - half - gap),
-            y: Math.round(side === 0 ? top - clear : bottom + front + clear),
+            x: sunk && !sink.r ? leftX : rightX,
+            ...(sunk && !(sink.r && sink.l) ? {} : { alt: leftX }),
+            y: Math.round(
+              side === 0
+                ? sunk
+                  ? Math.min(top + margin + pitch, Math.max(T + labelH + 8 * c, top - clear))
+                  : top - clear
+                : sunk
+                  ? Math.max(
+                      bottom - margin - pitch,
+                      Math.min(B - labelH - edge, bottom + front + clear),
+                    )
+                  : bottom + front + clear,
+            ),
             align: side === 0 ? 'up' : 'down',
           }
         : { x: Math.round(x), y: Math.round(y + under), align: 'below' };
@@ -570,7 +671,7 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
   // Tray: rows of up to three under the title, centred in the column, the gems as big as
   // the column allows (types the puzzle starts without are left out).
   const colX = (colL + colR) / 2;
-  const slotMax = (B - T) / c <= PH.shortCss ? PH.slotShort : PH.slotMax;
+  const slotMax = dense ? PH.slotMin : (B - T) / c <= PH.shortCss ? PH.slotShort : PH.slotMax;
   const slot = Math.max(
     PH.slotMin,
     Math.min(slotMax, Math.floor((colR - colL) / c / Math.max(per, 2) - PH.slotGap)),
@@ -676,6 +777,13 @@ function placeTitle(props: PropSpot[]): { titleX: number; titleMax: number } {
     titleMax: Math.round(best[1] - best[0] - 20),
   };
 }
+
+/**
+ * Touch aiming's loupe shows on sockets under this many CSS px apart (engine Gestures
+ * `magnify.below`; dense-board: every dense board on every phone, Lift Shaft's 45 on a Pro Max
+ * included).
+ */
+export const LOUPE_BELOW = 48;
 
 /** Socket centre for an on-altar cell. */
 export function cellCenter(L: AltarLayout, c: Cell, out: { x: number; y: number }): void {

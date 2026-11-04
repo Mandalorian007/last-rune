@@ -15,9 +15,9 @@
 import { mkdirSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
-import { MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
+import { type Cell, MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import { trayRemaining } from '../../games/last-rune/rules/validate';
-import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
+import { type AltarLayout, cellCenter } from '../../games/last-rune/scenes/altar/layout';
 import { playOrder } from './altar-audit';
 import { DEV_URL, settled, waitFrames } from './helpers';
 
@@ -185,6 +185,53 @@ async function holdOne(page: Page, id: MachineId, placed: unknown[]) {
   return slot.gem;
 }
 
+/** dense-board: the densest boards get an aim shot: a finger held over a socket, loupe up. */
+const AIM: readonly MachineId[] = ['the-last-rune', 'lift-shaft'];
+
+/**
+ * Drag a gem from the tray toward a socket the design still wants and hold it there, the
+ * finger 56 CSS px under the aim, until the loupe shows; returns the finger's release.
+ */
+async function aimOne(page: Page, id: MachineId, placed: readonly unknown[]) {
+  const L = await page.evaluate(
+    () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+  );
+  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const k = ob.width / 1920;
+  const view = page.viewportSize()!;
+  const pz = puzzleFor(id);
+  const client = (x: number, y: number) => ({ x: ob.x + x * k, y: ob.y + y * k });
+  const at = { x: 0, y: 0 };
+  // The highest socket the design still wants, so the finger under it stays on the screen.
+  const g = pz.design.intended
+    .slice(placed.length)
+    .filter((q) => trayRemaining(pz, placed as never, q.gem) > 0)
+    .sort((a, b) => a.cell.y - b.cell.y)[0]!;
+  const slot = L.tray.find((s) => s.gem === g.gem)!;
+  cellCenter(L, g.cell as Cell, at);
+  const from = client(slot.x, slot.y);
+  const aim = client(at.x + L.pitch * 0.2, at.y);
+  const end = { x: aim.x, y: Math.min(view.height - 4, aim.y + 56) };
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: type === 'touchEnd' ? [] : [{ x, y }],
+    });
+  await touch('touchStart', from.x, from.y);
+  for (let i = 1; i <= 10; i++) {
+    await touch(
+      'touchMove',
+      from.x + (end.x - from.x) * (i / 10),
+      from.y + (end.y - from.y) * (i / 10),
+    );
+    await waitFrames(page, 1);
+  }
+  await waitFrames(page, 3);
+  await expect(page.locator('.lr-loupe')).toHaveAttribute('data-on', '');
+  return () => touch('touchEnd');
+}
+
 /** Tap Strike (and confirm empty sockets if asked); wait for the verdict. */
 async function strike(page: Page) {
   await page.locator('[data-action="strike"]').tap();
@@ -303,6 +350,14 @@ for (const vp of PHONES) {
         const held = await holdOne(page, id, half);
         expect(held, `${id}: no tray gem left to hold`).not.toBeNull();
         await shot(page, `12-${id}-held`);
+        if (AIM.includes(id)) {
+          await meet(page, id, half);
+          await dismissCard(page);
+          await page.evaluate(() => (window as G).__game.fuse.hush());
+          const lift = await aimOne(page, id, half);
+          await shot(page, `12-${id}-aim`);
+          await lift();
+        }
       }
     });
 
