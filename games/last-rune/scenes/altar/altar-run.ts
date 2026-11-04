@@ -19,11 +19,13 @@ import {
   failHead,
   failText,
   fizzles,
+  hintRoom,
   nextStep,
   rootCell,
   rootFizzle,
   strikeStory,
   strikesLine,
+  verdictParts,
 } from './strike';
 
 export const runMethods = {
@@ -287,7 +289,10 @@ export const runMethods = {
     const say = (_i: number, text: string) => text;
     if (o === 'exact') {
       // The solve moment's FUSE line follows at once, so the exact line rides in the verdict.
-      this.showVerdict(exactLine(Math.min(4, this.ctx.tier()) as 1 | 2 | 3 | 4).text, 'exact');
+      const [title, body] = verdictParts(
+        exactLine(Math.min(4, this.ctx.tier()) as 1 | 2 | 3 | 4).text,
+      );
+      this.showVerdict(title, 'exact', body);
       this.wakeTimer = this.ctx.settings.reducedMotion ? 0.9 : 1.5;
       this.solved = true;
       this.ctx.sound.music.duck(0.5, 1.6);
@@ -300,10 +305,14 @@ export const runMethods = {
         L.phone && this.puzzle.pulses > 1
           ? ''
           : strikeStory(this.puzzle.pulses, res, this.capBeats);
+      // altar-truth: the hint names only gems this altar has, and the real cause.
+      const about = o === 'over' ? ms[over] : ms[under];
+      const room = hintRoom(this.puzzle, this.board.placements, res, this.capBeats, about);
       const hint = nextStep(
         o,
         this.fizzleList.map((f) => f.cause),
         this.touch && !this.keyboard,
+        room,
       );
       // Phones: the root cause is in the verdict (the headline when nothing arrived, else a line
       // unless the strike's story already fills it); the red mark on the socket says where.
@@ -328,8 +337,14 @@ export const runMethods = {
         const text = say(under, head(m, 'under'));
         this.showVerdict(text, 'under', story, hint, story ? '' : cause, each(m));
       } else {
-        // On a phone the cause is the headline ("The charge hit an empty socket").
-        this.showVerdict(cause || 'No charge reached the machine', 'dead', '', hint);
+        // A title and the fix. On a phone the cause is the title ("The charge hit an empty
+        // socket"); a separate title line would push the card past its line budget.
+        this.showVerdict(
+          cause.replace(/\.$/, '') || 'No charge reached the machine',
+          'dead',
+          '',
+          hint,
+        );
       }
       this.setStrikeWord('fail');
       // Idle hints ("Bend already here") give way to the verdict and its fizzle tags.

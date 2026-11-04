@@ -53,12 +53,12 @@ ${P} .lr-hg {
 }
 ${P} .lr-hg[data-in] { transform: none; }
 ${P} .lr-hg-rail, ${P} .lr-hg-side { display: none; }
-${P} .lr-hg-main { background: #2b2e37; }
+${P} .lr-hg-main { background: #2f2217; }
 
 /* Header: ‹ (with the unread count) · # channel · server; Skip sits at its right end. */
 ${P} .lr-hg-top {
   height: ${HEAD}; gap: ${cpx(4)}; padding: 0 calc(${LANE} + ${cpx(12)}) 0 ${cpx(12)};
-  font-size: ${tpx(15)}; white-space: nowrap; background: #30343f;
+  font-size: ${tpx(15)}; white-space: nowrap; background: #3a2a1c;
 }
 ${P} .lr-hg-top .lr-emo { font-size: ${tpx(15)}; margin-right: ${cpx(3)}; }
 ${P} .lr-hg-top .lr-hg-hash { font-size: ${tpx(16)}; min-width: 0; color: #8f887b; }
@@ -93,7 +93,7 @@ ${P} .lr-hg-start {
 ${P} .lr-hg-start[hidden] { display: none; }
 ${P} .lr-hg-start-emo {
   width: ${cpx(40)}; height: ${cpx(40)}; border-radius: 50%; display: grid; place-items: center; flex: none;
-  background: #3a3f4c; font-size: ${tpx(21)};
+  background: #4a3622; font-size: ${tpx(21)};
 }
 ${P} .lr-hg-start .lr-hg-hash { margin-right: ${cpx(3)}; color: #8f887b; font-weight: 400; }
 ${P} .lr-hg-msg { gap: ${cpx(10)}; padding: ${cpx(4)} ${cpx(4)}; border-radius: ${cpx(6)}; }
@@ -206,6 +206,25 @@ ${P} .lr-end-cue {
   text-shadow: 0 0 ${cpx(3)} #000, 0 0 ${cpx(8)} rgb(0 0 0 / 0.85);
 }
 ${P} .lr-end-cue[data-alone] { right: ${BAR_IN}; }
+/* chrome-polish-3 (Gate 2 review 5: "does it want a tap?"): a gold ▶ before the words and a
+   slow light running under them, as a player's "now playing" shows, so the ending reads as
+   playing on its own. Still bare text: no fill, no border, no taps. */
+${P} .lr-end-cue { font-size: ${tpx(13)}; gap: ${cpx(6)}; }
+${P} .lr-end-cue::before {
+  content: ''; flex: none; width: 0; height: 0; border-style: solid; border-color: transparent;
+  border-width: ${cpx(5)} 0 ${cpx(5)} ${cpx(8)}; border-left-color: #e8c06a;
+  filter: drop-shadow(0 0 ${cpx(3)} #000);
+}
+${P} .lr-end-cue::after {
+  content: ''; position: absolute; left: ${cpx(24)}; right: ${cpx(10)}; bottom: ${cpx(6)}; height: ${cpx(2)};
+  border-radius: ${cpx(1)}; background: linear-gradient(90deg, transparent, #e8c06a, transparent) no-repeat;
+  background-size: 40% 100%; animation: lr-end-playing 2.4s linear infinite; opacity: 0.85;
+}
+@keyframes lr-end-playing { from { background-position: -70% 0; } to { background-position: 170% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  ${P} .lr-end-cue::after { animation: none; background: rgb(232 192 106 / 0.5); }
+}
+[data-reduced-motion] ${P} .lr-end-cue::after { animation: none; background: rgb(232 192 106 / 0.5); }
 ${P} .lr-hg-top { padding-right: calc(${LANE} + ${cpx(130)}); }
 ${P} .lr-hg-log {
   padding-top: ${cpx(8)};
@@ -262,7 +281,7 @@ ${P} .lr-hg-start {
   border-bottom: 1px solid #ffffff1a; color: #fbf3e0;
 }
 ${P} .lr-hg-start[hidden] { display: none; }
-${P} .lr-hg-start-emo { width: ${cpx(60)}; height: ${cpx(60)}; font-size: ${tpx(31)}; background: #3a3f4c; }
+${P} .lr-hg-start-emo { width: ${cpx(60)}; height: ${cpx(60)}; font-size: ${tpx(31)}; background: #4a3622; }
 ${P} .lr-hg-start-text { display: flex; flex-direction: column; gap: ${cpx(2)}; min-width: 0; }
 ${P} .lr-hg-start-text b { font-size: ${tpx(22)}; line-height: 1.15; font-weight: 700; }
 ${P} .lr-hg-start-text small { font-size: ${tpx(14)}; line-height: 1.25; color: #a39a88; }

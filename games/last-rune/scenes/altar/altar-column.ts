@@ -14,6 +14,7 @@ import type { Cell } from '../../rules/types';
 import { SVG_NS } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { type AltarLayout, cellCenter, FUSE_LANE, TRAY_CENTER_X, trayTipX } from './layout';
+import { turnTeachLine } from './moments';
 
 /** A box in design px. */
 interface Box {
@@ -342,11 +343,20 @@ export const columnMethods = {
       this.turnBtn.hidden = !show && !phone;
       this.turnBtn.disabled = phone && !show;
       this.turnBtn.toggleAttribute('data-active', show);
-      this.turnMark.hidden = !show || phone;
+      this.turnMark.hidden = !show;
       if (phone) this.updateHint();
       this.avoidTray();
     }
-    if (!show || phone) return;
+    // altar-truth: the first time a turnable gem is in hand (or just placed), a line names Turn
+    // and what it turns, until the player turns one here.
+    const kind =
+      target === 'hand' ? this.hand?.kind : target ? this.board.at(target)?.gem : undefined;
+    if (phone)
+      this.setHintLine(
+        'holding',
+        turnTeachLine(kind, target === 'hand' ? 'hand' : 'placed', this.turnTeach, this.turned),
+      );
+    if (!show) return;
     const r = L.gemSize * 0.5;
     this.turnMark.style.left = `${Math.round(pt.x + r)}px`;
     this.turnMark.style.top = `${Math.round(pt.y - r)}px`;

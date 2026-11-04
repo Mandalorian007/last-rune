@@ -1,9 +1,22 @@
 /**
  * The journal on phones (mobile-3/4/5/6-chrome, mobile-7-ending): the found pages as paper rows,
- * the handwriting at a readable size, the page arrows on the book's corners. Appended to the
+ * the handwriting at a readable size, the page arrows by the book. Appended to the
  * phone sheet by game/ctx.ts (ui/styles.ts ensureGameStyles).
+ *
+ * chrome-polish-3 (Gate 2 review 5), last in the sheet so it wins:
+ * - The page arrows leave the pages. They sit either side of FUSE's plate under the book, like
+ *   the book's own page turns, and the plate's text stays clear of them. Before, they sat on the
+ *   leaves' outer bottom corners (mobile-7-ending, above).
+ * - FUSE's line on the plate has no lamp dot in front of it; on a phone it read as a stray bullet.
  */
 import { CB, cpx, P, tpx } from '../../ui/phone-base';
+
+/** The journal on a phone (chrome-polish-3's rules). */
+const J = `${P} .lr-journal`;
+/** The plate's ends (design px, journal-scene DESK_LAYOUT.plate: x 1252, w 1080, y 926). */
+const PLATE_L = 1252 - 540;
+const PLATE_R = 1252 + 540;
+const PLATE_Y = 926;
 
 export const JOURNAL_PHONE_CSS = /* css */ `
 /* Journal: the slips are an index 16 CSS px apart, so they keep their exact size (no grown hit
@@ -92,4 +105,14 @@ ${P} .lr-j-key i {
   display: inline-block; width: ${cpx(8)}; height: ${cpx(8)}; margin: 0 ${cpx(3)} 0 0; border-radius: 50%;
   vertical-align: 0.05em; background: radial-gradient(circle at 40% 35%, #d2463c, #8a1a14);
 }
+
+/* chrome-polish-3: the page arrows flank FUSE's plate; no lamp dot on the plate. */
+${J} .lr-j-turn[aria-label="Previous page"],
+${J} .lr-j-turn[aria-label="Next page"] {
+  top: ${PLATE_Y}px !important; right: auto; transform: translate(-50%, -50%);
+}
+${J} .lr-j-turn[aria-label="Previous page"] { left: calc(${PLATE_L}px + ${cpx(26)}) !important; }
+${J} .lr-j-turn[aria-label="Next page"] { left: calc(${PLATE_R}px - ${cpx(26)}) !important; }
+${J} .lr-j-plate { padding: 0 ${cpx(56)}; }
+${J} .lr-j-plate::before { display: none; }
 `;

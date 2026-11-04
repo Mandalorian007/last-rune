@@ -29,7 +29,7 @@ import { puzzleFor } from '../../content/puzzles';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { BoltOutcome } from '../../game/flow';
 import { progressOf } from '../../game/save';
-import { isRotational, type Placement, type PuzzleDef, type SimResult } from '../../rules';
+import type { Placement, PuzzleDef, SimResult } from '../../rules';
 import type { Cell, GemKind, MachineId } from '../../rules/types';
 import { codexPages } from '../../ui/codex-data';
 import { altarFrame } from './altar-chrome';
@@ -58,7 +58,7 @@ import { emitPuzzleEvent } from './events';
 import { setHintTarget } from './hints';
 import { type HintSlot, hintRetired } from './moments';
 import type { Fizzle, StrikeTimeline } from './strike';
-import { arrivalNudges, type NewGems, newGems } from './teach';
+import { arrivalNudges, type NewGems, newGems, turnTeaches } from './teach';
 
 type PlaceMethods = typeof placeMethods;
 type ColumnMethods = typeof columnMethods;
@@ -240,16 +240,12 @@ export class AltarScene implements GameScene {
   frame = '';
   relayoutPending = false;
   offDevice: (() => void) | null = null;
-  /** Charge read-outs on the route preview through a new fixed gem (see `updatePreviewChips`). */
-  previewChipEls: HTMLElement[] = [];
-  previewChipKey = '';
-  /** Charge read-outs on the preview through new gems, until the first strike here. */
-  teachChips = false;
+  // altar-truth: no charge numbers on the route before Strike, on any altar (one rule, D-040
+  // addendum 5). The plan's numbers live on the Capacitor read-out; chips come with Strike.
   /** Turning kinds this altar teaches to turn (show the turn arrow when held). */
   turnTeach = new Set<GemKind>();
   /** The route preview with the held gem tried where it would land (cell, rot, kind). */
   ghostKey = '';
-  previewSim: SimResult | null = null;
   /** Where the preview's first strike meets a gem from a side it doesn't take: a small ✕. */
   noGoEls: HTMLElement[] = [];
   noGoKey = '';
@@ -323,8 +319,7 @@ export class AltarScene implements GameScene {
       this.news = newGems(this.puzzle, solved);
       this.teachFixed = this.news.fixed.map((f) => ({ gem: f.gem, cell: f.cell }));
       this.teachTray = new Set(this.news.tray);
-      this.teachChips = this.news.fixed.length + this.news.tray.length > 0;
-      this.turnTeach = new Set([...this.news.turns, ...this.news.tray.filter(isRotational)]);
+      this.turnTeach = turnTeaches(this.news);
       this.guide = guideHops(
         this.puzzle,
         this.teachFixed.map((f) => f.cell),
@@ -411,7 +406,6 @@ export class AltarScene implements GameScene {
     this.view.dispose();
     this.dom.remove();
     this.chipEls.length = 0;
-    this.previewChipEls.length = 0;
     this.noGoEls.length = 0;
     this.capEls.length = 0;
     this.capLines.length = 0;
@@ -469,7 +463,6 @@ export class AltarScene implements GameScene {
     this.validRev = -1;
     this.tipKey = '';
     this.focusKey = '';
-    this.previewChipKey = '';
     this.ghostKey = '';
     this.noGoKey = '';
     this.buildDom();

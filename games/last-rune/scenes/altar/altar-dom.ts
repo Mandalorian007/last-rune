@@ -153,9 +153,14 @@ export const domMethods = {
       this.turnBtn.style.left = `${trayRight + 80}px`;
       this.turnBtn.style.top = `${L.trayY}px`;
     }
+    // altar-truth: phones mark Turn's target too (its own class: a small \u21bb on the gem's corner).
     this.turnMark = h(
       'div',
-      { class: 'lr-altar-turnmark lr-touch-only', 'aria-hidden': 'true', hidden: true },
+      {
+        class: `${L.phone ? 'lr-turn-target' : 'lr-altar-turnmark'} lr-touch-only`,
+        'aria-hidden': 'true',
+        hidden: true,
+      },
       '\u21bb',
     );
     this.counts = L.tray.map((s) =>

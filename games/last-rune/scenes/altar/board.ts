@@ -217,7 +217,11 @@ export class BoardState {
 
   /**
    * Restore saved placements, dropping any that are no longer legal (the puzzle may have been
-   * retuned since the save was written). Clears undo. Returns how many were dropped.
+   * retuned since the save was written). Returns how many were dropped.
+   *
+   * altar-truth: the restored gems come back with their undo history, one step per gem in the
+   * order they were saved, so Undo works on a board the player left mid-solve (it was greyed
+   * with gems on the board and no reason given).
    */
   restore(saved: readonly Placement[]): number {
     this.list = [];
@@ -230,6 +234,7 @@ export class BoardState {
         dropped++;
         continue;
       }
+      this.push();
       this.list.push({
         gem: s.gem,
         cell: { x: s.cell.x, y: s.cell.y },

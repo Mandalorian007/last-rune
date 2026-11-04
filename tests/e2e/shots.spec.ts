@@ -26,11 +26,12 @@ const ONLY = (process.env.SHOTS_ONLY ?? '').split(',').filter(Boolean);
 const PARTS = ['chrome', 'altars', 'moments', 'ending'] as const;
 type Part = (typeof PARTS)[number];
 
+/** `safari`: an iPhone, so no Fullscreen API (as Safari on iPhone): no Full screen button. */
 const PHONES = [
-  { name: 'se', width: 667, height: 320, inset: 0 },
-  { name: 'iphone', width: 844, height: 340, inset: 47 },
-  { name: 'promax', width: 932, height: 380, inset: 59 },
-  { name: 'android', width: 915, height: 360, inset: 0 },
+  { name: 'se', width: 667, height: 320, inset: 0, safari: true },
+  { name: 'iphone', width: 844, height: 340, inset: 47, safari: true },
+  { name: 'promax', width: 932, height: 380, inset: 59, safari: true },
+  { name: 'android', width: 915, height: 360, inset: 0, safari: false },
 ] as const;
 
 /** Whether SHOTS_ONLY asks for this phone (or 'portrait') and this part. */
@@ -71,7 +72,12 @@ async function snap(page: Page, folder: string, name: string, sel = '#app *') {
   await page.screenshot({ path: `${dir}/${name}.png` });
 }
 
-async function boot(page: Page, inset: number) {
+async function boot(page: Page, inset: number, safari = false) {
+  if (safari) {
+    await page.addInitScript(() => {
+      Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => false });
+    });
+  }
   if (inset) {
     await page.addInitScript((px) => {
       const s = document.createElement('style');
@@ -200,8 +206,10 @@ for (const vp of PHONES) {
 
     test(`chrome ${vp.name}`, async ({ page }) => {
       test.skip(!wanted(vp.name, 'chrome'), 'not in SHOTS_ONLY');
-      await boot(page, vp.inset);
+      await boot(page, vp.inset, vp.safari);
       await expect(page.locator('.lr-title-menu')).toBeVisible();
+      // The first visit's knock: FUSE speaks (his line's lane must keep off the storm cell).
+      await expect(page.locator(CAPTION)).toBeVisible({ timeout: 10_000 });
       await shot(page, '01-title');
 
       // A first visit: New game, FUSE's welcome and the Start here marker.
@@ -279,7 +287,7 @@ for (const vp of PHONES) {
 
     test(`altars ${vp.name}`, async ({ page }) => {
       test.skip(!wanted(vp.name, 'altars'), 'not in SHOTS_ONLY');
-      await boot(page, vp.inset);
+      await boot(page, vp.inset, vp.safari);
       for (const id of MACHINE_IDS) {
         // As it opens: its arrival card (if it brings anything new) and FUSE's line.
         await meet(page, id);
@@ -300,7 +308,7 @@ for (const vp of PHONES) {
 
     test(`moments ${vp.name}`, async ({ page }) => {
       test.skip(!wanted(vp.name, 'moments'), 'not in SHOTS_ONLY');
-      await boot(page, vp.inset);
+      await boot(page, vp.inset, vp.safari);
 
       // The very first altar on a fresh save, straight from New game: the first teach card,
       // FUSE's arrival line beside it.
@@ -367,7 +375,7 @@ for (const vp of PHONES) {
 
     test(`ending ${vp.name}`, async ({ page }) => {
       test.skip(!wanted(vp.name, 'ending'), 'not in SHOTS_ONLY');
-      await boot(page, vp.inset);
+      await boot(page, vp.inset, vp.safari);
       // The first time through (no Skip): everything else solved, then the Last Rune.
       await seed(
         page,
@@ -402,8 +410,9 @@ test.describe('portrait', () => {
   test('portrait: title, settings, rotate card', async ({ page }) => {
     test.skip(!wanted('portrait'), 'not in SHOTS_ONLY');
     const shot = (name: string) => snap(page, 'portrait', name);
-    await boot(page, 0);
+    await boot(page, 0, true);
     await expect(page.locator('.lr-title-menu')).toBeVisible();
+    await expect(page.locator(CAPTION)).toBeVisible({ timeout: 10_000 });
     await shot('01-title');
     await page.evaluate(() => (window as G).__game.openSettings());
     await expect(page.locator('.lr-settings-tab').first()).toBeVisible();
@@ -418,5 +427,73 @@ test.describe('portrait', () => {
     await expect(page.locator('.lr-altar')).toBeAttached();
     await expect(page.locator('.tc-rotate')).toBeVisible();
     await shot('41-rotate-altar');
+  });
+});
+
+/**
+ * Desktop (1280×720, mouse): the altars whose text and visuals altar-truth checked against the
+ * rules. Only when SHOTS_ONLY names `desktop`, so the phone gate set is unchanged.
+ *   SHOTS=altar-truth/after SHOTS_ONLY=desktop pnpm exec playwright test tests/e2e/shots.spec.ts
+ */
+test.describe('desktop', () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+  test('desktop: altars', async ({ page }) => {
+    test.skip(!ONLY.includes('desktop'), 'SHOTS_ONLY=desktop');
+    const shot = (name: string) => snap(page, 'desktop', name);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(DEV_URL);
+    await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+      timeout: 30_000,
+    });
+    const quiet = async () => {
+      await page.evaluate(() => (window as G).__game.fuse.hush());
+      await waitFrames(page, 4);
+    };
+    const ids: MachineId[] = [
+      'intake-desk',
+      'furnace',
+      'storm-cell-2',
+      'control-booth',
+      'lift-shaft',
+      'the-last-rune',
+    ];
+    for (const id of ids) {
+      await meet(page, id);
+      await quiet();
+      await shot(`10-${id}`);
+      const half = puzzleFor(id).design.intended.slice(
+        0,
+        Math.floor(puzzleFor(id).design.intended.length / 2),
+      );
+      await meet(page, id, half);
+      await quiet();
+      const L = await page.evaluate(
+        () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+      );
+      const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+      const k = ob.width / 1920;
+      const slot = L.tray.find((s) => trayRemaining(puzzleFor(id), half as never, s.gem) > 0);
+      if (slot) {
+        await page.mouse.click(ob.x + slot.x * k, ob.y + slot.y * k);
+        await page.mouse.move(ob.x + 960 * k, ob.y + 1000 * k);
+      }
+      await shot(`12-${id}-held`);
+    }
+    const tries = [
+      ['relay-tower', '13-relay-tower-fail', puzzleFor('relay-tower').design.intended.slice(0, 2)],
+      ['capacitor-bay', '13-capacitor-bay-multi', BAY_FIRST_TRY],
+    ] as const;
+    for (const [id, name, place] of tries) {
+      await meet(page, id, [...place]);
+      await quiet();
+      if (id === 'capacitor-bay') await shot('13-capacitor-bay-before');
+      await page.keyboard.press('f');
+      await waitFrames(page, 4);
+      const sure = page.locator('.lr-confirm .lr-gold-button');
+      if (await sure.isVisible()) await sure.click();
+      await expect(page.locator('.lr-altar-verdict')).toBeVisible({ timeout: 30_000 });
+      await quiet();
+      await shot(name);
+    }
   });
 });

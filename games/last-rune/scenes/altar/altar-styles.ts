@@ -149,10 +149,6 @@ const CSS = /* css */ `
 @keyframes lr-chip-in { from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } to { opacity: 1; } }
 
 /* Preview chips: the charge into and out of a new gem on the route, before the first strike. */
-.tc-overlay .lr-altar-chip[data-preview] {
-  background: rgba(10,18,26,0.78); border-style: dashed; border-color: rgba(120,200,255,0.6); box-shadow: none;
-}
-
 /* Multi-strike: one pip per strike at the storm and on Strike; lit as each strike fires. */
 .tc-overlay .lr-altar-storm .lr-storm-row {
   display: flex; align-items: center; gap: 8px; margin-top: 4px; font-family: var(--tc-font-body, serif); font-size: 20px; color: #cfeeff;
@@ -186,6 +182,10 @@ const CSS = /* css */ `
 .tc-overlay .lr-cap-line[data-kind="keep"] { color: #d8ecff; }
 .tc-overlay .lr-cap-line[data-kind="release"] { color: #fff6dd; }
 .tc-overlay .lr-cap-line[data-now] { color: #ffffff; text-shadow: 0 0 8px rgba(160,220,255,0.9); font-weight: 600; }
+/* altar-truth: the plan lets out more than a machine takes: the line and that gauge warn. */
+.tc-overlay .lr-cap-line[data-warn] { color: #ff9c86; font-weight: 600; }
+.tc-overlay .lr-altar-cap:has(.lr-cap-line[data-warn]) { border-color: #ff6a4d; }
+.tc-overlay .lr-altar-need[data-warn] { border-color: #ff6a4d; box-shadow: 0 0 18px rgba(255,90,60,0.55); }
 
 /* Preview: a wrong-facing gem turns the bolt away here (a small ✕ on its rim). */
 .tc-overlay .lr-altar-nogo {

@@ -397,24 +397,63 @@ for (const vp of PHONES) {
       await expect(page.locator('.lr-j-more')).toHaveText(/12 more pages to find/);
       problems.push(...small(await sizes(page, '.lr-j-more'), { h: 36, font: 12 }));
       problems.push(...small(await sizes(page, '.lr-j-turn'), { w: 44, h: 44 }));
-      // mobile-7-ending: the page arrows sit on the book's outer edges (the leaves span design
-      // px 669..1835), not out at the screen edges.
+      // chrome-polish-3 (Gate 2 review 5: the arrows sat on the pages): the page arrows flank
+      // FUSE's plate under the book (its ends at design px 712 and 1792), clear of both leaves
+      // (they end at design y 780) and of the plate's line.
       const turns = await page.evaluate(() => {
         const o = document
           .querySelector('.tc-overlay:not([data-units="css"])')!
           .getBoundingClientRect();
         const k = o.width / 1920;
+        const words = document.querySelector('.lr-j-plate-text, .lr-j-plate')!;
+        const range = document.createRange();
+        range.selectNodeContents(words);
+        const text = range.getBoundingClientRect();
         return [...document.querySelectorAll<HTMLElement>('.lr-j-turn')]
           .filter((b) => !b.hidden)
           .map((b) => {
             const r = b.getBoundingClientRect();
-            const edge = o.left + (b.ariaLabel === 'Previous page' ? 669 : 1835) * k;
-            return { label: b.ariaLabel, off: Math.abs((r.left + r.right) / 2 - edge) };
+            const cx = (r.left + r.right) / 2;
+            const end = o.left + (b.ariaLabel === 'Previous page' ? 712 : 1792) * k;
+            return {
+              label: b.ariaLabel,
+              off: Math.abs(cx - end),
+              onLeaf: r.top < o.top + 780 * k,
+              onText:
+                r.left < text.right &&
+                text.left < r.right &&
+                r.top < text.bottom &&
+                text.top < r.bottom,
+            };
           });
       });
       for (const t of turns) {
-        if (t.off > 6) problems.push(`journal: ${t.label} ${t.off.toFixed(0)} px off the book`);
+        if (t.off > 40)
+          problems.push(`journal: ${t.label} ${t.off.toFixed(0)} px off the plate's end`);
+        if (t.onLeaf) problems.push(`journal: ${t.label} sits on a page`);
+        if (t.onText) problems.push(`journal: ${t.label} covers FUSE's line`);
       }
+      // ...and the quill in the inkwell keeps clear of the page list.
+      const quill = await page.evaluate(() => {
+        const o = document
+          .querySelector('.tc-overlay:not([data-units="css"])')!
+          .getBoundingClientRect();
+        const k = o.width / 1920;
+        const q = (window as G).__game.stack.top.quillBox();
+        const hits: string[] = [];
+        for (const el of document.querySelectorAll<HTMLElement>('.lr-j-slip, .lr-j-more')) {
+          const r = el.getBoundingClientRect();
+          if (!r.width) continue;
+          const l = (r.left - o.left) / k;
+          const rr = (r.right - o.left) / k;
+          const t = (r.top - o.top) / k;
+          const b = (r.bottom - o.top) / k;
+          if (l < q.r && q.l < rr && t < q.b && q.t < b)
+            hits.push((el.textContent ?? '').trim().slice(0, 20));
+        }
+        return hits;
+      });
+      problems.push(...quill.map((s) => `journal: the quill overlaps "${s}"`));
       problems.push(...small(await sizes(page, '.lr-j-x'), { w: 36, h: 36, hitW: 44, hitH: 44 }));
       problems.push(...(await offscreen(page, '.lr-journal')).map((s) => `journal: ${s}`));
 

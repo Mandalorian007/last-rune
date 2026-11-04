@@ -50,6 +50,10 @@ const CSS = /* css */ `
   white-space: nowrap;
 }
 .tc-overlay .lr-title[data-canvas] p { margin-top: 196px; }
+/* Upright phones (chrome-polish-3): the picture is a slice centred on x 560 (TITLE_UPRIGHT) and
+   the view draws the name smaller there; the subtitle follows it, a size up so it still reads. */
+.tc-overlay .lr-title[data-upright] { left: -400px; top: 60px; }
+.tc-overlay .lr-title[data-canvas][data-upright] p { margin-top: 170px; font-size: 40px; letter-spacing: 6px; }
 .tc-overlay .lr-title p {
   margin: 18px 0 0; font-size: 30px; color: #c9b9e6; letter-spacing: 8px; text-transform: uppercase;
   text-shadow: 0 2px 8px #000;
@@ -288,16 +292,16 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-codex-rule { grid-column: 1 / -1; grid-row: 4; margin: 22px 0 0; font-size: 28px; line-height: 1.4; }
 .tc-overlay .lr-codex-maths {
-  grid-column: 1 / -1; grid-row: 5; justify-self: start; margin: 14px 0 0; font-family: var(--tc-font-mono); font-size: 24px; color: #5a3d22;
+  grid-column: 1 / -1; grid-row: 5; justify-self: start; margin: 14px 0 0; font-family: var(--tc-font-body); font-size: 24px; color: #5a3d22;
   padding: 10px 16px; border-left: 4px solid rgba(90,61,34,0.4); background: rgba(90,61,34,0.07);
 }
 .tc-overlay .lr-margin {
   grid-column: 2; grid-row: 3; align-self: center; padding: 16px 14px;
-  font-family: var(--tc-font-mono); font-size: 20px; line-height: 1.4; color: #6b3b10;
+  font-family: var(--tc-font-body); font-style: italic; font-size: 20px; line-height: 1.4; color: #6b3b10;
   transform: rotate(2deg); border-left: 3px dashed rgba(140,80,20,0.45);
 }
 .tc-overlay .lr-margin:empty { border: none; }
-.tc-overlay .lr-margin b { display: block; font-size: 16px; letter-spacing: 2px; margin-bottom: 6px; }
+.tc-overlay .lr-margin b { display: block; font-style: normal; font-size: 16px; letter-spacing: 2px; margin-bottom: 6px; }
 .tc-overlay .lr-codex-folio { grid-column: 1 / -1; grid-row: 7; align-self: end; text-align: center; font-size: 22px; color: #5e4329; }
 /* Bigger text: the plate keeps its size and FUSE's note takes the rest of the row, so the
    note stays short and the page still fits the spread (it scrolls if it ever doesn't). */

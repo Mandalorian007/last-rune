@@ -115,10 +115,6 @@ export const TEACH_MACHINE: MachineId = 'intake-desk';
  * The first altar's arrival card also says what the gold socket rings mean: the teach socket,
  * the machine's exit and, once building, the open ends of the route all ring gold.
  */
-/** A fixed gem's card on a phone opens with this (mobile-7-teach). */
-export const FIXED_LINE = 'Fixed: part of the machine.';
-/** A tray gem on the arrival card: the player's to place. */
-export const YOURS_LINE = 'Yours to place.';
 export const RING_NAME = 'Gold ring';
 export const RING_RULE = 'A socket the charge must reach. Set a gem there.';
 

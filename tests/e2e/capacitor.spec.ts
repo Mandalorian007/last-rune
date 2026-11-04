@@ -74,10 +74,15 @@ test('two strikes are announced and the Capacitor reads out both, before and dur
   const cap = page.locator('.lr-altar-cap');
   await expect(cap).toHaveCount(1);
   await expect(cap).toHaveAttribute('data-plan', '');
+  // altar-truth: 16 is more than the 8 the machine takes, so the plan says so and warns, and
+  // so does that gauge.
   await expect(cap.locator('.lr-cap-line')).toHaveText([
     'Strike 1: keeps 8',
-    'Strike 2: 8 + 8 → 16',
+    'Strike 2: 8 + 8 → 16, over the 8 needed',
   ]);
+  await expect(cap.locator('.lr-cap-line[data-warn]')).toHaveCount(1);
+  await expect(page.locator('.lr-altar-need[data-warn]')).toHaveCount(1);
+  await expect(page.locator('.lr-altar-need[data-warn]')).toContainText('8');
 
   // During strike 1 only its line shows; strike 2's line arrives with strike 2. Strike 1 lasts
   // well under a second of game time, too short for one-after-another polls from the test on a

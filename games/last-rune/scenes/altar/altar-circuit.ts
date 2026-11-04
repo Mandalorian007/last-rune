@@ -46,8 +46,6 @@ export const circuitMethods = {
       v.previewTarget = 0;
       this.ghostKey = '';
       this.realPreview = null;
-      this.previewSim = null;
-      this.updatePreviewChips();
       this.updateNoGo([], null);
       // The strike's own read-out replaces the plan (built in `strike`).
     }
@@ -133,8 +131,6 @@ export const circuitMethods = {
     v.faceAlong(hops, true);
     v.preview = hops;
     v.previewTarget = PREVIEW_PATH ? 1 : 0;
-    this.previewSim = sim;
-    this.updatePreviewChips();
     this.renderCaps(capacitorBeats(this.puzzle, placements, sim), sim, false);
   },
 
@@ -209,63 +205,6 @@ export const circuitMethods = {
       const c = this.chips[k]!;
       if (c.pulse === i && c.to.x === at.x && c.to.y === at.y)
         this.chipEls[k]!.dataset.state = state;
-    }
-  },
-
-  /**
-   * Until the first strike on an altar that introduces a gem, the route preview carries the
-   * charge into and out of each new gem on it, so its effect reads before anything fires.
-   */
-  updatePreviewChips(this: AltarScene): void {
-    const sim = this.teachChips && this.mode === 'edit' ? this.previewSim : null;
-    const L = this.view.layout;
-    const kinds = new Set<GemKind>([...this.news.fixed.map((f) => f.gem), ...this.news.tray]);
-    const chips: { from: Cell; to: Cell; charge: number }[] = [];
-    if (sim) {
-      const ghost = this.ghost();
-      const kindAt = (c: Cell): GemKind | undefined =>
-        ghost && ghost.cell.x === c.x && ghost.cell.y === c.y
-          ? ghost.gem
-          : (this.board.at(c) ?? this.board.fixedAt(c))?.gem;
-      const touches = (c: Cell): boolean => {
-        const k = kindAt(c);
-        return !!k && kinds.has(k);
-      };
-      for (const seg of sim.trace) {
-        if (seg.pulse !== 0) continue;
-        if (touches(seg.from) || touches(seg.to)) chips.push(seg);
-      }
-    }
-    const key = chips
-      .map((c) => `${c.from.x},${c.from.y}>${c.to.x},${c.to.y}=${c.charge}`)
-      .join(';');
-    if (key === this.previewChipKey) return;
-    this.previewChipKey = key;
-    for (const el of this.previewChipEls) el.remove();
-    this.previewChipEls.length = 0;
-    const a = { x: 0, y: 0 };
-    const b = { x: 0, y: 0 };
-    const chipPx = Math.max(16, Math.min(24, Math.round(L.pitch * 0.3)));
-    for (const c of chips) {
-      anchorOf(L, c.from, a);
-      anchorOf(L, c.to, b);
-      const el = h(
-        'div',
-        {
-          class: 'lr-altar-chip',
-          'data-preview': '',
-          'aria-hidden': 'true',
-          style: {
-            left: `${(a.x + b.x) / 2}px`,
-            top: `${(a.y + b.y) / 2}px`,
-            fontSize: scalePxCss(chipPx),
-            lineHeight: `calc(${scalePxCss(chipPx)} + 6px)`,
-          },
-        },
-        String(c.charge),
-      );
-      this.dom.insertBefore(el, this.tip.parentNode === this.dom ? this.tip : this.leader);
-      this.previewChipEls.push(el);
     }
   },
 

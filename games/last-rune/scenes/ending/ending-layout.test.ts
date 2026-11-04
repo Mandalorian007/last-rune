@@ -28,12 +28,12 @@ describe('phoneClipRest', () => {
     ['inset', 915, 360, 40],
   ] as const;
   for (const [name, vw, vh, inset] of phones) {
-    it(`keeps the whole board ≥12 CSS px inside on ${name}`, () => {
+    it(`keeps the whole board ≥24 CSS px inside on ${name}`, () => {
       const b = band(vw, vh, inset);
       const c = phoneClipRest(b);
       const { ex, ey } = extents(c);
-      expect(c.x + ex).toBeLessThanOrEqual(b.r - 12 * b.perCss + 1e-6);
-      expect(c.y + ey).toBeLessThanOrEqual(b.b - 12 * b.perCss + 1e-6);
+      expect(c.x + ex).toBeLessThanOrEqual(b.r - 24 * b.perCss + 1e-6);
+      expect(c.y + ey).toBeLessThanOrEqual(b.b - 24 * b.perCss + 1e-6);
       expect(c.x).toBeLessThanOrEqual(PHONE_CLIP.x);
       expect(c.y).toBeLessThanOrEqual(PHONE_CLIP.y);
       expect(c.w).toBe(PHONE_CLIP.w);

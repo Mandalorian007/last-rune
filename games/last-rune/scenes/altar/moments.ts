@@ -16,6 +16,7 @@
  *   line if it can, else waits (FUSE's caption is frozen, not dropped), so nothing ever overlaps.
  */
 
+import { CODEX } from '../../content/codex';
 import type { GemKind } from '../../rules/types';
 
 /** Machines restored before the phone how-to line retires. */
@@ -45,6 +46,24 @@ export type HintSlot = (typeof HINT_SLOTS)[number];
 /** The slot whose line shows: the first in `HINT_SLOTS` order with any text. */
 export function pickHint(lines: Partial<Record<HintSlot, string | null>>): HintSlot | null {
   return HINT_SLOTS.find((s) => !!lines[s]) ?? null;
+}
+
+/**
+ * altar-truth: the line that teaches Turn, in the `holding` slot. On an altar that teaches a
+ * turnable gem, while that gem is Turn's target (in hand, or just placed) and until the player
+ * has turned one here: "↻ Turn rotates the Bend in your hand." `null` otherwise.
+ */
+export function turnTeachLine(
+  kind: GemKind | undefined,
+  where: 'hand' | 'placed',
+  teaches: ReadonlySet<GemKind>,
+  turned: boolean,
+): string | null {
+  if (!kind || turned || !teaches.has(kind)) return null;
+  const name = CODEX[kind].name;
+  return where === 'hand'
+    ? `↻ Turn rotates the ${name} in your hand.`
+    : `↻ Turn rotates the ${name} you just placed.`;
 }
 
 /** The arrival card's button on page `page` (0-based) of `pages`: next page, or close it. */

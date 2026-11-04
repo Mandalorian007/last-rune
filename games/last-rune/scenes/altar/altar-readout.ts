@@ -8,7 +8,7 @@ import { type SimResult, stormCharge } from '../../rules';
 import { getMachine } from '../../rules/progression';
 import { listText, OUTCOME_WORD, RING_NAME, RING_RULE, timesWord } from './altar-defs';
 import type { AltarScene } from './altar-scene';
-import { type CapBeat, capBeatText } from './circuit-model';
+import { type CapBeat, capBeatText, planOver } from './circuit-model';
 import { cellCenter } from './layout';
 import { strikeLabel } from './strike';
 
@@ -64,10 +64,19 @@ export const readoutMethods = {
     sim: SimResult | null,
     live: boolean,
   ): void {
+    // altar-truth: in the plan, a release over a machine's need reads as a warning, and so
+    // does that gauge (the plan already shows the number).
+    const over = !live && sim ? planOver(beats, sim) : null;
+    this.needs.forEach((n, i) => {
+      n?.toggleAttribute('data-warn', !!over?.machines.has(i));
+    });
     const key =
       (live ? 'L' : 'P') +
       beats
-        .map((b) => `${b.cell.x},${b.cell.y}:${b.pulse}${b.kind}${b.stored}+${b.incoming}`)
+        .map(
+          (b, i) =>
+            `${b.cell.x},${b.cell.y}:${b.pulse}${b.kind}${b.stored}+${b.incoming}${over?.beats.get(i) ?? ''}`,
+        )
         .join(';');
     if (key === this.capKey) return;
     this.capKey = key;
@@ -102,10 +111,15 @@ export const readoutMethods = {
       const x = side === 'left' ? pt.x - off : side === 'right' ? pt.x + off : pt.x;
       const y = side === 'above' ? pt.y - off : side === 'below' ? pt.y + off : pt.y;
       const lines = list.map((b) => {
+        const need = over?.beats.get(beats.indexOf(b));
         const el = h(
           'span',
-          { class: 'lr-cap-line', 'data-kind': b.kind },
-          capBeatText(b, this.puzzle.pulses),
+          {
+            class: 'lr-cap-line',
+            'data-kind': b.kind,
+            ...(need === undefined ? {} : { 'data-warn': '' }),
+          },
+          capBeatText(b, this.puzzle.pulses, need),
         );
         if (live) el.hidden = true;
         this.capLines.push(el);

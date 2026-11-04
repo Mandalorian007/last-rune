@@ -3,12 +3,11 @@
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
 import { button, h } from '@thunderclap/engine/ui';
-import { codexEntry } from '../../content/codex';
+import { codexEntry, FIXED_NOTE, FIXED_NOTE_FULL, YOURS_NOTE } from '../../content/codex';
 import { gemNudge, TEACH_NUDGE } from '../../content/lines';
 import { isRotational } from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
 import {
-  FIXED_LINE,
   GEM_NAME,
   INFO_TAG,
   INTRO_FADE,
@@ -17,7 +16,6 @@ import {
   RING_RULE,
   TEACH_IDLE,
   TOUCH_CARD_SECS,
-  YOURS_LINE,
 } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { introButton, pickInfo } from './moments';
@@ -129,12 +127,12 @@ export const infoMethods = {
   chipRule(this: AltarScene, r: { gem: GemKind; how: InfoHow }, intro = false): string {
     const line = codexEntry(r.gem).chip;
     if (r.how === 'turns') return `${line} Turn it to fit.`;
-    // The arrival card's gold line already shows which gem; it says just "Fixed." so the card
+    // The arrival card's gold line already shows which gem; it says just "Built in." so the card
     // fits an SE. A tap on the gem says the whole line.
-    if (r.how === 'fixed') return `${intro ? 'Fixed.' : FIXED_LINE} ${line}`;
+    if (r.how === 'fixed') return `${intro ? FIXED_NOTE : FIXED_NOTE_FULL} ${line}`;
     // Only where the same card also teaches a fixed gem (the contrast is the lesson); elsewhere
     // the lit tray tile says it, and an SE has no room for the extra line.
-    if (intro && r.how === 'tray' && this.news.fixed.length > 0) return `${YOURS_LINE} ${line}`;
+    if (intro && r.how === 'tray' && this.news.fixed.length > 0) return `${YOURS_NOTE} ${line}`;
     return line;
   },
 
@@ -142,7 +140,6 @@ export const infoMethods = {
   learnFixed(this: AltarScene): void {
     this.teachFixed = [];
     this.introLeft = 0;
-    this.teachChips = false;
   },
 
   updateTeach(this: AltarScene, dt: number): void {

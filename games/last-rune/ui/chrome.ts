@@ -18,6 +18,7 @@ import {
   button,
   type CssChrome,
   createRotateCard,
+  defaultTheme,
   type LayoutSpec,
   type Overlay,
   type RotateCard,
@@ -55,18 +56,16 @@ export const CHROME_LAYOUT: LayoutSpec = {
     },
     'phone-portrait': {
       columns: [56, 'fill', 64],
-      // The picture's row is about a 16:9 picture tall at phone widths (375-430 → 211-242 px),
-      // the menu's row holds Play (or Continue, New game) and Settings, FUSE's lane is under
-      // it. ws/port-altar-2 review (the upright title was top-heavy): that group stands in the
-      // middle of the screen, the slack above it (`fill`, Full screen at its top) a little more
-      // than the band below (the links at its bottom, for the thumb), so the picture and the
-      // buttons, without FUSE's line, sit about mid-screen (390×844: 219 px over, 118 under).
+      // chrome-polish-3 (Gate 2: the upright title was a thin letterboxed band with black above
+      // and below): the picture takes every row the buttons, FUSE's lane and the links leave,
+      // and the title fills that frame's height, cropping the sides (FILL_BANDS.title), so the
+      // screen is the room from the Full screen row down to the menu.
       rows: [
+        48,
         'fill',
-        { frac: 0.27, min: 190, max: 246 },
-        { frac: 0.22, min: 172, max: 196 },
+        { frac: 0.2, min: 150, max: 190 },
         { frac: 0.11, min: 72, max: 104 },
-        { frac: 0.14, min: 64, max: 140 },
+        { frac: 0.09, min: 56, max: 96 },
       ],
       areas: [
         'top         top         top',
@@ -90,6 +89,8 @@ const DOCKED_CAPTION = new Set(['title', 'journal']);
  * Scenes drawn as landscape art (the hall's doors, the altar, the journal's spread, the
  * ending's stage): an upright phone is asked to turn. The title and the panels read upright.
  */
+/** The journal's bars (chrome-polish-3): the desk's edge colour, so the desk runs edge to edge. */
+const DESK_BARS = 'radial-gradient(120% 90% at 50% 45%, #1c0b06, #0b0503)';
 const LANDSCAPE_ONLY = new Set(['hall', 'puzzle', 'solve', 'journal', 'ending']);
 /** Scenes that show the HUD (☰). On phones it sits at the top of the right rail. */
 const HUD_SCENES = new Set(['hall', 'puzzle', 'solve']);
@@ -105,7 +106,8 @@ const ROTATE = {
     accent: '#e8c06a',
     glow: 'rgba(232,192,106,0.35)',
     muted: '#cbb991',
-    font: "Georgia, 'Times New Roman', serif",
+    // The game's serif (chrome-polish-3: the rotate card was the one screen in Georgia).
+    font: defaultTheme.fontBody,
   },
 } as const;
 
@@ -170,7 +172,7 @@ export function createGameChrome(opts: {
   chrome: CssChrome | null;
   ui: Overlay;
   hud: HTMLElement;
-  surface: Pick<Surface, 'setFrame'>;
+  surface: Pick<Surface, 'setFrame' | 'root'>;
   device: DeviceMode;
 }): GameChrome {
   const { chrome, ui, hud, surface, device } = opts;
@@ -181,6 +183,10 @@ export function createGameChrome(opts: {
   let rotate: RotateCard | null = null;
 
   const frame = () => {
+    // Phones: the bars beside the journal's desk are the desk's own dark wood, not the night's ink.
+    const bars = chrome?.active && state === 'journal' ? DESK_BARS : '';
+    surface.root.style.background = bars;
+    doc.body.style.background = bars;
     const upright =
       !!chrome?.active &&
       chrome.layout.formFactor === 'phone-portrait' &&
@@ -235,6 +241,8 @@ export function createGameChrome(opts: {
       hudHandle?.remove();
       rotate?.destroy();
       surface.setFrame(null);
+      surface.root.style.background = '';
+      doc.body.style.background = '';
     },
   };
 }
@@ -246,6 +254,8 @@ export function createGameChrome(opts: {
  */
 export function fullscreenButton(fullscreen: HostFullscreen): {
   element: HTMLButtonElement;
+  /** False where it can never show (iPhone Safari, a frame without it): don't place it at all. */
+  readonly possible: boolean;
   destroy(): void;
 } {
   const win = window;
@@ -268,6 +278,7 @@ export function fullscreenButton(fullscreen: HostFullscreen): {
   update();
   return {
     element,
+    possible: !refused && fullscreen.available(),
     destroy() {
       off();
       element.remove();

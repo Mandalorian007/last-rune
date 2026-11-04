@@ -671,22 +671,46 @@ export const SOCKET_WGSL = /* wgsl */ `${LIGHTS_WGSL}
     }
     let lit = lights_shade(in.world, hgt * 6.0, n, 8.0);
     let grain = 0.9 + 0.15 * engine_noise(p * 22.0 + seed);
-    let iron = vec3f(0.032, 0.034, 0.04) * grain;
-    let steel = vec3f(0.09, 0.092, 0.1);
-    let base = mix(iron, steel, riv);
-    var col = base * (0.25 + lit.diffuse * 0.55) + lit.spec * mix(0.06, 0.16, riv);
+    // altar-truth: heavy bronze, not dark iron, so it reads at arm's length on a phone; still
+    // lit metal and never a glow, so it can't pass for a selection mark.
+    let bronze = vec3f(0.30, 0.17, 0.06) * grain;
+    let brass = vec3f(0.55, 0.38, 0.14);
+    let base = mix(bronze, brass, riv);
+    var col = base * (0.35 + lit.diffuse * 0.65) + lit.spec * mix(0.10, 0.22, riv);
     // A dark seam at both edges so the ring reads cut, not painted, on any stone.
-    col *= 1.0 - 0.6 * (exp(-pow((r - r0) * 30.0, 2.0)) + exp(-pow((r - r1) * 30.0, 2.0)));
-    col = max(col, base * 0.25);
-    // Pale bevelled outer edge (filed steel), brightest toward the light above.
+    col *= 1.0 - 0.7 * (exp(-pow((r - r0) * 30.0, 2.0)) + exp(-pow((r - r1) * 30.0, 2.0)));
+    col = max(col, base * 0.3);
+    // Pale bevelled outer edge (filed bronze), brightest toward the light above.
     let bev = exp(-pow((r - (r1 - 0.06)) / 0.035, 2.0)) * (1.0 - riv);
-    col = mix(col, vec3f(0.30, 0.29, 0.27) * (0.7 + 0.3 * max(-rd.y, 0.0)), bev * 0.75);
+    col = mix(col, vec3f(0.62, 0.48, 0.26) * (0.7 + 0.3 * max(-rd.y, 0.0)), bev * 0.75);
     // Rivet heads catch a fixed pale glint so they read even in the dark.
     let rc = vec2f(p.x - sign(p.x) * mid * 0.70710678, p.y - sign(p.y) * mid * 0.70710678);
     let glint = 1.0 - smoothstep(0.0, 0.5, length(rc / rivR + vec2f(0.35, 0.35)));
-    col = mix(col, vec3f(0.30, 0.29, 0.27), riv * 0.5 * glint);
+    col = mix(col, vec3f(0.70, 0.58, 0.36), riv * 0.5 * glint);
+    // The lock pip (altar-truth): the lower-right rivet is a bigger brass disc carrying a dark
+    // padlock (body and shackle), so "can't move this" reads without the card.
+    let lc = p - vec2f(1.0, 1.0) * mid * 0.70710678;
+    let lr = length(lc);
+    let pipR = 0.27;
+    let pip = 1.0 - smoothstep(pipR - 0.03, pipR + 0.005, lr);
+    var lockA = 0.0;
+    if (pip > 0.0) {
+      let u = lc / pipR; // -1..1 across the pip, y down
+      let bodyD = max(abs(u.x) - 0.42, abs(u.y - 0.22) - 0.32);
+      let body = 1.0 - smoothstep(-0.02, 0.06, bodyD);
+      let sh = abs(length(u - vec2f(0.0, -0.12)) - 0.28) - 0.09;
+      let shackle = (1.0 - smoothstep(-0.02, 0.06, sh)) * step(u.y, -0.08);
+      lockA = max(body, shackle);
+      let dome = 1.0 - dot(u, u) * 0.35;
+      let disc = vec3f(0.78, 0.58, 0.24) * (0.55 + 0.45 * dome) * (0.7 + 0.3 * max(-u.y, 0.0));
+      let ink = vec3f(0.05, 0.03, 0.015);
+      // A dark rim keeps the pip apart from the band.
+      let rim = smoothstep(0.78, 0.95, lr / pipR);
+      let pc = mix(mix(disc, ink, lockA), ink, rim * 0.8);
+      col = mix(col, pc, pip);
+    }
     col *= lights_floor(in.world);
-    let a = max(band, riv) * 0.98;
+    let a = max(max(band, riv), pip) * 0.98;
     o.color = vec4f(col, a);
     o.emissive = vec4f(0.0, 0.0, 0.0, a);
     return o;

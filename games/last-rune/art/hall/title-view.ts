@@ -10,7 +10,13 @@
  * title → hall → title never rebakes or leaks.
  */
 import type { DrawParams, Frame, Renderer } from '@thunderclap/engine/render';
-import type { FuseSpot, TitleView, TitleViewFrame, ViewContext } from '../../scenes/views';
+import {
+  type FuseSpot,
+  TITLE_UPRIGHT,
+  type TitleView,
+  type TitleViewFrame,
+  type ViewContext,
+} from '../../scenes/views';
 import { HALL_WINDOW_UNIFORM_FLOATS } from '../../shaders/hall-shaders';
 import { type CandleInstance, CandleRenderer } from '../materials/candles';
 import { EmbossLabel, EmbossRenderer } from '../materials/emboss';
@@ -34,6 +40,10 @@ const STROLL_SPEED = 1.4;
 /** After the knock he stays and stares at the storm cell this long. */
 const KNOCK_STARE = 6;
 const TITLE_Y = 228;
+/** Upright phones: the name over the visible slice, smaller so it fits across it. */
+const UPRIGHT_TITLE = { x: TITLE_UPRIGHT.focusX, y: 150, scale: 0.6 } as const;
+/** Upright, the lancet windows stand shorter, under the name and its subtitle. */
+const UPRIGHT_WINDOW = { y: 520, h: 380 } as const;
 const WINDOWS = [
   { x: 250, y: 420, w: 150, h: 520 },
   { x: 1670, y: 420, w: 150, h: 520 },
@@ -158,7 +168,6 @@ export class StormTitleView implements TitleView {
   }
 
   render(frame: Frame, s: TitleViewFrame): void {
-    void s;
     const hall = this.hall;
     const kit = this.kit;
     const L = this.buildLights();
@@ -170,8 +179,13 @@ export class StormTitleView implements TitleView {
     frame.clear(0, 0, 0, 1);
     hall.wall.draw(frame, W / 2, H / 2, W, H, undefined, 1, 0.07);
     hall.floor.draw(frame, W / 2, (FLOOR_Y + H) / 2, W, H - FLOOR_Y, undefined, 1, 0.16);
-    this.drawWindows(frame, L);
-    kit.emboss.draw(frame, kit.title, W / 2, TITLE_Y, { shine: 1.2, glow: 0.6 });
+    this.drawWindows(frame, L, !!s.upright);
+    if (s.upright) {
+      const t = UPRIGHT_TITLE;
+      kit.emboss.draw(frame, kit.title, t.x, t.y, { shine: 1.2, glow: 0.6, scale: t.scale });
+    } else {
+      kit.emboss.draw(frame, kit.title, W / 2, TITLE_Y, { shine: 1.2, glow: 0.6 });
+    }
     this.storm.draw(frame, L);
     kit.candles.drawBodies(frame, this.all);
     kit.candles.drawFlames(frame, this.all);
@@ -242,7 +256,7 @@ export class StormTitleView implements TitleView {
     return L;
   }
 
-  private drawWindows(frame: Frame, L: LightSet): void {
+  private drawWindows(frame: Frame, L: LightSet, upright: boolean): void {
     const u = this.windowU;
     u.set(L.data, 0);
     u[PROP_LIGHT_FLOATS] = this.time;
@@ -257,6 +271,8 @@ export class StormTitleView implements TitleView {
       wd.params[0] = lt.flash * (struck ? 1 : 0.45);
       wd.params[2] = lt.boltX * (WINDOWS[i]!.w * 0.3);
       wd.params[3] = struck ? lt.bolt : 0;
+      wd.dp.y = upright ? UPRIGHT_WINDOW.y : WINDOWS[i]!.y;
+      wd.dp.h = upright ? UPRIGHT_WINDOW.h : WINDOWS[i]!.h;
       frame.sprite(mat, wd.dp);
     }
   }

@@ -29,6 +29,12 @@ ${A} .lr-need-lamp[data-on] {
   background: radial-gradient(circle at 40% 35%, #effdff 0 25%, #5fe6ff 60%, #1fb5e0);
   box-shadow: 0 0 0 1px #d6fbff, 0 0 ${cpx(7)} ${cpx(2)} rgba(63,224,255,0.85);
 }
+/* altar-truth: the Capacitor's plan shows more than this gauge takes: the lamp warns red. */
+${A} .lr-altar-need[data-warn] { border-color: #ff6a4d; }
+${A} .lr-altar-need[data-warn] .lr-need-lamp[data-on] {
+  background: radial-gradient(circle at 40% 35%, #fff0ea 0 25%, #ff7a5c 60%, #d8341c);
+  box-shadow: 0 0 0 1px #ffd6cc, 0 0 ${cpx(7)} ${cpx(2)} rgba(255,90,60,0.85);
+}
 ${A} .lr-altar-need[data-lamp] .lr-need-row { display: inline-flex; align-items: center; }
 /* Hide the leftover "Strike 1: 2: " parts if any, and keep "got" as one compact line. */
 ${A} .lr-altar-need .lr-need-strikes { display: none; }
@@ -42,6 +48,15 @@ ${A} .lr-altar-need:is([data-align="up"], [data-align="down"]) .lr-need-got::bef
 ${A} .lr-altar-verdict .lr-verdict-strikes {
   display: block; margin-top: ${cpx(2)}; font-family: var(--tc-font-ui); font-size: ${tpx(12.5)}; line-height: 1.3;
   letter-spacing: 0; color: #f4e6c4;
+}
+/* altar-truth: Turn's target on a phone, a small gold ↻ on the gem's corner (the one the Turn
+   button will rotate: the gem just placed, else the one in hand). */
+.tc-overlay .lr-turn-target[hidden] { display: none; }
+${A} .lr-turn-target {
+  position: absolute; pointer-events: none; transform: translate(-50%, -50%); z-index: 2;
+  width: ${cpx(22)}; height: ${cpx(22)}; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: ${tpx(15)}; line-height: 1; color: var(--lr-gold);
+  background: rgba(20,16,12,0.92); border: 1px solid rgba(232,192,106,0.9); box-shadow: 0 ${cpx(1)} ${cpx(4)} rgba(0,0,0,0.7);
 }
 /* mobile-7-strike end */
 `;

@@ -9,12 +9,14 @@
 export const EMOJI_FONT =
   "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', 'Android Emoji', 'EmojiOne Color', sans-serif";
 
+// chrome-polish-3 (Gate 2 review 5: "reads as a real app"): FUSE's idea of a hangout, drawn in
+// the hall's own wood, ink and gold and the game's serif, not a chat app's slate and sans.
 export const HANGOUT_CSS = /* css */ `
 .tc-overlay .lr-hg {
   position: absolute; left: 200px; top: 92px; width: 1520px; height: 868px; display: flex;
   border-radius: 18px; overflow: hidden; color: #e8dcc0;
-  font-family: var(--tc-font-ui), ${EMOJI_FONT}; font-size: 25px; line-height: 1.35;
-  background: linear-gradient(180deg, #30343f 0%, #262932 100%);
+  font-family: var(--tc-font-body), ${EMOJI_FONT}; font-size: 25px; line-height: 1.35;
+  background: linear-gradient(180deg, #3a2a1c 0%, #2a1e14 100%);
   border: 2px solid rgba(232,192,106,0.5);
   box-shadow: 0 30px 90px #2a1400b0, 0 0 0 6px #ffd98a22, inset 0 1px 0 #ffffff1a;
   opacity: 0; transform: translateY(26px) scale(0.98); transform-origin: 50% 55%;
@@ -30,7 +32,7 @@ export const HANGOUT_CSS = /* css */ `
 /* Rail: the server's badge, selected. */
 .tc-overlay .lr-hg-rail {
   flex: none; width: 96px; padding-top: 22px; display: flex; flex-direction: column; align-items: center;
-  background: #1b1d23; border-right: 1px solid #00000055; position: relative;
+  background: #1a120b; border-right: 1px solid #00000055; position: relative;
 }
 .tc-overlay .lr-hg-rail::before {
   content: ''; position: absolute; left: 0; top: 34px; width: 6px; height: 44px; border-radius: 0 6px 6px 0; background: #fff0b8;
@@ -42,7 +44,7 @@ export const HANGOUT_CSS = /* css */ `
 }
 
 /* Sidebar: the star. */
-.tc-overlay .lr-hg-side { flex: none; width: 400px; display: flex; flex-direction: column; background: #23252d; }
+.tc-overlay .lr-hg-side { flex: none; width: 400px; display: flex; flex-direction: column; background: #241910; }
 .tc-overlay .lr-hg-server {
   flex: none; height: 76px; display: flex; align-items: center; padding: 0 24px;
   font-family: var(--tc-font-display); font-weight: 700; font-size: 29px; color: #fff0b8; letter-spacing: 0.5px;
@@ -82,7 +84,7 @@ export const HANGOUT_CSS = /* css */ `
 .tc-overlay .lr-hg-here .lr-hg-face { width: 100% !important; height: 100% !important; }
 
 /* Main pane. */
-.tc-overlay .lr-hg-main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #2b2e37; }
+.tc-overlay .lr-hg-main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #2f2217; }
 .tc-overlay .lr-hg-top {
   flex: none; height: 76px; display: flex; align-items: center; gap: 10px; padding: 0 30px;
   font-weight: 700; font-size: 26px; color: #fbf3e0; border-bottom: 1px solid #00000066; box-shadow: 0 1px 0 #ffffff0d;
@@ -124,7 +126,7 @@ export const HANGOUT_CSS = /* css */ `
   box-shadow: 0 6px 16px #0007, inset 4px 0 0 #c9533a88;
 }
 .tc-overlay .lr-hg-form small {
-  display: block; font-family: var(--tc-font-ui); font-size: 15px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #7a5a30;
+  display: block; font-family: var(--tc-font-display); font-size: 15px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #7a5a30;
 }
 .tc-overlay .lr-hg-form p { margin: 0; }
 .tc-overlay .lr-hg-form span { color: #7a5a30; }
@@ -147,7 +149,7 @@ export const HANGOUT_CSS = /* css */ `
 /* Message bar: FUSE types here, then sends. */
 .tc-overlay .lr-hg-compose {
   flex: none; margin: 0 34px; height: 66px; border-radius: 12px; display: flex; align-items: center; padding: 0 24px;
-  background: #353946; border: 1px solid #ffffff12; color: #fbf3e0; white-space: nowrap; overflow: hidden;
+  background: #45321f; border: 1px solid #ffffff12; color: #fbf3e0; white-space: nowrap; overflow: hidden;
 }
 .tc-overlay .lr-hg-placeholder { color: #7d776c; }
 .tc-overlay .lr-hg-compose[data-typing] .lr-hg-placeholder { display: none; }
