@@ -29,8 +29,8 @@ import {
  * Last Rune's region tracks on phones. Landscape: rails left and right (the ☰ at the top of the
  * right one), Full screen along the top, the title's menu and links along the bottom,
  * FUSE's lane above it, full width so a line runs on two rows at most. Portrait (the title
- * only): the picture high under Full screen, the menu right beneath it, FUSE's lane under that,
- * the links at the bottom for the thumb. Empty tracks collapse.
+ * only): the picture, the menu right beneath it and FUSE's lane under that, centred upright;
+ * Full screen at the top, the links at the bottom for the thumb. Empty tracks collapse.
  */
 export const CHROME_LAYOUT: LayoutSpec = {
   // A phone is what the scaled overlay calls one (`device.phone`: the 1920×1080 design fits
@@ -56,9 +56,18 @@ export const CHROME_LAYOUT: LayoutSpec = {
     'phone-portrait': {
       columns: [56, 'fill', 64],
       // The picture's row is about a 16:9 picture tall at phone widths (375-430 → 211-242 px),
-      // so it sits high, under Full screen, and the menu starts right beneath it; the slack
-      // goes to the menu's row (the menu at its top), not to bands around the picture.
-      rows: [56, { frac: 0.27, min: 190, max: 246 }, 'fill', { frac: 0.11, min: 72, max: 104 }, 64],
+      // the menu's row holds Play (or Continue, New game) and Settings, FUSE's lane is under
+      // it. ws/port-altar-2 review (the upright title was top-heavy): that group stands in the
+      // middle of the screen, the slack above it (`fill`, Full screen at its top) a little more
+      // than the band below (the links at its bottom, for the thumb), so the picture and the
+      // buttons, without FUSE's line, sit about mid-screen (390×844: 219 px over, 118 under).
+      rows: [
+        'fill',
+        { frac: 0.27, min: 190, max: 246 },
+        { frac: 0.22, min: 172, max: 196 },
+        { frac: 0.11, min: 72, max: 104 },
+        { frac: 0.14, min: 64, max: 140 },
+      ],
       areas: [
         'top         top         top',
         'left        fill        right',

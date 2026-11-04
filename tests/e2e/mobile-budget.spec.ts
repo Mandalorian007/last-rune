@@ -3,7 +3,7 @@ import { LINES, wordCount } from '../../games/last-rune/content/lines';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { MACHINE_IDS } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
-import { DEV_URL, waitFrames } from './helpers';
+import { DEV_URL, settled, waitFrames } from './helpers';
 
 // mobile-2: the phone layout's hard budgets, on every altar, at the two tightest real phone
 // viewports (browser bars showing; the iPhone's notch insets emulated):
@@ -150,6 +150,8 @@ async function measure(page: Page) {
     for (const sel of [
       '.lr-hud > button',
       '.lr-altar-actions button',
+      // Phones: the rail buttons in the chrome's regions (altar-chrome.ts).
+      '.tc-region > [data-action]',
       '.lr-altar-title h2',
       '.lr-altar-turnbtn',
     ]) {
@@ -421,6 +423,10 @@ function cardProblems(m: M, label: string): string[] {
   return out;
 }
 
+/** What `measure` reads: labels, cards, caption, lane, rails and HUD. */
+const MEASURED =
+  '.lr-altar-need, .lr-altar-tip:not([hidden]), .lr-altar-verdict:not([hidden]), .tc-caption:not([hidden]), .lr-altar-lane, .lr-altar-count, .tc-region > [data-action], .tc-region > .lr-altar-turnbtn, .lr-hud button';
+
 for (const vp of PHONES) {
   test.describe(vp.name, () => {
     test.use({
@@ -473,7 +479,7 @@ for (const vp of PHONES) {
           { id, ids: [...MACHINE_IDS] as string[] },
         );
         await expect(page.locator('.lr-altar')).toBeVisible();
-        await waitFrames(page, 8);
+        await settled(page, MEASURED);
         const m = await measure(page);
         const wMin = m.hShare >= HEIGHT_BOUND ? 0 : 0.45;
         if (m.hShare < HSHARE_MIN[vp.name] - 0.005)
@@ -499,7 +505,7 @@ for (const vp of PHONES) {
         await page.evaluate((t) => {
           void (window as G).__game.fuse.say(t, { hold: 0 });
         }, LONGEST);
-        await waitFrames(page, 6);
+        await settled(page, MEASURED);
         const mc = await measure(page);
         problems.push(...cardProblems(mc, `${id} caption`));
         note(mc);
@@ -514,7 +520,7 @@ for (const vp of PHONES) {
         // Every gem in the tray: its chip.
         for (const s0 of L.tray) {
           await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);
-          await waitFrames(page, 6);
+          await settled(page, MEASURED);
           const mt = await measure(page);
           problems.push(...cardProblems(mt, `${id} chip ${s0.gem}`));
           note(mt);
@@ -543,7 +549,7 @@ for (const vp of PHONES) {
             for (let x = 0; x < L.cols && !placed; x++) {
               if (taken(x, y)) continue;
               await page.touchscreen.tap(ob.x + turner.x * k, ob.y + turner.y * k);
-              await waitFrames(page, 3);
+              await settled(page, MEASURED);
               const nowHum = hum(await measure(page));
               if (firstHum < 0) firstHum = nowHum;
               heldHum = Math.max(heldHum, nowHum);
@@ -557,7 +563,7 @@ for (const vp of PHONES) {
                 await waitFrames(page, 3);
               }
             }
-          await waitFrames(page, 6);
+          await settled(page, MEASURED);
           const mp = await measure(page);
           problems.push(...cardProblems(mp, `${id} placed ${turner.gem}`));
           if (!mp.turnActive) problems.push(`${id}: Turn not lit for the placed ${turner.gem}`);
@@ -582,7 +588,7 @@ for (const vp of PHONES) {
         if (await sure.isVisible()) await sure.tap();
         await expect(page.locator('.lr-altar-verdict')).toBeVisible({ timeout: 15_000 });
         await page.evaluate(() => (window as G).__game.fuse.hush());
-        await waitFrames(page, 6);
+        await settled(page, MEASURED);
         const mv = await measure(page);
         problems.push(...cardProblems(mv, `${id} verdict`));
         note(mv);

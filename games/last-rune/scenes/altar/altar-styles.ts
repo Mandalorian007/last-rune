@@ -3,6 +3,7 @@
  * shared `ui/styles.ts` stays untouched; injected once per document.
  */
 import { scaleFontSizes } from '@thunderclap/engine/ui';
+import { ALTAR_CHROME_CSS } from './altar-chrome';
 import { STRIKE_CSS } from './strike-styles';
 
 const CSS = /* css */ `
@@ -335,6 +336,6 @@ export function ensureAltarStyles(doc: Document = document): void {
   injected.add(doc);
   const el = doc.createElement('style');
   el.dataset.lr = 'altar';
-  el.textContent = scaleFontSizes(CSS + STRIKE_CSS);
+  el.textContent = scaleFontSizes(CSS + STRIKE_CSS + ALTAR_CHROME_CSS);
   doc.head.append(el);
 }

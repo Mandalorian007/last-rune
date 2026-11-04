@@ -12,7 +12,7 @@
 export const C = '.tc-overlay[data-units="css"][data-form-factor^="phone"]:not(#lr-none)';
 /** Either overlay off phones: phone-only controls (✕, segmented toggles) hide there. */
 const CP = '.tc-overlay[data-units="css"][data-form-factor="phone-portrait"]:not(#lr-none)';
-const CL = '.tc-overlay[data-units="css"][data-form-factor="phone-landscape"]:not(#lr-none)';
+export const CL = '.tc-overlay[data-units="css"][data-form-factor="phone-landscape"]:not(#lr-none)';
 const OFF = '.tc-overlay:not([data-phone]):not([data-form-factor^="phone"])';
 
 export const CHROME_CSS = /* css */ `
@@ -388,8 +388,11 @@ ${C} .lr-title-links .tc-link-row { gap: 8px; }
 ${C} .lr-title-menu { position: relative; inset: auto; transform: none; gap: 8px; }
 ${C} .tc-region[data-region="bottom"] .lr-title-menu { flex-direction: row; margin: 0 auto; }
 ${C} .tc-region[data-region="cardLane"] { justify-content: center; }
-/* Upright: the menu right under the picture (its row takes the slack below it). */
+/* Upright: the menu right under the picture; the group stands mid-screen, Full screen at the
+   top of the slack above it, the links at the bottom of the slack below. */
 ${CP} .tc-region[data-region="cardLane"]:has(.lr-title-menu) { justify-content: flex-start; padding-top: 14px; }
+${CP} .tc-region[data-region="top"] { align-items: flex-start; }
+${CP} .tc-region[data-region="bottom"] { align-items: flex-end; }
 ${C} .tc-region[data-region="cardLane"] .lr-title-menu { align-self: center; }
 ${C} .lr-title-menu .lr-gold-button {
   min-width: 150px; min-height: 48px; padding: 0 20px; border-radius: 9px;

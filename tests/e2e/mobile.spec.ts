@@ -117,7 +117,7 @@ test('intake desk by touch alone: tap gems onto sockets, tap Strike, tap Continu
   // Touch words, no key caps. (The data-touch and data-phone flags behind them are the engine's
   // device mode: packages/engine/e2e/ui.spec.ts.)
   await expect(page.locator('.lr-altar-hint')).toContainText('Tap');
-  await expect(page.locator('.lr-altar-actions kbd').first()).toBeHidden();
+  await expect(page.locator('[data-action="undo"] kbd')).toBeHidden();
 
   await buildByTouch(page, 'intake-desk');
   // Undo by touch takes the last gem off; tapping its socket again puts it back.

@@ -44,6 +44,7 @@ import { getMachine } from '../../rules/progression';
 import type { Cell, GemKind, MachineId } from '../../rules/types';
 import { codexPages } from '../../ui/codex-data';
 import { CSS_PALETTE } from '../../ui/styles';
+import { altarFrame, placeAltarRails } from './altar-chrome';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, DANGER, GOLD } from './altar-view';
 import { BoardState } from './board';
@@ -71,7 +72,6 @@ import {
   PHONE_GUTTER_CARD,
   type PhoneBand,
   type PropSpot,
-  phoneFrameFor,
   snapCell,
   TRAY_CENTER_X,
   traySlotAt,
@@ -360,6 +360,9 @@ export class AltarScene implements GameScene {
   private hint!: HTMLElement;
   private titleEl!: HTMLElement;
   private actionsEl!: HTMLElement;
+  private backBtn!: HTMLButtonElement;
+  /** Phones: takes the rail buttons out of their regions and the altar's tracks off the chrome. */
+  private offRails: (() => void) | null = null;
   /** The hint's mode, plus `+` when it mentions ↻ (phones say it only while it applies). */
   private hintMode = '';
   private needs: HTMLElement[] = [];
@@ -572,6 +575,8 @@ export class AltarScene implements GameScene {
 
   /** The board's view and every DOM label on it (exit, and a phone relayout). */
   private teardownView(): void {
+    this.offRails?.();
+    this.offRails = null;
     this.view.dispose();
     this.dom.remove();
     this.chipEls.length = 0;
@@ -605,7 +610,7 @@ export class AltarScene implements GameScene {
   /** The phone frame the layout was built for ('' off phones). */
   private frameKey(): string {
     const d = this.ctx.device;
-    const f = phoneFrameFor(d);
+    const f = altarFrame(d, this.ctx.chrome);
     return f ? `${f.padL},${f.padR},${f.cssPx.toFixed(3)},${f.top},${f.bottom}` : '';
   }
 
@@ -708,9 +713,12 @@ export class AltarScene implements GameScene {
         ...(this.verdict.hidden ? [] : [this.verdict]),
         ...this.needs,
         ...(this.stormLabel ? [this.stormLabel] : []),
-        this.actionsEl,
+        this.undoBtn,
+        this.clearBtn,
+        this.backBtn,
+        this.strikeBtn,
         ...(this.turnBtn.hidden ? [] : [this.turnBtn]),
-        ...ui.root.querySelectorAll<HTMLElement>('.lr-hud'),
+        ...ui.root.ownerDocument.querySelectorAll<HTMLElement>('.lr-hud'),
       ];
       for (const el of els) {
         const r = el.getBoundingClientRect();
@@ -830,6 +838,7 @@ export class AltarScene implements GameScene {
     this.strikeWord = h('span', { class: 'lr-strike-word' }, 'Strike');
     if (word) word.replaceWith(this.strikeWord);
     const back = btn('Back', 'Esc', () => this.back(), false, 'back', '\u2190');
+    this.backBtn = back;
     this.subtitle = h('small');
     this.holdingEl = h('span', { class: 'lr-altar-holding', 'aria-hidden': 'true', hidden: true });
     // The visible verdict is not a live region: it is unhidden and filled in the same frame,
@@ -864,9 +873,12 @@ export class AltarScene implements GameScene {
     this.turnBtn.hidden = true;
     this.turnShown = null;
     // Docked just right of the tray, so it never covers a socket the player may tap next.
-    const trayRight = Math.max(...L.tray.map((s) => s.x), TRAY_CENTER_X);
-    this.turnBtn.style.left = `${trayRight + 80}px`;
-    this.turnBtn.style.top = `${L.trayY}px`;
+    // Phones: at the foot of the left rail instead (altar-chrome.ts).
+    if (!L.phone) {
+      const trayRight = Math.max(...L.tray.map((s) => s.x), TRAY_CENTER_X);
+      this.turnBtn.style.left = `${trayRight + 80}px`;
+      this.turnBtn.style.top = `${L.trayY}px`;
+    }
     this.turnMark = h(
       'div',
       { class: 'lr-altar-turnmark lr-touch-only', 'aria-hidden': 'true', hidden: true },
@@ -1001,6 +1013,14 @@ export class AltarScene implements GameScene {
     }
     this.phoneCaption(true);
     this.ctx.ui.layers.hud.append(this.dom);
+    // Phones: the rail buttons in the chrome's rails, the board in what they leave (altar-chrome.ts).
+    this.offRails = placeAltarRails(this.ctx.chrome, {
+      back,
+      undo: this.undoBtn,
+      clear: this.clearBtn,
+      turn: this.turnBtn,
+      strike: this.strikeBtn,
+    });
     // Dev/e2e handle: the layout in use (tests tap cells and slots by it on phones).
     if (import.meta.env.DEV) {
       Object.defineProperty(window, '__altarLayout', {

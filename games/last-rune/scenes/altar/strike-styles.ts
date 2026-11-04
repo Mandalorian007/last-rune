@@ -13,29 +13,10 @@
 import { cpx, P, tpx } from '../../ui/phone-styles';
 
 const A = `${P} .lr-altar[data-phone]`;
-const CB = 'var(--tc-crop-b, 0px)';
 
 export const STRIKE_CSS = /* css */ `
 /* mobile-7-strike ─ Strike and the verdict at a glance (D-040 addendum 5) ─────────────── */
-${A} .lr-altar-actions [data-action="strike"] {
-  width: auto; min-width: ${cpx(64)}; height: ${cpx(58)}; padding: 0 ${cpx(14)};
-  right: calc(-1 * var(--tc-bar, 0px) + ${cpx(12)}); bottom: calc(${CB} + ${cpx(6)});
-  font-family: var(--tc-font-display); font-size: ${tpx(15)}; letter-spacing: 0.3px; white-space: nowrap;
-}
-${A} .lr-altar-actions [data-action="strike"] > span { flex-direction: row; }
-${A} .lr-altar-actions .lr-strike-word { white-space: nowrap; line-height: 1; }
-${A} .lr-altar-actions .lr-strike-n { display: none; }
-/* A verdict too tall for the column owns the corner until it clears (altar-scene arrangeColumn). */
-${A} .lr-altar-actions [data-action="strike"][data-yield] { visibility: hidden; }
-/* Ready: every gauge's lamp is lit. A bright rim and a slow glow (steady under reduced motion). */
-${A} .lr-altar-actions .lr-gold-button[data-ready] { animation: lr-strike-ready-ph 1.8s ease-in-out infinite; }
-@keyframes lr-strike-ready-ph {
-  0%, 100% { box-shadow: 0 0 0 ${cpx(2)} rgba(255,236,170,0.85), 0 0 ${cpx(8)} ${cpx(1)} rgba(255,214,120,0.45); }
-  50% { box-shadow: 0 0 0 ${cpx(3)} #fff3c8, 0 0 ${cpx(20)} ${cpx(5)} rgba(255,214,120,0.9); }
-}
-[data-reduced-motion] ${A} .lr-altar-actions .lr-gold-button[data-ready] {
-  animation: none; box-shadow: 0 0 0 ${cpx(3)} #fff3c8, 0 0 ${cpx(16)} ${cpx(4)} rgba(255,214,120,0.8);
-}
+/* Strike itself stands at the foot of the right rail on the chrome (altar-chrome.ts). */
 
 /* The reach lamp: dark and hollow until the charge path reaches the gauge, then lit cyan, the
    colour of the route. */

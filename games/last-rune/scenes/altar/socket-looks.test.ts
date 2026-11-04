@@ -5,7 +5,8 @@ import { PUZZLES } from '../../content/puzzles';
 import { altarDims } from '../../rules/model';
 import { GEM_KINDS } from '../../rules/types';
 import { trayRemaining } from '../../rules/validate';
-import { computeLayout, phoneFrameFor } from './layout';
+import { altarRegions, frameFromRegions } from './altar-chrome';
+import { computeLayout } from './layout';
 import { huggedSlabDistance, legalSockets, recessCells, socketLooks } from './socket-looks';
 
 describe('socket looks (mobile-4-board)', () => {
@@ -68,13 +69,18 @@ describe('hugged slab (mobile-5-board)', () => {
   ] as const;
   const frames = PHONES.map(([w, h]) => {
     const r = computeFillWidth(w, h, 1920, 1080, { minVisible: 860, focusY: 540 });
-    const frame = phoneFrameFor({
-      phone: true,
-      cssPx: 1 / r.scale,
-      bar: r.x / r.scale,
-      cropT: Math.round(-r.y / r.scale),
-      cropB: Math.round((r.y + r.height - h) / r.scale),
-    });
+    // The board's frame from the altar's rail regions at this size (altar-chrome.ts).
+    const frame = frameFromRegions(
+      {
+        phone: true,
+        cssPx: 1 / r.scale,
+        bar: r.x / r.scale,
+        cropT: Math.round(-r.y / r.scale),
+        cropB: Math.round((r.y + r.height - h) / r.scale),
+      },
+      altarRegions(w, h),
+      w,
+    );
     if (!frame) throw new Error('no phone frame');
     return frame;
   });

@@ -20,14 +20,16 @@ export function teach7Css({ P, cpx, tpx }: SheetKit): string {
    (se/16: "Holding Channel" beside a Capacitor card). It returns when the hand is empty. */
 ${A}[data-hand] .lr-altar-lane .lr-altar-cap[data-plan] { display: none; }
 
-/* The puzzle's name stays while a gem is in hand: it shrinks to a small line and the
-   "Holding X" pill sits under it, both over the tray (the pill no longer covers the name). */
+/* The puzzle's name stays while a gem is in hand: it shrinks to a 12 px line and the
+   "Holding X" pill sits under it, both over the tray (the pill no longer covers the name).
+   ws/port-altar-2 review: the name stands wholly on screen (3 px in, a line box its glyphs
+   fit) and the pill clears it by 2 px; the tray's first row sits under both (PH.titleH). */
 ${A} .lr-altar-title[data-holding] {
-  top: calc(var(--tc-crop-t, 0px) + ${cpx(0.5)}); display: flex; flex-direction: column; align-items: center;
-  gap: ${cpx(1)};
+  top: calc(var(--tc-crop-t, 0px) + ${cpx(3)}); display: flex; flex-direction: column; align-items: center;
+  gap: ${cpx(2)};
 }
 ${A} .lr-altar-title[data-holding] > :not(.lr-altar-holding) { visibility: visible; }
-${A} .lr-altar-title[data-holding] h2 { font-size: ${tpx(10.5)}; line-height: 1; opacity: 0.9; }
+${A} .lr-altar-title[data-holding] h2 { font-size: ${tpx(12)}; line-height: 1.2; opacity: 0.9; }
 ${A} .lr-altar-title[data-holding] .lr-altar-holding {
   position: static; padding-top: 0; padding-bottom: 0; font-size: ${tpx(12)}; line-height: 1.25;
 }
