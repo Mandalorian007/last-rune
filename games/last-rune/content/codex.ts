@@ -73,7 +73,8 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
     name: 'Gate',
     rule: 'Charge must reach the two sides beside the arrow in one strike; their sum leaves by the arrow. One side alone is lost.',
     // teach-4: "both sides" alone read as the board's left and right; they are the arrow's sides.
-    chip: 'Charge both sides of the arrow in one strike; the sum goes out.',
+    // teach-6: "both sides of the arrow" then read as its head and tail: the sides beside it.
+    chip: 'Feed both sides beside the arrow at once; sum goes out.',
     maths: 'In 4 and 4 → out 8. Only one in: lost.',
   },
   capacitor: {

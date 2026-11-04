@@ -11,7 +11,7 @@ import { DEV_URL, waitFrames } from './helpers';
 //  2. Before Strike each gauge shows a lamp (on or off, no number) that agrees with the path;
 //     Strike glows ("ready") when every lamp is lit.
 //  3. After a two-strike fail the gauge card stays compact ("Needs 8 · got 16", no per-strike
-//     chips); the verdict tells each strike in words ("Got 0, then 16; needs 8 in one strike.").
+//     chips); the verdict tells each strike in words ("Got 0, then 16; needs 8 in either strike.").
 //  4. An empty-socket fail: title "No charge reached the machine", cause "The charge hit …".
 //  5. The solve card covers no gauge and no socket; FUSE's line keeps ≥12 px off it.
 
@@ -218,11 +218,11 @@ for (const vp of PHONES) {
         chips: document.querySelectorAll('.lr-altar-need .lr-need-strikes').length,
         lamps: document.querySelectorAll('.lr-altar-need .lr-need-lamp').length,
       }));
-      if (!/Got 0, then 16; needs 8 in one strike\./.test(v.verdict))
+      if (!/Got 0, then 16; needs 8 in either strike\./.test(v.verdict))
         problems.push(`bay fail: verdict "${v.verdict}"`);
       if (/\b\d: \d/.test(v.cards.join('|')) || v.chips)
         problems.push(`bay fail: strike chips on the card "${v.cards.join('|')}"`);
-      // One line: "Needs 8 · got 16" (the dot is drawn before "got").
+      // teach-6: stacked on a multi-strike altar, "Needs 8 / got 16" (read here as one line).
       if (!v.cards.some((c) => /^Needs 8 · ?got 16$/.test(c.replace(/ got/, ' · got'))))
         problems.push(`bay fail: card reads "${v.cards.join('|')}", not "Needs 8 · got 16"`);
       if (v.lamps) problems.push('bay fail: lamps still showing after Strike');

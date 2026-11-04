@@ -335,7 +335,7 @@ describe('hints come from the room (altar-truth)', () => {
       readings: [0, 16],
       wokeOn: 1,
     };
-    expect(strikesLine(m, 2)).toBe('Got 0, then 16; needs 8 in one strike.');
+    expect(strikesLine(m, 2)).toBe('Got 0, then 16; needs 8 in either strike.');
     expect(verdictParts('Exactly right. Look at it go.')).toEqual([
       'Exactly right.',
       'Look at it go.',

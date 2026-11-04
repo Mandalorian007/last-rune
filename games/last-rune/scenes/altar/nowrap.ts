@@ -18,6 +18,7 @@ export function keepTogether(text: string): string {
       .replace(/(\d) of (?=\d)/g, `$1${NB}of${NB}`)
       // "in one strike", "per strike".
       .replace(/\bin one strike\b/g, `in${NB}one${NB}strike`)
+      .replace(/\bin (either|any one) strike\b/g, (m) => m.replace(/ /g, NB))
       .replace(/(\d) per strike\b/g, `$1${NB}per${NB}strike`)
       // "Strike ×2".
       .replace(/(\S) (×\d)/g, `$1${NB}$2`)

@@ -57,11 +57,24 @@ export const domMethods = {
     this.hintMode = key;
     if (other && slot === 'lamp' && other === LAMP_LINE.reach) {
       // teach-5: the dot's legend, once per game: each row led by the dot as the gauge draws it.
+      // teach-6: 'off' rows draw no dot (the gauge shows none), and "Got it" retires it.
       const dot = (look: string) =>
-        h('i', { class: 'lr-need-lamp', dataset: { look }, 'aria-hidden': 'true' });
+        look === 'off'
+          ? null
+          : h('i', { class: 'lr-need-lamp', dataset: { look }, 'aria-hidden': 'true' });
+      const ok = button(
+        'Got it',
+        (e) => {
+          (e.currentTarget as HTMLElement).blur();
+          this.retireDotLegend();
+        },
+        { className: 'lr-dot-ok', ariaLabel: 'Got it: close the dot legend' },
+      );
       this.hint.replaceChildren(
-        h('span', { class: 'lr-dot-head' }, DOT_LEGEND_HEAD),
-        ...DOT_LEGEND.map((r) => h('span', { class: 'lr-dot-row' }, dot(r.look), r.text)),
+        h('span', { class: 'lr-dot-head' }, DOT_LEGEND_HEAD, ok),
+        ...DOT_LEGEND.map((r) =>
+          h('span', { class: 'lr-dot-row', dataset: { look: r.look } }, dot(r.look), r.text),
+        ),
       );
       this.hint.dataset.mode = 'slot';
       this.hint.dataset.legend = '';

@@ -130,7 +130,7 @@ ${A} .lr-altar-need .lr-need-note { color: #e6d6b2; }
 ${A} .lr-altar-need .lr-need-strikes .lr-need-strike-lead { font-style: normal; align-self: center; color: #e6d6b2; }
 /* A one-strike north/south card keeps one line after a strike: "Needs 4  got 0" side by side
    (the layout gives it one line of room, and the board fills the height). */
-${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not(:has(.lr-need-note, .lr-need-strikes)) {
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not([data-multi]):not(:has(.lr-need-note, .lr-need-strikes)) {
   flex-direction: row; align-items: baseline; gap: ${cpx(6)};
 }
 ${P} .lr-solve[data-phone] .lr-page-note, ${P} .lr-solve[data-phone] .lr-page-note b { font-size: ${tpx(12)}; }

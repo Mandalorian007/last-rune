@@ -323,12 +323,24 @@ export const columnMethods = {
     );
     lane.toggleAttribute('data-hand', dom.hasAttribute('data-hand'));
     const live = this.capEls.some((el) => !el.hasAttribute('data-plan') && el.offsetHeight > 0);
-    const cardUp = !this.verdict.hidden || !this.tip.hidden || live;
-    this.holdFuse(cardUp);
-    // card-fit: the dot's legend (four lines) gets the lane to itself. It waits while a gem's
-    // card, a teach card, the verdict or a live read-out is up (stacked under one, an SE's lane
+    const legend = this.hint.hasAttribute('data-legend');
+    // teach-6: the dot's legend outranks a gem's chip (a gem is in hand nearly all the time, so
+    // it never came up: blind review 8). The chip steps aside (CSS) until the legend retires.
+    const chip =
+      !this.tip.hidden &&
+      this.tip.dataset.source !== 'intro' &&
+      !this.tip.hasAttribute('data-full');
+    const yieldTip = legend && chip;
+    if (yieldTip !== this.tip.hasAttribute('data-yield'))
+      this.tip.toggleAttribute('data-yield', yieldTip);
+    const other = !this.verdict.hidden || (!this.tip.hidden && !yieldTip) || live;
+    // card-fit: the dot's legend (four lines) gets the lane to itself. It waits while a teach
+    // card, a pinned card, the verdict or a live read-out is up (stacked under one, an SE's lane
     // cut both short), and the Capacitor plan steps aside for it (CSS) until it retires.
-    const wait = cardUp && this.hint.hasAttribute('data-legend');
+    const wait = other && legend;
+    // teach-6: while it shows it is the column's card, so FUSE waits too (his line cut it).
+    const cardUp = other || legend;
+    this.holdFuse(cardUp);
     if (wait !== this.hint.hasAttribute('data-wait')) this.hint.toggleAttribute('data-wait', wait);
     // teach-5: a picture-first card that does not fit its lane (a short lane under a tall tray)
     // draws its picture smaller rather than scroll. card-fit: so does one whose head row is too

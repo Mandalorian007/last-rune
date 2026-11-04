@@ -450,11 +450,17 @@ test.describe('the dot legend (se)', () => {
     await dismissCard(page);
     await expect(legend).toBeVisible();
     await expect(legend).toContainText('The dot on a gauge:');
+    // teach-6: three rows; "No dot" draws none (the gauge shows none), lit and red draw theirs.
+    const rows = await legend
+      .locator('.lr-dot-row')
+      .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.look));
+    expect(rows).toEqual(['off', 'on', 'red']);
     const looks = await legend
       .locator('.lr-need-lamp')
       .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.look));
-    expect(looks).toEqual(['off', 'on', 'red']);
-    expect(await legend.textContent()).not.toMatch(/\d/);
+    expect(looks).toEqual(['on', 'red']);
+    // Never an amount, never "enough" (D-043).
+    expect(await legend.textContent()).not.toMatch(/\d|enough|exact/i);
     expect(await page.evaluate(() => !!(window as G).__game.save.get().flags.dotTold)).toBe(false);
 
     // Strike: the legend has done its job.
@@ -472,6 +478,43 @@ test.describe('the dot legend (se)', () => {
     await dismissCard(page);
     await expect(page.locator('.lr-altar-need .lr-need-lamp[data-on]').first()).toBeAttached();
     await waitFrames(page, 6);
+    await expect(legend).toHaveCount(0);
+  });
+
+  // teach-6: a gem is in hand nearly all the time, and its card used to keep the legend waiting
+  // for good (blind review 8 never saw it). Now the legend takes the gem card's place, and its
+  // own "Got it" retires it.
+  test('shows with a gem in hand, and "Got it" retires it', async ({ page }) => {
+    await boot(page, 0);
+    const legend = page.locator('.lr-altar-hint[data-legend]');
+    const id = MACHINE_IDS[0];
+    await openFresh(page, id, 1);
+    await dismissCard(page);
+    await expect(legend).toBeVisible();
+    // Hold a tray gem: the legend stays, the gem card steps aside.
+    const L = await page.evaluate(
+      () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+    );
+    const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+    const k = ob.width / 1920;
+    const slot = L.tray[0]!;
+    await page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);
+    await waitFrames(page, 6);
+    expect(await page.evaluate(() => (window as G).__altarView.held?.kind ?? null)).toBe(slot.gem);
+    await expect(legend).toBeVisible();
+    await expect(page.locator('.lr-altar-tip:not([hidden]):not([data-yield])')).toHaveCount(0);
+    // The legend is never cut: every row fits inside it.
+    const cut = await legend.evaluate(
+      (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1,
+    );
+    expect(cut).toBe(false);
+
+    const ok = legend.locator('.lr-dot-ok');
+    const b = (await ok.boundingBox())!;
+    await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+    await expect
+      .poll(() => page.evaluate(() => !!(window as G).__game.save.get().flags.dotTold))
+      .toBe(true);
     await expect(legend).toHaveCount(0);
   });
 });
