@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { GEM_KINDS, MACHINE_IDS } from '../../games/last-rune/rules/types';
 import { cellCenter, computeLayout } from '../../games/last-rune/scenes/altar/layout';
-import { DEV_URL, trackProblems, waitFrames } from './helpers';
+import { DEV_URL, strikeToVerdict, trackProblems, waitFrames } from './helpers';
 
 // bug-bash: what must fit on a 1280×720 screen at every text size (D-027: a first-time
 // player never hunts for a hidden Done button or reads text under a tab row). Each check
@@ -78,6 +78,10 @@ for (const scale of SCALES) {
   test(`every Codex spread fits at ${scale}% text, folio clear of the tab row`, async ({
     page,
   }) => {
+    // Walks every spread, and each turn has to be drawn before it is measured. Alone that is
+    // about 2 s; a renderer starved by a full parallel run draws a few frames a second, which
+    // took it past 30 s with nothing wrong (it waits on frames, not on time).
+    test.setTimeout(90_000);
     const problems = trackProblems(page);
     await boot(page, scale, ['intake-desk', 'furnace', 'splitter-mill']);
     await page.keyboard.press('KeyC');
@@ -130,9 +134,7 @@ for (const id of ['archive', 'intake-desk'] as const) {
     await expect(page.locator('.lr-altar')).toBeVisible();
     await page.waitForTimeout(400);
     // Strike an empty board and skip to the verdict: the bolt fizzles at the first socket.
-    await page.keyboard.press('KeyF');
-    await page.waitForTimeout(300);
-    await page.keyboard.press('Enter');
+    await strikeToVerdict(page);
     await expect(page.locator('.lr-altar-verdict')).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('.lr-altar-tag').first()).toBeVisible();
     await page.waitForTimeout(400);
@@ -193,9 +195,7 @@ for (const width of [1280, 1920] as const) {
       await page.waitForTimeout(200);
       await at(c.x, c.y);
       await expect(page.locator('.lr-altar-tag', { hasText: 'already here' })).toBeVisible();
-      await page.keyboard.press('KeyF');
-      await page.waitForTimeout(300);
-      await page.keyboard.press('Enter');
+      await strikeToVerdict(page);
       const hint = page.locator('.lr-altar-verdict .lr-verdict-hint');
       await expect(hint).toBeVisible({ timeout: 10_000 });
       // The empty lower arm outranks the lonely Gate it causes.
@@ -274,9 +274,7 @@ for (const [width, scale] of [
     });
     await expect(page.locator('.lr-altar')).toBeVisible();
     await page.waitForTimeout(400);
-    await page.keyboard.press('KeyF');
-    await page.waitForTimeout(300);
-    await page.keyboard.press('Enter');
+    await strikeToVerdict(page);
     const hint = page.locator('.lr-altar-verdict .lr-verdict-hint');
     await expect(hint).toBeVisible({ timeout: 10_000 });
     await expect(hint).toHaveText('Try: turn the gem at the red mark (R or scroll).');
@@ -391,9 +389,7 @@ for (const [width, scale] of [
     expect(hits(before.caption, FUSE_BODY), 'the caption covers FUSE').toBe(false);
     expect(hits(before.caption, mark), 'the caption covers the red-mark socket').toBe(false);
     // After the strike: the fail verdict (docked under the board at 1280×720, 150%).
-    await page.keyboard.press('KeyF');
-    await page.waitForTimeout(300);
-    await page.keyboard.press('Enter');
+    await strikeToVerdict(page);
     await expect(page.locator('.lr-altar-verdict .lr-verdict-hint')).toBeVisible({
       timeout: 10_000,
     });
