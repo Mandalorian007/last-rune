@@ -38,10 +38,10 @@ import { PHONE_WORDS_PER_CARD } from '../content/lines';
 import { storyTier } from '../rules/progression';
 import type { MachineId } from '../rules/types';
 import type { ViewContext, ViewCue, ViewFactories } from '../scenes/views';
+import { CHROME_LAYOUT, createGameChrome } from '../ui/chrome';
 import { Codex } from '../ui/codex';
 import { Fuse } from '../ui/fuse';
 import { Hud } from '../ui/hud';
-import { createPhoneChrome } from '../ui/phone-chrome';
 import { openSettings } from '../ui/settings-panel';
 import { ensureGameStyles } from '../ui/styles';
 import { type Action, BINDINGS } from './actions';
@@ -134,6 +134,8 @@ export function engineOptions(
     save: (host) => createGameSave({ host }),
     mixerKey: SAVE_GAME_ID,
     styles: ensureGameStyles,
+    // Phones: menus, panels, the HUD and FUSE's lane in CSS px on layout regions (ui/chrome.ts).
+    overlay: { layout: CHROME_LAYOUT },
     // The HUD shortcuts (Codex, Settings, Journal) also work while a button or link has focus,
     // e.g. the ending's "Back to the hall". Back (Esc) and the arrows work on a focused button
     // too, so a clicked or Tabbed-to button never strands a keyboard player.
@@ -176,7 +178,8 @@ function isFallbackAdapter(adapter: GPUAdapter): boolean {
 
 /** Adds Last Rune's nouns to the engine ctx (the same object, so scenes see them). */
 export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): GameCtx {
-  const { surface, gpu, renderer, post, particles, input, audio, ui, host, device, save } = engine;
+  const { surface, gpu, renderer, post, particles, input, audio, ui, chrome, host, device, save } =
+    engine;
   const { stack, loop, hooks } = engine;
 
   // ── Graphics quality (Settings → Graphics; see game/graphics.ts) ───────
@@ -253,6 +256,7 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
         applyParticles();
         surface.root.toggleAttribute('data-reduced-motion', e.reducedMotion);
         applyTextScale(ui.root, e.textScale / 100, (t) => ui.setTheme(t));
+        if (chrome) applyTextScale(chrome.ui.root, e.textScale / 100, (t) => chrome.ui.setTheme(t));
       },
     },
     prefersReducedMotion(),
@@ -333,13 +337,13 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
     const j = save.get().journal;
     return j.found.filter((p) => !j.read.includes(p)).length;
   };
-  // Phones: the upright "turn sideways" card, and Full screen on the title (D-039).
-  const phoneChrome = createPhoneChrome(ui.layers.hud, device, host.fullscreen);
-  phoneChrome.showFullscreen(flow.state === 'title' || flow.state === 'boot');
+  // Phones: FUSE's lane, the ☰ in its rail, the "turn sideways" card (ui/chrome.ts).
+  const gameChrome = createGameChrome({ chrome, ui, hud: hud.root, surface, device });
+  gameChrome.scene(flow.state);
   engine.setFill(flow.state);
   flow.onChange((state) => {
     engine.setFill(state);
-    phoneChrome.showFullscreen(state === 'title');
+    gameChrome.scene(state);
     // Scenes own their caption avoid regions; leaving the altar must never strand one.
     if (state !== 'puzzle') fuse.avoid(null);
     hud.visible = state === 'hall' || state === 'puzzle' || state === 'solve';

@@ -192,7 +192,7 @@ ${P}:has(.lr-ending) .tc-caption { bottom: calc(${CB} + ${cpx(8)}) !important; }
 ${P} .lr-hg { top: ${CT}; height: calc(1080px - ${CT} - ${CB}); }
 /* "Plays by itself" beside Skip (or alone in its place on a first ending): a newcomer knows to
    watch, and that Skip is there. Desktop keeps its Skip · Esc. */
-.tc-overlay:not([data-phone]) .lr-end-cue { display: none; }
+.tc-overlay:not([data-phone]):not([data-form-factor^="phone"]) .lr-end-cue { display: none; }
 ${P} .lr-end-cue {
   position: absolute; z-index: 3; top: calc(${CT} + ${cpx(4)}); right: calc(${BAR_IN} + ${LANE} + ${cpx(6)});
   height: ${cpx(36)}; margin: 0; padding: 0 ${cpx(10)}; display: flex; align-items: center; box-sizing: border-box;

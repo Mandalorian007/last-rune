@@ -15,6 +15,7 @@ import { coffeeLink } from '../../content/ending';
 import { beatLine, type FuseLine, titleLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { hasProgress } from '../../game/save';
+import { fullscreenButton, placeWidgets } from '../../ui/chrome';
 import { coffeeLinkWidget } from '../../ui/coffee';
 import type { TitleView, TitleViewFrame } from '../views';
 import { ChatterClock, ShuffleBag } from './chatter';
@@ -37,6 +38,9 @@ export class TitleScene implements GameScene {
   private returning = false;
   private knockPending = false;
   private chatter = new ChatterClock();
+  /** Phones: the menu, links and Full screen in their regions (ui/chrome.ts). */
+  private unplace: () => void = () => {};
+  private fullscreen: { element: HTMLElement; destroy(): void } | null = null;
 
   enter(ctx: GameCtx): void {
     this.ctx = ctx;
@@ -47,6 +51,7 @@ export class TitleScene implements GameScene {
     this.chatter = new ChatterClock();
     this.dom = this.buildDom();
     ctx.ui.layers.hud.append(this.dom);
+    this.placeChrome();
     ctx.post.set({
       godRays: { x: 960, y: 210, intensity: 0.28, sourceIntensity: 0 },
       fog: { density: 0.4 },
@@ -55,6 +60,10 @@ export class TitleScene implements GameScene {
   }
 
   exit(): void {
+    this.unplace();
+    this.unplace = () => {};
+    this.fullscreen?.destroy();
+    this.fullscreen = null;
     this.dom?.remove();
     this.dom = null;
     this.view.dispose();
@@ -82,7 +91,9 @@ export class TitleScene implements GameScene {
     if (this.chatter.tick(dt, { paused, speaking })) this.chat();
     if (!this.ctx.ui.stack.hasModal && this.dom) {
       // Arrows and the pad walk the menu (and the Ko-fi link); otherwise A/Enter/Space play.
-      if (!menuNav(this.ctx.input, this.dom) && this.ctx.input.pressed('confirm')) this.primary();
+      // On phones the menu and links are in the CSS-px overlay's regions.
+      const nav = this.ctx.chrome?.active ? this.ctx.chrome.layout.element : this.dom;
+      if (!menuNav(this.ctx.input, nav) && this.ctx.input.pressed('confirm')) this.primary();
     }
     this.view.update(dt, this.frameState());
     // Phones: FUSE's card points at him as he potters (mobile-7-hall).
@@ -145,7 +156,7 @@ export class TitleScene implements GameScene {
       });
     }
     // Phones (mobile-5-chrome): FUSE himself, wherever he potters, so his card never covers him.
-    if (this.ctx.device.phone) {
+    if (this.ctx.device.phone && !this.ctx.chrome?.active) {
       out.push(FUSE_ZONE);
       const logo = this.dom.querySelector<HTMLElement>('.lr-title')?.getBoundingClientRect();
       if (logo && logo.height > 0) {
@@ -154,6 +165,43 @@ export class TitleScene implements GameScene {
       }
     }
     return out;
+  }
+
+  /**
+   * Phones (ws/port-chrome): Full screen and the release label along the top; the menu a row
+   * along the bottom (landscape) or a column under the picture (upright); the Ko-fi link top
+   * right (landscape) or along the bottom (upright). The name stays on the picture.
+   */
+  private placeChrome(): void {
+    const dom = this.dom;
+    const chrome = this.ctx.chrome;
+    if (!dom || !chrome) return;
+    this.fullscreen = fullscreenButton(this.ctx.host.fullscreen);
+    const q = (sel: string) => dom.querySelector<HTMLElement>(sel);
+    const widgets = [
+      {
+        el: this.fullscreen.element,
+        place: { default: 'top' as const },
+        order: 0,
+        id: 'lr-fullscreen',
+      },
+      { el: q('.lr-release'), place: { default: 'top' as const }, order: 1, id: 'lr-release' },
+      {
+        el: q('.lr-title-links'),
+        place: { default: 'top' as const, 'phone-portrait': 'bottom' as const },
+        order: 2,
+        id: 'lr-title-links',
+      },
+      {
+        el: q('.lr-title-menu'),
+        place: { default: 'bottom' as const, 'phone-portrait': 'cardLane' as const },
+        id: 'lr-title-menu',
+      },
+    ];
+    this.unplace = placeWidgets(
+      chrome,
+      widgets.filter((w): w is (typeof widgets)[number] & { el: HTMLElement } => w.el !== null),
+    );
   }
 
   private primary(): void {
