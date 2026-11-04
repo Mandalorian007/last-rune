@@ -59,6 +59,15 @@ export function newGems(p: PuzzleDef, solved: readonly PuzzleDef[]): NewGems {
   return { fixed, tray, turns };
 }
 
+/**
+ * Turnable kinds this altar teaches to turn: a new tray gem that turns, or one first put in
+ * the player's hand here (seen fixed before). The turn badge, ↻ mark and Turn line show for
+ * these until the player turns one (altar-truth).
+ */
+export function turnTeaches(news: NewGems): Set<GemKind> {
+  return new Set([...news.turns, ...news.tray.filter(isRotational)]);
+}
+
 /** New gems FUSE has a nudge line for, fixed first, in the order he should say them. */
 export function nudgeGems(news: NewGems): GemKind[] {
   return [...news.fixed.map((f) => f.gem), ...news.tray].filter((g) => !!gemNudge(g));

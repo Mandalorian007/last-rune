@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { FIXED_NOTE, FIXED_NOTE_FULL, YOURS_NOTE } from '../../games/last-rune/content/codex';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { MACHINE_IDS } from '../../games/last-rune/rules/types';
 import { trayRemaining } from '../../games/last-rune/rules/validate';
@@ -346,14 +347,14 @@ for (const vp of PHONES) {
           // a gem the player places; and says which it is.
           if (g.how === 'fixed') {
             if (!g.leader) problems.push(`${tag}: no line from the card to the fixed gem`);
-            if (!g.rule.startsWith('Fixed.'))
+            if (!g.rule.startsWith(FIXED_NOTE))
               problems.push(`${tag}: a fixed gem's page says "${g.rule}"`);
           } else if (g.how === 'tray' || g.how === 'turns') {
             if (g.how === 'tray' && !g.lit) problems.push(`${tag}: its tray tile is not lit`);
             if (g.leader) problems.push(`${tag}: a line points at the board for a tray gem`);
           }
           // The first lesson: "Bend is fixed; Channels are yours to place".
-          if (id === 'intake-desk' && g.how === 'tray' && !g.rule.startsWith('Yours to place'))
+          if (id === 'intake-desk' && g.how === 'tray' && !g.rule.startsWith(YOURS_NOTE))
             problems.push(`${tag}: a tray gem's page says "${g.rule}"`);
           // A finger, not the mouse (a click would switch the hints to mouse wording).
           await page.touchscreen.tap((n.l + n.r) / 2, (n.t + n.b) / 2);
@@ -409,8 +410,7 @@ for (const vp of PHONES) {
           checked++;
           if (SHOTS && checked <= 3)
             await page.screenshot({ path: `${SHOTS}/teach-fixed-${vp.name}-${id}.png` });
-          if (!g.tip.includes('Fixed: part of the machine'))
-            problems.push(`${tag}: the card says "${g.tip}"`);
+          if (!g.tip.includes(FIXED_NOTE_FULL)) problems.push(`${tag}: the card says "${g.tip}"`);
           if (g.settle > 0.01) problems.push(`${tag}: the gem bounces (settle ${g.settle})`);
           if (g.lift > 0.01) problems.push(`${tag}: the gem lifts (${g.lift})`);
           if (g.held) problems.push(`${tag}: the tap picked up ${g.held}`);

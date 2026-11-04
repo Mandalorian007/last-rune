@@ -1,16 +1,25 @@
 import { describe, expect, it } from 'vitest';
+import { CODEX } from '../../content/codex';
 import { PUZZLES, puzzleFor } from '../../content/puzzles';
-import { type PuzzleDef, simulate } from '../../rules';
+import { type Placement, type PuzzleDef, simulate } from '../../rules';
 import { altarDims } from '../../rules/model';
+import type { GemKind } from '../../rules/types';
+import { capacitorBeats, capBeatText, planOver } from './circuit-model';
 import { anchorOf, cellAt, computeLayout, DESIGN_H, DESIGN_W } from './layout';
 import {
   buildTimeline,
+  causeHeadline,
   causeText,
   failText,
   fizzles,
+  hintRoom,
   nextStep,
+  roomGems,
   rootCell,
   rootFizzle,
+  strikeStory,
+  strikesLine,
+  verdictParts,
 } from './strike';
 
 function bench(over: Partial<PuzzleDef> = {}): PuzzleDef {
@@ -162,7 +171,12 @@ describe('failed-verdict guidance', () => {
     expect(nextStep('dead', ['gate-alone', 'empty'])).toMatch(/put a gem in the socket/);
     expect(nextStep('dead', ['facing'])).toMatch(/turn the gem/);
     expect(nextStep('over', ['ground'])).toMatch(/less charge/);
-    expect(nextStep('under', [])).toMatch(/Amplify/);
+    const withAmp = {
+      gems: new Set(['channel', 'amplify'] as const),
+      path: new Set(['channel'] as const),
+      beats: [],
+    };
+    expect(nextStep('under', [], false, withAmp)).toMatch(/Amplify/);
     expect(nextStep('exact', [])).toBe('');
     const all = [
       'empty',
@@ -195,5 +209,141 @@ describe('failed-verdict guidance', () => {
       expect(nextStep('dead', [c])).not.toMatch(words);
     }
     for (const o of ['over', 'under', 'dead'] as const) expect(nextStep(o, [])).not.toMatch(words);
+  });
+});
+
+/** Capacitor Bay's natural first try: straight up through the Capacitor to the 8 machine. */
+const BAY_OVER: Placement[] = [
+  { cell: { x: 4, y: 5 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 4 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 3 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 2 }, gem: 'bend', rot: 1 },
+  { cell: { x: 6, y: 2 }, gem: 'channel', rot: 0 },
+  { cell: { x: 7, y: 2 }, gem: 'channel', rot: 0 },
+];
+
+describe('hints come from the room (altar-truth)', () => {
+  const OUTCOMES = ['over', 'under', 'dead'] as const;
+  const CAUSES = [
+    'empty',
+    'blocked',
+    'ground',
+    'facing',
+    'odd-split',
+    'gate-alone',
+    'spent',
+  ] as const;
+  /** A cause only happens where its gem is: an odd split needs a Split, a lone side a Gate. */
+  const possible = (gems: ReadonlySet<GemKind>, c: (typeof CAUSES)[number]) =>
+    (c !== 'odd-split' || gems.has('split')) && (c !== 'gate-alone' || gems.has('gate'));
+  const named = (text: string) =>
+    (Object.keys(CODEX) as GemKind[]).filter((g) =>
+      new RegExp(`\\b${CODEX[g].name}s?\\b`).test(text),
+    );
+  const verdictText = (p: PuzzleDef, places: readonly Placement[]) => {
+    const res = simulate(p, places);
+    const beats = capacitorBeats(p, places, res);
+    const ms = res.machines;
+    const about =
+      res.outcome === 'over'
+        ? ms.find((m) => m.outcome === 'over')
+        : ms.find((m) => m.outcome !== 'exact' && m.outcome !== 'over');
+    const room = hintRoom(p, places, res, beats, about);
+    const causes = fizzles(p, places, res).map((f) => f.cause);
+    return [
+      nextStep(res.outcome, causes, false, room),
+      nextStep(res.outcome, causes, true, room),
+      strikeStory(p.pulses, res, beats),
+    ].join(' ');
+  };
+
+  it('for every puzzle × outcome × cause, the hint names no gem the puzzle lacks', () => {
+    for (const p of Object.values(PUZZLES)) {
+      const gems = roomGems(p);
+      // Worst case: the charge went through every gem the room has, and a Capacitor (if any)
+      // let out more than the machine needs.
+      const beats = gems.has('capacitor')
+        ? [
+            {
+              cell: { x: 0, y: 0 },
+              pulse: 1,
+              kind: 'release' as const,
+              stored: 8,
+              incoming: 8,
+              out: 16,
+              seg: 0,
+            },
+          ]
+        : [];
+      const room = { gems, path: gems, beats };
+      for (const o of OUTCOMES)
+        for (const touch of [false, true])
+          for (const cs of [[], ...CAUSES.filter((c) => possible(gems, c)).map((c) => [c])]) {
+            const hint = nextStep(o, cs, touch, room);
+            for (const g of named(hint)) expect(gems, `${p.id} ${o} [${cs}]: ${hint}`).toContain(g);
+          }
+    }
+  });
+
+  it('on real attempts (every prefix of the intended solve), names only gems the puzzle has', () => {
+    for (const p of Object.values(PUZZLES)) {
+      const gems = roomGems(p);
+      const plan = p.design.intended;
+      for (let n = 0; n <= plan.length; n++) {
+        const text = verdictText(p, plan.slice(0, n));
+        for (const g of named(text)) expect(gems, `${p.id} first ${n}: ${text}`).toContain(g);
+      }
+    }
+  });
+
+  it('names the real cause: the Capacitor let out 8 + 8 on Capacitor Bay, no Amplify', () => {
+    const p = puzzleFor('capacitor-bay');
+    expect(roomGems(p).has('amplify')).toBe(false);
+    const res = simulate(p, BAY_OVER);
+    expect(res.outcome).toBe('over');
+    const beats = capacitorBeats(p, BAY_OVER, res);
+    const m = res.machines.find((x) => x.outcome === 'over');
+    const hint = nextStep('over', [], true, hintRoom(p, BAY_OVER, res, beats, m));
+    expect(hint).toBe(
+      'Try: feed the Capacitor less. It let out 8 + 8 = 16. A Split halves the charge.',
+    );
+    expect(hint).not.toMatch(/Amplify/);
+  });
+
+  it("the Capacitor's plan warns when it lets out more than the machine takes", () => {
+    const p = puzzleFor('capacitor-bay');
+    const res = simulate(p, BAY_OVER);
+    const beats = capacitorBeats(p, BAY_OVER, res);
+    const over = planOver(beats, res);
+    const i = beats.findIndex((b) => b.kind === 'release');
+    expect(over.beats.get(i)).toBe(8);
+    expect(capBeatText(beats[i]!, p.pulses, 8)).toBe('Strike 2: 8 + 8 → 16, over the 8 needed');
+    expect([...over.machines].map((j) => res.machines[j]!.need)).toEqual([8]);
+    // The intended solve warns nowhere.
+    const ok = simulate(p, p.design.intended);
+    expect(planOver(capacitorBeats(p, p.design.intended, ok), ok).machines.size).toBe(0);
+  });
+
+  it('with no room, names no gem at all', () => {
+    for (const o of OUTCOMES) expect(named(nextStep(o, []))).toEqual([]);
+  });
+
+  it('every verdict line is a full sentence: causes end in a full stop, strikes too', () => {
+    for (const c of CAUSES) expect(causeHeadline(c)).toMatch(/\.$/);
+    const m = {
+      at: { x: 0, y: 0 },
+      need: 8,
+      outcome: 'over' as const,
+      readings: [0, 16],
+      wokeOn: 1,
+    };
+    expect(strikesLine(m, 2)).toBe(
+      'Strike 1 gave it 0. Strike 2 gave it 16. It needs 8 in one strike.',
+    );
+    expect(verdictParts('Exactly right. Look at it go.')).toEqual([
+      'Exactly right.',
+      'Look at it go.',
+    ]);
+    expect(verdictParts('Exact')).toEqual(['Exact', '']);
   });
 });

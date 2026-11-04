@@ -11,8 +11,8 @@ import { DEV_URL, waitFrames } from './helpers';
 //  2. Before Strike each gauge shows a lamp (on or off, no number) that agrees with the path;
 //     Strike glows ("ready") when every lamp is lit.
 //  3. After a two-strike fail the gauge card stays compact ("Needs 8 · got 16", no per-strike
-//     chips); the verdict tells each strike in words ("Strike 1: 0 · Strike 2: 16.").
-//  4. An empty-socket fail reads "The charge hit an empty socket".
+//     chips); the verdict tells each strike in words ("Strike 1 gave it 0. Strike 2 gave it 16.").
+//  4. An empty-socket fail: title "No charge reached the machine", cause "The charge hit …".
 //  5. The solve card covers no gauge and no socket; FUSE's line keeps ≥12 px off it.
 
 const PHONES = [
@@ -192,7 +192,7 @@ for (const vp of PHONES) {
         chips: document.querySelectorAll('.lr-altar-need .lr-need-strikes').length,
         lamps: document.querySelectorAll('.lr-altar-need .lr-need-lamp').length,
       }));
-      if (!/Strike 1: 0 · Strike 2: 16\. Needs 8 in one strike\./.test(v.verdict))
+      if (!/Strike 1 gave it 0\. Strike 2 gave it 16\. It needs 8 in one strike\./.test(v.verdict))
         problems.push(`bay fail: verdict "${v.verdict}"`);
       if (/\b\d: \d/.test(v.cards.join('|')) || v.chips)
         problems.push(`bay fail: strike chips on the card "${v.cards.join('|')}"`);
@@ -206,11 +206,15 @@ for (const vp of PHONES) {
       await open(page, 'relay-tower', []);
       problems.push(...strikeProblems('relay, before', await strikeRead(page), 'Strike'));
       await strike(page);
-      const head = await page.evaluate(
-        () => document.querySelector('.lr-altar-verdict')?.firstChild?.textContent ?? '',
-      );
+      // altar-truth: every verdict is a title plus a body. Here the title is the cause and the
+      // body is the fix, as a full sentence.
+      const { head, body } = await page.evaluate(() => ({
+        head: document.querySelector('.lr-altar-verdict')?.firstChild?.textContent ?? '',
+        body: document.querySelector('.lr-altar-verdict .lr-verdict-hint')?.textContent ?? '',
+      }));
       if (!/^The charge /.test(head) || /charge lost/.test(head))
-        problems.push(`relay fail: headline "${head}"`);
+        problems.push(`relay fail: title "${head}"`);
+      if (!/^Try: .*\.$/.test(body)) problems.push(`relay fail: body "${body}"`);
 
       // 5. The solve card: off every gauge and socket; FUSE's line clear of it.
       for (const id of ['furnace', 'capacitor-bay', 'the-last-rune'] as MachineId[]) {

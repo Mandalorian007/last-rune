@@ -101,9 +101,25 @@ describe('BoardState', () => {
     ]);
     expect(dropped).toBe(4);
     expect(c.placements).toHaveLength(3);
-    expect(c.canUndo).toBe(false);
     expect(c.equals(b.serialise())).toBe(false);
     c.remove({ x: 2, y: 3 });
     expect(c.equals(b.serialise())).toBe(true);
+  });
+
+  it('restored gems come back with their undo history, one step per gem (altar-truth)', () => {
+    const c = new BoardState(bench());
+    c.restore([
+      { gem: 'channel', cell: { x: 1, y: 1 }, rot: 0 },
+      { gem: 'bend', cell: { x: 4, y: 2 }, rot: 3 },
+    ]);
+    expect(c.canUndo).toBe(true);
+    c.undo();
+    expect(c.placements.map((p) => p.gem)).toEqual(['channel']);
+    c.undo();
+    expect(c.placements).toHaveLength(0);
+    expect(c.canUndo).toBe(false);
+    // An empty save leaves nothing to undo.
+    c.restore([]);
+    expect(c.canUndo).toBe(false);
   });
 });

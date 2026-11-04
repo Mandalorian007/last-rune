@@ -57,8 +57,8 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
   split: {
     gem: 'split',
     name: 'Split',
-    rule: 'Charge enters at the plain end and leaves by both arrows, half each. Odd charge, or charge from any other side, is lost.',
-    chip: 'In at the plain end, half out each arrow. Odd or wrong side: lost.',
+    rule: 'Power the end with no arrow; half the charge comes out of each arrow. Odd charge, or charge from another side, is lost.',
+    chip: 'Power the no-arrow end: half out each arrow. Odd charge is lost.',
     maths: 'In 4 → out 2 and 2. Odd charge is lost.',
   },
   amplify: {
@@ -71,8 +71,8 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
   gate: {
     gem: 'gate',
     name: 'Gate',
-    rule: 'Takes charge in on both side lines. If both arrive in the same strike, their sum leaves by the arrow. Otherwise it is lost.',
-    chip: 'Both side lines in one strike: their sum leaves by the arrow.',
+    rule: 'Power both side inputs on the same strike; the total comes out the arrow. Power only one and the charge is lost.',
+    chip: 'Power both side inputs on one strike: the total comes out the arrow.',
     maths: 'In 4 and 4 → out 8. Only one in: lost.',
   },
   capacitor: {
@@ -83,6 +83,15 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
     maths: 'Strike 1: keeps 4. Strike 2: 4 + 4 → 8.',
   },
 };
+
+/**
+ * What a gem the player didn't place is, in plain words (altar-truth): the short form opens a
+ * fixed gem's line on the arrival card (it must fit an SE), the full form its card on a tap.
+ */
+export const FIXED_NOTE = 'Built in.';
+export const FIXED_NOTE_FULL = "Built in: you can't move or turn it.";
+/** A tray gem on the arrival card, where the same card also teaches a fixed gem. */
+export const YOURS_NOTE = 'Yours to place.';
 
 export function codexEntry(gem: GemKind): CodexEntry {
   return CODEX[gem];

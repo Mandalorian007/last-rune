@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { CODEX } from '../../content/codex';
+import { PUZZLES } from '../../content/puzzles';
+import { isRotational } from '../../rules';
 import { GEM_KINDS, type GemKind } from '../../rules/types';
 import {
   arbitrate,
@@ -9,8 +12,10 @@ import {
   phoneHint,
   pickHint,
   pickInfo,
+  turnTeachLine,
   type VoiceAsk,
 } from './moments';
+import { newGems, turnTeaches } from './teach';
 
 describe('phone how-to line', () => {
   it('teaches the tap until the player has restored a few machines', () => {
@@ -25,6 +30,37 @@ describe('phone how-to line', () => {
     expect(phoneHint(false, true)).toBe('touchHeld');
     expect(phoneHint(true, false)).toBe('off');
     expect(phoneHint(true, true)).toBe('off');
+  });
+
+  it('teaches Turn the first time a turnable gem is its target (altar-truth)', () => {
+    const teaches = new Set(['bend'] as const);
+    expect(turnTeachLine('bend', 'hand', teaches, false)).toBe(
+      '↻ Turn rotates the Bend in your hand.',
+    );
+    expect(turnTeachLine('bend', 'placed', teaches, false)).toBe(
+      '↻ Turn rotates the Bend you just placed.',
+    );
+    // Once turned here, or on an altar that doesn't teach it, or nothing to turn: no line.
+    expect(turnTeachLine('bend', 'hand', teaches, true)).toBeNull();
+    expect(turnTeachLine('gate', 'hand', teaches, false)).toBeNull();
+    expect(turnTeachLine(undefined, 'hand', teaches, false)).toBeNull();
+  });
+
+  it('every altar that first hands the player a turnable gem teaches Turn for it', () => {
+    const all = Object.values(PUZZLES);
+    for (const p of all)
+      for (const [k, n] of Object.entries(p.tray)) {
+        const g = k as GemKind;
+        if ((n ?? 0) <= 0 || !isRotational(g)) continue;
+        // First time in hand (nothing solved offered it): taught, and the line names it.
+        const fresh = all.filter((q) => q.id !== p.id && !(q.tray[g] ?? 0));
+        const teaches = turnTeaches(newGems(p, fresh));
+        expect(teaches.has(g), `${p.id} ${g}`).toBe(true);
+        expect(turnTeachLine(g, 'hand', teaches, false)).toContain(CODEX[g].name);
+        // Already in hand before: not taught again.
+        const before = all.filter((q) => q.id !== p.id && (q.tray[g] ?? 0) > 0);
+        if (before.length > 0) expect(turnTeaches(newGems(p, before)).has(g)).toBe(false);
+      }
   });
 
   it("lets other workstreams' lines stand in the slot, held gem first", () => {
