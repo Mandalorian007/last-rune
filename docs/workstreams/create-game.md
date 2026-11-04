@@ -14,7 +14,7 @@ Plan: [../engine/refactor-plan.md](../engine/refactor-plan.md), "Phase 1" → ws
 - `pnpm baseline` shows no pixel change on desktop.
 - There is no `@game` import in the engine.
 - The CHANGELOG lists every promoted module.
-- The engine e2e harness is green across its matrix, and the game specs no longer re-assert anything the engine owns for Phase 1 modules (D-041 addendum 2).
+- The engine e2e harness is green across its matrix, and the CI `engine e2e` job is a required gate (no `continue-on-error`) after repeated green runs on GitHub runners, and the game specs no longer re-assert anything the engine owns for Phase 1 modules (D-041 addendum 2).
 - Then tag `engine-v0.2.0-alpha.1`.
 
 ## Rules
