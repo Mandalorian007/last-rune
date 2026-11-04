@@ -50,8 +50,15 @@ fn g_ring(p: vec2f, c: vec2f, r: f32) -> f32 {
 // flat on the rim and domed inward, flared under the glow into a funnel that read as one, and
 // players wired the Gate backwards). \`at\` is the rim point, \`dir\` points into the gem.
 // glyph-truth-2's name is kept: its test counts the inputs by it.
+// glyph-truth-4 (blind review 10, E): the port is a hollow ring, not a solid plug. Solid, at
+// board size (~32 px) it read as a soft white blob the weight of a facet highlight. As a thin
+// bright ring round a dark hole, sat in the glyph's dark halo, it is clearly a mark, and it is
+// the opposite of an arrowhead (open and round vs solid and pointed). Leads stop at the ring's
+// outer edge (PORT_R + PORT_AT below), so the hole stays dark.
+const PORT_AT = 0.32;   // ring centre, in from the rim point
+const PORT_R = 0.2;     // ring radius (centre of the stroke)
 fn g_inlet(p: vec2f, at: vec2f, dir: vec2f) -> f32 {
-  return length(p - (at + dir * 0.24)) - 0.16;
+  return abs(length(p - (at + dir * PORT_AT)) - PORT_R) + 0.02;
 }
 
 // A solid triangle (iq's exact distance), for the outlets' arrowheads.
@@ -112,7 +119,9 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     // straight on. A bold T: a port on the input rim (\`g_inlet\`) feeds the stem to the
     // centre, and the crossbar runs out both ways to a solid arrowhead on each side (D-031).
     // held-gem: one port and two arrows, where the Gate has two ports and one arrow.
-    d = g_seg(p, vec2f(0.0, 0.56), vec2f(0.0, 0.0)) - 0.02;
+    // glyph-truth-4: the stem stops at the ring, so the port's hole stays open; the crossbar
+    // with its two heads reads as one double arrow (↔) across the gem, the port below it.
+    d = g_seg(p, vec2f(0.0, 0.8 - PORT_AT - PORT_R), vec2f(0.0, 0.0)) - 0.02;
     d = min(d, g_inlet(p, vec2f(0.0, 0.8), vec2f(0.0, -1.0)));
     d = min(d, g_seg(p, vec2f(-0.5, 0.0), vec2f(0.5, 0.0)) - 0.02);
     d = min(d, g_outlet(p, vec2f(-0.8, 0.0), vec2f(-1.0, 0.0)));
@@ -134,20 +143,35 @@ fn g_glyph(p: vec2f, kind: i32) -> f32 {
     // 0). held-gem: a port on each input rim (\`g_inlet\`, as the Split's) with its lead to the
     // centre, and one solid arrowhead out: two ports and one arrow, where the Split has one
     // port and two arrows. No ring at the centre: it sat between the two and, small, made the
-    // glyph a cross of blobs like the Split's.
-    d = g_seg(p, vec2f(-0.56, 0.0), vec2f(0.56, 0.0)) - 0.02;
+    // glyph a cross of blobs like the Split's. glyph-truth-4: the crossbar runs ring to ring
+    // (o-o, a dumbbell) and the single arrow rises from its middle, where the Split's crossbar
+    // ends in two arrowheads (<->) with its one ring below.
+    let gl = 0.8 - PORT_AT - PORT_R;
+    d = g_seg(p, vec2f(-gl, 0.0), vec2f(gl, 0.0)) - 0.02;
     d = min(d, g_inlet(p, vec2f(-0.8, 0.0), vec2f(1.0, 0.0)));
     d = min(d, g_inlet(p, vec2f(0.8, 0.0), vec2f(-1.0, 0.0)));
     d = min(d, g_seg(p, vec2f(0.0, 0.0), vec2f(0.0, -0.52)) - 0.02);
     d = min(d, g_outlet(p, vec2f(0.0, -0.8), vec2f(0.0, -1.0)));
   } else {
-    // Capacitor: two plates with leads, straight through.
-    d = g_seg(p, vec2f(0.0, 0.66), vec2f(0.0, 0.14));
-    d = min(d, g_seg(p, vec2f(0.0, -0.14), vec2f(0.0, -0.66)));
-    d = min(d, g_seg(p, vec2f(-0.38, 0.14), vec2f(0.38, 0.14)) - 0.015);
-    d = min(d, g_seg(p, vec2f(-0.38, -0.14), vec2f(0.38, -0.14)) - 0.015);
+    // Capacitor: two plates across a straight run. glyph-truth-4 (blind review 10, E): the
+    // run is one unbroken line rim to rim, like a Channel's, so the way it passes charge
+    // ("straight on", either way) shows; before, the leads stopped at the plates and the
+    // glyph gave no direction. The plates are long bars across it (a ‡ on a wide bar).
+    d = g_seg(p, vec2f(0.0, 0.66), vec2f(0.0, -0.66)) - 0.005;
+    d = min(d, g_seg(p, vec2f(-0.56, 0.17), vec2f(0.56, 0.17)) - 0.01);
+    d = min(d, g_seg(p, vec2f(-0.56, -0.17), vec2f(0.56, -0.17)) - 0.01);
   }
   return d;
+}
+
+// glyph-truth-4: distance to the nearest port's centre (glyph space), for the one-way gems'
+// hollow ports; fs_main darkens the hole so the port reads open (a ring, not a blob) under the
+// body's inner glow and the bloom. Keep in step with the g_inlet calls in g_glyph.
+fn g_port_hole(p: vec2f, kind: i32) -> f32 {
+  let c = 0.8 - PORT_AT;
+  if (kind == 2) { return length(p - vec2f(0.0, c)); }
+  if (kind == 4) { return length(vec2f(abs(p.x) - c, p.y)); }
+  return 1e3;
 }
 
 struct Cut {
@@ -157,6 +181,11 @@ struct Cut {
   offset: vec2f,  // centroid shift
 };
 
+// glyph-truth-4 (blind review 10, E): a cut's points say where charge leaves. The Split is a
+// wide hexagon with its two points on its two outs (W, E), flat top and bottom (no point on N,
+// glyph-truth-3, and its port sits on a flat); the Gate is a shield pointing at its one out.
+// The Capacitor is no longer a hexagon like the Channel's (pale blue beside cyan read alike):
+// it is a squat square-cornered bar lying across its run, the plates along its length.
 fn g_cut(kind: i32) -> Cut {
   var c: Cut;
   c.offset = vec2f(0.0);
@@ -165,14 +194,14 @@ fn g_cut(kind: i32) -> Cut {
     c.sides = 6.0; c.phase = -TAU / 4.0; c.scale = vec2f(0.66, 1.0);
   } else if (kind == 1) {   // square cushion
     c.sides = 4.0; c.phase = TAU / 8.0; c.scale = vec2f(1.08);
-  } else if (kind == 2) {   // octagon, a corner on each side: points nowhere, so the T leads
-    c.sides = 8.0; c.phase = 0.0; c.scale = vec2f(1.02);
+  } else if (kind == 2) {   // wide hexagon, pointing at both outs
+    c.sides = 6.0; c.phase = 0.0; c.scale = vec2f(1.08, 1.0);
   } else if (kind == 3) {   // round brilliant
     c.sides = 12.0; c.phase = 0.0; c.scale = vec2f(0.97);
   } else if (kind == 4) {   // shield
     c.sides = 5.0; c.phase = -TAU / 4.0; c.scale = vec2f(1.0); c.offset = vec2f(0.0, 0.06);
-  } else {                  // flat hexagon
-    c.sides = 6.0; c.phase = 0.0; c.scale = vec2f(1.0, 0.9);
+  } else {                  // squat bar across the run
+    c.sides = 4.0; c.phase = TAU / 8.0; c.scale = vec2f(1.2, 0.86);
   }
   return c;
 }
@@ -375,6 +404,10 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32, soft: f32) -> f32 {
   col += lit.diffuse * base * 0.08;
   // Hot white core when energised.
   col += mix(base, vec3f(1.0, 0.97, 0.92), 0.5) * core * energy * 0.35;
+  // glyph-truth-4: a port's hole is dark (a hollow ring with a dark rim inside and out), so
+  // small it cannot read as a soft white blob, the weight of a facet highlight.
+  let hole = (1.0 - smoothstep(PORT_R * 0.45, PORT_R * 0.8, g_port_hole(gp, kind))) * select(1.0, 0.0, dim);
+  col *= 1.0 - hole * 0.85;
   if (dim) {
     // Engraved glyph: a dark groove with a faint lit lower lip.
     let dg = g_glyph(q0 * 1.08, kind);
@@ -398,7 +431,8 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32, soft: f32) -> f32 {
   var a = alpha;
   if (ghost) {
     let gm = clamp(max(max(gl.r, gl.g), gl.b), 0.0, 1.0);
-    a = alpha * mix(0.36, 0.58, smoothstep(0.15, 0.7, gm));
+    // glyph-truth-4: a port's hole is open in the ghost, the socket shows through it.
+    a = alpha * mix(0.36, 0.58, smoothstep(0.15, 0.7, gm)) * (1.0 - hole);
     let rimD = abs(f.sdf / pxUnit + 2.8);
     let rimW = max(1.4, 0.035 / pxUnit);
     let rimLine = 1.0 - smoothstep(rimW - 0.6, rimW + 0.6, rimD);
@@ -416,7 +450,7 @@ fn g_glyph_light(p: vec2f, kind: i32, w: f32, soft: f32) -> f32 {
     mix(base, vec3f(1.0), 0.3) * select(exp(-r2 * 14.0), core, bend) * energy * 0.6 + specW * 0.2;
   // Normalise by brightness so pale gems (capacitor) don't out-bloom saturated ones.
   let lumK = 0.35 / max(engine_luma(base), 0.35);
-  o.emissive = vec4f(em * in.emissive * a * lumK * spentK, a);
+  o.emissive = vec4f(em * in.emissive * a * lumK * spentK * (1.0 - hole * 0.95), a);
   return o;
 }
 `;

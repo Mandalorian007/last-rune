@@ -45,8 +45,8 @@ emboss.draw(frame, label, x, y);
 - `glow` multiplies the state's emissive (pulses, win flash).
 - `drawUnder(frame, list)`, `drawGems(frame, list)`, `draw(frame, g)` (single, unbatched).
 - `addGemLight(lights, g, intensity?)` adds the gem's coloured light to the stone and to neighbouring facets.
-- Cuts: channel long hexagon, bend cushion square, split octagon, amplify round 12, gate
-  shield pentagon, capacitor frosted hexagon. Glyph flow enters at the bottom and leaves at the top.
+- Cuts: channel long hexagon, bend cushion square, split wide hexagon (points on its two outs), amplify round 12, gate
+  shield pentagon, capacitor frosted squat bar across its run (glyph-truth-4). Glyph flow enters at the bottom and leaves at the top.
 
 ## `stone.ts`: walls, floor, altar
 - `createStoneWall(renderer, { width?, height?, seed? })` and `createStoneFloor(...)` return a

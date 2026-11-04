@@ -19,10 +19,10 @@ multipliers above 1 are for emissive use only.
 |---|---|---|---|---|
 | Channel | cyan | `#3fe0ff` | 0.050, 0.745, 1.000 | long hexagon (step cut, long axis = flow) |
 | Bend | amethyst | `#9b5cff` | 0.328, 0.107, 1.000 | square cushion |
-| Split | magenta | `#ff3fb4` | 1.000, 0.050, 0.456 | trillion (triangle) |
+| Split | magenta | `#ff3fb4` | 1.000, 0.050, 0.456 | wide hexagon, its two points on the two outs (glyph-truth-4) |
 | Amplify | amber | `#ffb03f` | 1.000, 0.434, 0.050 | round brilliant (12 facets) |
 | Gate | emerald | `#2fe58a` | 0.028, 0.784, 0.254 | shield (pentagon) |
-| Capacitor | ice | `#cfeaff` | 0.624, 0.823, 1.000 | flat hexagon, frosted |
+| Capacitor | ice | `#cfeaff` | 0.624, 0.823, 1.000 | squat square-cornered bar across its run, frosted; glyph a straight line rim to rim through two plates (glyph-truth-4) |
 
 Each gem has its own cut and its own inner glyph, so kinds stay readable without colour
 (colour-blind players, dim states). Cyan and ice are told apart by value (ice is pale, near
