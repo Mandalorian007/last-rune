@@ -325,3 +325,12 @@ Blind scores were 7 (SE), 7 (iPhone), 7 (Pro Max) and 7 (Android), average 7.0, 
 
 ### D-043 addendum 1: cover pick (user, 2026-11-04)
 The itch cover is #8 **fuse-portrait**: FUSE by candlelight, his eye on a glowing gem, the gold title and "A gem-circuit puzzle". The other seven covers and the hosted `/cover-image/` page come down. The cover stays reproducible from source with `pnpm cover`, which writes `build/last-rune-itch-cover.png` (630×500, git-ignored). → ws/cover-final.
+
+## D-044: External architecture review adopted; one overlay is the Phase 3 entry condition (2026-11-04, user + PM)
+The user brought an external review of the engine at 0.2.0-alpha.1 (full text: `docs/engine/review-2026-11-04.md`). It confirms the package boundary, `Host`, the pure Layout functions, Gestures, the generic `createGame()`/`EngineCtx` layering and the D-041 add. 2 test split, and ranks five debts. Adopted as written:
+- **Protect what is right.** `ARCHITECTURE.md` (today vs planned, per phase) is updated in the same branch as every public API change; the PM checks it on merge.
+- **One overlay before the camera (debt 1).** `ctx.ui` becomes CSS px on every form factor and `createCssChrome`, `legacyScale` and `avoid()` are deleted, so panels and toasts never move between roots. This is a Phase 3 **entry condition**: ws/camera does not start until it is merged. → ws/one-overlay (PLAN 9.5).
+- **ws/camera absorbs debts 2 and 3.** It delivers the matrix `Camera` with `fitRect` fed by `layout.freeRect`, and in the same branch deletes `device: DeviceMode` and `fillBands` / `setFill(key)` from `EngineCtx` (and `platform/device-mode.ts`). The dense phone board is answered here.
+- **ws/render-call absorbs debts 4 and 5.** `Renderer.render(frame, camera, target)`; `Host.requestFrame` (rAF on web and Electron, `XRSession.requestAnimationFrame` later); `GameLoop` takes its frame source from the host. The `Host` change is logged in DECISIONS and `CHANGELOG.md` when it lands.
+- **No Forgewilds engine work until Gate 3.** It would inherit the two-overlay model and the fixed pipeline. PLAN row 17's "Forgewilds ws 1" starts after Gate 3.
+- **Timing (PM).** ws/one-overlay starts now in a worktree, because phones already run CSS px and Gate 2 judges phones. It is **held from main** until blind review 7 is compiled, and must keep the desktop and iPad baselines (`pnpm baseline`) unchanged, or within the baseline tolerance with each diff explained. ws/camera and the other Phase 3 rows wait for it and for Gate 2.

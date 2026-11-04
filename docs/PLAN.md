@@ -62,16 +62,17 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9m | Strike free 2: Capacitor plan vs arrival card on pre-filled phone boards; end card drops the miss count | ws/strike-free-2 | 2 | 9j | ✅ merged |
 | 9k | Menu flow: audit and clean up title/hall/altar/solve/ending menus, one back pattern, Journal in altar menu (D-043) | ws/menu-flow | 2 | 9i | ✅ merged |
 | 9l | Cover art: 8 itch covers rendered by the game at /cover-image/ for user review (D-043) | ws/cover-art | — | — | ✅ merged; user picked #8 fuse-portrait (D-043 add. 1) |
-| 9n | Cover final: keep fuse-portrait, page off Pages, `pnpm cover` writes the PNG | ws/cover-final | — | 9l | 🔄 running |
+| 9n | Cover final: keep fuse-portrait, page off Pages, `pnpm cover` writes the PNG | ws/cover-final | — | 9l | ✅ merged (`pnpm cover`; /cover-image/ off Pages) |
 | G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 6: 7/7/7/7 (D-040 add. 7; up from 6.6) → 9f–9k, then blind review 7 |
-| 10 | Camera + math | ws/camera | 3 | 9 | ⏳ |
+| 9.5 | One overlay: `ctx.ui` in CSS px on every form factor; delete `createCssChrome`, `legacyScale`, `avoid()`; desktop/iPad baselines unchanged. **Phase 3 entry condition** (D-044) | ws/one-overlay | 3 (entry) | 9c | 🔄 running; held from main until blind review 7 is compiled |
+| 10 | Camera + math: matrix `Camera`, `fitRect` fed by `layout.freeRect`; delete `EngineCtx.device`, `fillBands`, `setFill(key)`, `device-mode.ts` (D-044) | ws/camera | 3 | 9.5, G2 | ⏳ |
 | 11 | Transforms + layer/depth sort | ws/transforms | 3 | 9 | ⏳ |
-| 12 | `render(camera, target)` | ws/render-call | 3 | 10, 11 | ⏳ |
+| 12 | `Renderer.render(frame, camera, target)`; `Host.requestFrame`; `GameLoop` takes its frame source from the host (D-044) | ws/render-call | 3 | 10, 11 | ⏳ |
 | 13 | Port game shaders to camera block | ws/port-shaders | 3 | 12 | ⏳ |
 | 14 | `?demo=mesh` | ws/demo-3d | 3 | 13 | ⏳ |
 | 15 | host-electron package + builds | ws/host-electron | 4 | 3 | ✅ merged (D-042) |
 | 16 | Last Rune desktop boot + e2e | ws/last-rune-desktop | 4 | 15 | ✅ merged; Gate 4 needs CI artefacts on 3 OSes + a run on the user's machine |
-| 17 | Extract engine repo, publish engine-v1.0.0 | engine repo | 5 | 13, 16, Forgewilds ws 1 | ⏳ |
+| 17 | Extract engine repo, publish engine-v1.0.0 | engine repo | 5 | 13, 16, Forgewilds ws 1 (no Forgewilds engine work before Gate 3, D-044) | ⏳ |
 
 ## Waves (Last Rune waves 1–5; up to 10 top-level agents from D-041)
 
