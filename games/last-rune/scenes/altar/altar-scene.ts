@@ -229,10 +229,8 @@ export class AltarScene implements GameScene {
   introPageIdx = 0;
   /** Phones: lines other workstreams put in the how-to slot (`setHintLine`, moments.ts). */
   hintLines: Partial<Record<HintSlot, string | null>> = {};
-  /** Phones: the column arbiter froze FUSE's caption to make room (released when it fits). */
+  /** Phones: a card owns the column, so FUSE's caption is frozen (released when none does). */
   fuseHeld = false;
-  /** Phones: FUSE's bubble height when last measured (it is not laid out while frozen). */
-  fuseH = 0;
   /** Phones: the how-to line has retired (moments.ts), and FUSE's fail quip waits its turn. */
   hintRetired = false;
   pendingQuip: ReturnType<typeof reactionLine> | null = null;
@@ -262,13 +260,14 @@ export class AltarScene implements GameScene {
   strikePips: HTMLElement[] = [];
   /** One read-out per Capacitor the bolt reaches: what it keeps and lets out, per strike. */
   capEls: HTMLElement[] = [];
-  /** Phones: the column lane under the tray (gem chip, verdict, Capacitor read-outs). */
+  /** Phones: the cards (gem and teach card, verdict, how-to line, read-outs), in `cardLane`. */
   lane: HTMLElement | null = null;
+  /** Phones: the title and the tray's slots and counts, in the chrome's `top` region. */
+  head: HTMLElement | null = null;
+  /** Where the head was last lined up with the tray (`placeHead`). */
+  headKey = '';
   /** Gives/Needs card sizes when last placed (phone). */
   labelKey = '';
-  /** Phones: how far (design px) the lane steps right of a label, and the bubble's last place. */
-  laneShift = 0;
-  capKey2 = '';
   /** Phones: Strike's "twice" / "1 of 2" for multi-strike altars (the pips are for big screens). */
   strikeCount: HTMLElement | null = null;
   /**
@@ -423,9 +422,11 @@ export class AltarScene implements GameScene {
     this.strikeCount = null;
     this.strikeWord = null;
     this.lampEls.length = 0;
+    this.lane?.remove();
     this.lane = null;
-    this.laneShift = 0;
-    this.capKey2 = '';
+    this.head?.remove();
+    this.head = null;
+    this.headKey = '';
     this.slotEls.length = 0;
     this.leader = null;
     this.leaderKey = '';

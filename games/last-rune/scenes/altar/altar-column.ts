@@ -1,51 +1,113 @@
 /**
- * Phones: the column beside the board (tray, cards, Turn) and FUSE's place in it.
+ * Phones: the column beside the board (title, tray, cards, FUSE's line) and Turn.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
+ *
+ * port-altar-3: the column is regions on the CSS-px chrome (altar-chrome.ts `placeAltarChrome`):
+ * the head (title, tray slots and counts) in `top`, the cards in `cardLane`, FUSE's line docked
+ * under them, Strike in `bottom`. Regions never overlap, so the only rule left here is who
+ * speaks: a card up (verdict, gem or teach card, a live read-out) and FUSE waits; FUSE talking
+ * and the how-to line and the plan read-outs wait.
  */
 import { h } from '@thunderclap/engine/ui';
 import { isRotational } from '../../rules';
 import type { Cell } from '../../rules/types';
 import { SVG_NS } from './altar-defs';
 import type { AltarScene } from './altar-scene';
-import {
-  type AltarLayout,
-  cellCenter,
-  FUSE_LANE,
-  type PhoneBand,
-  TRAY_CENTER_X,
-  trayTipX,
-} from './layout';
-import { arbitrate, type Grant, type VoiceAsk } from './moments';
+import { type AltarLayout, cellCenter, FUSE_LANE, TRAY_CENTER_X, trayTipX } from './layout';
+
+/** A box in design px. */
+interface Box {
+  l: number;
+  r: number;
+  t: number;
+  b: number;
+}
+
+/** Does the axis-aligned segment a→b (design px) come within `pad` of the box? */
+export function segmentHits(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  q: Box,
+  pad = 0,
+): boolean {
+  const l = Math.min(a.x, b.x);
+  const r = Math.max(a.x, b.x);
+  const t = Math.min(a.y, b.y);
+  const bt = Math.max(a.y, b.y);
+  return l < q.r + pad && r > q.l - pad && t < q.b + pad && bt > q.t - pad;
+}
+
+/**
+ * The teach card's leader to a socket, design px: out of the card level with its anchor to the
+ * gap between the slab's last column and its rim, along that gap to the grid line between two
+ * rows, along the line to the socket's column, then half a cell in to the ring. It runs between
+ * sockets, never over one. `null` when the board is laid out without room for it.
+ */
+export function leaderPath(
+  L: Pick<AltarLayout, 'left' | 'right' | 'top' | 'margin' | 'pitch' | 'rows'>,
+  from: { x: number; y: number },
+  cell: { x: number; y: number },
+  ring: number,
+): { x: number; y: number }[] {
+  const x0 = L.left + L.margin;
+  const y0 = L.top + L.margin;
+  const cx = x0 + L.pitch * (cell.x + 0.5);
+  const cy = y0 + L.pitch * (cell.y + 0.5);
+  // The grid line above or below the socket's row, whichever is nearer the card's anchor.
+  const above = y0 + L.pitch * cell.y;
+  const below = above + L.pitch;
+  const gy = Math.abs(from.y - above) <= Math.abs(from.y - below) ? above : below;
+  const rim = L.right - L.margin / 2;
+  const end = { x: cx, y: gy < cy ? cy - ring : cy + ring };
+  return [from, { x: rim, y: from.y }, { x: rim, y: gy }, { x: cx, y: gy }, end];
+}
 
 export const columnMethods = {
-  /**
-   * Phones: FUSE's caption is a bubble beside him in the bottom band, left of the tray (CSS
-   * reads these variables off the overlay root; ui/phone-styles.ts). Off phones, nothing.
-   */
+  /** Phones: FUSE's line back to its own corner style on exit (its tail is set per frame). */
   phoneCaption(this: AltarScene, on: boolean): void {
-    const st = this.ctx.ui.root.style;
-    const band = this.view.layout.phone;
-    if (on && band) {
-      st.setProperty('--lr-cap-l', `${band.bubbleL}px`);
-      // From the column's left edge on into the right bar (CSS adds the bar).
-      st.setProperty('--lr-cap-w', `${1920 - band.bubbleL}px`);
-      // Over FUSE's head, its tail pointing down at him (mobile-5-moments).
-      const f = this.view.fuse;
-      const head = 1080 - f.y + 2.3 * f.scale + 6 * band.cssPx;
-      st.setProperty('--lr-cap-b', `${Math.round(Math.max(1080 - band.bubbleB, head))}px`);
-      st.setProperty('--lr-cap-tail', `${Math.round(f.x - band.bubbleL)}px`);
-    } else {
-      st.removeProperty('--lr-cap-l');
-      st.removeProperty('--lr-cap-w');
-      st.removeProperty('--lr-cap-b');
-      st.removeProperty('--lr-cap-tail');
-    }
+    if (!on) this.ctx.ui.caption.element.style.removeProperty('--lr-cap-tail');
+  },
+
+  /**
+   * Phones: the head's slots and counts over the gems the canvas draws at `L.tray`. The gems
+   * are lit, lifted and animated on the canvas, so they stay there; the head converts the same
+   * design-px spots to its own CSS px through the scaled overlay's box, whenever either moves.
+   */
+  placeHead(this: AltarScene): void {
+    const head = this.head;
+    if (!head?.isConnected) return;
+    const L = this.view.layout;
+    const o = this.ctx.ui.root.getBoundingClientRect();
+    const hr = head.getBoundingClientRect();
+    if (o.width <= 0 || hr.width <= 0) return;
+    const k = o.width / 1920;
+    const key = [o.left, o.top, k, hr.left, hr.top].map((n) => n.toFixed(2)).join();
+    if (key === this.headKey) return;
+    this.headKey = key;
+    const x = (dx: number) => `${(o.left + dx * k - hr.left).toFixed(1)}px`;
+    const y = (dy: number) => `${(o.top + dy * k - hr.top).toFixed(1)}px`;
+    L.tray.forEach((t, i) => {
+      const s = this.slotEls[i]?.style;
+      if (s) {
+        s.left = x(t.x);
+        s.top = y(t.y);
+        s.width = s.height = `${(t.size * k).toFixed(1)}px`;
+      }
+      // The count is a badge hung from the gem's lower-right corner, growing left over its own
+      // gem (never into the next one), the same in every room.
+      const c = this.counts[i]?.style;
+      if (c) {
+        c.left = x(t.x + t.size * 0.52);
+        c.top = y(t.y + t.size * 0.38);
+      }
+    });
   },
 
   /**
    * Phones: the arrival card points at what it teaches. A fixed gem's page draws a gold line
    * from the card to that gem on the board (which also pulses); a tray gem's page rings its
-   * tray tile. Nothing while the card is down.
+   * tray tile. The line runs between the sockets (`leaderPath`); where it would cross a gauge
+   * or a Gives/Needs card it is left out and the ring alone marks the gem.
    */
   updateTeachPointer(this: AltarScene): void {
     const L = this.view.layout;
@@ -67,54 +129,66 @@ export const columnMethods = {
       this.leaderKey = '';
       return;
     }
-    // From the card's left edge, a third of the way down (by the gem's name), in design px.
+    // From the card's left edge, by the gem's name, in design px.
     const box = this.dom.getBoundingClientRect();
     const r = this.tip.getBoundingClientRect();
     if (box.width <= 0 || r.width <= 0) return;
     const k = 1920 / box.width;
-    const x0 = Math.round((r.left - box.left) * k);
-    const y0 = Math.round((r.top - box.top + Math.min(r.height / 3, 24 / k)) * k);
-    const ends = cells.map((f) => {
-      const cx = L.left + L.margin + L.pitch * (f.cell.x + 0.5);
-      const cy = L.top + L.margin + L.pitch * (f.cell.y + 0.5);
-      return { cx, cy };
-    });
+    const from = {
+      x: Math.round((r.left - box.left) * k),
+      y: Math.round((r.top - box.top + Math.min(r.height / 2, 12)) * k),
+    };
     const ring = L.pitch * 0.52;
-    const key = `${x0},${y0},${ring.toFixed(1)}:${ends.map((e) => `${e.cx},${e.cy}`).join(';')}`;
+    const key = `${from.x},${from.y},${ring.toFixed(1)}:${cells.map((f) => `${f.cell.x},${f.cell.y}`).join(';')}`;
     if (key === this.leaderKey) return;
     this.leaderKey = key;
+    // What the line must not cross: every gauge and every Gives/Needs card.
+    const keep: Box[] = [L.storm, ...L.machines].map((sp) => {
+      const half = sp === L.storm ? sp.size * 0.26 : sp.size * 0.46;
+      return { l: sp.x - half, r: sp.x + half, t: sp.y - half, b: sp.y + half };
+    });
+    for (const el of [this.stormLabel, ...this.needs]) {
+      const q = el?.getBoundingClientRect();
+      if (!q || q.width === 0) continue;
+      keep.push({
+        l: (q.left - box.left) * k,
+        r: (q.right - box.left) * k,
+        t: (q.top - box.top) * k,
+        b: (q.bottom - box.top) * k,
+      });
+    }
     const w = Math.round(2 * (L.phone.cssPx || 1) * 10) / 10;
     const el = (tag: string, a: Record<string, string | number>) => {
       const e = document.createElementNS(SVG_NS, tag);
       for (const [n, v] of Object.entries(a)) e.setAttribute(n, String(v));
       return e;
     };
+    const pt = { x: 0, y: 0 };
     svg.replaceChildren(
-      ...ends.flatMap(({ cx, cy }) => {
-        // Stop at the gem's ring, so the line never covers the gem itself.
-        const dx = x0 - cx;
-        const dy = y0 - cy;
-        const d = Math.hypot(dx, dy) || 1;
-        const x1 = cx + (dx / d) * ring;
-        const y1 = cy + (dy / d) * ring;
+      ...cells.flatMap((f) => {
+        cellCenter(L, f.cell, pt);
+        const ringEl = el('circle', {
+          cx: pt.x,
+          cy: pt.y,
+          r: ring,
+          class: 'lr-leader-ring',
+          'stroke-width': w,
+        });
+        const path = leaderPath(L, from, f.cell, ring);
+        const clear = path.every(
+          (p, i) => i === 0 || !keep.some((q) => segmentHits(path[i - 1]!, p, q, 2)),
+        );
+        if (!clear) return [ringEl];
+        const points = path.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(' ');
         return [
-          el('line', {
-            x1: x0,
-            y1: y0,
-            x2: x1,
-            y2: y1,
+          el('polyline', {
+            points,
             class: 'lr-leader-shade',
+            fill: 'none',
             'stroke-width': w * 2.2,
           }),
-          el('line', {
-            x1: x0,
-            y1: y0,
-            x2: x1,
-            y2: y1,
-            class: 'lr-leader-line',
-            'stroke-width': w,
-          }),
-          el('circle', { cx, cy, r: ring, class: 'lr-leader-ring', 'stroke-width': w }),
+          el('polyline', { points, class: 'lr-leader-line', fill: 'none', 'stroke-width': w }),
+          ringEl,
         ];
       }),
     );
@@ -175,146 +249,58 @@ export const columnMethods = {
   },
 
   /**
-   * Phones: FUSE's bubble grows up from above Strike and the lane grows down from the tray;
-   * when the two would meet, the lane (the player's own chip, verdict or read-out) wins and
-   * the bubble steps out until there is room again.
+   * Phones, every frame: the Gives/Needs cards placed again when one changed size, the head
+   * lined up with the tray, and the column's one rule (`arrangeColumn`).
    */
   updateCrowd(this: AltarScene): void {
-    if (!this.lane) return;
-    // A Gives/Needs card grew or shrank (a reading came in, the text size changed): place the
-    // cards again so none runs into another or a gauge.
     const band = this.view.layout.phone;
-    if (band) {
-      const els = [this.stormLabel, ...this.needs];
-      const key = els.map((el) => (el ? `${el.offsetWidth}x${el.offsetHeight}` : '')).join();
-      if (key !== this.labelKey) {
-        this.labelKey = key;
-        this.placePhoneLabels(band);
-      }
+    if (!this.lane || !band) return;
+    const els = [this.stormLabel, ...this.needs];
+    const key = els.map((el) => (el ? `${el.offsetWidth}x${el.offsetHeight}` : '')).join();
+    if (key !== this.labelKey) {
+      this.labelKey = key;
+      this.placePhoneLabels(band);
     }
-    if (band) this.arrangeColumn(band);
+    this.placeHead();
+    this.arrangeColumn();
   },
 
   /**
-   * Phones: one owner of the right column at a time (mobile-6-moments, moments.ts `arbitrate`).
-   * The lane grows down from under the tray; FUSE's bubble sits over his head, 10 px clear of
-   * Strike. Between them the verdict, the teach card, a gem's tip, the how-to line and FUSE's
-   * bubble get room in that order: a tip that does not fit shrinks to its name line, anything
-   * else waits (FUSE's line is frozen, not lost). The lane also steps right of any Gives/Needs
-   * card that reaches into the column, so no card ever touches a board label.
+   * Phones: one owner of the cards region at a time. A card (the verdict, a gem or teach card,
+   * a live Capacitor read-out) and FUSE's line waits, frozen not lost; with no card up FUSE
+   * speaks, and then the how-to line and the Capacitor plan step aside. The region caps the
+   * cards' height (they scroll inside it), and Strike and FUSE stand in the foot row below it,
+   * so nothing here measures room.
    */
-  arrangeColumn(this: AltarScene, band: PhoneBand): void {
+  arrangeColumn(this: AltarScene): void {
     const lane = this.lane;
-    if (!lane || !this.dom.isConnected) return;
-    const ui = this.ctx.ui;
-    const css = band.cssPx; // design px per CSS px
-    const gap = 4;
-    // 1. Clear of board labels: the lane starts 8 px right of any card that reaches it.
-    const lr = lane.getBoundingClientRect();
-    const baseL = lr.left - this.laneShift / css;
-    const floorY = this.strikeBtn.getBoundingClientRect().top;
-    let left = baseL;
-    for (const el of [this.stormLabel, ...this.needs]) {
-      if (!el || el.hidden) continue;
-      const q = el.getBoundingClientRect();
-      if (q.width === 0 || q.bottom < lr.top - gap || q.top > floorY) continue;
-      // Its words, which may run past the card's own box ("in one strike").
-      let right = q.right;
-      for (const c of el.querySelectorAll('*'))
-        right = Math.max(right, c.getBoundingClientRect().right);
-      if (right + 8 > left && q.left < baseL + 40) left = right + 8;
+    if (!lane?.isConnected) return;
+    const dom = this.dom;
+    this.head?.toggleAttribute(
+      'data-first',
+      dom.hasAttribute('data-first') && !dom.hasAttribute('data-picked'),
+    );
+    lane.toggleAttribute('data-hand', dom.hasAttribute('data-hand'));
+    const live = this.capEls.some((el) => !el.hasAttribute('data-plan') && el.offsetHeight > 0);
+    const cardUp = !this.verdict.hidden || !this.tip.hidden || live;
+    this.holdFuse(cardUp);
+    const cap = this.ctx.ui.caption;
+    const talking = !cardUp && !cap.element.hidden && !!cap.currentText;
+    lane.toggleAttribute('data-fuse', talking);
+    if (talking) {
+      // The tail points down at FUSE, who stands in the foot row under the line.
+      const o = this.ctx.ui.root.getBoundingClientRect();
+      const r = cap.element.getBoundingClientRect();
+      const k = o.width / 1920;
+      const tail = Math.round(
+        Math.min(Math.max(o.left + this.view.fuse.x * k - r.left, 14), r.width - 14),
+      );
+      if (cap.element.style.getPropertyValue('--lr-cap-tail') !== `${tail}px`)
+        cap.element.style.setProperty('--lr-cap-tail', `${tail}px`);
     }
-    const shift = Math.max(0, Math.round((left - baseL) * css));
-    if (shift !== this.laneShift) {
-      this.laneShift = shift;
-      lane.style.setProperty('--lr-lane-l', `${band.colL + shift}px`);
-      lane.style.setProperty('--lr-lane-w', `${Math.round(band.colR - band.colL - shift)}px`);
-    }
-    // 2. FUSE's bubble: over his head, its bottom at least 10 px above Strike, and never left
-    // of the lane (so it clears the labels too).
-    const f = this.view.fuse;
-    const strikeTop = (this.strikeBtn.getBoundingClientRect().top - this.overlayTop()) * css;
-    const bubB = Math.min(f.y - 2.3 * f.scale - 6 * css, band.bubbleB, strikeTop - 10 * css);
-    const capL = Math.max(band.bubbleL, band.colL + shift);
-    const capKey = `${Math.round(bubB)},${capL}`;
-    if (capKey !== this.capKey2) {
-      this.capKey2 = capKey;
-      const st = ui.root.style;
-      st.setProperty('--lr-cap-b', `${Math.round(1080 - bubB)}px`);
-      st.setProperty('--lr-cap-l', `${capL}px`);
-      st.setProperty('--lr-cap-w', `${1920 - capL}px`);
-      st.setProperty('--lr-cap-tail', `${Math.round(Math.max(22 * css, f.x - capL))}px`);
-    }
-    // 3. Who gets the room between the lane's top and the bubble's bottom.
-    const room = this.overlayTop() + bubB / css - lr.top;
-    const asks: VoiceAsk[] = [];
-    const els = new Map<string, HTMLElement>();
-    const ask = (id: string, el: HTMLElement, voice: VoiceAsk['voice'], shrinks: boolean) => {
-      if (el.hidden || getComputedStyle(el).display === 'none') return;
-      els.set(id, el);
-      // Measured whole, even while it waits or is shrunk (briefly laid out whole to measure).
-      const was = el.dataset.arb;
-      if (was) el.removeAttribute('data-arb');
-      const full = el.getBoundingClientRect().height;
-      const cs = getComputedStyle(el);
-      const first = el.firstElementChild ? getComputedStyle(el.firstElementChild) : cs;
-      const lh = Number.parseFloat(first.lineHeight) || Number.parseFloat(first.fontSize) * 1.3;
-      const edge = (k: 'Top' | 'Bottom') =>
-        Number.parseFloat(cs[`padding${k}`]) + Number.parseFloat(cs[`border${k}Width`]);
-      const line = lh + edge('Top') + edge('Bottom');
-      if (was) el.dataset.arb = was;
-      asks.push(shrinks && line < full ? { id, voice, full, line } : { id, voice, full });
-    };
-    const verdictUp = !this.verdict.hidden;
-    if (verdictUp) ask('verdict', this.verdict, 'verdict', false);
-    // mobile-7-strike: under a verdict the Capacitor read-out waits for room (the verdict's
-    // strike line already gives each strike's reading).
-    this.capEls.forEach((el, i) => {
-      if (el.parentElement === lane) ask(`cap${i}`, el, verdictUp ? 'hint' : 'verdict', false);
-    });
-    const teach = this.tip.dataset.source === 'intro';
-    if (teach && !this.tip.hidden) {
-      // The teach card's button sits under the rule when there is room; where there is not (an
-      // iPhone SE under a two-row tray) it stands top-right and the rule wraps round it.
-      this.tip.removeAttribute('data-compact');
-      const below = this.verdict.hidden ? 0 : this.verdict.getBoundingClientRect().height + gap;
-      if (this.tip.getBoundingClientRect().height + below > room)
-        this.tip.setAttribute('data-compact', '');
-    }
-    if (!this.tip.hidden) ask('tip', this.tip, teach ? 'teach' : 'tip', !teach);
-    ask('hint', this.hint, 'hint', false);
-    const cap = ui.root.querySelector<HTMLElement>('.tc-caption');
-    const talking = !!cap && !cap.hidden && cap.textContent !== '';
-    if (talking && cap) {
-      const h0 = cap.getBoundingClientRect().height;
-      if (h0 > 0) this.fuseH = h0;
-      // The bubble keeps its own 8 px from the lane (the gap adds 4).
-      asks.push({ id: 'fuse', voice: 'fuse', full: this.fuseH + gap });
-    }
-    const grants = arbitrate(asks, room, gap);
-    for (const [id, el] of els) {
-      const g: Grant = grants.get(id) ?? 'full';
-      if (g === 'full') el.removeAttribute('data-arb');
-      else if (el.dataset.arb !== g) el.dataset.arb = g;
-    }
-    this.holdFuse(talking && grants.get('fuse') === 'wait');
-    // mobile-7-strike: a verdict too tall for the column (an SE after a two-strike fail) owns
-    // the corner; Strike steps out until the verdict clears (any tap), never under it.
-    let yieldStrike = false;
-    if (verdictUp) {
-      const v = this.verdict.getBoundingClientRect();
-      const b = this.strikeBtn.getBoundingClientRect();
-      yieldStrike = v.bottom > b.top && v.right > b.left && v.left < b.right && v.height > 0;
-    }
-    this.strikeBtn.toggleAttribute('data-yield', yieldStrike);
   },
 
-  /** The overlay's top edge in CSS px (design y 0). */
-  overlayTop(this: AltarScene): number {
-    return this.ctx.ui.root.getBoundingClientRect().top;
-  },
-
-  /** Freeze FUSE's caption while the column has no room for it; release it when it does. */
+  /** Freeze FUSE's caption while a card owns the column; release it when none does. */
   holdFuse(this: AltarScene, on: boolean): void {
     if (on === this.fuseHeld) return;
     this.fuseHeld = on;

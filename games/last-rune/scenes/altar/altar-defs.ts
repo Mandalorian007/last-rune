@@ -146,24 +146,6 @@ export const TICK = 0.15;
 export const SKIP_RATE = 10;
 export const FF_RATE = 3;
 
-/** The Holding pill's gap to Menu, CSS px. */
-export const MENU_GAP_CSS = 8;
-
-/**
- * The Holding pill never touches Menu: slide it left until it is `MENU_GAP_CSS` clear.
- * `scale` is CSS px per design px.
- */
-export function keepClearOfMenu(pill: HTMLElement, menu: Element | null, scale: number): void {
-  pill.style.marginLeft = '';
-  if (!menu || pill.hidden) return;
-  const m = menu.getBoundingClientRect();
-  const p = pill.getBoundingClientRect();
-  if (m.width < 1 || p.width < 1) return;
-  if (p.bottom <= m.top || p.top >= m.bottom) return;
-  const over = p.right + MENU_GAP_CSS - m.left;
-  if (over > 0) pill.style.marginLeft = `${-Math.ceil(over / scale)}px`;
-}
-
 export type HintMode = 'mouse' | 'keys' | 'strike' | 'touch' | 'touchHeld' | 'touchStrike' | 'off';
 
 /** The key-hint line for each mode. Short enough to sit under the tray at 150% text. */

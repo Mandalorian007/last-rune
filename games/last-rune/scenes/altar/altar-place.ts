@@ -10,7 +10,6 @@ import {
   anchorOf,
   CAPTION_LANE,
   FUSE_LANE,
-  PHONE_GUTTER_CARD,
   type PhoneBand,
   type PropSpot,
   TRAY_CENTER_X,
@@ -151,9 +150,9 @@ export const placeMethods = {
    * (bottom right, beside the tray), bottom-aligned, never over the board.
    */
   fitPhone(this: AltarScene, band: PhoneBand): void {
-    const L = this.view.layout;
-    this.titleEl.style.left = `${Math.round(L.titleX)}px`;
-    this.titleEl.style.maxWidth = `${band.colR - band.colL}px`;
+    // The title heads the column's region (altar-chrome.ts), which sizes it.
+    this.titleEl.style.left = '';
+    this.titleEl.style.maxWidth = '';
     const v = this.verdict;
     v.removeAttribute('data-docked');
     v.removeAttribute('data-narrow');
@@ -194,7 +193,6 @@ export const placeMethods = {
     ];
     const gauges = [L.storm, ...L.machines].map(gauge);
     const placed: Box[] = [];
-    const room = (PHONE_GUTTER_CARD * band.cssPx) | 0;
     const minX = band.padL + band.edge;
     const maxX = band.colL - band.edge;
     // West/east cards sit under their gauge; north/south ones beside it, right or left. The
@@ -209,7 +207,8 @@ export const placeMethods = {
       el.style.maxWidth = '';
       if (lb.align === 'below') {
         el.dataset.align = 'below';
-        el.style.maxWidth = `${room}px`;
+        // port-altar-3: the card is as wide as its words (two lines, never spilling); it
+        // slides along under its gauge to stay off the left rail and out of the column.
         el.style.left = `${lb.x}px`;
         el.style.top = `${lb.y}px`;
         // Off the bottom of the screen: up over the gauge's top instead.
@@ -217,6 +216,38 @@ export const placeMethods = {
           el.dataset.align = 'above';
           el.style.top = `${Math.round(gauge(sp).t)}px`;
         }
+        const b0 = box(el);
+        // Off the sockets: a card under an east gauge starts right of the sockets' edge, one
+        // under a west gauge ends left of it, when the open canvas has the room.
+        const inner = L.margin + L.pitch * 0.02;
+        let want = 0;
+        if (b0.t < L.frontBottom && b0.b > L.top) {
+          if (sp.x > L.right && b0.l < L.right - inner) want = L.right - inner - b0.l;
+          if (sp.x < L.left && b0.r > L.left + inner) want = L.left + inner - b0.r;
+        }
+        const lo = minX - b0.l;
+        const hi = maxX - b0.r;
+        const shift = hi < lo ? lo : Math.min(hi, Math.max(lo, want));
+        el.style.removeProperty('--lr-notch');
+        if (shift) {
+          el.style.marginLeft = `${Math.round(shift)}px`;
+          // The notch stays under the gauge.
+          el.style.setProperty('--lr-notch', `${Math.round((b0.r - b0.l) / 2 - shift)}px`);
+        }
+        // Squeezed back over the sockets (no room before the column): down past them instead.
+        const b1 = box(el);
+        let under = 0;
+        for (let y = 0; y < L.rows; y++)
+          for (let x = 0; x < L.cols; x++) {
+            if (this.puzzle.blocked.some((c) => c.x === x && c.y === y)) continue;
+            const r = L.pitch * 0.38;
+            const cx = L.left + L.margin + L.pitch * (x + 0.5);
+            const cy = L.top + L.margin + L.pitch * (y + 0.5);
+            if (b1.l < cx + r && b1.r > cx - r && b1.t < cy + r && b1.b > cy - r)
+              under = Math.max(under, cy + r + 2 - b1.t);
+          }
+        if (under > 0 && el.dataset.align === 'below' && b1.b + under <= band.visB - band.edge)
+          el.style.marginTop = `${Math.ceil(under)}px`;
         placed.push(box(el));
         continue;
       }

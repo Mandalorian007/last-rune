@@ -2,7 +2,7 @@
  * Phone altar moments (mobile-5-moments, mobile-6-moments; D-040 addenda 3 and 4): what the
  * how-to line says and when it retires, the arrival card's pages, and who owns the phone's right
  * column at any moment. Pure TS, unit-tested. The altar scene measures and asks; the CSS in
- * ui/phone-styles.ts lays the column out.
+ * altar-column-styles.ts lays the column out.
  *
  * - The line teaches the tap: "Tap a gem, then a socket", then "Now tap a socket" while a gem
  *   is in hand (with "↻ Turn spins it" when the held gem turns). Other workstreams may put their

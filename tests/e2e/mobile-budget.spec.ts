@@ -11,12 +11,15 @@ import { DEV_URL, settled, waitFrames } from './helpers';
 //     height and ≥45% of the usable width (or ≥75% of the height, see HEIGHT_BOUND).
 //  2. Chrome (HUD, action buttons, title) covers ≤20% of the usable area.
 //  3. Transient cards (hint, gem chip, verdict, FUSE's bubble) are each ≤⅓ of the screen wide
-//     and ≤3 lines, and none of them, nor any chrome, sits over the board.
+//     and ≤3 lines, and none of them, nor any chrome, sits over the board. (port-altar-3: cards in
+//     the chrome's card lane are bounded by their region, capped and scrolled; their width and
+//     lines are not budgeted here, and altar-column.spec checks they touch nothing.)
 //  4. The page never scrolls, and no text is cut off (no ellipsis, line clamp or clipped
 //     overflow on anything in the overlay, D-027).
 // mobile-3-board (D-040):
 //  5. Socket pitch per board size (PITCH_MIN): the board is framed, not shrunk to fit chrome.
-//  6. Gives/Needs cards stand ≥8 px clear of the board and of each other; the Capacitor
+//  6. Gives/Needs cards sit over no socket (port-altar-3: the board fills its region, so a card
+//     may stand on the slab's rim) and clear of each other; the Capacitor
 //     read-out, the verdict, the hint and FUSE's bubble sit over neither the board nor a card;
 //     the hint is one line.
 // mobile-4-board (D-040 gate review 1), on four phones:
@@ -77,8 +80,6 @@ const TEXT_MIN = { number: 15, label: 13 };
 /** Strike's clearance from the app's right edge, CSS px. */
 const STRIKE_IN = 12;
 const pitchClass = (cols: number) => (cols <= 6 ? 0 : cols <= 8 ? 1 : 2);
-/** A Gives/Needs card's clearance from the board, CSS px. */
-const LABEL_CLEAR = 8;
 /** Gauges and cards stand this far inside the play area, CSS px (mobile-4-board). */
 const EDGE_IN = 4;
 
@@ -174,7 +175,7 @@ async function measure(page: Page) {
       }
       return tops.length;
     };
-    const cards: { name: string; box: Box; lines: number; text: string }[] = [];
+    const cards: { name: string; box: Box; lines: number; text: string; lane: boolean }[] = [];
     for (const [sel, name] of [
       ['.lr-altar-hint', 'hint'],
       ['.lr-altar-tip', 'chip'],
@@ -188,6 +189,7 @@ async function measure(page: Page) {
           box: box(el.getBoundingClientRect()),
           lines: lines(el),
           text: el.textContent.trim().slice(0, 40),
+          lane: !!el.closest('.tc-overlay[data-units="css"]'),
         });
       }
     }
@@ -292,7 +294,9 @@ async function measure(page: Page) {
       for (const el of document.querySelectorAll<HTMLElement>(sel)) {
         const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent?.trim());
         if (!own || !shown(el)) continue;
-        const px = Number.parseFloat(getComputedStyle(el).fontSize) * ovScale;
+        // The column's head is in CSS px already (port-altar-3: the chrome's regions).
+        const k = el.closest('.tc-overlay[data-units="css"]') ? 1 : ovScale;
+        const px = Number.parseFloat(getComputedStyle(el).fontSize) * k;
         textMin.push({ sel: kind, px, text: el.textContent?.trim().slice(0, 24) ?? '' });
       }
     }
@@ -314,13 +318,13 @@ async function measure(page: Page) {
       textMin,
       turnActive: !!document.querySelector('.lr-altar-turnbtn[data-active]:not(:disabled)'),
       sockets: (() => {
-        const out: Box[] = [];
+        const out: (Box & { x: number; y: number })[] = [];
         for (let y = 0; y < L.rows; y++)
           for (let x = 0; x < L.cols; x++) {
             const cx = L.left + L.margin + L.pitch * (x + 0.5);
             const cy = L.top + L.margin + L.pitch * (y + 0.5);
             const r = L.pitch * 0.36;
-            out.push({ l: X(cx - r), r: X(cx + r), t: Y(cy - r), b: Y(cy + r) });
+            out.push({ x, y, l: X(cx - r), r: X(cx + r), t: Y(cy - r), b: Y(cy + r) });
           }
         return out;
       })(),
@@ -355,6 +359,10 @@ function cardProblems(m: M, label: string): string[] {
   const out: string[] = [];
   for (const c of m.cards) {
     const w = c.box.r - c.box.l;
+    if (c.lane) {
+      if (hit(c.box, m.slab)) out.push(`${label}: ${c.name} over the board "${c.text}"`);
+      continue;
+    }
     if (w > m.screenW / 3 + 1) out.push(`${label}: ${c.name} ${w.toFixed(0)}px wide "${c.text}"`);
     // The board takes the width from the column (mobile-5-board): in a lane under 150 px a gem
     // chip may take five lines and the verdict six (each has the lane's height to itself).
@@ -365,10 +373,11 @@ function cardProblems(m: M, label: string): string[] {
       out.push(`${label}: ${c.name} over a Gives/Needs card "${c.text}"`);
     if (c.name === 'hint' && c.lines > 2) out.push(`${label}: hint ${c.lines} lines "${c.text}"`);
   }
-  const grown = (b: Box, d: number): Box => ({ l: b.l - d, t: b.t - d, r: b.r + d, b: b.b + d });
+  // Blocked cells are solid slab on phones (no socket is drawn there), so a card may sit on one.
+  const blocked = puzzleFor(label.split(' ')[0] as Parameters<typeof puzzleFor>[0]).blocked;
+  const open = m.sockets.filter((s) => !blocked.some((c) => c.x === s.x && c.y === s.y));
   m.labels.forEach((b, i) => {
-    if (hit(b, grown(m.slab, LABEL_CLEAR - 1)))
-      out.push(`${label}: Gives/Needs card ${i} within ${LABEL_CLEAR}px of the board`);
+    if (open.some((s) => hit(b, s))) out.push(`${label}: Gives/Needs card ${i} over a socket`);
     if (m.labels.some((o, j) => j > i && hit(b, o)))
       out.push(`${label}: Gives/Needs cards ${i} overlap`);
     if (m.chrome.some((c) => hit(b, c.box)))

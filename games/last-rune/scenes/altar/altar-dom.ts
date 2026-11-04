@@ -7,15 +7,8 @@ import { GEM_COLOUR } from '../../art/props/palette';
 import { isRotational, stormCharge } from '../../rules';
 import { getMachine } from '../../rules/progression';
 import { CSS_PALETTE } from '../../ui/styles';
-import { placeAltarRails } from './altar-chrome';
-import {
-  GEM_NAME,
-  type HintMode,
-  hintLine,
-  keepClearOfMenu,
-  SVG_NS,
-  timesWord,
-} from './altar-defs';
+import { type AltarColumn, placeAltarChrome } from './altar-chrome';
+import { GEM_NAME, type HintMode, hintLine, SVG_NS, timesWord } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { TRAY_CENTER_X } from './layout';
 import { type HintSlot, phoneHint, pickHint } from './moments';
@@ -264,44 +257,53 @@ export const domMethods = {
     this.dom.toggleAttribute('data-picked', this.picked);
     const band = L.phone;
     this.dom.toggleAttribute('data-phone', !!band);
+    let col: AltarColumn | null = null;
     if (band) {
-      // The column right of the board (layout.ts PhoneBand): title, tray, then the lane.
-      const st = this.dom.style;
-      st.setProperty('--lr-col-l', `${band.colL}px`);
-      st.setProperty('--lr-col-w', `${band.colR - band.colL}px`);
-      st.setProperty('--lr-lane-t', `${band.laneTop}px`);
-      st.setProperty('--lr-bub-l', `${band.bubbleL}px`);
-      st.setProperty('--lr-bub-b', `${1080 - band.bubbleB}px`);
+      // port-altar-3: the column right of the board is a region on the CSS-px chrome
+      // (altar-chrome.ts). Its head holds the title and the tray's slots and counts, over the
+      // gems the canvas draws at `L.tray` (placeHead lines them up); the cards stack under it.
       this.verdict.style.left = '';
       this.verdict.style.maxWidth = '';
       delete this.verdict.dataset.narrow;
-      // The how-to line heads the lane, under the tray: its own slot, apart from FUSE's bubble.
-      this.lane = h('div', { class: 'lr-altar-lane' }, this.hint, this.tip, this.verdict);
-      this.dom.append(this.lane);
-      this.slotEls = L.tray.map((t) =>
-        h('div', {
-          class: 'lr-altar-slot',
-          'aria-hidden': 'true',
-          style: { left: `${t.x}px`, top: `${t.y}px`, width: `${t.size}px`, height: `${t.size}px` },
-        }),
+      this.lane = h('div', { class: 'lr-altar-lane' }, this.tip, this.verdict, this.hint);
+      this.slotEls = L.tray.map(() => h('div', { class: 'lr-altar-slot', 'aria-hidden': 'true' }));
+      this.head = h(
+        'div',
+        { class: 'lr-altar-head' },
+        this.titleEl,
+        ...this.slotEls,
+        ...this.counts,
       );
-      this.dom.prepend(...this.slotEls);
+      this.headKey = '';
       this.leader = document.createElementNS(SVG_NS, 'svg');
       this.leader.setAttribute('class', 'lr-teach-leader');
       this.leader.setAttribute('viewBox', '0 0 1920 1080');
       this.leader.setAttribute('aria-hidden', 'true');
       this.dom.append(this.leader);
+      col = {
+        head: this.head,
+        cards: this.lane,
+        caption: this.ctx.ui.caption,
+        colL: band.colL,
+        headB: band.laneTop,
+      };
     }
-    this.phoneCaption(true);
     this.ctx.ui.layers.hud.append(this.dom);
-    // Phones: the rail buttons in the chrome's rails, the board in what they leave (altar-chrome.ts).
-    this.offRails = placeAltarRails(this.ctx.chrome, {
-      back,
-      undo: this.undoBtn,
-      clear: this.clearBtn,
-      turn: this.turnBtn,
-      strike: this.strikeBtn,
-    });
+    // Phones: the rail buttons in the chrome's rails, the column beside the board, and the
+    // board in what they leave (altar-chrome.ts).
+    this.offRails = placeAltarChrome(
+      this.ctx.chrome,
+      this.ctx.device,
+      {
+        back,
+        undo: this.undoBtn,
+        clear: this.clearBtn,
+        turn: this.turnBtn,
+        strike: this.strikeBtn,
+      },
+      col,
+    );
+    this.placeHead();
     // Dev/e2e handle: the layout in use (tests tap cells and slots by it on phones).
     if (import.meta.env.DEV) {
       Object.defineProperty(window, '__altarLayout', {
@@ -320,9 +322,11 @@ export const domMethods = {
       // A keycap for the hotkey, then the count apart from it: "1 ×6" must never read "16".
       el.replaceChildren(
         h('kbd', { class: 'lr-k' }, String(i + 1)),
-        // Phones: a used-up gem stays as a dimmed silhouette that reads "all placed".
-        h('span', { class: 'lr-n' }, n === 0 && L.phone ? 'all placed' : `×${n}`),
+        // Phones: a used-up gem stays as a dimmed silhouette with a "×0" badge (port-altar-3:
+        // the same short badge in its own slot in every room, so nothing can cut it).
+        h('span', { class: 'lr-n' }, `×${n}`),
       );
+      if (L.phone) el.setAttribute('aria-label', n === 0 ? 'all placed' : `${n} left`);
       el.toggleAttribute('data-empty', n === 0);
       this.slotEls[i]?.toggleAttribute('data-empty', n === 0);
       const held = this.hand?.kind === s.gem && !this.hand.from;
@@ -340,13 +344,7 @@ export const domMethods = {
       this.holdingEl.hidden = false;
     } else this.holdingEl.hidden = true;
     this.titleEl.toggleAttribute('data-holding', !!inHand && !!L.phone);
-    // A long gem name must not run the pill into Menu.
-    if (L.phone && this.dom.isConnected)
-      keepClearOfMenu(
-        this.holdingEl,
-        this.ctx.ui.root.querySelector('.lr-hud-menu'),
-        this.ctx.ui.scale,
-      );
+    // Phones: the pill is in the column's head, a region apart from Menu's (altar-chrome.ts).
     this.puzzle.machines.forEach((m, i) => {
       const el = this.needs[i]!;
       if (this.mode === 'edit' || !this.result) {

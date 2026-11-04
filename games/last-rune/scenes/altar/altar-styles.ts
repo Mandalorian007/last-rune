@@ -4,6 +4,8 @@
  */
 import { scaleFontSizes } from '@thunderclap/engine/ui';
 import { ALTAR_CHROME_CSS } from './altar-chrome';
+import { ALTAR_COLUMN_CSS } from './altar-column-styles';
+import { ALTAR_PHONE_CSS } from './altar-phone-styles';
 import { STRIKE_CSS } from './strike-styles';
 
 const CSS = /* css */ `
@@ -336,6 +338,8 @@ export function ensureAltarStyles(doc: Document = document): void {
   injected.add(doc);
   const el = doc.createElement('style');
   el.dataset.lr = 'altar';
-  el.textContent = scaleFontSizes(CSS + STRIKE_CSS + ALTAR_CHROME_CSS);
+  el.textContent = scaleFontSizes(
+    ALTAR_PHONE_CSS + CSS + STRIKE_CSS + ALTAR_CHROME_CSS + ALTAR_COLUMN_CSS,
+  );
   doc.head.append(el);
 }

@@ -264,7 +264,7 @@ export const circuitMethods = {
         },
         String(c.charge),
       );
-      this.dom.insertBefore(el, this.lane ?? this.tip);
+      this.dom.insertBefore(el, this.tip.parentNode === this.dom ? this.tip : this.leader);
       this.previewChipEls.push(el);
     }
   },
@@ -301,7 +301,7 @@ export const circuitMethods = {
         'aria-hidden': 'true',
         style: { left: `${a.x + (b.x - a.x) * t}px`, top: `${a.y + (b.y - a.y) * t}px` },
       });
-      this.dom.insertBefore(el, this.lane ?? this.tip);
+      this.dom.insertBefore(el, this.tip.parentNode === this.dom ? this.tip : this.leader);
       this.noGoEls.push(el);
     }
   },
