@@ -271,6 +271,13 @@ export class AltarScene implements GameScene {
   capEls: HTMLElement[] = [];
   /** Phones: the cards (gem and teach card, verdict, how-to line, read-outs), in `cardLane`. */
   lane: HTMLElement | null = null;
+  /**
+   * dense-board-4: on a slim column the held gem's rule card folds behind this tab; a tap opens
+   * it (pinned), the next tap or setting the gem down closes it.
+   */
+  ruleTab: HTMLButtonElement | null = null;
+  /** dense-board-4: the pinned card came from the Rule tab (shown as the chip). */
+  ruleOpen = false;
   /** Phones: the title and the tray's slots and counts, in the chrome's `top` region. */
   head: HTMLElement | null = null;
   /** Where the head was last lined up with the tray (`placeHead`). */

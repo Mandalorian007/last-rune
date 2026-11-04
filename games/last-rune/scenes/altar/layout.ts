@@ -126,6 +126,13 @@ export interface PhoneBand {
   /** The visible band, design y (mobile-5-board: the altar fills a wide phone's width). */
   visT: number;
   visB: number;
+  /**
+   * dense-board-4: the slim column (a dense board short of a fingertip): the tray a tight strip
+   * two to a row, the rule card folded behind a tab (altar-column).
+   */
+  slim?: boolean;
+  /** dense-board-4: a dense fit (its ×N badges and Gives/Needs cards at 14 px). */
+  dense?: boolean;
 }
 
 export interface AltarLayout {
@@ -431,6 +438,15 @@ const PH = {
   edgeDense: 4,
   /** dense-board-3: compact gauges are taken when they buy the sockets this many CSS px. */
   compactGain: 0.5,
+  /**
+   * dense-board-4: the slim column. A dense board still under `dense` after its dense fit is
+   * fitted again with the column a tight strip (two gems a row, `colSlim` wide) and the rule
+   * card folded behind a tab; the slim fit wins when it buys the sockets `slimGain` CSS px.
+   */
+  colSlim: 100,
+  slimGain: 1.5,
+  /** dense-board-4: the tray count badge on a dense board (14 px type, 15 px tall). */
+  countDense: 15,
 } as const;
 
 /** A lifted gem rises this far (design px; gems.ts GEM_LIFT_PX) and grows 7%. */
@@ -493,6 +509,18 @@ function phoneLayout(p: PuzzleDef, f: PhoneFrame): AltarLayout {
     const lean = fitDense(PH.laneMin);
     if (lean.pitch > best.pitch) best = lean;
   }
+  // dense-board-4: still short of a fingertip, the column turns a slim strip when the width it
+  // frees buys the sockets `slimGain` (a height-bound board gains nothing and keeps its column).
+  const kinds = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0).length;
+  if (best.pitch / f.cssPx < PH.dense && kinds <= 4) {
+    const grown = phoneFit(p, f, true, 0, false, false, true);
+    const compact = phoneFit(p, f, true, 0, true, false, true);
+    const slim = compact.pitch > grown.pitch + PH.compactGain * f.cssPx ? compact : grown;
+    // Its card lane may not get shorter: a long verdict (cause and a two-line Try) still fits.
+    const lane = (L: AltarLayout) => (f.bottom ?? DESIGN_H) - (L.phone?.laneTop ?? 0);
+    if (slim.pitch >= best.pitch + PH.slimGain * f.cssPx && lane(slim) >= lane(best) - f.cssPx)
+      best = slim;
+  }
   return best;
 }
 
@@ -544,11 +572,15 @@ function phoneFit(
   lane = 0,
   compact = false,
   wide = false,
+  slim = false,
 ): AltarLayout {
   const c = f.cssPx;
   const { w: cols, h: rows } = altarDims(p.altar);
   const edge = PH.edge * c;
   const clear = PH.clear * c;
+  // dense-board-4: a dense board's Gives/Needs cards are set at the 14 px floor (D-039), not 13;
+  // the budgets below already hold them at that size (measured: the widest, "on strike 1 or 2",
+  // is ~95 px of `labelW2`'s 100), so the type costs the sockets nothing.
   const labelH = (p.pulses > 1 ? PH.label2 : PH.label1) * c;
   // dense-board-2: on a dense board the gauges are a little smaller (the dial still reads), so
   // their reach above and below the board costs fewer sockets' worth of height.
@@ -740,17 +772,21 @@ function phoneFit(
   // Tray rows (mobile-5-board): up to four types two to a row, so the column can be narrower
   // and the board wider; five or six, three to a row.
   const kinds = GEM_KINDS.filter((k) => (p.tray[k] ?? 0) > 0);
+  // dense-board-4: the slim column is two gems a row, so only a tray of up to four kinds goes
+  // slim (three a row would not fit its strip; three rows of two would cut the card lane short).
   const per = kinds.length <= 4 ? Math.min(2, Math.max(1, kinds.length)) : 3;
   const nRows = Math.max(1, Math.ceil(kinds.length / per));
   // Wide phones take the width from the column; a narrow one (an SE) keeps its lane readable.
   const narrow = DESIGN_W / c < PH.wideCss;
   // dense-board: on a wide phone two gems a row need only `colDense`. An SE's dense column keeps
   // `laneDense`, so a long verdict (cause and a two-line Try) still fits beside the tray.
-  const colMin = !dense
-    ? Math.max(per <= 2 ? PH.colMin2 : PH.colMin, narrow ? PH.laneMin : 0) * c
-    : narrow
-      ? (lane || PH.laneDense) * c
-      : (per <= 2 ? PH.colDense : PH.colMin) * c;
+  const colMin = slim
+    ? PH.colSlim * c
+    : !dense
+      ? Math.max(per <= 2 ? PH.colMin2 : PH.colMin, narrow ? PH.laneMin : 0) * c
+      : narrow
+        ? (lane || PH.laneDense) * c
+        : (per <= 2 ? PH.colDense : PH.colMin) * c;
   const boardRoom = x1 - x0 - colMin - PH.colGap * c;
   const dims = (pitch: number, slab = 0) => {
     const m = Math.round(pitch * PHONE_SLAB[slab]![0]);
@@ -890,10 +926,12 @@ function phoneFit(
     Math.min(slotMax, Math.floor((colR - colL) / c / Math.max(per, 2) - PH.slotGap)),
   );
   const slotDX = slot + PH.slotGap;
+  // dense-board-4: a dense board's ×N badge is set at 14 px (`countDense` tall).
+  const countH = dense ? PH.countDense : PH.countH;
   // A row's badge (under its gem) clears the glyph of the gem in the next row.
   const slotDY = Math.max(
     slot + PH.slotGap,
-    Math.ceil((TRAY_COUNT_DROP + TRAY_GLYPH_HALF * TRAY_HELD_SCALE) * slot + PH.countH + 1),
+    Math.ceil((TRAY_COUNT_DROP + TRAY_GLYPH_HALF * TRAY_HELD_SCALE) * slot + countH + 1),
   );
   const lift = LIFT / c;
   // First row: a held gem, lifted, and its ↻ badge clear of the title line.
@@ -917,7 +955,7 @@ function phoneFit(
       colL,
       colR,
       // The count badge hangs under the gem; the cards start 1 px under that.
-      laneTop: Math.round(T + (lastRow + TRAY_COUNT_DROP * slot + PH.countH + 1) * c),
+      laneTop: Math.round(T + (lastRow + TRAY_COUNT_DROP * slot + countH + 1) * c),
       bubbleL: colL,
       bubbleB: Math.round(B - PH.bubbleUp * c),
       fuseX: Math.round(colL + 22 * c),
@@ -932,6 +970,8 @@ function phoneFit(
       front,
       visT: T,
       visB: B,
+      ...(slim ? { slim: true } : {}),
+      ...(dense ? { dense: true } : {}),
     },
     cols,
     rows,
@@ -1000,6 +1040,12 @@ function placeTitle(props: PropSpot[]): { titleX: number; titleMax: number } {
  * included).
  */
 export const LOUPE_BELOW = 48;
+/**
+ * dense-board-4: under this pitch (CSS px) the loupe is `LOUPE_SMALL` across, not 128: at 2.5×
+ * it still shows the whole aimed socket, and it fits beside the 3×3 it keeps clear.
+ */
+export const LOUPE_SMALL_BELOW = 42;
+export const LOUPE_SMALL = 104;
 
 /** Socket centre for an on-altar cell. */
 export function cellCenter(L: AltarLayout, c: Cell, out: { x: number; y: number }): void {

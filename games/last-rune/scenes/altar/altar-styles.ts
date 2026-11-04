@@ -299,6 +299,8 @@ const CSS = /* css */ `
   background: #000; box-shadow: 0 6px 22px rgba(0,0,0,0.7), 0 0 0 1px #000; transition: opacity 0.15s ease-out;
 }
 [data-reduced-motion] .lr-loupe { transition: none; }
+/* dense-board-4: the thin gold leader from the lens to the socket it magnifies. */
+.lr-loupe-leader { z-index: 29; background: #e8c06a !important; border-radius: 1px; }
 [data-reduced-motion] .tc-overlay .lr-altar-verdict,
 [data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-turn-arrow,
 [data-reduced-motion] .tc-overlay .lr-altar-cap,

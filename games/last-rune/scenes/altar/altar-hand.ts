@@ -162,7 +162,11 @@ export const handMethods = {
     this.logPlace(cell, null);
     // Phones (mobile-5-board): setting a gem down ends the hold, so the valid-socket rings
     // clear and Turn turns the gem just placed; the next tap on the tray takes another.
-    if (this.view.layout.phone) this.hand = null;
+    if (this.view.layout.phone) {
+      this.hand = null;
+      // dense-board-4: setting the gem down folds its rule card behind the tab again.
+      if (this.ruleTab) this.infoPin = null;
+    }
     this.changed(cell);
   },
 

@@ -377,6 +377,13 @@ for (const vp of PHONES) {
         const held = await holdOne(page, id, half);
         expect(held, `${id}: no tray gem left to hold`).not.toBeNull();
         await shot(page, `12-${id}-held`);
+        // dense-board-4: a slim column folds the held gem's card behind its Rule tab; open it.
+        const ruleTab = page.locator('.lr-rule-tab');
+        if (await ruleTab.isVisible()) {
+          await ruleTab.tap();
+          await expect(page.locator('.lr-altar-tip')).toBeVisible();
+          await shot(page, `12-${id}-held-rule`);
+        }
         const turn = TURN_HELD.find((t) => t.id === id);
         if (turn) {
           await meet(page, id, half);

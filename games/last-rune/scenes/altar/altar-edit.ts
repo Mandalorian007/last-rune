@@ -8,7 +8,15 @@ import type { Cell } from '../../rules/types';
 import { DRAG_PX, HOLD_SECS, SLOT_ACTIONS } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { jumpCursor, stepCursor } from './cursor';
-import { cellAt, cellCenter, LOUPE_BELOW, snapCell, traySlotAt } from './layout';
+import {
+  cellAt,
+  cellCenter,
+  LOUPE_BELOW,
+  LOUPE_SMALL,
+  LOUPE_SMALL_BELOW,
+  snapCell,
+  traySlotAt,
+} from './layout';
 
 export const editMethods = {
   /**
@@ -26,6 +34,10 @@ export const editMethods = {
       magnify: {
         pitch: () => L().pitch / ctx.device.cssPx,
         below: LOUPE_BELOW,
+        // dense-board-4: a smaller lens on the densest boards, so it finds room beside the aimed
+        // socket's neighbours; a thin leader joins it to the socket it magnifies.
+        size: () => (L().pitch / ctx.device.cssPx < LOUPE_SMALL_BELOW ? LOUPE_SMALL : 128),
+        leader: true,
         when: () => !!this.hand && !this.keyboard && this.mode === 'edit',
         snap: (x, y) => {
           const cell = snapCell(L(), x, y, this.aimable);
@@ -39,13 +51,18 @@ export const editMethods = {
         // dense-board-3: the loupe never covers the aimed socket or its eight neighbours (the
         // player still sees where the gem goes and what it joins), and keeps off the column's
         // title, held-gem pill and tray counts unless nowhere else is free.
-        clear: (t) => {
-          if (!t) return null;
+        clear: (t, aim) => {
           const l = L();
+          // dense-board-4: with no socket snapped (an occupied or wrong cell) the loupe still
+          // keeps clear of the cell under the aim point (it once sat right over it).
+          const under = t ? null : cellAt(l, aim.x, aim.y);
+          const mid = { x: aim.x, y: aim.y };
+          if (under) cellCenter(l, under, mid);
+          const at = t ?? mid;
           const to = (x: number, y: number) => ctx.surface.logicalToClient(x, y);
           const n = 1.5 * l.pitch;
-          const a = to(t.x - n, t.y - n);
-          const b = to(t.x + n, t.y + n);
+          const a = to(at.x - n, at.y - n);
+          const b = to(at.x + n, at.y + n);
           const keep = [{ l: a.x, t: a.y, r: b.x, b: b.y }];
           const ph = l.phone;
           if (!ph) return { keep };
@@ -98,9 +115,10 @@ export const editMethods = {
     else delete this.dom.dataset.loupe;
 
     // ── Pointer ──
-    // Phones: a tap while a gem's full card is open only closes it.
-    const closing = input.pressed('select') && !!this.infoPin;
-    if (closing) this.infoPin = null;
+    // Phones: a tap while a gem's full card is open only closes it. dense-board-4: the Rule
+    // tab's card closes on any tap too, but the tap still lands (a socket tapped places the gem).
+    const closing = input.pressed('select') && !!this.infoPin && !this.ruleOpen;
+    if (input.pressed('select') && this.infoPin) this.infoPin = null;
     if (
       !closing &&
       input.pressed('select') &&
