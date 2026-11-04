@@ -617,7 +617,7 @@ ${A} .lr-altar-verdict .lr-verdict-cause {
 /* The teach card: the rule, then "New here · 1 of 3" and the button that turns the page. Where
    the column is short (data-compact, altar-scene arrangeColumn) they stand top-right, the
    counter over the button, and the rule wraps round them. */
-${A} .lr-altar-tip:has(> .lr-info-foot):not([data-compact]) { display: flex; flex-direction: column; }
+${A} .lr-altar-tip:has(> .lr-info-foot):not([data-compact]):not([hidden]) { display: flex; flex-direction: column; }
 ${A} .lr-altar-tip .lr-info-foot {
   order: 1; display: flex; align-items: center; justify-content: space-between; gap: ${cpx(8)};
   margin-top: ${cpx(3)};

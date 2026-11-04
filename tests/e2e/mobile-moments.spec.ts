@@ -42,18 +42,22 @@ async function insets(page: Page, px: number) {
   }, px);
 }
 
-/** A shown element's box (client px), or null when it is hidden, empty or invisible. */
-async function shownBox(page: Page, sel: string): Promise<Box | null> {
-  return page.evaluate((sel) => {
-    const el = document.querySelector<HTMLElement>(sel);
-    if (!el || el.hidden) return null;
-    const cs = getComputedStyle(el);
-    const r = el.getBoundingClientRect();
-    if (cs.visibility === 'hidden' || cs.display === 'none' || r.width < 1 || r.height < 1)
-      return null;
-    if (Number(cs.opacity) < 0.05) return null;
-    return { l: r.left, t: r.top, r: r.right, b: r.bottom };
-  }, sel);
+/** A shown element's box (client px), or null when it is hidden, empty or invisible. `drawn`
+ * ignores the hidden attribute and asks only what the player sees: a CSS rule can override it. */
+async function shownBox(page: Page, sel: string, drawn = false): Promise<Box | null> {
+  return page.evaluate(
+    ([sel, drawn]) => {
+      const el = document.querySelector<HTMLElement>(sel as string);
+      if (!el || (!drawn && el.hidden)) return null;
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      if (cs.visibility === 'hidden' || cs.display === 'none' || r.width < 1 || r.height < 1)
+        return null;
+      if (Number(cs.opacity) < 0.05) return null;
+      return { l: r.left, t: r.top, r: r.right, b: r.bottom };
+    },
+    [sel, drawn] as const,
+  );
 }
 
 const hit = (a: Box, b: Box) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
@@ -123,7 +127,7 @@ async function arrivalProblems(
     await page.touchscreen.tap(m.x, m.y);
     await waitFrames(page, 4);
   }
-  if (await shownBox(page, '.lr-altar-tip[data-source="intro"]'))
+  if (await shownBox(page, '.lr-altar-tip[data-source="intro"]', true))
     out.push(`${label}: arrival card still up after "Got it"`);
   return out;
 }
