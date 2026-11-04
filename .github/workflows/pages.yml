@@ -11,7 +11,7 @@ on:
       label:
         description: "Release label shown in the build (e.g. alpha-1, v1.0.0)"
         required: true
-        default: alpha
+        default: v1.0.0
 
 permissions:
   contents: read

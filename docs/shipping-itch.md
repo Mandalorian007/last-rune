@@ -11,7 +11,7 @@ Nothing in the repo or CI uploads to itch or holds itch credentials. Every uploa
 - [ ] `pnpm install --frozen-lockfile && pnpm check` passes.
 - [ ] `pnpm test:e2e` passes locally (macOS: see `tests/e2e/README.md`). After engine-render merges, no tests should be `fixme`.
 - [ ] Optional: run the **E2E (WebGPU smoke)** workflow by hand (Actions → Run workflow).
-- [ ] Saves use `last-rune:`-prefixed `localStorage` keys, never call `localStorage.clear()`, and survive `localStorage` throwing (research §3).
+- [ ] Saves use `thunderclap:last-rune:`-prefixed `localStorage` keys, never call `localStorage.clear()`, and survive `localStorage` throwing (research §3).
 
 ## 1. Build and zip
 

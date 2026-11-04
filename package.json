@@ -1,7 +1,7 @@
 {
   "name": "last-rune",
   "private": true,
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
   "description": "The Last Rune — a gem-circuit puzzle game for the browser (WebGPU). First game on the ThunderClap engine.",
   "license": "MIT",
@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "baseline": "playwright test -c scripts/baseline/playwright.config.ts",
     "package:itch": "node scripts/package-itch.mjs",
     "itch:sim": "node scripts/itch-sim/serve.mjs",
     "audio:check": "node scripts/audio-check.mjs",
