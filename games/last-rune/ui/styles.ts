@@ -256,7 +256,9 @@ const CSS = /* css */ `
 .tc-overlay .lr-plate-bolt { position: absolute; inset: 0; pointer-events: none; }
 .tc-overlay .lr-plate-bolt svg { width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 3px rgba(80,200,255,0.9)); }
 .tc-overlay .lr-plate-bolt line { stroke: #9cf0ff; stroke-width: 3.2; stroke-linecap: round; }
-.tc-overlay .lr-plate-bolt polygon, .tc-overlay .lr-plate-bolt circle { fill: #9cf0ff; stroke: #9cf0ff; stroke-width: 1; stroke-linejoin: round; }
+.tc-overlay .lr-plate-bolt polygon { fill: #9cf0ff; stroke: #9cf0ff; stroke-width: 1; stroke-linejoin: round; }
+/* glyph-truth-4: a one-way gem's port is a hollow ring, as on the gem. */
+.tc-overlay .lr-plate-bolt circle { fill: none; stroke: #9cf0ff; stroke-width: 2.6; }
 /* Charge chips and fizzle marks: the altar's own look (scenes/altar/altar-styles.ts). */
 .tc-overlay .lr-plate-chip {
   position: absolute; transform: translate(-50%, -50%); min-width: 1.5em; padding: 0 0.35em; box-sizing: border-box; border-radius: 999px; white-space: nowrap;

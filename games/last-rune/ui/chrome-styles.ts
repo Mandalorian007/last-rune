@@ -448,6 +448,9 @@ ${C} .lr-codex-spread::after { left: calc(50% - 14px); width: 28px; }
 
 /* While a panel is open, the ☰ steps back. */
 ${C}:has(.tc-panel-host[data-modal="true"]) .lr-hud { visibility: hidden; }
+/* polish-10: and the title's buttons and links: on an upright phone Settings stood over Play,
+   and a ghost "Pl" showed through its lower edge. */
+${C}:has(.tc-panel-host[data-modal="true"]) :is(.lr-title-menu, .lr-title-links) { visibility: hidden; }
 
 /* Settings on an upright phone: the tabs get their own row under the title, and each tab
    becomes one column with each choice under its label. */

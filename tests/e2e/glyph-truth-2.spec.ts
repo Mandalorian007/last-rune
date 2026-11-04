@@ -1,7 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
-import { MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
+import { type GemKind, MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
 import { GEM_WGSL } from '../../games/last-rune/shaders/gem-wgsl';
+import { GEM_DIAGRAMS } from '../../games/last-rune/ui/codex-diagram';
 import { playOrder } from './altar-audit';
 import { DEV_URL, waitFrames } from './helpers';
 
@@ -141,4 +142,28 @@ test("the Split's and the Gate's inputs are inlet marks on the rim, not door bar
   const inlet = GEM_WGSL.slice(GEM_WGSL.indexOf('fn g_inlet('), GEM_WGSL.indexOf('fn g_tri('));
   expect(inlet, 'a port is a round plug').toMatch(/length\(p - /);
   expect(inlet).not.toContain('g_tri');
+  // glyph-truth-4 (blind review 10, E): the port is a hollow ring (|length - r|), not a disc.
+  expect(inlet, 'a port is a hollow ring').toMatch(/abs\(length\(p - /);
+  // glyph-truth-4 (B): ports and arrows belong to the one-way gems only, on the gem and in the
+  // Codex alike. Per gem: the glyph has a port or arrow exactly when its Codex diagram is
+  // one-way, and then as many as the diagram has bolts in and out.
+  const kinds: Record<number, GemKind> = {
+    0: 'channel',
+    1: 'bend',
+    2: 'split',
+    3: 'amplify',
+    4: 'gate',
+    5: 'capacitor',
+  };
+  for (const [k, gem] of Object.entries(kinds)) {
+    const n = Number(k);
+    const src =
+      n === 5
+        ? GEM_WGSL.slice(GEM_WGSL.indexOf('if (kind == 4)'), GEM_WGSL.indexOf('fn g_port_hole'))
+        : branch(n);
+    const body = n === 5 ? src.slice(src.indexOf('} else {')) : src;
+    const d = GEM_DIAGRAMS[gem];
+    expect(inlets(body), `${gem}: ports`).toBe(d.oneWay ? d.ins.length : 0);
+    expect(outlets(body), `${gem}: arrows`).toBe(d.oneWay ? d.outs.length : 0);
+  }
 });
