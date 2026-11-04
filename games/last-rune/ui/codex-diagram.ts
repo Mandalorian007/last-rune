@@ -104,6 +104,13 @@ export function diagramSvg(d: GemDiagram): string {
     const px = -uy * head * 0.62;
     const py = ux * head * 0.62;
     const n = (v: number) => Math.round(v * 10) / 10;
+    // held-gem (blind review 9, finding C): one arrow language, as on the gem. An arrowhead
+    // means out; a bolt coming in ends at a round port on the gem's rim, never an arrowhead.
+    if (inward)
+      return (
+        `<line x1="${n(tail[0])}" y1="${n(tail[1])}" x2="${n(tip[0] - ux * 4)}" y2="${n(tip[1] - uy * 4)}"/>` +
+        `<circle cx="${n(tip[0] - ux * 4)}" cy="${n(tip[1] - uy * 4)}" r="4.6"/>`
+      );
     return (
       `<line x1="${n(tail[0])}" y1="${n(tail[1])}" x2="${n(base[0])}" y2="${n(base[1])}"/>` +
       `<polygon points="${n(tip[0])},${n(tip[1])} ${n(base[0] + px)},${n(base[1] + py)} ${n(base[0] - px)},${n(base[1] - py)}"/>`

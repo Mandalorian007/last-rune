@@ -8,6 +8,7 @@
  * FUSE, particles.
  */
 import type { Frame, RGBA } from '@thunderclap/engine/render';
+import { gemCutPoints } from '../../art/gem-cut';
 import type { CandleInstance } from '../../art/materials/candles';
 import { addGemLight, type GemInstance, type GemState } from '../../art/materials/gems';
 import { LightSet } from '../../art/materials/lights';
@@ -66,6 +67,11 @@ export interface BoardGem {
   energyTarget: number;
   /** Extra pulse (capacitor holding charge). */
   holding: boolean;
+  /**
+   * An Amplify the bolt passed without doubling it (it was already doubled; held-gem, finding
+   * E): drawn idle, dim and unlit, where a working Amplify flares.
+   */
+  idle: boolean;
   /** Being dragged: drawn at the pointer instead. */
   hidden: boolean;
 }
@@ -91,6 +97,16 @@ export interface HeldGem {
   size?: number;
   /** Hover lift when not the default (phones: 0, it rests flat in its tray ring; glyph-truth). */
   lift?: number;
+  /**
+   * Phones: resting in its own tray slot (held-gem). Drawn calm (no hover wash, no lift) so its
+   * glyph keeps full contrast and a Turn shows at a glance; the slot's own copy is hidden.
+   */
+  rest?: boolean;
+  /**
+   * Phones, while it is snapped over a socket: the tray slot it came from, where a calm copy at
+   * its turn stays (the ghost on the socket shows where it would land).
+   */
+  slot?: { x: number; y: number; size: number } | null;
 }
 
 export class AltarView {
@@ -163,6 +179,16 @@ export class AltarView {
     y: 0,
     size: 80,
     state: 'hover',
+  };
+
+  /** Phones: the held tray gem's ring (gem state "ring"), drawn round it in its slot. */
+  private readonly ringInst: GemInstance = {
+    kind: 'channel',
+    x: 0,
+    y: 0,
+    size: 80,
+    state: 'ring',
+    lift: 0,
   };
   private readonly heldList: GemInstance[] = [this.heldInst];
   private readonly drawList: GemInstance[] = [];
@@ -336,6 +362,7 @@ export class AltarView {
         energy: 0,
         energyTarget: 0,
         holding: false,
+        idle: false,
         hidden: false,
       });
       if (isNew) g.lift = 1;
@@ -400,6 +427,7 @@ export class AltarView {
     for (const b of this.board) {
       b.energyTarget = 0;
       b.holding = false;
+      b.idle = false;
     }
   }
 
@@ -455,6 +483,8 @@ export class AltarView {
       g.state = b.energy > 0.45 ? 'energised' : b.hidden ? 'dim' : 'placed';
       const hold = b.holding ? 0.35 + 0.25 * Math.sin(this.time * 6) : 0;
       g.glow = 1 + b.energy * this.energyGlow + hold;
+      // An idle Amplify sits below a resting gem's glow: the bolt went through, nothing woke.
+      if (b.idle && g.state === 'placed') g.glow = 0.45;
     }
     for (let i = 0; i < this.tray.length; i++) {
       const t = this.tray[i]!;
@@ -485,6 +515,31 @@ export class AltarView {
    * groove to their socket; the edit-time route lies faintly in grooves between gems; sockets
    * out of play are skimmed over so the circuit, not the grid, is what reads.
    */
+  /**
+   * Phones (held-gem, blind review 9 finding A): the gem in hand, resting in its tray slot,
+   * sits in a gold ring of its own outline (an octagon round a Split), turned with it. Drawn
+   * under the gem, hugging its edge, so nothing lies over the gem's glyph: a ring over the gem
+   * (and its glow) paled it, and a Turn read as no change.
+   */
+  private drawHeldRing(frame: Frame): void {
+    const h = this.held;
+    if (!h || !this.layout.phone) return;
+    const ti = this.tray.findIndex((t) => t.kind === h.kind);
+    const slot = this.layout.tray[ti];
+    if (!slot || !(h.rest || h.slot)) return;
+    const r = this.ringInst;
+    r.kind = h.kind;
+    r.rot = isRotational(h.kind) ? h.rot : 0;
+    r.x = slot.x;
+    r.y = slot.y;
+    // The stroke's centre a hair outside the gem's corners.
+    const corner = (slot.size / 2) * Math.min(1, cutRadius(h.kind)) + HELD_RING_GAP;
+    r.size = Math.round(2 * corner * ringScale(h.kind));
+    this.heldList[0] = r;
+    this.assets.gems.drawGems(frame, this.heldList);
+    this.heldList[0] = this.heldInst;
+  }
+
   private drawCircuit(frame: Frame): void {
     const c = this.assets.circuit;
     const L = this.layout;
@@ -687,6 +742,7 @@ export class AltarView {
     for (const b of this.board) if (!b.hidden) list.push(b.g);
     for (const t of this.tray) if (t.size !== 0) list.push(t);
     a.gems.drawUnder(frame, list);
+    this.drawHeldRing(frame);
     a.gems.drawGems(frame, list);
 
     if (this.held) {
@@ -698,12 +754,20 @@ export class AltarView {
       g.rot = isRotational(h.kind) ? h.rot : h.snapped ? (this.heldFace ?? 0) : 0;
       g.x = h.x;
       g.y = h.y;
-      g.lift = h.lift ?? (h.snapped ? 0.6 : 1);
-      g.state = 'hover';
+      g.seed = this.tray.find((t) => t.kind === h.kind)?.seed ?? 40;
+      // held-gem: over a socket it would land in, the gem is a ghost sitting in that socket at
+      // its turn: faint, flat, its glyph still clear, so the turn reads before it drops (and the
+      // loupe, which copies these pixels, shows the same). Resting in a phone's tray slot it is
+      // drawn as the tray draws its gems (idle, flat), only turned, inside its ring.
+      g.lift = h.snapped ? 0 : (h.lift ?? 1);
+      g.state = h.snapped ? 'ghost' : h.rest ? 'idle' : 'hover';
       g.size = h.size ?? L.gemSize * (h.snapped ? 1 : 1.05);
-      g.glow = 1.1;
-      a.gems.drawUnder(frame, this.heldList);
-      a.gems.drawGems(frame, this.heldList);
+      g.glow = h.rest ? 1 : 1.1;
+      // Resting in its slot it is the tray's own copy, turned (altar-hand.ts `updateTray`).
+      if (!h.rest) {
+        a.gems.drawUnder(frame, this.heldList);
+        a.gems.drawGems(frame, this.heldList);
+      }
     }
 
     if (this.showcase) {
@@ -720,6 +784,22 @@ export class AltarView {
 }
 
 export { DANGER, GOLD };
+
+/**
+ * The ring quad's size per unit of ring radius: the "ring" state strokes the cut's outline
+ * shrunk by 1.16 and set 0.07 in (gem-wgsl.ts), so its corners land on the radius.
+ */
+function ringScale(kind: GemKind): number {
+  return 1 / (cutRadius(kind) / 1.16 - 0.07);
+}
+
+/** The cut's corner radius, gem half-sizes. */
+function cutRadius(kind: GemKind): number {
+  return Math.max(...gemCutPoints(kind).map(([x, y]) => Math.hypot(x, y)));
+}
+
+/** Design px between a held tray gem's corners and its ring's line. */
+const HELD_RING_GAP = 7;
 
 function inside(L: AltarLayout, c: Cell): boolean {
   return c.x >= 0 && c.y >= 0 && c.x < L.cols && c.y < L.rows;

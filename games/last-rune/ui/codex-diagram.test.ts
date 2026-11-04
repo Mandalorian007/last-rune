@@ -41,11 +41,14 @@ describe('codex bolt diagrams', () => {
     }
   });
 
-  it('draws one arrow per bolt and keeps marks inside the plate', () => {
+  it('draws an arrowhead per bolt out, a port per bolt in, and keeps marks inside the plate', () => {
     for (const gem of GEM_KINDS) {
       const d = GEM_DIAGRAMS[gem];
       const svg = diagramSvg(d);
-      expect(svg.match(/<polygon/g)?.length).toBe(d.ins.length + d.outs.length);
+      // held-gem: arrow = out, round port = in, as on the gem's own glyph.
+      expect(svg.match(/<polygon/g)?.length, gem).toBe(d.outs.length);
+      expect(svg.match(/<circle/g)?.length ?? 0, gem).toBe(d.ins.length);
+      expect(svg.match(/<line/g)?.length, gem).toBe(d.ins.length + d.outs.length);
       expect(svg).not.toContain('id=');
       expect(d.alt.length).toBeGreaterThan(10);
       const marks = [

@@ -130,4 +130,15 @@ test("the Split's and the Gate's inputs are inlet marks on the rim, not door bar
   expect(inlets(branch(2)), 'Split: one input').toBe(1);
   expect(inlets(branch(4)), 'Gate: two inputs').toBe(2);
   for (const k of [0, 1, 3]) expect(inlets(branch(k)), `kind ${k} has no input mark`).toBe(0);
+  // held-gem (blind review 9, finding C): one arrow language. An arrowhead means out, so the
+  // Split is one port and two arrows, the Gate two ports and one arrow; the two-way gems
+  // carry no arrowhead, and an input is a round port, never pointed.
+  const outlets = (src: string) => (src.match(/g_outlet\(p,/g) ?? []).length;
+  expect(GEM_WGSL).toContain('fn g_outlet(');
+  expect(outlets(branch(2)), 'Split: two arrows out').toBe(2);
+  expect(outlets(branch(4)), 'Gate: one arrow out').toBe(1);
+  for (const k of [0, 1, 3]) expect(outlets(branch(k)), `kind ${k} has no arrowhead`).toBe(0);
+  const inlet = GEM_WGSL.slice(GEM_WGSL.indexOf('fn g_inlet('), GEM_WGSL.indexOf('fn g_tri('));
+  expect(inlet, 'a port is a round plug').toMatch(/length\(p - /);
+  expect(inlet).not.toContain('g_tri');
 });

@@ -8,6 +8,7 @@ import type { BoltOutcome } from '../../game/flow';
 import { type SimResult, simulate } from '../../rules';
 import { FF_RATE, FIRST_MISS_LINE, OUT_GLOW, SKIP_RATE, TICK } from './altar-defs';
 import type { AltarScene } from './altar-scene';
+import { idleAmpArrivals } from './amp-idle';
 import { capacitorBeats } from './circuit-model';
 import { emitPuzzleEvent, type FireMachine, puzzleEventsWanted } from './events';
 import { anchorOf } from './layout';
@@ -41,6 +42,10 @@ export const runMethods = {
     this.result = result;
     this.timeline = tl;
     this.fizzleList = fizzles(this.puzzle, placements, result, tl);
+    this.idleAmps = idleAmpArrivals(
+      result.trace,
+      [...this.puzzle.fixed, ...placements].filter((g) => g.gem === 'amplify').map((g) => g.cell),
+    );
     this.attempts++;
     this.outcomes[result.outcome]++;
     this.ctx.flow.recordAttempt(this.machine, result.outcome);
@@ -157,7 +162,10 @@ export const runMethods = {
     }
     for (const b of this.view.board) {
       b.holding = false;
-      if (i > 0) b.energyTarget = 0;
+      if (i > 0) {
+        b.energyTarget = 0;
+        b.idle = false;
+      }
     }
     if (tl.pulses.length > 1) this.subtitle.textContent = `Strike ${i + 1} of ${tl.pulses.length}`;
     this.setStrikeRow(i);
@@ -171,7 +179,11 @@ export const runMethods = {
       case 'store':
       case 'wait': {
         const b = this.view.gemAt(a.cell);
-        if (b) {
+        // held-gem: an Amplify the bolt passes undoubled stays idle (dim, no flare).
+        const idle = this.idleAmps.has(a.seg);
+        if (b && idle) b.idle = b.energyTarget === 0;
+        else if (b) {
+          b.idle = false;
           b.energyTarget = a.end === 'wait' ? 0.6 : 1;
           if (a.end === 'store') b.holding = true;
         }
