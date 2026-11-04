@@ -18,10 +18,10 @@ const TAU = Math.PI * 2;
 export const GEM_CUT: Readonly<Record<GemKind, Cut>> = {
   channel: { sides: 6, phase: -TAU / 4, scale: [0.66, 1], offset: [0, 0] },
   bend: { sides: 4, phase: TAU / 8, scale: [1.08, 1.08], offset: [0, 0] },
-  split: { sides: 8, phase: 0, scale: [1.02, 1.02], offset: [0, 0] },
+  split: { sides: 6, phase: 0, scale: [0.98, 0.98], offset: [0, 0] },
   amplify: { sides: 12, phase: 0, scale: [0.97, 0.97], offset: [0, 0] },
   gate: { sides: 5, phase: -TAU / 4, scale: [1, 1], offset: [0, 0.06] },
-  capacitor: { sides: 6, phase: 0, scale: [1, 0.9], offset: [0, 0] },
+  capacitor: { sides: 4, phase: TAU / 8, scale: [1.2, 0.86], offset: [0, 0] },
 };
 
 /**

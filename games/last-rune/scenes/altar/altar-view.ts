@@ -517,7 +517,7 @@ export class AltarView {
    */
   /**
    * Phones (held-gem, blind review 9 finding A): the gem in hand, resting in its tray slot,
-   * sits in a gold ring of its own outline (an octagon round a Split), turned with it. Drawn
+   * sits in a gold ring of its own outline (a hexagon round a Split), turned with it. Drawn
    * under the gem, hugging its edge, so nothing lies over the gem's glyph: a ring over the gem
    * (and its glow) paled it, and a Turn read as no change.
    */
