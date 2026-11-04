@@ -125,9 +125,24 @@ ${LANE} > .lr-altar-tip .lr-info-next {
 ${LANE} > .lr-altar-tip .lr-info-next::before {
   content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%);
 }
+/* More below (altar-column.ts arrangeColumn): the card takes a swipe, and its foot says so. */
+${LANE} > :is(.lr-altar-tip, .lr-altar-verdict, .lr-altar-cap)[data-more] { pointer-events: auto; }
+${LANE} > .lr-altar-tip[data-more] .lr-info-foot::before {
+  content: '▾'; position: absolute; right: 0; bottom: 100%; height: 18px; padding: 0 8px 0 14px;
+  font: 14px/18px ${SERIF}; color: #e8c06a; pointer-events: none;
+  background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,0.98) 10px);
+}
+${LANE} > :is(.lr-altar-verdict, .lr-altar-cap)[data-more] {
+  mask-image: linear-gradient(#000 calc(100% - 18px), transparent);
+}
 
-/* The verdict: the headline, then each strike, the cause and the next step on lines of their own. */
-${LANE} > .lr-altar-verdict { order: -1; font-family: var(--tc-font-display, serif); font-size: 15px; line-height: 1.25; }
+/* The verdict: the headline, then each strike, the cause and the next step on lines of their own.
+   The player reads it first, so it keeps its height (up to the whole region) and a Capacitor
+   read-out under it gives way, scrolling with its cue. */
+${LANE} > .lr-altar-verdict {
+  order: -1; flex-shrink: 0; max-height: 100%;
+  font-family: var(--tc-font-display, serif); font-size: 15px; line-height: 1.25;
+}
 ${LANE} > .lr-altar-verdict[hidden] { display: none; }
 ${LANE} > .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-hint, .lr-verdict-cause, .lr-verdict-strikes) {
   display: block; max-width: none; margin: 3px 0 0; white-space: normal; text-align: left;

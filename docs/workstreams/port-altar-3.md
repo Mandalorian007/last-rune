@@ -88,3 +88,17 @@ Blind review 5 scored 6.6/10. Every layout major is in the tray / gem card / hin
 - Test updates:
   - `mobile-budget`: lane cards are CSS px (scale 1) and are checked only against the board. The 8 px "label clear of the board" rule is replaced by "a Gives/Needs card never covers an open socket". Blocked cells are skipped, since they are solid slab on phones.
   - `mobile-teach`: the fixed-gem marker can be a ring alone, re-anchored when no clear leader path exists. "All placed" is asserted as "×0" plus the aria-label.
+
+**Merge of main (chrome-polish-3, altar-truth) into ws/port-altar-3 (03dbfc4)**
+- `ui/phone-styles.ts` stays deleted. Chrome-polish-3's journal rules are appended to `scenes/journal/journal-phone-styles.ts`. Its door-plate sheet joins the phone sheet through `SCENE_PHONE_CSS` in `game/ctx.ts`.
+- Altar-truth's changes are carried into the split modules:
+  - previewChips, teachChips and FIXED/YOURS lines removed;
+  - Turn taught via `turnTeachLine`;
+  - the `planOver` warn;
+  - `verdictParts` and `hintRoom`.
+- `altar-scene.ts` is now 642 lines, still with zero `L.phone`.
+- **More-below cue (from the gate6 review):** on the SE, a long Split card and a Capacitor read-out under a verdict were cut off with no sign of more text.
+  - `arrangeColumn` sets `data-more` on any lane card that has more text below. The tip then shows a small ▾ above its footer; the verdict and cap fade out at the bottom. Both can be scrolled.
+  - The verdict no longer shrinks (up to the whole region); a Capacitor read-out under it gives way first.
+  - Note for content: SE's lane holds about 3 lines of card text; Split's how-to and Capacitor verdicts run longer.
+- **Baselines (not regenerated, as the PM asked):** 84 altar shots differ: every altar scene, "empty" and "solved", at desktop-720, desktop-1080 and ipad. Main at 42a4e6f fails the same 84, and pre-merge ab3c7f3 passed all 96 altar baselines, so the diffs come from altar-truth's changes. The 44 non-altar baselines pass.

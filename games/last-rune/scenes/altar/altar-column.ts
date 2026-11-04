@@ -285,6 +285,13 @@ export const columnMethods = {
     const live = this.capEls.some((el) => !el.hasAttribute('data-plan') && el.offsetHeight > 0);
     const cardUp = !this.verdict.hidden || !this.tip.hidden || live;
     this.holdFuse(cardUp);
+    // A card taller than its region scrolls; until its end is in view it says there is more
+    // (a fade and a ▾ over its foot) and takes touches, so the rest is a swipe away.
+    for (const card of [this.tip, this.verdict, ...this.capEls]) {
+      const more =
+        card.offsetHeight > 0 && card.scrollHeight - card.scrollTop - card.clientHeight > 2;
+      if (more !== card.hasAttribute('data-more')) card.toggleAttribute('data-more', more);
+    }
     const cap = this.ctx.ui.caption;
     const talking = !cardUp && !cap.element.hidden && !!cap.currentText;
     lane.toggleAttribute('data-fuse', talking);
