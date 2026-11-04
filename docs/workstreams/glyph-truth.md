@@ -8,7 +8,8 @@ Source: D-040 addendum 7. Starts after solve-truth merges, because both touch ge
 3. **×0 is a dimmed copy of the real icon,** the same treatment for every gem kind (today Bend becomes a grey square and others become dark faceted blobs).
 4. **Capacitor at ×1 or more looks available,** not pale like the empty look.
 5. **Calmer holding state.** While holding, legal sockets are marked, but softer than a full-cream ring on every socket, so the circuit and built-in gems stay readable (`12-archive-held`, `12-the-last-rune-held`).
-6. **Built-in lock** stays readable at phone size (it's about 6 px on SE today); grow it or strengthen the collar.
+6. **A straight gem never turns when you press Strike** (left over from solve-truth, see `solve-truth.md`). Before Strike, a straight gem (Channel, Amplify, Capacitor) that the preview doesn't reach rests facing the storm. On Capacitor-release paths (capacitor-bay, roof-array, lift-shaft, the-last-rune), the real strike then reaches it and it turns. Rest it along the run it will carry, from the same rule data `solvedLook` uses, so the board never changes shape at Strike. Add an e2e check: on those altars, the turns before Strike equal the turns at the verdict.
+7. **Built-in lock** stays readable at phone size (it's about 6 px on SE today); grow it or strengthen the collar.
 
 ## Done when
 - A visual check on all four phones (fresh `SHOTS=gate7`) covers Storm Cell II, Foundry, Relay Tower, Control Booth, Archive, The Last Rune and Capacitor Bay. Look at them yourself, zoomed to real size.

@@ -54,8 +54,8 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9c | Port altar part 3: right column (tray/gem/teach/verdict cards, FUSE lane) on regions, cards that cannot collide, board fills region; delete phone-styles.ts; altar-scene.ts < 2,000. Pulled into Gate 2 (D-040 add. 6) | ws/port-altar-3 | 2 | 9b | ✅ merged (altar-scene.ts 642 lines, phone-styles.ts gone) |
 | 9d | Altar truth: hints from the room, over-charge preview, one badge rule, fixed gems unmistakable, Turn taught, Undo, plain copy | ws/altar-truth | 2 | 9b | ✅ merged |
 | 9e | Chrome polish 3: title, portrait title, hall toast/labels, settings, codex, journal, ending | ws/chrome-polish-3 | 2 | 9b | ✅ merged |
-| 9f | Solve truth: solved board renders exactly the built board (Channel direction, only powered gems lit, fixed collar kept, readable bloom) | ws/solve-truth | 2 | 9c | 🔄 running |
-| 9g | Glyph truth: Split/Gate inputs legible, tray badge off the gem, ×0 dimmed real icon, Capacitor lit, calmer holding glow | ws/glyph-truth | 2 | 9f | ⏳ after 9f |
+| 9f | Solve truth: solved board renders exactly the built board (Channel direction, only powered gems lit, fixed collar kept, readable bloom) | ws/solve-truth | 2 | 9c | ✅ merged (render bug; rules were right) |
+| 9g | Glyph truth: Split/Gate inputs legible, tray badge off the gem, ×0 dimmed real icon, Capacitor lit, calmer holding glow | ws/glyph-truth | 2 | 9f | 🔄 running |
 | 9h | Teach 4: in→out diagrams on gem cards, Capacitor two-strike strip, gauge dot explained, Channels lie along their run, no mid-sum wraps | ws/teach-4 | 2 | 9c | 🔄 running |
 | 9i | Chrome polish 4: hall legend, title/end-card button weight, end-card stats, journal caption | ws/chrome-polish-4 | 2 | 9c | 🔄 running |
 | G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 6: 7/7/7/7 (D-040 add. 7; up from 6.6) → 9f–9i, then blind review 7 |
