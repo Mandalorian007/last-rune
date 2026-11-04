@@ -402,9 +402,9 @@ ${C} .tc-region[data-region="cardLane"] { justify-content: center; }
    right of the storm cell like FUSE's line. */
 ${CL} .tc-region[data-region="cardLane"]:has(.lr-title-menu) { justify-content: flex-end; padding-bottom: 6px; }
 ${CL} .tc-region[data-region="bottom"]:has(.lr-title-links) { padding-left: 41%; justify-content: center; }
-/* Upright: the menu right under the picture; the group stands mid-screen, Full screen at the
-   top of the slack above it, the links at the bottom of the slack below. */
-${CP} .tc-region[data-region="cardLane"]:has(.lr-title-menu) { justify-content: flex-start; padding-top: 14px; }
+/* Upright: the menu centred in its lane under the picture (polish-8: no dead band below it);
+   Full screen at the top of the slack above, the links at the bottom of the slack below. */
+${CP} .tc-region[data-region="cardLane"]:has(.lr-title-menu) { justify-content: center; }
 ${CP} .tc-region[data-region="top"] { align-items: flex-start; }
 ${CP} .tc-region[data-region="bottom"] { align-items: flex-end; }
 ${C} .tc-region[data-region="cardLane"] .lr-title-menu { align-self: center; }

@@ -185,6 +185,31 @@ async function holdOne(page: Page, id: MachineId, placed: unknown[]) {
   return slot.gem;
 }
 
+/**
+ * polish-8: every half-board above holds a Channel, so Turn is always dim there. These hold a
+ * gem that turns, where it first comes to the tray (Bend at the Furnace, Split at Press Unit 4),
+ * once as picked up (Turn lit) and once after one Turn.
+ */
+const TURN_HELD: readonly { id: MachineId; gem: string }[] = [
+  { id: 'furnace', gem: 'bend' },
+  { id: 'press-unit-4', gem: 'split' },
+];
+
+/** Tap the tray's `gem` (it must still be in stock). */
+async function holdKind(page: Page, id: MachineId, placed: unknown[], gem: string) {
+  const L = await page.evaluate(
+    () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+  );
+  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const k = ob.width / 1920;
+  const slot = L.tray.find(
+    (s) => s.gem === gem && trayRemaining(puzzleFor(id), placed as never, s.gem) > 0,
+  );
+  expect(slot, `${id}: no ${gem} in the tray`).toBeTruthy();
+  await page.touchscreen.tap(ob.x + slot!.x * k, ob.y + slot!.y * k);
+  await page.waitForFunction((g) => (window as G).__altarView?.held?.kind === g, gem);
+}
+
 /** dense-board: the densest boards get an aim shot: a finger held over a socket, loupe up. */
 const AIM: readonly MachineId[] = ['the-last-rune', 'lift-shaft'];
 
@@ -350,6 +375,20 @@ for (const vp of PHONES) {
         const held = await holdOne(page, id, half);
         expect(held, `${id}: no tray gem left to hold`).not.toBeNull();
         await shot(page, `12-${id}-held`);
+        const turn = TURN_HELD.find((t) => t.id === id);
+        if (turn) {
+          await meet(page, id, half);
+          await dismissCard(page);
+          await page.evaluate(() => (window as G).__game.fuse.hush());
+          await holdKind(page, id, half, turn.gem);
+          const turnBtn = page.locator('.lr-altar-turnbtn');
+          await expect(turnBtn).toBeEnabled();
+          await shot(page, `12-${id}-held-${turn.gem}`);
+          await turnBtn.tap();
+          // The held gem eases round; shoot it once it rests.
+          await waitFrames(page, 40);
+          await shot(page, `12-${id}-held-${turn.gem}-turned`);
+        }
         if (AIM.includes(id)) {
           await meet(page, id, half);
           await dismissCard(page);
@@ -377,19 +416,51 @@ for (const vp of PHONES) {
         g.flow.openPuzzle('intake-desk');
       });
       await expect(page.locator('.lr-altar-tip:not([hidden])')).toBeVisible();
-      await shot(page, '14-intake-desk-teach');
-      // Its last page (the gold ring) when it has more than one.
+      // polish-8: the card's first page is 10-intake-desk already; these are what comes next.
+      // Its next page (the gold ring) when it has more than one.
       const next = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
       if (await next.isVisible()) {
         await next.tap();
         await waitFrames(page, 4);
         await shot(page, '14-intake-desk-teach-2');
       }
+      // The first gem set on the board: what the card and the board say back.
+      {
+        const first = puzzleFor('intake-desk').design.intended[0]!;
+        await holdKind(page, 'intake-desk', [], first.gem);
+        const L = await page.evaluate(
+          () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+        );
+        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+        const k = ob.width / 1920;
+        const pt = { x: 0, y: 0 };
+        cellCenter(L, first.cell as Cell, pt);
+        await page.touchscreen.tap(ob.x + pt.x * k, ob.y + pt.y * k);
+        await page.waitForFunction(() => !(window as G).__altarView?.held);
+        await shot(page, '14-intake-desk-first-gem');
+      }
 
-      // A new gem's card: Relay Tower right after the Intake Desk (Split, and a fixed Gate).
+      // The gauge dot's legend (teach-5/6): the first time a dot lights, once per game. Keyed
+      // on the legend itself, so it follows teach-6 when that changes when it shows.
+      {
+        await meet(page, 'intake-desk', puzzleFor('intake-desk').design.intended);
+        await dismissCard(page);
+        await page.evaluate(() => (window as G).__game.fuse.hush());
+        const legend = page.locator('.lr-altar-hint[data-legend]:not([data-wait])');
+        await expect.soft(legend, 'the dot legend on a lit dot').toBeVisible({ timeout: 10_000 });
+        if (await legend.isVisible()) await shot(page, '16-dot-legend');
+      }
+
+      // A new gem's card past its first page (its first page is 10-relay-tower).
       await meet(page, 'relay-tower');
       await expect(page.locator('.lr-altar-tip:not([hidden])')).toBeVisible();
-      await shot(page, '14-relay-tower-teach');
+      const relayNext = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
+      if (await relayNext.isVisible()) {
+        await relayNext.tap();
+        await waitFrames(page, 4);
+        if (await page.locator('.lr-altar-tip:not([hidden])').isVisible())
+          await shot(page, '14-relay-tower-teach-2');
+      }
 
       // The Capacitor's card at Capacitor Bay.
       await meet(page, 'capacitor-bay');

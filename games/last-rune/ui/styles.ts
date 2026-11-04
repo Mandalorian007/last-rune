@@ -53,7 +53,11 @@ const CSS = /* css */ `
 /* Upright phones (chrome-polish-3): the picture is a slice centred on x 560 (TITLE_UPRIGHT) and
    the view draws the name smaller there; the subtitle follows it, a size up so it still reads. */
 .tc-overlay .lr-title[data-upright] { left: -400px; top: 60px; }
-.tc-overlay .lr-title[data-canvas][data-upright] p { margin-top: 170px; font-size: 40px; letter-spacing: 6px; }
+.tc-overlay .lr-title[data-canvas][data-upright] p { margin-top: 170px; font-size: 36px; letter-spacing: 5px; }
+/* Phones on their side (polish-8): the view draws the name at y 330, scale 0.8 (title-view
+   COMPACT_TITLE), so the band can hold FUSE whole; the subtitle sits just under it. */
+.tc-overlay .lr-title[data-compact] { top: 270px; }
+.tc-overlay .lr-title[data-canvas][data-compact] p { margin-top: 136px; font-size: 34px; }
 .tc-overlay .lr-title p {
   margin: 18px 0 0; font-size: 30px; color: #c9b9e6; letter-spacing: 8px; text-transform: uppercase;
   text-shadow: 0 2px 8px #000;
