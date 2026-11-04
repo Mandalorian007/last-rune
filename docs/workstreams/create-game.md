@@ -8,6 +8,11 @@ Plan: [../engine/refactor-plan.md](../engine/refactor-plan.md), "Phase 1" → ws
 - **Entry point.** `main.ts` shrinks to `createGame({...}).then(ctx => scenes.push(title))`.
 - **Docs.** `ARCHITECTURE.md` documents `createGame`, and `CHANGELOG.md` is updated.
 
+## Follow-ups from host (PM calls)
+- `games/last-rune/ui/settings-panel.ts` save export: route it through `ctx.host.copyText`. The execCommand and selected-field fallback inside itch is the D-036 behaviour we want everywhere, so the behaviour change is accepted.
+- `phone-chrome.ts` / rotate-card fullscreen goes through `ctx.host.fullscreen`. Do this after promote-ui lands, wherever that code ends up.
+- Afterwards, grep that the game makes no direct `navigator.clipboard`, `window.open`, `localStorage` or `requestFullscreen` calls.
+
 ## Gate 1 (the PM runs it after this merges)
 - `pnpm check` is green in both packages.
 - full-run e2e passes 16/16.
