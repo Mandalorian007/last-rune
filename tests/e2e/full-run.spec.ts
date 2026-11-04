@@ -319,11 +319,19 @@ async function solve(machine: MachineId) {
       });
     }
   }
-  const verdict = page.locator('.lr-altar-verdict');
-  await expect(verdict).toBeVisible({ timeout: 60_000 });
+  // The verdict's outcome is read in the frame it shows: an exact verdict stays up only 1.5 s
+  // of game time before the altar closes, so a second, later look can find it already gone.
+  const outcome = await page.waitForFunction(
+    () => {
+      const v = document.querySelector<HTMLElement>('.lr-altar-verdict');
+      return v && !v.hidden ? (v.dataset.outcome ?? '') : null;
+    },
+    null,
+    { polling: 'raf', timeout: 60_000 },
+  );
   const strikeMs = Date.now() - s0;
+  expect(await outcome.jsonValue()).toBe('exact');
   const strikeFrames = await frameStats(f0);
-  await expect(verdict).toHaveAttribute('data-outcome', 'exact');
   if (PLAYTEST_OUT) {
     await page.screenshot({
       path: join(PLAYTEST_OUT, `${String(++shot).padStart(3, '0')}-${n}-${machine}-verdict.png`),

@@ -148,3 +148,22 @@ export async function pressKey(page: Page, key: string, times = 1) {
     await waitFrames(page, 3);
   }
 }
+
+/**
+ * Strike at the altar (F) and let the bolt run to its verdict. No Enter to skip it: in edit
+ * mode Enter picks up the gem at the cursor, and on a loaded machine a short bolt can end
+ * (several fixed steps run per frame) between the test seeing the strike and its Enter landing.
+ * Enter then lifted a gem and hid the verdict ("F, wait 300 ms, Enter" did the same when both
+ * keys reached one tick). Waits until the verdict shows, on the page's own frames.
+ */
+export async function strikeToVerdict(page: Page): Promise<void> {
+  await page.keyboard.press('KeyF', { delay: 50 });
+  await page.waitForFunction(
+    () => {
+      const verdict = document.querySelector<HTMLElement>('.lr-altar-verdict');
+      return !!verdict && !verdict.hidden;
+    },
+    null,
+    { polling: 'raf', timeout: 30_000 },
+  );
+}
