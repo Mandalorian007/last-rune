@@ -1,19 +1,30 @@
 /**
- * Phone screenshots for D-027 reviews (ws/port-altar): every altar on every phone row as a
- * first-time player sees it, plus the empty hand (altars open holding the first gem on touch), the hall, settings and the title upright. Off
- * unless SHOTS=<dir name> is set; images go to docs/design/screens/local/<dir>/ (git-ignored).
+ * Phone screenshots for the D-040 blind review (gate set): every scene, every altar as it opens
+ * and mid-play with a gem in hand, teach cards, verdicts, the solve and the ending, on the four
+ * realistic landscape phones, plus an upright set. Touch first, as a phone player plays. Off
+ * unless SHOTS=<dir name> is set; images go to docs/design/screens/local/<dir>/<phone>/
+ * (git-ignored) and docs/design/screens/local/<dir>/portrait/.
  *
- *   SHOTS=port-altar pnpm exec playwright test tests/e2e/shots.spec.ts
- *   SHOTS=port-altar SHOTS_ONLY=se,furnace ...   (a subset: phone names and machine ids)
+ *   SHOTS=gate5 pnpm exec playwright test tests/e2e/shots.spec.ts
+ *   SHOTS=gate5 SHOTS_ONLY=se,portrait ...   (a subset: phone names and/or part names:
+ *                                             chrome, altars, moments, ending)
+ *
+ * Every altar is met the way a player meets it: everything before it in play order solved,
+ * its own board fresh, so first-appearance teaching shows (D-040 addendum 3).
  */
+import { mkdirSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
-import { MACHINE_IDS } from '../../games/last-rune/rules/types';
+import { puzzleFor } from '../../games/last-rune/content/puzzles';
+import { MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
+import { trayRemaining } from '../../games/last-rune/rules/validate';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
-import { DEV_URL, waitFrames } from './helpers';
+import { playOrder } from './altar-audit';
+import { DEV_URL, settled, waitFrames } from './helpers';
 
 const DIR = process.env.SHOTS ?? '';
 const ONLY = (process.env.SHOTS_ONLY ?? '').split(',').filter(Boolean);
-const want = (k: string) => ONLY.length === 0 || ONLY.includes(k);
+const PARTS = ['chrome', 'altars', 'moments', 'ending'] as const;
+type Part = (typeof PARTS)[number];
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0 },
@@ -22,13 +33,43 @@ const PHONES = [
   { name: 'android', width: 915, height: 360, inset: 0 },
 ] as const;
 
+/** Whether SHOTS_ONLY asks for this phone (or 'portrait') and this part. */
+function wanted(phone: string, part?: Part) {
+  const phones = ONLY.filter((o) => !PARTS.includes(o as Part));
+  const parts = ONLY.filter((o) => PARTS.includes(o as Part));
+  return (
+    (phones.length === 0 || phones.includes(phone)) &&
+    (!part || parts.length === 0 || parts.includes(part))
+  );
+}
+
+const ORDER = playOrder();
+/** Capacitor Bay's first try (capacitor.spec): strike 1 keeps 8, strike 2 lets out 16 into 8. */
+const BAY_FIRST_TRY = [
+  { cell: { x: 4, y: 5 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 4 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 3 }, gem: 'channel', rot: 0 },
+  { cell: { x: 4, y: 2 }, gem: 'bend', rot: 1 },
+  { cell: { x: 6, y: 2 }, gem: 'channel', rot: 0 },
+  { cell: { x: 7, y: 2 }, gem: 'channel', rot: 0 },
+];
+
 // biome-ignore lint/suspicious/noExplicitAny: dev handle
 type G = any;
 
 test.skip(!DIR, 'SHOTS=<dir> to take screenshots');
-test.setTimeout(600_000);
+test.setTimeout(900_000);
 
-const out = (name: string) => `docs/design/screens/local/${DIR}/${name}.png`;
+const CAPTION = '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]';
+
+/** A shot taken once the layout has stopped moving, on the page's own frames. */
+async function snap(page: Page, folder: string, name: string, sel = '#app *') {
+  await settled(page, sel);
+  await waitFrames(page, 6);
+  const dir = `docs/design/screens/local/${DIR}/${folder}`;
+  mkdirSync(dir, { recursive: true });
+  await page.screenshot({ path: `${dir}/${name}.png` });
+}
 
 async function boot(page: Page, inset: number) {
   if (inset) {
@@ -43,14 +84,108 @@ async function boot(page: Page, inset: number) {
   await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
     timeout: 30_000,
   });
-}
-
-async function touchMode(page: Page) {
+  // Touch mode: the first input a phone player gives is a finger.
   await page.evaluate(() =>
     document.dispatchEvent(
       new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }),
     ),
   );
+}
+
+/** Seed the save (progress, one altar's board) and stand in the hall. */
+async function seed(
+  page: Page,
+  solved: readonly string[],
+  puzzles: Record<string, unknown> = {},
+  journal?: { found: number[]; read: number[] },
+) {
+  await page.evaluate(
+    ({ solved, puzzles, journal }) => {
+      const g = (window as G).__game;
+      g.ui.stack.clear();
+      if (g.flow.state === 'puzzle') g.flow.closePuzzle();
+      g.save.update((d: G) => {
+        d.flags.hallIntro = true;
+        d.settings.captionSpeed = 'instant';
+        d.progress.solved = solved;
+        d.puzzles = puzzles;
+        if (journal) {
+          d.journal.found = journal.found;
+          d.journal.read = journal.read;
+        }
+      });
+      if (g.flow.state !== 'hall') g.flow.continueGame();
+    },
+    { solved: [...solved], puzzles, journal },
+  );
+  await page.waitForFunction(() => (window as G).__game.flow.state === 'hall');
+}
+
+/** Open `id` as a player meets it: everything before it solved, `placements` on its board. */
+async function meet(page: Page, id: MachineId, placements: unknown[] = []) {
+  await seed(page, ORDER.slice(0, ORDER.indexOf(id)), {
+    [id]: { placements, attempts: 0 },
+  });
+  await page.evaluate((id) => (window as G).__game.flow.openPuzzle(id), id);
+  await expect(page.locator('.lr-altar')).toBeVisible();
+  await page.waitForFunction(() => !!(window as G).__altarLayout);
+  await waitFrames(page, 10);
+}
+
+/**
+ * Turn the arrival card's pages with a finger until it closes. FUSE speaking takes the right
+ * column and hides the card for a while without closing it, so he is hushed before each look.
+ */
+async function dismissCard(page: Page) {
+  const read = () =>
+    page.evaluate(() => {
+      const t = document.querySelector<HTMLElement>('.lr-altar-tip');
+      const b = t?.querySelector<HTMLElement>('.lr-info-next');
+      const r = b?.getBoundingClientRect();
+      const cs = b && getComputedStyle(b);
+      const shown =
+        !!r && r.width > 0 && cs?.visibility !== 'hidden' && Number(cs?.opacity ?? 0) > 0.05;
+      return {
+        open: !!t && !t.hidden && !b?.closest('[hidden]') && shown,
+        label: t?.querySelector('.lr-info-next')?.textContent ?? '',
+      };
+    });
+  for (let i = 0; i < 20; i++) {
+    await page.evaluate(() => (window as G).__game.fuse.hush());
+    await waitFrames(page, 4);
+    await settled(page, '.lr-altar-tip, .lr-altar-tip *');
+    const before = await read();
+    if (!before.open || !before.label) return;
+    await page
+      .locator('.lr-altar-tip:not([hidden]) .lr-info-next')
+      .tap({ timeout: 2000 })
+      .catch(() => {});
+  }
+  throw new Error('the arrival card never closed');
+}
+
+/** Tap a tray gem that is still in stock; returns its kind. */
+async function holdOne(page: Page, id: MachineId, placed: unknown[]) {
+  const L = await page.evaluate(
+    () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+  );
+  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const k = ob.width / 1920;
+  const pz = puzzleFor(id);
+  const slot = L.tray.find((s) => trayRemaining(pz, placed as never, s.gem) > 0);
+  if (!slot) return null;
+  await page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);
+  await page.waitForFunction((g) => (window as G).__altarView?.held?.kind === g, slot.gem);
+  return slot.gem;
+}
+
+/** Tap Strike (and confirm empty sockets if asked); wait for the verdict. */
+async function strike(page: Page) {
+  await page.locator('[data-action="strike"]').tap();
+  await waitFrames(page, 4);
+  const sure = page.locator('.lr-confirm .lr-gold-button');
+  if (await sure.isVisible()) await sure.tap();
+  await expect(page.locator('.lr-altar-verdict')).toBeVisible({ timeout: 30_000 });
 }
 
 for (const vp of PHONES) {
@@ -61,87 +196,227 @@ for (const vp of PHONES) {
       hasTouch: true,
       deviceScaleFactor: 2,
     });
-    test(`altars ${vp.name}`, async ({ page }) => {
-      test.skip(!want(vp.name), 'not in SHOTS_ONLY');
+    const shot = (page: Page, name: string, sel?: string) => snap(page, vp.name, name, sel);
+
+    test(`chrome ${vp.name}`, async ({ page }) => {
+      test.skip(!wanted(vp.name, 'chrome'), 'not in SHOTS_ONLY');
       await boot(page, vp.inset);
-      await touchMode(page);
+      await expect(page.locator('.lr-title-menu')).toBeVisible();
+      await shot(page, '01-title');
+
+      // A first visit: New game, FUSE's welcome and the Start here marker.
       await page.evaluate(() => {
         const g = (window as G).__game;
         g.save.update((d: G) => {
-          d.flags.hallIntro = true;
           d.settings.captionSpeed = 'instant';
-          // Mid-game, with an unread journal page (the ☰ badge shows).
-          d.progress.solved = ['intake-desk', 'furnace', 'splitter-mill'];
-          d.journal.found = [1, 2, 3, 4];
-          d.journal.read = [1, 2, 3];
         });
-        g.flow.continueGame();
+        g.flow.newGame();
       });
-      await page.waitForTimeout(600);
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'hall');
+      await expect(page.locator('.lr-hall-next-tag')).toHaveText(/Start here/);
+      await expect(page.locator(CAPTION)).toBeVisible();
+      await shot(page, '02-hall');
+
+      // Mid-game, with an unread journal page (the New page badge on Menu).
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.fuse.hush();
+        g.flow.toTitle();
+      });
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'title');
+      await seed(
+        page,
+        ['intake-desk', 'furnace', 'splitter-mill'],
+        {},
+        {
+          found: [1, 2, 3, 4],
+          read: [1, 2, 3],
+        },
+      );
       await page.evaluate(() => (window as G).__game.fuse.hush());
-      await page.waitForTimeout(300);
-      await page.screenshot({ path: out(`${vp.name}-hall`) });
+      await expect(page.locator('.lr-hall-next-tag')).toHaveText(/Next/);
+      await expect(page.locator('.lr-hud-menu-new')).toBeVisible();
+      await shot(page, '02-hall-mid');
+
+      // Settings, both tabs.
+      await page.evaluate(() => (window as G).__game.openSettings());
+      await expect(page.locator('.lr-settings-tab').first()).toBeVisible();
+      await shot(page, '03-settings-sound');
+      await page.locator('.lr-settings-tab').nth(1).tap();
+      await expect(page.locator('.lr-settings-tab').nth(1)).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      await shot(page, '03-settings-graphics');
+      await page.evaluate(() => (window as G).__game.ui.stack.clear());
+
+      await page.evaluate(() => (window as G).__game.codex.open());
+      await expect(page.locator('.lr-codex')).toBeVisible();
+      await shot(page, '04-codex');
+      await page.evaluate(() => (window as G).__game.ui.stack.clear());
+
+      await page.evaluate(() => (window as G).__game.flow.openJournal());
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'journal');
+      await waitFrames(page, 30);
+      await shot(page, '05-journal');
+      await page.evaluate(() => (window as G).__game.flow.closeJournal());
+      await page.waitForFunction(() => (window as G).__game.flow.state === 'hall');
+      await page.evaluate(() => (window as G).__game.fuse.hush());
+
+      // The Menu, open: in the hall and at an altar.
+      await page.locator('.lr-hud-menu').tap();
+      await expect(page.locator('.lr-hud-scrim')).toBeVisible();
+      await shot(page, '06-menu');
+      await page.locator('.lr-hud-menu').tap();
+      await expect(page.locator('.lr-hud-scrim')).toBeHidden();
+      await meet(page, 'furnace');
+      await dismissCard(page);
+      await page.evaluate(() => (window as G).__game.fuse.hush());
+      await page.locator('.lr-hud-menu').tap();
+      await expect(page.locator('.lr-hud-scrim')).toBeVisible();
+      await shot(page, '06-menu-altar');
+    });
+
+    test(`altars ${vp.name}`, async ({ page }) => {
+      test.skip(!wanted(vp.name, 'altars'), 'not in SHOTS_ONLY');
+      await boot(page, vp.inset);
       for (const id of MACHINE_IDS) {
-        if (ONLY.some((o) => MACHINE_IDS.includes(o as never)) && !want(id)) continue;
-        await page.evaluate(
-          ({ id, ids }) => {
-            const g = (window as G).__game;
-            g.save.update((d: G) => {
-              d.progress.solved = ids.filter((m) => m !== id);
-              d.puzzles = {};
-            });
-            if (g.flow.state !== 'hall') g.flow.continueGame();
-            g.flow.openPuzzle(id);
-          },
-          { id, ids: [...MACHINE_IDS] as string[] },
+        // As it opens: its arrival card (if it brings anything new) and FUSE's line.
+        await meet(page, id);
+        await shot(page, `10-${id}`);
+        // Mid-play: half the intended gems placed, the card put away, one gem in hand.
+        const half = puzzleFor(id).design.intended.slice(
+          0,
+          Math.floor(puzzleFor(id).design.intended.length / 2),
         );
-        await expect(page.locator('.lr-altar')).toBeVisible();
-        await page.waitForTimeout(900);
-        await page.screenshot({ path: out(`${vp.name}-${id}`) });
+        await meet(page, id, half);
+        await dismissCard(page);
         await page.evaluate(() => (window as G).__game.fuse.hush());
-        const L = await page.evaluate(
-          () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
-        );
-        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
-        const k = ob.width / 1920;
-        const s0 = L.tray[0];
-        if (s0) {
-          await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);
-          await waitFrames(page, 10);
-          await page.screenshot({ path: out(`${vp.name}-${id}-empty-hand`) });
-          await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);
-        }
+        const held = await holdOne(page, id, half);
+        expect(held, `${id}: no tray gem left to hold`).not.toBeNull();
+        await shot(page, `12-${id}-held`);
       }
+    });
+
+    test(`moments ${vp.name}`, async ({ page }) => {
+      test.skip(!wanted(vp.name, 'moments'), 'not in SHOTS_ONLY');
+      await boot(page, vp.inset);
+
+      // The very first altar on a fresh save, straight from New game: the first teach card,
+      // FUSE's arrival line beside it.
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.save.update((d: G) => {
+          d.settings.captionSpeed = 'instant';
+        });
+        g.flow.newGame();
+        g.fuse.hush();
+        g.flow.openPuzzle('intake-desk');
+      });
+      await expect(page.locator('.lr-altar-tip:not([hidden])')).toBeVisible();
+      await shot(page, '14-intake-desk-teach');
+      // Its last page (the gold ring) when it has more than one.
+      const next = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
+      if (await next.isVisible()) {
+        await next.tap();
+        await waitFrames(page, 4);
+        await shot(page, '14-intake-desk-teach-2');
+      }
+
+      // A new gem's card: Relay Tower right after the Intake Desk (Split, and a fixed Gate).
+      await meet(page, 'relay-tower');
+      await expect(page.locator('.lr-altar-tip:not([hidden])')).toBeVisible();
+      await shot(page, '14-relay-tower-teach');
+
+      // The Capacitor's card at Capacitor Bay.
+      await meet(page, 'capacitor-bay');
+      await expect(page.locator('.lr-altar-tip:not([hidden])')).toBeVisible();
+      await shot(page, '15-capacitor-teach');
+      for (let i = 2; i < 6; i++) {
+        const more = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
+        if (!(await more.isVisible())) break;
+        await more.tap();
+        await waitFrames(page, 4);
+        if (/capacitor/i.test((await page.locator('.lr-altar-tip').textContent()) ?? ''))
+          await shot(page, `15-capacitor-teach-${i}`);
+      }
+
+      // A failed verdict: half of Relay Tower's route, struck.
+      const relayHalf = puzzleFor('relay-tower').design.intended.slice(0, 2);
+      await meet(page, 'relay-tower', relayHalf);
+      await dismissCard(page);
+      await page.evaluate(() => (window as G).__game.fuse.hush());
+      await strike(page);
+      await shot(page, '13-relay-tower-fail');
+
+      // A multi-strike verdict: Capacitor Bay's first try (strike 1: 0 · strike 2: 16).
+      await meet(page, 'capacitor-bay', BAY_FIRST_TRY);
+      await dismissCard(page);
+      await page.evaluate(() => (window as G).__game.fuse.hush());
+      await shot(page, '13-capacitor-bay-before');
+      await strike(page);
+      await expect(page.locator('.lr-altar-verdict')).toContainText('Strike 2');
+      await shot(page, '13-capacitor-bay-multi');
+
+      // A solve: the Furnace really solved, under its solve card.
+      await meet(page, 'furnace', puzzleFor('furnace').design.intended);
+      await page.evaluate(() => (window as G).__game.flow.completePuzzle('furnace'));
+      await expect(page.locator('.lr-solve-continue')).toBeVisible({ timeout: 20_000 });
+      await shot(page, '20-solve');
+    });
+
+    test(`ending ${vp.name}`, async ({ page }) => {
+      test.skip(!wanted(vp.name, 'ending'), 'not in SHOTS_ONLY');
+      await boot(page, vp.inset);
+      // The first time through (no Skip): everything else solved, then the Last Rune.
+      await seed(
+        page,
+        MACHINE_IDS.filter((m) => m !== 'the-last-rune'),
+      );
+      await page.evaluate(() => {
+        const g = (window as G).__game;
+        g.flow.openPuzzle('the-last-rune');
+        g.flow.completePuzzle('the-last-rune');
+        g.flow.finishSolve();
+      });
+      await expect(page.locator(CAPTION)).toBeVisible({ timeout: 60_000 });
+      await shot(page, '30-ending', CAPTION);
+      const hg = page.locator('.lr-hg');
+      await expect(hg).toBeVisible({ timeout: 240_000 });
+      await expect(hg.locator('.lr-hg-form')).toBeVisible({ timeout: 120_000 });
+      await shot(page, '31-hangout', '.lr-hg-log:not([hidden]) > *');
+      await expect(page.locator('.lr-end-card a.lr-end-join')).toBeVisible({ timeout: 480_000 });
+      await expect(page.locator('.lr-end-card')).toHaveAttribute('data-in', '');
+      await shot(page, '32-end-card', '.lr-end-card *');
     });
   });
 }
 
-test.describe('upright', () => {
+test.describe('portrait', () => {
   test.use({
     viewport: { width: 390, height: 844 },
     isMobile: true,
     hasTouch: true,
     deviceScaleFactor: 2,
   });
-  test('title, settings, altar upright', async ({ page }) => {
-    test.skip(!want('portrait'), 'not in SHOTS_ONLY');
+  test('portrait: title, settings, rotate card', async ({ page }) => {
+    test.skip(!wanted('portrait'), 'not in SHOTS_ONLY');
+    const shot = (name: string) => snap(page, 'portrait', name);
     await boot(page, 0);
-    await touchMode(page);
-    await page.waitForTimeout(800);
-    await page.screenshot({ path: out('portrait-title') });
+    await expect(page.locator('.lr-title-menu')).toBeVisible();
+    await shot('01-title');
     await page.evaluate(() => (window as G).__game.openSettings());
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: out('portrait-settings') });
-    await page.evaluate(() => {
-      const g = (window as G).__game;
-      g.ui.stack.clear();
-      g.save.update((d: G) => {
-        d.flags.hallIntro = true;
-      });
-      g.flow.continueGame();
-      g.flow.openPuzzle('furnace');
-    });
-    await page.waitForTimeout(800);
-    await page.screenshot({ path: out('portrait-furnace') });
+    await expect(page.locator('.lr-settings-tab').first()).toBeVisible();
+    await shot('03-settings');
+    await seed(
+      page,
+      MACHINE_IDS.filter((m) => m !== 'the-last-rune'),
+    );
+    await expect(page.locator('.tc-rotate')).toBeVisible();
+    await shot('40-rotate-hall');
+    await page.evaluate(() => (window as G).__game.flow.openPuzzle('the-last-rune'));
+    await expect(page.locator('.lr-altar')).toBeAttached();
+    await expect(page.locator('.tc-rotate')).toBeVisible();
+    await shot('41-rotate-altar');
   });
 });
