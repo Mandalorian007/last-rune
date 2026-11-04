@@ -68,7 +68,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9s | Card fit: no clipped card text in the phone column (held card + dot legend) | ws/card-fit | 2 | 9r | ✅ merged |
 | 9t | Teach 6: gauge-dot language (D-043), two-strike wording, ○○ label, Capacitor card, Gate card, Amplify naming | ws/teach-6 | 2 | 9s | 🔄 running |
 | 9u | Glyph truth 3: Bend two-armed when lit, Split input end at small size, built-in contrast, carved cells | ws/glyph-truth-3 | 2 | 9s | 🔄 running |
-| 9v | Dense board 3: The Last Rune ≥ 40 px (≥ 34 SE), loupe off the target, labels on their gauges, orbs on screen | ws/dense-board-3 | 2 | 9s | 🔄 running |
+| 9v | Dense board 3: The Last Rune ≥ 40 px (≥ 34 SE), loupe off the target, labels on their gauges, orbs on screen | ws/dense-board-3 | 2 | 9s | ✅ merged (iPhone 40 not reachable without camera) |
 | 9w | Polish 8: Turn/teach/legend shots, hall label, title FUSE + candles, menu dims Strike, stray diamond | ws/polish-8 | 2 | 9s | ✅ merged |
 | 9p | Teach 5: "Strike ×2" + pips, diagram-above-text cards, Amplify diagram, Needs-dot legend, solve/ending/menu/title minors (D-040 add. 8) | ws/teach-5 | 2 | G2 r7 | ✅ merged |
 | 9q | Glyph truth 2: Split/Gate inlets at board size, Channels along their run, one tray orientation, disabled Turn/Undo/Clear, one lock badge (D-040 add. 8) | ws/glyph-truth-2 | 2 | G2 r7 | ✅ merged (Channel-across-run was a render bug; `rest-turn.ts`) |
