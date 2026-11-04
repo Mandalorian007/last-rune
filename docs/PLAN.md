@@ -72,7 +72,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9w | Polish 8: Turn/teach/legend shots, hall label, title FUSE + candles, menu dims Strike, stray diamond | ws/polish-8 | 2 | 9s | ✅ merged |
 | 9x | Fit 9: Last Rune east card vs "in either strike"; FUSE gem names | ws/fit-9 | 2 | 9w | ✅ merged |
 | 9y | Held gem: held tray glyph at full contrast with a shape ring, ghost of the held gem on the aimed socket and in the loupe, arrows = out / inputs = inward ports on Split and Gate, idle Amplify drawn idle, blocked cells not socket-like (D-040 add. 10) | ws/held-gem | 2 | G2 r9 | 🔄 running |
-| 9z | Teach 7: "on strike 1 or 2", per-strike result on each gauge, every failing gauge named, one Gate sentence, "stores", Try again (D-040 add. 10) | ws/teach-7 | 2 | G2 r9 | 🔄 running |
+| 9z | Teach 7: "on strike 1 or 2", per-strike result on each gauge, every failing gauge named, one Gate sentence, "stores", Try again (D-040 add. 10) | ws/teach-7 | 2 | G2 r9 | ✅ merged |
 | 9z2 | Polish 9: gauge needle shows what arrived after Strike (rests at 0 before), loupe clear of Needs labels and the hint card, hangout header emoji (D-040 add. 10) | ws/polish-9 | 2 | G2 r9 | ✅ merged |
 | 9p | Teach 5: "Strike ×2" + pips, diagram-above-text cards, Amplify diagram, Needs-dot legend, solve/ending/menu/title minors (D-040 add. 8) | ws/teach-5 | 2 | G2 r7 | ✅ merged |
 | 9q | Glyph truth 2: Split/Gate inlets at board size, Channels along their run, one tray orientation, disabled Turn/Undo/Clear, one lock badge (D-040 add. 8) | ws/glyph-truth-2 | 2 | G2 r7 | ✅ merged (Channel-across-run was a render bug; `rest-turn.ts`) |
