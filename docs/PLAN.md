@@ -55,7 +55,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9d | Altar truth: hints from the room, over-charge preview, one badge rule, fixed gems unmistakable, Turn taught, Undo, plain copy | ws/altar-truth | 2 | 9b | ✅ merged |
 | 9e | Chrome polish 3: title, portrait title, hall toast/labels, settings, codex, journal, ending | ws/chrome-polish-3 | 2 | 9b | ✅ merged |
 | 9f | Solve truth: solved board renders exactly the built board (Channel direction, only powered gems lit, fixed collar kept, readable bloom) | ws/solve-truth | 2 | 9c | ✅ merged (render bug; rules were right) |
-| 9g | Glyph truth: Split/Gate inputs legible, tray badge off the gem, ×0 dimmed real icon, Capacitor lit, calmer holding glow | ws/glyph-truth | 2 | 9f | 🔄 running |
+| 9g | Glyph truth: Split/Gate inputs legible, tray badge off the gem, ×0 dimmed real icon, Capacitor lit, calmer holding glow | ws/glyph-truth | 2 | 9f | ✅ merged (badge/glyph overlap test, no-turn-at-Strike e2e) |
 | 9h | Teach 4: in→out diagrams on gem cards, Capacitor two-strike strip, gauge dot explained, Channels lie along their run, no mid-sum wraps | ws/teach-4 | 2 | 9c | ✅ merged |
 | 9i | Chrome polish 4: hall legend, title/end-card button weight, end-card stats, journal caption | ws/chrome-polish-4 | 2 | 9c | ✅ merged |
 | 9j | Strike free: Strike framed as a free test, no attempt counters, verdict as information (D-043; no live readout) | ws/strike-free | 2 | 9h | 🔄 running |
