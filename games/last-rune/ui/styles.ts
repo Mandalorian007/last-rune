@@ -365,6 +365,8 @@ const CSS = /* css */ `
   color: var(--tc-color-text); background: rgba(0,0,0,0.35); border: 2px solid var(--tc-color-border); border-radius: 8px; padding: 10px;
 }
 .tc-overlay .lr-settings .lr-row { display: flex; flex-wrap: wrap; gap: 14px; }
+/* Desktop only (settings-panel.ts): Quit sits at the far left of the Done row, away from Done. */
+.tc-overlay .lr-settings .lr-settings-done .lr-quit { margin-right: auto; }
 .tc-overlay .lr-settings .lr-note { font-size: 22px; color: var(--tc-color-warn); margin: 0; }
 .tc-overlay .lr-confirm { width: 720px; font-size: 28px; }
 .tc-overlay .lr-confirm .lr-row { display: flex; gap: 16px; justify-content: flex-end; margin-top: 24px; }

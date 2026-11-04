@@ -2,6 +2,7 @@
 // wires the noun-free systems (fatal screens for no WebGPU or a lost device included); the game
 // adds its nouns and boots into the title. Dev routes: `?demo=audio|render|art|props`, `?nogpu`.
 import { createGame } from '@thunderclap/engine';
+import { bootHost } from './boot-host';
 import {
   createGameCtx,
   engineOptions,
@@ -42,9 +43,12 @@ async function main(): Promise<void> {
   }
 
   const forceUnsupported = import.meta.env.DEV && qs.has('nogpu');
-  const engine: LastRuneEngine | null = await createGame(
-    engineOptions(root, { title: TITLE, forceUnsupported }),
-  );
+  // The desktop shell's host, or undefined for the web host (boot-host.ts).
+  const host = await bootHost();
+  const engine: LastRuneEngine | null = await createGame({
+    ...engineOptions(root, { title: TITLE, forceUnsupported }),
+    host,
+  });
   if (!engine) return;
   const ctx = createGameCtx(engine, SCENES);
   startGame(ctx);

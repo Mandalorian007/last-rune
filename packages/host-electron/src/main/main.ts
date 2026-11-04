@@ -86,10 +86,21 @@ if (!app.requestSingleInstanceLock()) {
 
 app.on('window-all-closed', () => app.quit());
 
-// No webviews, no new windows, no navigation away, in any web contents.
+// No webviews, no new windows, no navigation away, in any web contents. A plain https link that
+// asks for a new window (`<a target="_blank">`, the engine's link widget on a click or Enter)
+// opens in the system browser instead, as the bridge's `openExternal` would: same rule, and only
+// from our own page.
 app.on('web-contents-created', (_e, contents) => {
   contents.on('will-attach-webview', (e) => e.preventDefault());
-  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  contents.setWindowOpenHandler(({ url }) => {
+    const href = safeExternalHttps(url);
+    if (href && navigationAllowed(contents.getURL(), startUrl)) {
+      shell.openExternal(href).catch((err) => {
+        console.error('[thunderclap] openExternal failed:', err);
+      });
+    }
+    return { action: 'deny' };
+  });
   contents.on('will-navigate', (e, url) => {
     if (!navigationAllowed(url, startUrl)) e.preventDefault();
   });

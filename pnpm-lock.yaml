@@ -11,6 +11,9 @@ importers:
       '@thunderclap/engine':
         specifier: workspace:*
         version: link:packages/engine
+      '@thunderclap/host-electron':
+        specifier: workspace:*
+        version: link:packages/host-electron
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.14.0

@@ -4,17 +4,24 @@
 // the app after the quarantine prompt.
 //
 // The app identity is a noun-free default; a game sets its own through the environment when it
-// packages its renderer (ws/last-rune-desktop): TC_APP_ID, TC_PRODUCT_NAME.
-// Output: dist/desktop/ at the repo root. Run through scripts/dist.mjs (`pnpm desktop:build`).
+// packages its renderer (ws/last-rune-desktop): TC_APP_ID, TC_PRODUCT_NAME, TC_APP_VERSION and
+// TC_ICON (an absolute path to a PNG of at least 512x512; electron-builder makes the .icns and
+// .ico from it). Without TC_ICON the build uses Electron's default icon. Artefact file names
+// start with the product name with spaces turned into dashes ("The-Last-Rune-1.0.0-mac-arm64.dmg").
+// Output: dist/desktop/ at the repo root. Run through scripts/dist.mjs.
 
 const productName = process.env.TC_PRODUCT_NAME || 'ThunderClap';
+const version = process.env.TC_APP_VERSION;
+const icon = process.env.TC_ICON || undefined;
+const fileStem = productName.replace(/\s+/g, '-');
 
 /** @type {import('electron-builder').Configuration} */
 export default {
   appId: process.env.TC_APP_ID || 'dev.thunderclap.shell',
   productName,
   // Electron names the app (and its userData folder, where localStorage lives) from this.
-  extraMetadata: { productName },
+  extraMetadata: { productName, ...(version ? { version } : {}) },
+  ...(icon ? { icon } : {}),
   copyright: 'MIT License',
   directories: { output: '../../dist/desktop' },
   // Everything the app needs is bundled into out/ (main, preload, renderer); no node_modules.
@@ -23,8 +30,8 @@ export default {
   npmRebuild: false,
   nodeGypRebuild: false,
   publish: null,
-  // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder's own macros, not JS.
-  artifactName: '${productName}-${version}-${os}-${arch}.${ext}',
+  // The escaped \${…} are electron-builder's own macros, filled in at packaging time.
+  artifactName: `${fileStem}-\${version}-\${os}-\${arch}.\${ext}`,
   mac: {
     target: ['dmg', 'zip'],
     category: 'public.app-category.games',
