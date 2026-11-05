@@ -4,7 +4,7 @@ _Last updated: 2026-11-04 by PM_
 
 **D-047 (user, 2026-11-04):** itch.io cut. Pages is the release. The game's itch packager, itch-sim, itch-release spec and cover tooling are removed; the engine keeps the itch iframe option.
 
-**Gate 2 feedback (2026-11-05, user's iPhone in Brave):** (1) phones placed one gem per pick. D-048 restores chain placement, matching desktop (merged by the PM). (2) The teach card was squeezed and scrolled in a short browser viewport. D-049 adds an overlay card with auto-minimise (ws/teach-overlay, running).
+**Gate 2 feedback (2026-11-05, user's iPhone in Brave):** (1) phones placed one gem per pick. D-048 restores chain placement, matching desktop (merged by the PM). (2) The teach card was squeezed and scrolled in a short browser viewport. D-049: the card opens over the tray, folds to a pill after 4 s idle and reopens on a tap; a short 852×270 browser-viewport profile was added to the phone specs (merged; full e2e 213 ✅).
 
 **Now (D-046, user):** review minimised. The phone build is live at https://mandalorian007.github.io/last-rune/ (main, through polish-11; e2e 195 ✅, engine 274 ✅, desktop 7 ✅). Waiting on the user's real-phone test, which is Gate 2. Blind review 12 is cancelled, ws/camera is parked, and ws/one-overlay is held on its branch. Next: fix the blockers the user hits, then extract the engine (0.2.0) and start the next game.
 
