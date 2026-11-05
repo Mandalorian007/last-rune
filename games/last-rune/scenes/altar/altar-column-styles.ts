@@ -349,6 +349,38 @@ ${LANE} > .lr-rule-tab b {
 }
 ${LANE} > .lr-rule-tab[data-open] { border-color: #ffd77a; box-shadow: 0 0 0 1px #ffd77a, 0 2px 8px rgba(0,0,0,0.6); }
 
+/* teach-overlay: the arrival card (and a pinned rule card; on a short lane a verdict or the dot's
+   legend cut short) is a panel over the column: over the
+   tray and the lane, under the title and the ☰, on the foot row's top edge (FUSE and Strike stay
+   in view), never over the board (altar-column.ts placeCardPanel sets the box). It is as tall
+   as its words, up to that box. Opaque: the tray under it does not show through. */
+${LANE} > [data-over] {
+  position: fixed !important; left: var(--lr-over-l) !important; right: var(--lr-over-r) !important;
+  bottom: var(--lr-over-b) !important; top: auto !important; width: auto; max-height: var(--lr-over-h);
+  z-index: 6; background: rgb(22,17,12); border-color: rgba(232,192,106,0.8);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 6px 22px 4px rgba(0,0,0,0.85);
+  animation: lr-over-in 140ms ease-out;
+}
+${LANE} > .lr-altar-tip[data-over] { pointer-events: auto; }
+@keyframes lr-over-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+[data-reduced-motion] ${LANE} > [data-over] { animation: none; }
+${LANE} > .lr-altar-tip[data-over] .lr-info-foot { background: rgb(22,17,12); }
+/* The folded arrival card: the gem's picture and its name, 44 px tall; a tap opens it again. */
+${LANE} > .lr-card-pill {
+  flex: none; align-self: flex-start; display: inline-flex; align-items: center; gap: 7px; max-width: 100%;
+  min-height: 44px; min-width: 44px; margin: 0; padding: 0 14px 0 7px; box-sizing: border-box;
+  pointer-events: auto; border-radius: 22px; border: 1px solid #e8c06a;
+  background: rgba(20,16,12,0.96); color: #f4e6c4; box-shadow: 0 0 0 1px rgba(232,192,106,0.35), 0 2px 8px rgba(0,0,0,0.6);
+  font: 600 15px/1.1 ${SERIF}; letter-spacing: 0.3px; text-align: left;
+}
+${LANE} > .lr-card-pill[hidden] { display: none; }
+${LANE} > .lr-card-pill .lr-pill-gem { flex: none; width: 30px; height: 30px; border-radius: 7px; background: #22262f; }
+${LANE} > .lr-card-pill > b {
+  flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: #e8c06a; color: #1a120a; font: 700 15px/1 ${SERIF};
+}
+${LANE} > .lr-card-pill .lr-pill-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* The teach leader (in the scaled overlay, over the board). */
 .tc-overlay .lr-teach-leader polyline { fill: none; stroke-linejoin: round; }
 /* port-altar-3 end */

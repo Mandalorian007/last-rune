@@ -119,6 +119,9 @@ export const editMethods = {
     // tab's card closes on any tap too, but the tap still lands (a socket tapped places the gem).
     const closing = input.pressed('select') && !!this.infoPin && !this.ruleOpen;
     if (input.pressed('select') && this.infoPin) this.infoPin = null;
+    // teach-overlay: a tap on the board or the tray folds the open arrival card to its pill (the
+    // tap still lands: a gem is picked or placed as ever).
+    if (input.pressed('select') && p.inside && L.phone) this.cardMin = true;
     if (
       !closing &&
       input.pressed('select') &&

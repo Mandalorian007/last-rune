@@ -9,9 +9,18 @@
  * and the how-to line and the plan read-outs wait.
  */
 import { h } from '@thunderclap/engine/ui';
+import { createGemPortraits } from '../../art/gem-portraits';
 import { isRotational } from '../../rules';
 import type { Cell } from '../../rules/types';
-import { GEM_NAME, SVG_NS } from './altar-defs';
+import {
+  CARD_IDLE_SECS,
+  eitherName,
+  GEM_NAME,
+  GOAL_NAME,
+  RING_NAME,
+  SHORT_LANE_PX,
+  SVG_NS,
+} from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import {
   type AltarLayout,
@@ -22,6 +31,12 @@ import {
   trayTipX,
 } from './layout';
 import { straightLine, turnTeachLine } from './moments';
+import { strikeLabel } from './strike';
+
+/** teach-overlay: the folded card's gem picture, CSS px. */
+const PILL_PIC_PX = 30;
+/** teach-overlay: the widest the phone card panel grows, CSS px (a readable line). */
+const PANEL_MAX_W = 400;
 
 /** A box in design px. */
 interface Box {
@@ -355,7 +370,13 @@ export const columnMethods = {
     // teach-6: while it shows it is the column's card, so FUSE waits too (his line cut it).
     // dense-board-4: on a slim column the Rule tab (a gem in hand) owns the lane too; a short
     // lane under a tall tray holds no tab and FUSE's line both, so FUSE waits.
-    const tab = this.updateRuleTab(legend);
+    // teach-overlay: the folded arrival card's pill stands in the lane the same way.
+    // teach-overlay: a lane too short for a gem's card and its Turn line (a browser's bars on
+    // screen) folds the held gem's card behind the Rule tab, as a slim column does.
+    const laneH = lane.parentElement?.clientHeight ?? 0;
+    if (laneH > 0) this.shortLane = laneH < SHORT_LANE_PX;
+    const pill = this.updateCardPanel();
+    const tab = this.updateRuleTab(legend) || pill;
     const cardUp = other || legend || tab;
     this.holdFuse(cardUp);
     if (wait !== this.hint.hasAttribute('data-wait')) this.hint.toggleAttribute('data-wait', wait);
@@ -405,17 +426,186 @@ export const columnMethods = {
   updateRuleTab(this: AltarScene, legend: boolean): boolean {
     const tab = this.ruleTab;
     if (!tab) return false;
+    const fold = !!this.view.layout.phone?.slim || this.shortLane;
     const open = !!this.infoPin && !!this.hand && this.infoPin.gem === this.hand.kind;
     const teach = !this.tip.hidden && this.tip.dataset.source === 'intro';
     // Open, the card has the lane and the next tap anywhere closes it, so the tab steps aside.
+    // teach-overlay: one pill at a time; the folded arrival card's outranks it.
+    const pill = !!this.cardPill && !this.cardPill.hidden;
     const show =
-      !!this.hand && !open && this.mode !== 'strike' && this.verdict.hidden && !legend && !teach;
+      fold &&
+      !!this.hand &&
+      !open &&
+      this.mode !== 'strike' &&
+      this.verdict.hidden &&
+      !legend &&
+      !teach &&
+      !pill;
     if (tab.hidden === show) tab.hidden = !show;
     if (open !== tab.hasAttribute('data-open')) {
       tab.toggleAttribute('data-open', open);
       tab.setAttribute('aria-expanded', String(open));
     }
     return show;
+  },
+
+  /**
+   * teach-overlay (phones): the arrival card, and a pinned rule card, open as a panel over the
+   * column: over the tray and the lane, under the ☰ and above the foot row (FUSE, Strike), so
+   * never over the board's sockets, its gauges or Strike. It stands on the lane's foot and grows
+   * up as far as it needs to show its words in full. A few seconds with no touch on it, the
+   * arrival card folds to its pill (a pinned card closes); a tap on the pill opens it again.
+   * Returns whether the pill stands.
+   */
+  updateCardPanel(this: AltarScene): boolean {
+    const tip = this.tip;
+    const lane = this.lane;
+    const pill = this.cardPill;
+    if (!lane || !pill) return false;
+    const edit = this.mode === 'edit';
+    // Out of edit (a strike, its verdict) the arrival card comes back folded.
+    if (!edit && this.introLeft > 0) this.cardMin = true;
+    const intro = !tip.hidden && tip.dataset.source === 'intro';
+    const over = intro || (!tip.hidden && tip.hasAttribute('data-full'));
+    if (over !== tip.hasAttribute('data-over')) tip.toggleAttribute('data-over', over);
+    if (over) {
+      // A new card (or page) restarts the clock.
+      const key = `${this.tipKey}`;
+      if (key !== this.cardKey) {
+        this.cardKey = key;
+        this.cardAt = this.time;
+      }
+      const idle =
+        (import.meta.env.DEV
+          ? (window as unknown as { __lrCardIdle?: number }).__lrCardIdle
+          : undefined) ?? CARD_IDLE_SECS;
+      if (this.time - this.cardAt > idle) {
+        if (intro) this.cardMin = true;
+        else this.infoPin = null;
+        this.cardKey = '';
+        this.updateInfo();
+        return this.updateCardPanel();
+      }
+      this.placeCardPanel(tip);
+    } else {
+      this.cardKey = '';
+      this.unplaceCardPanel(tip);
+    }
+    // On a short lane (a browser's bars on screen) the verdict and the dot's legend, cut short
+    // in the lane, stand over the column too; each keeps the panel while its words stay.
+    for (const el of [this.verdict, this.hint]) {
+      const up = !el.hidden && el.offsetHeight > 0 && !!el.textContent?.trim();
+      const words = el.textContent ?? '';
+      const keep = up && el.hasAttribute('data-over') && el.dataset.overText === words;
+      const cut = up && this.shortLane && el.scrollHeight > el.clientHeight + 1;
+      const on = keep || cut;
+      if (on !== el.hasAttribute('data-over')) el.toggleAttribute('data-over', on);
+      if (on) {
+        el.dataset.overText = words;
+        this.placeCardPanel(el);
+      } else {
+        delete el.dataset.overText;
+        this.unplaceCardPanel(el);
+      }
+    }
+    // The pill: the arrival card folded, until "Got it".
+    const pages = this.introLeft > 0 && this.cardMin && edit ? this.teachPages() : [];
+    const page = pages[Math.min(this.introPageIdx, pages.length - 1)];
+    const show = !!page;
+    if (pill.hidden === show) pill.hidden = !show;
+    if (!page) return false;
+    const pk = `${this.introPageIdx}:${page.kind}:${page.kind === 'gem' ? page.gem : ''}`;
+    if (pk !== this.cardPillKey) {
+      this.cardPillKey = pk;
+      const name =
+        page.kind === 'gem'
+          ? GEM_NAME[page.gem]
+          : page.kind === 'goal'
+            ? GOAL_NAME
+            : page.kind === 'ring'
+              ? RING_NAME
+              : page.kind === 'strikes'
+                ? strikeLabel(this.puzzle.pulses)
+                : eitherName(this.puzzle.pulses);
+      let pic: HTMLElement | null = null;
+      if (page.kind === 'gem') {
+        this.pictures ??= createGemPortraits(this.ctx.renderer);
+        pic = this.pictures.canvas(page.gem, PILL_PIC_PX);
+        if (pic) pic.className = 'lr-pill-gem';
+      }
+      pill.replaceChildren(
+        pic ?? h('b', { 'aria-hidden': 'true' }, '?'),
+        h('span', { class: 'lr-pill-name' }, name),
+      );
+      pill.setAttribute('aria-label', `Show the card: ${name}`);
+    }
+    return true;
+  },
+
+  /** teach-overlay: the panel's box over the column, CSS px (custom properties on the card). */
+  placeCardPanel(this: AltarScene, tip: HTMLElement): void {
+    const lane = this.lane;
+    const regionEl = lane?.parentElement;
+    const topEl = this.head?.parentElement;
+    if (!regionEl || !topEl) return;
+    const region = regionEl.getBoundingClientRect();
+    const top = topEl.getBoundingClientRect();
+    if (region.width <= 0 || top.width <= 0) return;
+    const gap = 4;
+    const right = region.right - gap;
+    // Wider than the column where the board leaves room: left to the slab's edge, its props
+    // and the gauges' notes (whichever reaches furthest right), at most PANEL_MAX_W wide.
+    const o = this.ctx.ui.root.getBoundingClientRect();
+    const k = o.width / 1920;
+    const L = this.view.layout;
+    let edge = L.right;
+    for (const m of [L.storm, ...L.machines]) edge = Math.max(edge, m.x + m.size / 2);
+    let board = o.left + edge * k;
+    for (const n of document.querySelectorAll('.lr-altar-need')) {
+      const q = n.getBoundingClientRect();
+      if (q.width > 0) board = Math.max(board, q.right);
+    }
+    const left = Math.min(top.left + gap, Math.max(board + 2 * gap, right - PANEL_MAX_W));
+    // Under the title, and under the ☰ where the panel reaches under it.
+    let ceil = top.top;
+    const title = this.head?.querySelector('.lr-altar-title h2')?.getBoundingClientRect();
+    if (title && title.height > 0) ceil = Math.max(ceil, title.bottom);
+    const rail = topEl.parentElement?.querySelector(':scope > .tc-region[data-region="right"]');
+    for (const el of Array.from(rail?.children ?? [])) {
+      const q = el.getBoundingClientRect();
+      if (q.height > 0 && q.left < right && q.right > left) ceil = Math.max(ceil, q.bottom);
+    }
+    // The overlay (contain: layout) is the panel's containing block, not the viewport.
+    const box = (tip.closest('.tc-overlay') ?? document.documentElement).getBoundingClientRect();
+    const l = Math.round(left - box.left);
+    const r = Math.round(box.right - right);
+    const b = Math.round(box.bottom - region.bottom + gap);
+    const hgt = Math.max(0, Math.round(region.bottom - gap - (ceil + gap)));
+    const key = `${l},${r},${b},${hgt}`;
+    if (key === tip.dataset.overBox) return;
+    tip.dataset.overBox = key;
+    tip.style.setProperty('--lr-over-l', `${l}px`);
+    tip.style.setProperty('--lr-over-r', `${r}px`);
+    tip.style.setProperty('--lr-over-b', `${b}px`);
+    tip.style.setProperty('--lr-over-h', `${hgt}px`);
+  },
+
+  /** teach-overlay: a card back in the lane forgets its panel box. */
+  unplaceCardPanel(this: AltarScene, el: HTMLElement): void {
+    if (el.dataset.overBox === undefined) return;
+    delete el.dataset.overBox;
+    for (const v of ['--lr-over-l', '--lr-over-r', '--lr-over-b', '--lr-over-h'])
+      el.style.removeProperty(v);
+  },
+
+  /** teach-overlay: the pill opens the arrival card again. */
+  cardPillTapped(this: AltarScene): void {
+    this.cardMin = false;
+    this.cardAt = this.time;
+    this.cardKey = '';
+    this.infoPin = null;
+    this.updateInfo();
+    this.arrangeColumn();
   },
 
   /** dense-board-4: the Rule tab opens the held gem's card, or closes it. */
