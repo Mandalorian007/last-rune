@@ -1,11 +1,9 @@
 /// <reference types="@webgpu/types" />
 import type { Frame, Page } from '@playwright/test';
 
-import { ITCH_GAME_ORIGIN } from './ports';
+export { DEV_URL, PREVIEW_URL } from './ports';
 
-export { DEV_URL, ITCH_GAME_ORIGIN, ITCH_SIM_URL, PREVIEW_URL } from './ports';
-
-/** Console noise that is not ours: Chromium warns about itch's non-standard allow tokens. */
+/** Console noise that is not ours: Chromium warns about non-standard iframe allow tokens. */
 const IGNORED_CONSOLE = [/Unrecognized feature: '(monetization|xr|web-share)'/];
 
 /**
@@ -96,21 +94,6 @@ export async function nonBlackFraction(page: Page, png: Buffer, threshold = 40) 
     },
     { b64: png.toString('base64'), threshold },
   );
-}
-
-/** Wait for the itch-sim iframe and return its Frame. */
-export async function itchGameFrame(page: Page): Promise<Frame> {
-  const handle = await page.locator('iframe#game_drop').elementHandle();
-  if (!handle) throw new Error('itch-sim iframe#game_drop not found');
-  for (let i = 0; i < 50; i++) {
-    const frame = await handle.contentFrame();
-    if (frame?.url().startsWith(ITCH_GAME_ORIGIN)) {
-      await frame.waitForLoadState('load');
-      return frame;
-    }
-    await page.waitForTimeout(100);
-  }
-  throw new Error('itch-sim game frame never loaded');
 }
 
 // ── Gameplay helpers (full-run, playtest) ─────────────────────────────────────

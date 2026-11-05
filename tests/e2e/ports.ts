@@ -14,18 +14,12 @@ function offset(): number {
   const cwd = process.cwd();
   if (!cwd.includes('/.claude/worktrees/')) return 0;
   const n = createHash('sha1').update(cwd).digest().readUInt16BE(0);
-  return 10 + (n % 90) * 10; // 10..900, step 10 so the itch-sim pair (n, n+1) never overlaps
+  return 10 + (n % 90) * 10; // 10..900, step 10
 }
 
 export const PORT_OFFSET = offset();
 export const PREVIEW_PORT = 4173 + PORT_OFFSET;
 export const DEV_PORT = 5175 + PORT_OFFSET;
-export const ITCH_SIM_PORT = 8790 + PORT_OFFSET;
-/** `pnpm cover` (scripts/cover/) serves the itch cover page here. */
-export const COVER_PORT = 6290 + PORT_OFFSET;
 
 export const PREVIEW_URL = `http://localhost:${PREVIEW_PORT}`;
 export const DEV_URL = `http://127.0.0.1:${DEV_PORT}/`;
-export const ITCH_SIM_URL = `http://localhost:${ITCH_SIM_PORT}`;
-/** itch-sim serves the game files on port + 1 (stands in for html-classic.itch.zone). */
-export const ITCH_GAME_ORIGIN = `http://127.0.0.1:${ITCH_SIM_PORT + 1}`;

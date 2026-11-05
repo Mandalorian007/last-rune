@@ -1,10 +1,10 @@
 # Gate for main, as three jobs (D-041):
 #   engine:     @thunderclap/engine typecheck + lint + unit tests (packages/engine).
 #   engine-e2e: engine platform e2e on the harness matrix (D-041 addendum 2).
-#   game:       game typecheck + lint + import-boundary check + unit tests, production build, itch zip.
+#   game:       game typecheck + lint + import-boundary check + unit tests, production build.
 #   desktop:    unsigned Electron builds of The Last Rune on Linux, macOS and Windows (non-blocking;
 #               ws/host-electron, ws/last-rune-desktop).
-# No secrets are used or needed. Nothing is uploaded to itch.io (see docs/shipping-itch.md).
+# No secrets are used or needed. Nothing is uploaded anywhere; Pages deploys from pages.yml.
 name: CI
 
 on:
@@ -101,20 +101,10 @@ jobs:
 
       - run: pnpm build
 
-      # Validates dist/ against itch.io upload rules and writes build/last-rune-itch-<v>.zip.
-      - run: pnpm package:itch --skip-build
-
       - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
-          if-no-files-found: error
-          retention-days: 14
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: itch-zip
-          path: build/*.zip
           if-no-files-found: error
           retention-days: 14
 
