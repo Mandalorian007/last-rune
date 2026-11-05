@@ -49,6 +49,16 @@ async function boot(page: Page, inset: number) {
   );
 }
 
+/**
+ * teach-overlay: fold the open arrival panel to its pill (it lies over the tray, so a tap on a
+ * tray gem would land on it), as a player's idle few seconds would.
+ */
+async function foldCard(page: Page) {
+  await page.evaluate(() => Object.assign(window, { __lrCardIdle: 0 }));
+  await expect(page.locator('.lr-altar-tip[data-over]:not([hidden])')).toHaveCount(0);
+  await page.evaluate(() => Object.assign(window, { __lrCardIdle: undefined }));
+}
+
 /** Open `id` at first meeting (its arrival card up) with half its intended gems placed. */
 async function openFresh(page: Page, id: string, share = 0.5) {
   const at = MACHINE_IDS.indexOf(id as (typeof MACHINE_IDS)[number]);
@@ -127,6 +137,7 @@ for (const vp of PHONES) {
       const problems: string[] = [];
       for (const id of MACHINE_IDS) {
         await openFresh(page, id);
+        await foldCard(page);
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
@@ -167,6 +178,7 @@ for (const vp of PHONES) {
       const problems: string[] = [];
       for (const id of ['capacitor-bay', 'the-last-rune', 'intake-desk'] as const) {
         await openFresh(page, id);
+        await foldCard(page);
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );

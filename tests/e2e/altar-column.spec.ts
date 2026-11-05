@@ -5,6 +5,7 @@ import { type Cell, MACHINE_IDS, type MachineId } from '../../games/last-rune/ru
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
 import { playOrder } from './altar-audit';
 import { DEV_URL, settled, waitFrames } from './helpers';
+import { SHORT_PHONE } from './phones';
 
 // port-altar-3: the altar's right column lives on the chrome's layout regions, so on every
 // altar and phone nothing in it touches anything else. At first meeting (the arrival card up),
@@ -16,12 +17,17 @@ import { DEV_URL, settled, waitFrames } from './helpers';
 // column (the how-to line, the dot legend and the Capacitor read-outs too) keeps its text in
 // full and stays inside the lane and the column, also mid-play where cards stack (the legend
 // lit by half a design, a gem's card with the Turn line under it).
+// teach-overlay: the arrival card (and a pinned rule card) is a panel over the column on phones.
+// It may lie over the tray, the title and the lane, never over a socket, a Gives/Needs label or
+// a button, and it stays on screen; it is held open here (no idle fold) while it is measured.
+// The short phone (852×270, a browser's bars on screen) joins the four.
 
 const PHONES = [
   { name: 'se', width: 667, height: 320, inset: 0 },
   { name: 'iphone', width: 844, height: 340, inset: 47 },
   { name: 'promax', width: 932, height: 380, inset: 59 },
   { name: 'android', width: 915, height: 360, inset: 0 },
+  SHORT_PHONE,
 ] as const;
 
 // biome-ignore lint/suspicious/noExplicitAny: dev handle
@@ -58,6 +64,8 @@ const MEASURED =
   '.lr-altar-need, .lr-altar-lane, .lr-altar-head, .tc-caption, .tc-region > [data-action]';
 
 async function boot(page: Page, inset: number) {
+  // The card stays open while it is measured (teach-overlay folds it after a few idle seconds).
+  await page.addInitScript(() => Object.assign(window, { __lrCardIdle: 1e9 }));
   if (inset)
     await page.addInitScript((px) => {
       const s = document.createElement('style');
@@ -105,7 +113,8 @@ async function parts(page: Page, blocked: Cell[]): Promise<{ parts: Part[]; smal
       out.push({ what, group, box: { l: r.left, t: r.top, r: r.right, b: r.bottom } });
     };
     for (const el of document.querySelectorAll('.lr-altar-lane > *'))
-      if (el.textContent?.trim()) add(el.className, 'card', el);
+      if (el.textContent?.trim())
+        add(el.className, el.hasAttribute('data-over') ? 'over' : 'card', el);
     for (const el of document.querySelectorAll('.tc-caption')) add('FUSE', 'card', el);
     for (const el of document.querySelectorAll('.lr-altar-title h2')) add('title', 'title', el);
     for (const el of document.querySelectorAll('.lr-altar-holding')) add('holding', 'title', el);
@@ -199,6 +208,11 @@ async function unfit(page: Page): Promise<string[]> {
       if (!words && el.scrollWidth > el.clientWidth + 1)
         out.push(`${what} too wide (${el.scrollWidth} > ${el.clientWidth}) "${text}"`);
       const inLane = el.parentElement === laneEl;
+      if (el.hasAttribute('data-over')) {
+        if (box.left < 0 || box.top < 0 || box.right > innerWidth || box.bottom > innerHeight)
+          out.push(`${what} panel off screen "${text}"`);
+        continue;
+      }
       for (const [name, r] of [
         ['lane', inLane ? lane : undefined],
         ['column', region],
@@ -303,6 +317,9 @@ function overlaps(list: Part[]): string[] {
       const a = list[i]!;
       const b = list[j]!;
       if (a.group === b.group && a.group !== 'card') continue;
+      // The card panel lies over the tray, the title and the lane, never sockets, labels, buttons.
+      const [o, u] = a.group === 'over' ? [a, b] : [b, a];
+      if (o.group === 'over' && !['socket', 'label', 'button'].includes(u.group)) continue;
       if (hit(a.box, b.box)) out.push(`${a.what} × ${b.what}`);
     }
   return out;
@@ -327,7 +344,7 @@ for (const vp of PHONES) {
       viewport: { width: vp.width, height: vp.height },
       isMobile: true,
       hasTouch: true,
-      deviceScaleFactor: 1,
+      deviceScaleFactor: 'dpr' in vp ? vp.dpr : 1,
     });
     test(`nothing in the altar column overlaps at ${vp.width}×${vp.height}`, async ({ page }) => {
       await boot(page, vp.inset);

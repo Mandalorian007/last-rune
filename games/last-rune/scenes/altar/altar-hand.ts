@@ -20,7 +20,11 @@ export const handMethods = {
   changed(this: AltarScene, placed: Cell | null = null): void {
     if (this.mode === 'result') this.backToEdit();
     // The arrival card has done its job once the player starts building: let it fade.
-    if (placed && this.introLeft > INTRO_FADE) this.introLeft = INTRO_FADE;
+    // teach-overlay: a phone's card folds to its pill instead; only "Got it" retires it.
+    if (placed && this.introLeft > INTRO_FADE) {
+      if (this.view.layout.phone) this.cardMin = true;
+      else this.introLeft = INTRO_FADE;
+    }
     this.view.syncBoard(this.board, placed);
     if (placed) this.lastPlaced = { x: placed.x, y: placed.y };
     this.ctx.flow.savePlacements(this.machine, this.board.serialise());

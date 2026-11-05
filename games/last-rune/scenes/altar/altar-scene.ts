@@ -278,6 +278,21 @@ export class AltarScene implements GameScene {
   ruleTab: HTMLButtonElement | null = null;
   /** dense-board-4: the pinned card came from the Rule tab (shown as the chip). */
   ruleOpen = false;
+  /**
+   * teach-overlay: phones open the arrival card (and a pinned rule card) as a panel over the
+   * column. After a few seconds without a touch on it, or a tap on the board or tray, the
+   * arrival card folds to `cardPill` (not dismissed: "Got it" does that) and a pinned card closes.
+   */
+  cardMin = false;
+  /** Scene time of the last touch on the open panel (or its opening). */
+  cardAt = 0;
+  /** What the panel showed when `cardAt` was last reset (a new card restarts the clock). */
+  cardKey = '';
+  /** The folded arrival card: its gem's picture and name; a tap opens it again. */
+  cardPill: HTMLButtonElement | null = null;
+  cardPillKey = '';
+  /** Phones: the card lane is short (SHORT_LANE_PX): the held gem's card folds behind the tab. */
+  shortLane = false;
   /** Phones: the title and the tray's slots and counts, in the chrome's `top` region. */
   head: HTMLElement | null = null;
   /** Where the head was last lined up with the tray (`placeHead`). */
