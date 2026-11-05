@@ -23,3 +23,5 @@ export const DEV_PORT = 5175 + PORT_OFFSET;
 
 export const PREVIEW_URL = `http://localhost:${PREVIEW_PORT}`;
 export const DEV_URL = `http://127.0.0.1:${DEV_PORT}/`;
+/** `pnpm social` (scripts/cover/) serves the social card page here. */
+export const COVER_PORT = 6290 + PORT_OFFSET;
