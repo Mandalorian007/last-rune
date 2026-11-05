@@ -401,3 +401,11 @@ Blind review 7 on `gate7` (main after glyph-truth, teach-4, chrome-polish-4, men
 
 ## D-045: The save records which gems have been taught (2026-11-04, PM)
 Proposed by teach-8 (D-040 add. 11, major C). The save gains an optional `codex.taught`, a map from gem kind to the altar whose arrival card taught it. It is written when an arrival card opens. Any gem kind on an altar that is not in `taught` gets its pictured card ("Again" if it was earned but never handled), whether the gem is fixed or in the tray and in any play order. Older saves load unchanged: a missing field means nothing has been taught yet. The field is stored in localStorage only, like the rest of the save. Also ruled with it: the Capacitor plan's red "this gauge will trip" warning before Strike is a forecast under D-043 and is removed. Per-strike results after Strike stay.
+
+## D-046: Good enough beats more review; the user's phone test decides Gate 2 (2026-11-04, user)
+User: "minimize review. Get phone ready for testing and I will try it. This is the very first game... get it functional, extract engine and then work towards next rather than over investing. I would rather make sure we have good enough then consider possible usage metrics."
+- Gate 2's bar changes. No more D-040 blind phone reviews (review 12 is cancelled). The gate is the user's own real-phone test of the live Pages build. Blockers they hit get fixed; polish beyond that waits for real usage.
+- ws/camera (zoom/pan for dense boards) is parked. It is reopened only if the user's phone test finds dense boards unplayable.
+- ws/one-overlay is kept on its branch and is not merged before the phone test. desktop/iPad must not change (the user rates iPad highly).
+- After Gate 2: extract the engine (`@thunderclap/engine` 0.2.0, usable by a next game) and move on to the next game. Usage metrics may come later. They need their own decision, because storage is localStorage-only and there are no runtime network calls today.
+
