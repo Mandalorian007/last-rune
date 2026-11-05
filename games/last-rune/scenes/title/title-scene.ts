@@ -110,6 +110,7 @@ export class TitleScene implements GameScene {
     speaking: false,
     returning: false,
     upright: false,
+    compact: false,
   };
 
   private frameState(): TitleViewFrame {
@@ -120,6 +121,7 @@ export class TitleScene implements GameScene {
     s.speaking = this.ctx.fuse.speaking;
     s.returning = this.returning;
     s.upright = this.upright();
+    s.compact = this.compact();
     return s;
   }
 
@@ -131,6 +133,16 @@ export class TitleScene implements GameScene {
       title.toggleAttribute('data-upright', up);
     }
     return up;
+  }
+
+  /** A phone on its side (polish-8): the view draws the name lower; the subtitle follows. */
+  private compact(): boolean {
+    const on = this.ctx.ui.layout.formFactor === 'phone-landscape';
+    const title = this.dom?.querySelector<HTMLElement>('.lr-title');
+    if (title && title.hasAttribute('data-compact') !== on) {
+      title.toggleAttribute('data-compact', on);
+    }
+    return on;
   }
 
   /** One idle line, from the bag, with the card kept clear of the menu. */

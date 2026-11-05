@@ -268,6 +268,8 @@ for (const vp of PHONES) {
               slotSeen: !!ss && ss.display !== 'none' && ss.visibility !== 'hidden',
               tick: after !== 'none' && after !== 'normal' && after !== '""',
               gem: { size: view.tray[i]?.size ?? 0, state: view.tray[i]?.state ?? '' },
+              full: view.layout.tray[i]?.size ?? 0,
+              struck: getComputedStyle(c.querySelector('.lr-n') ?? c).textDecorationLine,
             };
           });
         });
@@ -286,6 +288,10 @@ for (const vp of PHONES) {
           // glyph-truth: a dimmed copy of the real icon (the `spent` gem state), every kind alike.
           if (!(c.gem.size > 0) || c.gem.state !== 'spent')
             problems.push(`${tag}: no dimmed copy (${c.gem.state} ${c.gem.size})`);
+          // polish-10: full size, so the spent gem is still recognisably itself, and the "×0"
+          // struck through so it reads as spent.
+          if (c.gem.size !== c.full) problems.push(`${tag}: shrunk (${c.gem.size} of ${c.full})`);
+          if (!c.struck.includes('line-through')) problems.push(`${tag}: "×0" not struck`);
           g.forEach((o, j) => {
             if (j !== i && hit(c.box, o.box)) problems.push(`${tag}: overlaps count ${j + 1}`);
           });
@@ -331,9 +337,12 @@ for (const vp of PHONES) {
               leader: document.querySelectorAll(
                 '.lr-teach-leader :is(.lr-leader-line, .lr-leader-ring)',
               ).length,
-              lit: [...document.querySelectorAll<HTMLElement>('.lr-altar-slot[data-teach]')].filter(
-                (s) => getComputedStyle(s).display !== 'none',
-              ).length,
+              // A ringed tray tile with nothing in hand (the first altar's breathing tray aside).
+              lit: [
+                ...document.querySelectorAll<HTMLElement>(
+                  '.lr-altar-head:not([data-first]) .lr-altar-slot:not([data-held])',
+                ),
+              ].filter((s) => getComputedStyle(s).display !== 'none').length,
             };
           });
           if (!g.next || !g.card) break;
@@ -347,14 +356,15 @@ for (const vp of PHONES) {
           const c = g.card;
           if (n.l < c.l - 0.5 || n.r > c.r + 0.5 || n.t < c.t - 0.5 || n.b > c.b + 0.5)
             problems.push(`${tag}: "${g.label}" pokes out of the card`);
-          // The card points at what it teaches: a line to a fixed gem, a lit tray tile for
-          // a gem the player places; and says which it is.
+          // The card points at what it teaches: a line to a fixed gem; and says which it is.
+          // polish-11 (D-040 add. 12): a tray gem's page rings nothing in the tray (the ring
+          // read as the gem already picked up); nothing is held until the player taps.
           if (g.how === 'fixed') {
             if (!g.leader) problems.push(`${tag}: nothing marks the fixed gem on the board`);
             if (!g.rule.startsWith(FIXED_NOTE))
               problems.push(`${tag}: a fixed gem's page says "${g.rule}"`);
           } else if (g.how === 'tray' || g.how === 'turns') {
-            if (g.how === 'tray' && !g.lit) problems.push(`${tag}: its tray tile is not lit`);
+            if (g.lit) problems.push(`${tag}: a tray tile is ringed before any tap`);
             if (g.leader) problems.push(`${tag}: a line points at the board for a tray gem`);
           }
           // The first lesson: "Bend is fixed; Channels are yours to place".
@@ -428,3 +438,89 @@ for (const vp of PHONES) {
     });
   });
 }
+
+// teach-5: the gauge dot is explained once per game, the first time a dot lights; the strike
+// after that retires it for good (a saved flag), so a reload or the next altar stays quiet.
+test.describe('the dot legend (se)', () => {
+  test.use({
+    viewport: { width: 667, height: 320 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 1,
+  });
+
+  test('shows once, when a dot first lights, and never after the next strike', async ({ page }) => {
+    await boot(page, 0);
+    const legend = page.locator('.lr-altar-hint[data-legend]');
+    await openFresh(page, MACHINE_IDS[0], 1);
+    await dismissCard(page);
+    await expect(legend).toBeVisible();
+    await expect(legend).toContainText('The dot on a gauge:');
+    // teach-6: "No dot" draws none (the gauge shows none). teach-8 (D-043): no red row.
+    const rows = await legend
+      .locator('.lr-dot-row')
+      .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.look));
+    expect(rows).toEqual(['off', 'on']);
+    const looks = await legend
+      .locator('.lr-need-lamp')
+      .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.look));
+    expect(looks).toEqual(['on']);
+    // Never an amount, never "enough" (D-043).
+    expect(await legend.textContent()).not.toMatch(/\d|enough|exact/i);
+    expect(await page.evaluate(() => !!(window as G).__game.save.get().flags.dotTold)).toBe(false);
+
+    // Strike: the legend has done its job.
+    await page.locator('[data-action="strike"]').tap();
+    await expect
+      .poll(() => page.evaluate(() => !!(window as G).__game.save.get().flags.dotTold))
+      .toBe(true);
+
+    // A reload, and the next altar with its dots lit: no legend.
+    await page.reload();
+    await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
+      timeout: 30_000,
+    });
+    await openFresh(page, MACHINE_IDS[1], 1);
+    await dismissCard(page);
+    await expect(page.locator('.lr-altar-need .lr-need-lamp[data-on]').first()).toBeAttached();
+    await waitFrames(page, 6);
+    await expect(legend).toHaveCount(0);
+  });
+
+  // teach-6: a gem is in hand nearly all the time, and its card used to keep the legend waiting
+  // for good (blind review 8 never saw it). Now the legend takes the gem card's place, and its
+  // own "Got it" retires it.
+  test('shows with a gem in hand, and "Got it" retires it', async ({ page }) => {
+    await boot(page, 0);
+    const legend = page.locator('.lr-altar-hint[data-legend]');
+    const id = MACHINE_IDS[0];
+    await openFresh(page, id, 1);
+    await dismissCard(page);
+    await expect(legend).toBeVisible();
+    // Hold a tray gem: the legend stays, the gem card steps aside.
+    const L = await page.evaluate(
+      () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+    );
+    const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
+    const k = ob.width / 1920;
+    const slot = L.tray[0]!;
+    await page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);
+    await waitFrames(page, 6);
+    expect(await page.evaluate(() => (window as G).__altarView.held?.kind ?? null)).toBe(slot.gem);
+    await expect(legend).toBeVisible();
+    await expect(page.locator('.lr-altar-tip:not([hidden]):not([data-yield])')).toHaveCount(0);
+    // The legend is never cut: every row fits inside it.
+    const cut = await legend.evaluate(
+      (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1,
+    );
+    expect(cut).toBe(false);
+
+    const ok = legend.locator('.lr-dot-ok');
+    const b = (await ok.boundingBox())!;
+    await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+    await expect
+      .poll(() => page.evaluate(() => !!(window as G).__game.save.get().flags.dotTold))
+      .toBe(true);
+    await expect(legend).toHaveCount(0);
+  });
+});

@@ -38,7 +38,8 @@ export function socketLooks(
 
 /**
  * Phones (mobile-5-board): the hugged slab's top face, as the bake carves it (`alt_hug` in
- * `stone-wgsl.ts`). It is the union of one rounded block per open cell, grown by `margin`
+ * `stone-wgsl.ts`). It is the union of one rounded block per open cell (and per blocked cell
+ * inside the slab, `recessCells`, filled flush), grown by `margin`
  * less a 3 px chip, with corner radius min(0.9·margin, 22). Returns the signed distance from
  * a point in slab-local px (origin at the top face's top-left) to the edge, negative inside.
  * Pure, so tests can check that no socket, source or gauge wire hangs off the stone.
@@ -54,10 +55,12 @@ export function huggedSlabDistance(
 ): number {
   const half = pitch / 2 + margin - 3;
   const rc = Math.min(margin * 0.9, 22);
+  const inner = recessCells(cols, rows, blocked);
+  const has = (cs: readonly Cell[], x: number, y: number) => cs.some((b) => b.x === x && b.y === y);
   let d = 1e5;
   for (let y = 0; y < rows; y++)
     for (let x = 0; x < cols; x++) {
-      if (blocked.some((b) => b.x === x && b.y === y)) continue;
+      if (has(blocked, x, y) && !has(inner, x, y)) continue;
       const qx = Math.abs(px - (margin + pitch * (x + 0.5))) - half + rc;
       const qy = Math.abs(py - (margin + pitch * (y + 0.5))) - half + rc;
       const out = Math.hypot(Math.max(qx, 0), Math.max(qy, 0));
@@ -67,8 +70,9 @@ export function huggedSlabDistance(
 }
 
 /**
- * Phones (mobile-6-board): the blocked cells inside the slab, which the bake fills with sunk
- * stone (`alt_inner` in `stone-wgsl.ts`) instead of letting the wall show through. A blocked
+ * Phones (mobile-6-board): the blocked cells inside the slab, which the bake fills flush with
+ * the slab's stone (`alt_inner` in `stone-wgsl.ts`; held-gem: a sunk square read as a square
+ * socket) instead of letting the wall show through. A blocked
  * cell is inside when there are open cells on both sides of it in its row, or both above and
  * below it in its column. The rest stay off the stone, so the slab still hugs the sockets.
  */

@@ -6,12 +6,12 @@ import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-7-strike (D-040 addendum 5), on four phones (browser bars showing, the iPhone's notch
 // insets emulated):
-//  1. Strike says what a tap does, on one line: "Strike (2 left)" before a two-strike run,
-//     "Try again" after a fail. It is ≥56 CSS px tall and ≥12 CSS px inside the play area.
+//  1. Strike says what a tap does, on one line: "Strike ×2" (two unlit pips) before a two-strike run,
+//     "Strike ×2" after a fail too (teach-7: nothing is lost). It is ≥56 CSS px tall and ≥12 CSS px inside the play area.
 //  2. Before Strike each gauge shows a lamp (on or off, no number) that agrees with the path;
 //     Strike glows ("ready") when every lamp is lit.
 //  3. After a two-strike fail the gauge card stays compact ("Needs 8 · got 16", no per-strike
-//     chips); the verdict tells each strike in words ("Got 0, then 16; needs 8 in one strike.").
+//     chips); the verdict tells each strike by number ("Strike 2: 16. Needs 8 on one strike.").
 //  4. An empty-socket fail: title "No charge reached the machine", cause "The charge hit …".
 //  5. The solve card covers no gauge and no socket; FUSE's line keeps ≥12 px off it.
 
@@ -23,7 +23,7 @@ const PHONES = [
 ] as const;
 
 const ORDER = playOrder();
-/** Capacitor Bay's first try (capacitor.spec): strike 1 keeps 8, strike 2 lets out 16 into 8. */
+/** Capacitor Bay's first try (capacitor.spec): strike 1 stores 8, strike 2 lets out 16 into 8. */
 const ROW = [
   { cell: { x: 4, y: 5 }, gem: 'channel', rot: 0 },
   { cell: { x: 4, y: 4 }, gem: 'channel', rot: 0 },
@@ -94,7 +94,13 @@ async function strikeRead(page: Page) {
     const r = b.getBoundingClientRect();
     const app = document.getElementById('app')!.getBoundingClientRect();
     const lines = w ? w.getClientRects().length : 0;
+    // teach-5: the pips beside the label, one per strike; how many show and how many are lit.
+    const pips = [...b.querySelectorAll<HTMLElement>('.lr-strike-pips > i')].filter(
+      (p) => p.getBoundingClientRect().width > 0,
+    );
     return {
+      pips: pips.length,
+      lit: pips.filter((p) => p.hasAttribute('data-lit')).length,
       word: (w?.textContent ?? '').replace(/\u00a0/g, ' '),
       lines,
       h: r.height,
@@ -143,7 +149,11 @@ for (const vp of PHONES) {
       // 1–2. Capacitor Bay, half a route: Strike says two strikes; lamps agree with the path.
       await open(page, 'capacitor-bay', ROW.slice(0, 3));
       await expect(page.locator('.tc-overlay')).toHaveAttribute('data-phone', '');
-      problems.push(...strikeProblems('bay, before', await strikeRead(page), 'Strike (2 left)'));
+      const before = await strikeRead(page);
+      problems.push(...strikeProblems('bay, before', before, 'Strike ×2'));
+      // teach-5: two pips beside "Strike ×2", none lit until a strike fires.
+      if (before.pips !== 2 || before.lit !== 0)
+        problems.push(`bay, before: ${before.pips} pips showing, ${before.lit} lit (want 2, 0)`);
       const lamps = async () =>
         page.evaluate(() => ({
           on: [...document.querySelectorAll('.lr-altar-need .lr-need-lamp')].map((l) =>
@@ -178,8 +188,21 @@ for (const vp of PHONES) {
       if (part.on.every(Boolean) === false && (await strikeRead(page)).ready)
         problems.push('bay, first try: Strike glows with a gauge unreached');
 
-      // 3. The two-strike fail: compact card, each strike in words, "Try again".
+      // 3. The two-strike fail: each strike on the card and in words; Strike reads as before.
+      // teach-5: while the run fires, the Strike pips light one per strike (1, then 2).
+      await page.evaluate(() => {
+        const b = document.querySelector('[data-action="strike"]')!;
+        const seen: number[] = [];
+        (window as G).__pipsSeen = seen;
+        new MutationObserver(() => {
+          const n = b.querySelectorAll('.lr-strike-pips > i[data-lit]').length;
+          if (n && seen[seen.length - 1] !== n) seen.push(n);
+        }).observe(b, { subtree: true, attributes: true, attributeFilter: ['data-lit'] });
+      });
       await strike(page);
+      const seen = await page.evaluate(() => (window as G).__pipsSeen as number[]);
+      if (JSON.stringify(seen) !== '[1,2]')
+        problems.push(`bay strike: pips lit ${JSON.stringify(seen)}, not one then two`);
       const v = await page.evaluate(() => ({
         verdict: (document.querySelector('.lr-altar-verdict')?.textContent ?? '').replace(
           /\u00a0/g,
@@ -192,15 +215,30 @@ for (const vp of PHONES) {
         chips: document.querySelectorAll('.lr-altar-need .lr-need-strikes').length,
         lamps: document.querySelectorAll('.lr-altar-need .lr-need-lamp').length,
       }));
-      if (!/Got 0, then 16; needs 8 in one strike\./.test(v.verdict))
+      if (!/Strike 2: 16\. Needs 8 on one strike\./.test(v.verdict))
         problems.push(`bay fail: verdict "${v.verdict}"`);
-      if (/\b\d: \d/.test(v.cards.join('|')) || v.chips)
+      if (/Strike \d: \d.*Strike \d/.test(v.cards.join('|')) || v.chips)
         problems.push(`bay fail: strike chips on the card "${v.cards.join('|')}"`);
-      // One line: "Needs 8 · got 16" (the dot is drawn before "got").
-      if (!v.cards.some((c) => /^Needs 8 · ?got 16$/.test(c.replace(/ got/, ' · got'))))
-        problems.push(`bay fail: card reads "${v.cards.join('|')}", not "Needs 8 · got 16"`);
+      // teach-8: stacked on a multi-strike altar, the card says what each strike brought,
+      // by number, "Needs 8 / strike 1: 0 · 2: 16 ✕" (read here as one line).
+      if (!v.cards.some((c) => /^Needs 8 strike 1: 0 · 2: 16 ?✕$/.test(c)))
+        problems.push(
+          `bay fail: card reads "${v.cards.join('|')}", not "Needs 8 strike 1: 0 · 2: 16 ✕"`,
+        );
       if (v.lamps) problems.push('bay fail: lamps still showing after Strike');
-      problems.push(...strikeProblems('bay, after', await strikeRead(page), 'Try again'));
+      // teach-7: nothing is lost by a miss, so Strike reads as before, its marks unlit.
+      const after = await strikeRead(page);
+      problems.push(...strikeProblems('bay, after', after, 'Strike ×2'));
+      if (after.pips !== 2 || after.lit !== 0)
+        problems.push(`bay, after: ${after.pips} pips, ${after.lit} lit (want 2, 0)`);
+      // teach-7: strike 1 is seen to happen: the Capacitor's "stores 8" stays on the board.
+      const stored = await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>('.lr-altar-chip[data-store]')]
+          .filter((el) => !el.hidden)
+          .map((el) => (el.textContent ?? '').replace(/ /g, ' ')),
+      );
+      if (JSON.stringify(stored) !== '["stores 8"]')
+        problems.push(`bay, after: stored chips ${JSON.stringify(stored)}, want ["stores 8"]`);
 
       // 4. An empty socket: the plain headline.
       await open(page, 'relay-tower', []);

@@ -8,6 +8,7 @@
  * FUSE, particles.
  */
 import type { Frame, RGBA } from '@thunderclap/engine/render';
+import { gemCutPoints } from '../../art/gem-cut';
 import type { CandleInstance } from '../../art/materials/candles';
 import { addGemLight, type GemInstance, type GemState } from '../../art/materials/gems';
 import { LightSet } from '../../art/materials/lights';
@@ -26,6 +27,7 @@ import { type AltarAssets, altarAssets, ensureBolts } from './assets';
 import type { BoardState } from './board';
 import type { PathHop } from './circuit-model';
 import { type AltarLayout, anchorOf, cellCenter, computeLayout, DESIGN_W } from './layout';
+import { hopTurn, restTurn } from './rest-turn';
 import type { StrikeTimeline } from './strike';
 
 const W = DESIGN_W;
@@ -65,6 +67,11 @@ export interface BoardGem {
   energyTarget: number;
   /** Extra pulse (capacitor holding charge). */
   holding: boolean;
+  /**
+   * An Amplify the bolt passed without doubling it (it was already doubled; held-gem, finding
+   * E): drawn idle, dim and unlit, where a working Amplify flares.
+   */
+  idle: boolean;
   /** Being dragged: drawn at the pointer instead. */
   hidden: boolean;
 }
@@ -90,6 +97,16 @@ export interface HeldGem {
   size?: number;
   /** Hover lift when not the default (phones: 0, it rests flat in its tray ring; glyph-truth). */
   lift?: number;
+  /**
+   * Phones: resting in its own tray slot (held-gem). Drawn calm (no hover wash, no lift) so its
+   * glyph keeps full contrast and a Turn shows at a glance; the slot's own copy is hidden.
+   */
+  rest?: boolean;
+  /**
+   * Phones, while it is snapped over a socket: the tray slot it came from, where a calm copy at
+   * its turn stays (the ghost on the socket shows where it would land).
+   */
+  slot?: { x: number; y: number; size: number } | null;
 }
 
 export class AltarView {
@@ -107,6 +124,11 @@ export class AltarView {
   /** Extra glow a fully energised gem gets (the solve moment turns it down; solve-truth). */
   energyGlow = 0.6;
   held: HeldGem | null = null;
+  /**
+   * The turn a held straight gem shows while it is snapped over a socket: the way it would sit
+   * there (set by the scene with the ghost preview). Off the board it shows the tray's turn.
+   */
+  heldFace: number | null = null;
   /** A gem shown large in front of everything (the solve moment's granted gem). */
   showcase: GemInstance | null = null;
   private readonly showcaseList: GemInstance[] = [];
@@ -158,6 +180,16 @@ export class AltarView {
     size: 80,
     state: 'hover',
   };
+
+  /** Phones: the held tray gem's ring (gem state "ring"), drawn round it in its slot. */
+  private readonly ringInst: GemInstance = {
+    kind: 'channel',
+    x: 0,
+    y: 0,
+    size: 80,
+    state: 'ring',
+    lift: 0,
+  };
   private readonly heldList: GemInstance[] = [this.heldInst];
   private readonly drawList: GemInstance[] = [];
   private readonly pt = { x: 0, y: 0 };
@@ -199,8 +231,9 @@ export class AltarView {
       size: s.size,
       state: 'idle' as GemState,
       lift: 0,
-      // As it will sit on the board: straight gems face the bolt; Bend, Gate, Split as held.
-      rot: this.restRot({ gem: s.gem, cell: { x: 0, y: 0 }, rot: 0 }),
+      // One turn on every altar (glyph-truth-2): straight gems upright, as the Codex draws
+      // them; Bend, Gate and Split at rot 0, as they come out of the tray.
+      rot: 0,
       seed: 40 + i,
     }));
     this.trayLift = L.tray.map(() => 0);
@@ -290,6 +323,7 @@ export class AltarView {
       ...state.placements.map((p) => ({ p, fixed: state.lockedPlacements.includes(p) })),
     ];
     const old = this.board.splice(0, this.board.length);
+    const gems = want.map((w) => w.p);
     for (const { p, fixed } of want) {
       const prev = old.find(
         (b) => b.cell.x === p.cell.x && b.cell.y === p.cell.y && b.g.kind === p.gem,
@@ -312,7 +346,7 @@ export class AltarView {
         y: this.pt.y,
         size: L.gemSize,
         state: 'placed',
-        rot: this.restRot(p),
+        rot: this.restRot(p, gems),
         lift: 0,
         glow: 1,
         seed: p.cell.x * 7 + p.cell.y * 13 + (fixed ? 100 : 0),
@@ -328,17 +362,29 @@ export class AltarView {
         energy: 0,
         energyTarget: 0,
         holding: false,
+        idle: false,
         hidden: false,
       });
       if (isNew) g.lift = 1;
     }
   }
 
-  /** Rest rotation: Bend/Gate/Split as set; other gems face the bolt (storm direction). */
-  private restRot(p: Placement): number {
+  /**
+   * Rest rotation: Bend/Gate/Split as set; straight gems lie along the run their socket is part
+   * of (`restTurn`, glyph-truth-2), never across it.
+   */
+  private restRot(p: Placement, gems: readonly Placement[]): number {
     if (isRotational(p.gem)) return p.rot;
-    const d = this.puzzle.storm.dir;
-    return d === 'N' ? 0 : d === 'E' ? 1 : d === 'S' ? 2 : 3;
+    return restTurn(this.puzzle, gems, p.cell);
+  }
+
+  /** The gems on the board now, as placements (turned gems at the turn they show). */
+  placedGems(): Placement[] {
+    return this.board.map((b) => ({
+      gem: b.g.kind,
+      cell: b.cell,
+      rot: (((Math.round(b.rotTarget) % 4) + 4) % 4) as Placement['rot'],
+    }));
   }
 
   gemAt(c: Cell): BoardGem | undefined {
@@ -352,20 +398,23 @@ export class AltarView {
 
   /**
    * Turn each straight-through gem so its glyph's input faces where the bolt comes in: the hop
-   * that ends on the gem. With `rest`, gems no hop reaches go back to facing the storm.
-   * Bend, Gate and Split never move: their turn is part of the rules.
+   * that ends on the gem. With `rest`, gems no hop reaches lie along their run (`restTurn`, from
+   * `gems`, by default the board as it is); one already on that axis keeps its turn, so it
+   * never spins end for end. Bend, Gate and Split never move: their turn is part of the rules.
    */
-  faceAlong(hops: readonly { from: Cell; to: Cell }[], rest = false): void {
+  faceAlong(
+    hops: readonly { from: Cell; to: Cell }[],
+    rest = false,
+    gems: readonly Placement[] = this.placedGems(),
+  ): void {
     for (const b of this.board) {
       if (isRotational(b.g.kind)) continue;
       const h = hops.find((s) => s.to.x === b.cell.x && s.to.y === b.cell.y);
       let q: number;
-      if (h) {
-        const dx = h.to.x - h.from.x;
-        const dy = h.to.y - h.from.y;
-        q = dy < 0 ? 0 : dx > 0 ? 1 : dy > 0 ? 2 : 3;
-      } else if (rest) {
-        q = this.restRot({ gem: b.g.kind, cell: b.cell, rot: 0 });
+      if (h) q = hopTurn(h);
+      else if (rest) {
+        q = restTurn(this.puzzle, gems, b.cell);
+        if (((Math.round(b.rotTarget) - q) & 1) === 0) continue;
       } else continue;
       const cur = Math.round(b.rotTarget);
       const fwd = (((q - cur) % 4) + 4) % 4;
@@ -378,6 +427,7 @@ export class AltarView {
     for (const b of this.board) {
       b.energyTarget = 0;
       b.holding = false;
+      b.idle = false;
     }
   }
 
@@ -433,6 +483,8 @@ export class AltarView {
       g.state = b.energy > 0.45 ? 'energised' : b.hidden ? 'dim' : 'placed';
       const hold = b.holding ? 0.35 + 0.25 * Math.sin(this.time * 6) : 0;
       g.glow = 1 + b.energy * this.energyGlow + hold;
+      // An idle Amplify sits below a resting gem's glow: the bolt went through, nothing woke.
+      if (b.idle && g.state === 'placed') g.glow = 0.45;
     }
     for (let i = 0; i < this.tray.length; i++) {
       const t = this.tray[i]!;
@@ -463,6 +515,31 @@ export class AltarView {
    * groove to their socket; the edit-time route lies faintly in grooves between gems; sockets
    * out of play are skimmed over so the circuit, not the grid, is what reads.
    */
+  /**
+   * Phones (held-gem, blind review 9 finding A): the gem in hand, resting in its tray slot,
+   * sits in a gold ring of its own outline (a hexagon round a Split), turned with it. Drawn
+   * under the gem, hugging its edge, so nothing lies over the gem's glyph: a ring over the gem
+   * (and its glow) paled it, and a Turn read as no change.
+   */
+  private drawHeldRing(frame: Frame): void {
+    const h = this.held;
+    if (!h || !this.layout.phone) return;
+    const ti = this.tray.findIndex((t) => t.kind === h.kind);
+    const slot = this.layout.tray[ti];
+    if (!slot || !(h.rest || h.slot)) return;
+    const r = this.ringInst;
+    r.kind = h.kind;
+    r.rot = isRotational(h.kind) ? h.rot : 0;
+    r.x = slot.x;
+    r.y = slot.y;
+    // The stroke's centre a hair outside the gem's corners.
+    const corner = (slot.size / 2) * Math.min(1, cutRadius(h.kind)) + HELD_RING_GAP;
+    r.size = Math.round(2 * corner * ringScale(h.kind));
+    this.heldList[0] = r;
+    this.assets.gems.drawGems(frame, this.heldList);
+    this.heldList[0] = this.heldInst;
+  }
+
   private drawCircuit(frame: Frame): void {
     const c = this.assets.circuit;
     const L = this.layout;
@@ -665,22 +742,32 @@ export class AltarView {
     for (const b of this.board) if (!b.hidden) list.push(b.g);
     for (const t of this.tray) if (t.size !== 0) list.push(t);
     a.gems.drawUnder(frame, list);
+    this.drawHeldRing(frame);
     a.gems.drawGems(frame, list);
 
     if (this.held) {
       const h = this.held;
       const g = this.heldInst;
       g.kind = h.kind;
-      // Non-rotational gems in hand look as they will once set down (facing the storm).
-      g.rot = this.restRot({ gem: h.kind, cell: { x: 0, y: 0 }, rot: h.rot as Placement['rot'] });
+      // Turned gems show their turn. A straight gem shows the tray's upright turn, and over a
+      // socket the way it would sit there (`heldFace`), so it never lands crosswise.
+      g.rot = isRotational(h.kind) ? h.rot : h.snapped ? (this.heldFace ?? 0) : 0;
       g.x = h.x;
       g.y = h.y;
-      g.lift = h.lift ?? (h.snapped ? 0.6 : 1);
-      g.state = 'hover';
+      g.seed = this.tray.find((t) => t.kind === h.kind)?.seed ?? 40;
+      // held-gem: over a socket it would land in, the gem is a ghost sitting in that socket at
+      // its turn: faint, flat, its glyph still clear, so the turn reads before it drops (and the
+      // loupe, which copies these pixels, shows the same). Resting in a phone's tray slot it is
+      // drawn as the tray draws its gems (idle, flat), only turned, inside its ring.
+      g.lift = h.snapped ? 0 : (h.lift ?? 1);
+      g.state = h.snapped ? 'ghost' : h.rest ? 'idle' : 'hover';
       g.size = h.size ?? L.gemSize * (h.snapped ? 1 : 1.05);
-      g.glow = 1.1;
-      a.gems.drawUnder(frame, this.heldList);
-      a.gems.drawGems(frame, this.heldList);
+      g.glow = h.rest ? 1 : 1.1;
+      // Resting in its slot it is the tray's own copy, turned (altar-hand.ts `updateTray`).
+      if (!h.rest) {
+        a.gems.drawUnder(frame, this.heldList);
+        a.gems.drawGems(frame, this.heldList);
+      }
     }
 
     if (this.showcase) {
@@ -697,6 +784,22 @@ export class AltarView {
 }
 
 export { DANGER, GOLD };
+
+/**
+ * The ring quad's size per unit of ring radius: the "ring" state strokes the cut's outline
+ * shrunk by 1.16 and set 0.07 in (gem-wgsl.ts), so its corners land on the radius.
+ */
+function ringScale(kind: GemKind): number {
+  return 1 / (cutRadius(kind) / 1.16 - 0.07);
+}
+
+/** The cut's corner radius, gem half-sizes. */
+function cutRadius(kind: GemKind): number {
+  return Math.max(...gemCutPoints(kind).map(([x, y]) => Math.hypot(x, y)));
+}
+
+/** Design px between a held tray gem's corners and its ring's line. */
+const HELD_RING_GAP = 7;
 
 function inside(L: AltarLayout, c: Cell): boolean {
   return c.x >= 0 && c.y >= 0 && c.x < L.cols && c.y < L.rows;

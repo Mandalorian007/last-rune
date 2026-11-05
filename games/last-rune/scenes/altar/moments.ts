@@ -51,7 +51,8 @@ export function pickHint(lines: Partial<Record<HintSlot, string | null>>): HintS
 /**
  * altar-truth: the line that teaches Turn, in the `holding` slot. On an altar that teaches a
  * turnable gem, while that gem is Turn's target (in hand, or just placed) and until the player
- * has turned one here: "↻ Turn rotates the Bend in your hand." `null` otherwise.
+ * has turned one here: "↻ Turn rotates the Bend." `null` otherwise. card-fit: it no longer adds "in
+ * your hand" (the "Holding" pill says so), so it stays one line under a gem's card on an SE.
  */
 export function turnTeachLine(
   kind: GemKind | undefined,
@@ -62,45 +63,54 @@ export function turnTeachLine(
   if (!kind || turned || !teaches.has(kind)) return null;
   const name = CODEX[kind].name;
   return where === 'hand'
-    ? `↻ Turn rotates the ${name} in your hand.`
+    ? `↻ Turn rotates the ${name}.`
     : `↻ Turn rotates the ${name} you just placed.`;
 }
 
 /**
  * teach-4: Turn stays dim while a gem that never turns is in hand. Where Turn has just been
- * taught, a line says why, so a dim Turn does not read as broken: "A Channel lies along the run
- * on its own." `null` for a gem that turns.
+ * taught, a line says why, so a dim Turn does not read as broken (teach-5, in plain words): "A Channel
+ * works whichever way the charge comes in: no need to turn it." `null` for a gem that turns.
  */
 export function straightLine(kind: GemKind | undefined | null): string | null {
   if (!kind || kind === 'bend' || kind === 'gate' || kind === 'split') return null;
   const name = CODEX[kind].name;
   const a = /^[AEIOU]/.test(name) ? 'An' : 'A';
-  return `${a} ${name} lies along the run on its own: no turning.`;
+  return `${a} ${name} works whichever way the charge comes in: no need to turn it.`;
 }
 
 /**
  * teach-4: what the dot on a "Needs" pill means, said once where it first changes. The dot
- * (altar-readout.ts `setNeed`) is an empty ring until the route as built reaches that gauge
- * (reach.ts), then lit cyan; it never says how much. It turns red when a Capacitor's plan lets
- * out more than that gauge needs (circuit-model.ts `planOver`): Strike would trip it.
+ * (altar-readout.ts `setNeed`) shows once the route as built reaches that gauge (reach.ts), lit
+ * cyan; it never says how much, and it never turns red: teach-8 cut the pre-Strike trip
+ * warning (D-043, no forecasts before Strike). teach-6: before the route
+ * reaches a gauge it shows no mark at all (blind review 8 read the hollow ring as "0").
  */
-export type LampLine = 'reach' | 'over';
+export type LampLine = 'reach';
+/**
+ * teach-5: `reach` is the dot's legend, shown once per game the first time a dot lights
+ * (`DOT_LEGEND` draws it, a real dot on each row). teach-6: the legend comes up even with a gem
+ * in hand (it takes the gem card's place) and has its own "Got it" (altar-column.ts).
+ */
 export const LAMP_LINE: Record<LampLine, string> = {
-  reach: 'Lit dot: the charge reaches this gauge. Strike to see how much.',
-  over: 'Red dot: the Capacitor lets out more than this gauge needs. It will trip.',
+  reach: 'The dot on a gauge: no dot, no charge yet; lit, charge reaches it.',
 };
+/**
+ * The legend's rows, each led by the dot as the gauge draws it ('off' has none, as on the
+ * gauge). Never an amount and never "enough" (D-043): a lit dot means reach, not a promise.
+ */
+export const DOT_LEGEND_HEAD = 'The dot on a gauge:';
+export const DOT_LEGEND: readonly { readonly look: 'off' | 'on'; readonly text: string }[] = [
+  { look: 'off', text: 'No dot: no charge yet' },
+  { look: 'on', text: 'Lit: charge reaches it' },
+];
 
 /**
- * Which dot line to show, if any: red outranks lit. `teachReach`: this player is new enough to
- * be told (the first altar, until its first strike); `teachOver`: the first Capacitor altar.
+ * Which dot line to show, if any: red outranks lit. `teachReach`: this player has not seen the
+ * legend yet (once per game, until the strike after it shows); `teachOver`: the first Capacitor
+ * altar.
  */
-export function lampLine(a: {
-  reached: boolean;
-  over: boolean;
-  teachReach: boolean;
-  teachOver: boolean;
-}): LampLine | null {
-  if (a.over && a.teachOver) return 'over';
+export function lampLine(a: { reached: boolean; teachReach: boolean }): LampLine | null {
   if (a.reached && a.teachReach) return 'reach';
   return null;
 }

@@ -1,6 +1,8 @@
 # The Last Rune — Design Pitch v0.3 (canonical source)
 
 > Imported verbatim (text only) from the ThunderClap design-pitch artifact on 2026-11-02. This is the source of truth for design intent. Deviations are logged in `docs/DECISIONS.md`, not edited in here.
+>
+> Changelog: 2026-11-04 (fit-9, PM call): FUSE's and the Builder's lines name gems, not colours: amber → Amplify, magenta → Split, emerald → Gate, in the Press Unit 4, Furnace, Relay Tower and Foundry lines, the Tier 1 locked door, and the two Tier 2 journal pages. The palette still pairs each gem with its colour.
 
 ```text
 The Last Rune — ThunderClap Gaming pitch document v0.3
@@ -88,7 +90,7 @@ Running gags
 Counts the days. Files incident reports on you. Hates drawers.
 Sample lines
 "Welcome to the facility. Start with the intake desk: the gold doorway. Mistakes cost nothing here. Management made sure. Management made a lot of them."
-"Press Unit 4 wants a magenta and an amber. Regulation 12. I wrote Regulation 12. I was having a day."
+"Press Unit 4 wants a Split and an Amplify. Regulation 12. I wrote Regulation 12. I was having a day."
 "Incident report #4,211: visitor set a Bend facing a wall. Outcome: wall remains unpowered. Visitor remains hopeful."
 "Storm's coming. Good. We're a lightning factory. Rain would be awkward."
 4 · Story
@@ -117,23 +119,23 @@ Arrive: "Day 14,610. A visitor. There's a form for that. Take a rune from the tr
 Solve: "Regulation 1: the hallway rune. Regulation 2: this unit does not do a victory noise. Bzzt. That wasn't one."
 FURNACE · grants Amplify
 Arrive: "The furnace. Went cold the week Management left. Everything did. Unrelated."
-Solve: "Amber gem doubles the charge. Stack two and the second one just feels important. Like a deputy foreman."
+Solve: "An Amplify doubles the charge. Stack two and the second one just feels important. Like a deputy foreman."
 SPLITTER MILL · grants Split
 Arrive: "Splitter Mill. Takes one thing and makes it two smaller things. Management loved it. Management loved committees."
 Solve: "Half and half. Like this unit's optimism. Incident report #4,211: visitor appears competent. Monitoring."
 RELAY TOWER · grants Gate
 Arrive: "The relay. Needs two signals at once to pass one. Two signatures. Regulation 9. Nobody remembers who signed."
-Solve: "Emerald. Good. Regulation 8: don't ask where Management went. Regulation 8 is new. Regulation 8 is for you."
+Solve: "A Gate. Good. Regulation 8: don't ask where Management went. Regulation 8 is new. Regulation 8 is for you."
 CONVEYOR A · no gem · 1× bolt check
 Arrive: "Conveyor A. Carried parts to the big one. Then carried them back. Then stopped. Very relatable machine."
 Solve: "Moving again. The sound it makes. That's… a sound. Carry on."
-Locked-door lines (Tier 1): "Needs a magenta. Regulation 12. Someone wrote Regulation 12 while having a day." · "Needs a double bolt. Storm Cell II. It's upstairs. Everything important is upstairs." · "Needs the crane. The crane needs the relay. The relay needs patience. Everything here needs something."
+Locked-door lines (Tier 1): "Needs a Split. Regulation 12. Someone wrote Regulation 12 while having a day." · "Needs a double bolt. Storm Cell II. It's upstairs. Everything important is upstairs." · "Needs the crane. The crane needs the relay. The relay needs patience. Everything here needs something."
 Journal, Tier 1 (Builder): "Intake desk reopened. First visitor in a month. Committee again. They brought forms." · "Furnace runs hot enough for everything except the one thing I built it for." · "Split the team in two. Half stayed. Half were right."
 Script · Tier 2
 The jokes know too much. "I" appears.
 PRESS UNIT 4 · needs Amplify + Split
-Arrive: "Press Unit 4. Sulking since the committee. The trick is amber before magenta, never after. Not that anyone asked. Nobody asks."
-Solve: "Amber before magenta. Told you. Didn't tell you. Thought it loudly. Incident report: visitor hears thoughts. Monitoring harder."
+Arrive: "Press Unit 4. Sulking since the committee. The trick is Amplify before Split, never after. Not that anyone asked. Nobody asks."
+Solve: "Amplify before Split. Told you. Didn't tell you. Thought it loudly. Incident report: visitor hears thoughts. Monitoring harder."
 STORM CELL II · needs Split · grants 2× bolt
 Arrive: "Second storm cell. Double the bolt. The committee said it couldn't be built. The committee also said that about the first one."
 Solve: "Two bolts. Both my eyes are on. That hasn't happened since… it's dust. There's dust. Forty years of it."
@@ -148,9 +150,9 @@ ARCHIVE · needs 8×6 altar
 Arrive: "The archive. Drawers. Nothing but drawers. Can't open a single one. Had a long time to resent drawers. Regulation 14 is about drawers."
 Solve: "You've read the pages. This unit hasn't. 'They say nothing on this floor runs hot enough.' That's page four. How is that… Regulation 8. Regulation 8."
 FOUNDRY · needs Amplify + Gate
-Arrive: "Foundry. Where the gems were cut. The magenta ones never came out right. Too proud. Cut them anyway."
+Arrive: "Foundry. Where the gems were cut. The Splits never came out right. Too proud. Cut them anyway."
 Solve: "I cut… the foundry cut six hundred gems. Six hundred and twelve. Why is that a number this unit has."
-Journal, Tier 2 (Builder): "Amber before magenta. Wrote it on the wall so I'd stop forgetting." · "Moved the cot to face the big one. If it wakes up at night I want to see it." · "Six hundred and twelve gems. The magenta ones are too proud. Keeping them anyway." · "The committee came with a shutdown order. I signed it. I didn't say when."
+Journal, Tier 2 (Builder): "Amplify before Split. Wrote it on the wall so I'd stop forgetting." · "Moved the cot to face the big one. If it wakes up at night I want to see it." · "Six hundred and twelve gems. The Splits are too proud. Keeping them anyway." · "The committee came with a shutdown order. I signed it. I didn't say when."
 Script · Tier 3 and the Last Rune
 Quiet, fast, then one line
 CAPACITOR BAY · needs 2× bolt · grants Capacitor

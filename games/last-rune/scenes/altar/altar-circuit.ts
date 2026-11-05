@@ -3,7 +3,7 @@
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
 import { h, scalePxCss, toFrameUnits } from '@thunderclap/engine/ui';
-import { type Placement, type SimResult, simulate } from '../../rules';
+import { isRotational, type Placement, type SimResult, simulate } from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
 import { dpx } from '../../ui/frame-units';
 import { CYAN, HUM, LEGAL_RING, OPEN_END, PREVIEW_PATH, WHITE_HOT } from './altar-defs';
@@ -13,6 +13,7 @@ import { capacitorBeats, chargeChips, liveSockets, previewPath } from './circuit
 import { anchorOf } from './layout';
 import { LAMP_LINE, lampLine } from './moments';
 import { allReached, gaugeReach } from './reach';
+import { hopTurn, restTurn } from './rest-turn';
 import { socketLooks } from './socket-looks';
 import { fizzles } from './strike';
 
@@ -74,17 +75,28 @@ export const circuitMethods = {
    * says what it means (moments.ts `lampLine`): the lit dot on the first altar until its first
    * strike, the red dot while the plan warns on the first Capacitor altar.
    */
+  /** teach-6: the dot legend's "Got it": it retires now, once per game, as a Strike would. */
+  retireDotLegend(this: AltarScene): void {
+    if (!this.lampTeach.reach) return;
+    this.lampTeach.reach = false;
+    this.ctx.flow.tellDot();
+    this.updateLampLine();
+    this.arrangeColumn();
+  },
+
   updateLampLine(this: AltarScene): void {
     if (!this.view.layout.phone) return;
     const t = this.lampTeach;
-    if (this.mode !== 'edit' && this.hintLines.lamp === LAMP_LINE.reach) t.reach = false;
+    // teach-5: the legend shows until the strike after it first shows, once per game.
+    if (this.mode !== 'edit' && this.hintLines.lamp === LAMP_LINE.reach && t.reach) {
+      t.reach = false;
+      this.ctx.flow.tellDot();
+    }
     const which =
       this.mode === 'edit'
         ? lampLine({
             reached: this.lampEls.some((el) => !!el?.hasAttribute('data-on')),
-            over: this.needs.some((n) => !!n?.hasAttribute('data-warn')),
             teachReach: t.reach,
-            teachOver: t.over,
           })
         : null;
     this.setHintLine('lamp', which ? LAMP_LINE[which] : null);
@@ -155,7 +167,15 @@ export const circuitMethods = {
     // counts, not just the first (glyph-truth): a gem only a Capacitor's release reaches already
     // rests along that run, so nothing turns when Strike is pressed (the verdict faces gems
     // along the same trace; `solvedLook` hops).
-    v.faceAlong(sim.trace, true);
+    // Gems no strike reaches lie along their run, counting the held gem where it would land
+    // (glyph-truth-2); the held straight gem itself shows the turn it would sit at.
+    const gems = [...this.puzzle.fixed, ...placements];
+    v.faceAlong(sim.trace, true, gems);
+    v.heldFace = null;
+    if (ghost && !isRotational(ghost.gem)) {
+      const h = sim.trace.find((s) => s.to.x === ghost.cell.x && s.to.y === ghost.cell.y);
+      v.heldFace = h ? hopTurn(h) : restTurn(this.puzzle, gems, ghost.cell);
+    }
     v.preview = hops;
     v.previewTarget = PREVIEW_PATH ? 1 : 0;
     this.renderCaps(capacitorBeats(this.puzzle, placements, sim), sim, false);
@@ -204,6 +224,35 @@ export const circuitMethods = {
       this.dom.append(el);
       this.chipEls.push(el);
     }
+    // teach-7 (D-040 add. 10, B): phones, what a Capacitor stored on strike 1 stays on the board
+    // ("stores 8", ice-blue, on the seam beside the gem) through the rest of the strike and the
+    // result, so strike 1 is seen to happen. Desktop has its Capacitor read-out on the board.
+    if (!phone) return;
+    res.trace.forEach((seg, i) => {
+      if (seg.end !== 'store') return;
+      anchorOf(L, seg.to, b);
+      // Above the gem unless it sits on the top row, where the chip goes below.
+      const dy = (seg.to.y > 0 ? -0.5 : 0.5) * L.pitch;
+      const px = Math.round(chipPx * 0.75);
+      const el = h(
+        'div',
+        {
+          class: 'lr-altar-chip',
+          'data-store': '',
+          hidden: true,
+          style: {
+            left: dpx(b.x),
+            top: dpx(b.y + dy),
+            fontSize: toFrameUnits(scalePxCss(px)),
+            lineHeight: toFrameUnits(`calc(${scalePxCss(px)} + 6px)`),
+          },
+        },
+        `stores ${seg.charge}`,
+      );
+      this.chips.push({ seg: i, pulse: seg.pulse, from: seg.from, to: seg.to, charge: seg.charge });
+      this.dom.append(el);
+      this.chipEls.push(el);
+    });
   },
 
   clearChips(this: AltarScene): void {
@@ -219,8 +268,12 @@ export const circuitMethods = {
     for (let i = 0; i < this.chips.length; i++) {
       const c = this.chips[i]!;
       const seg = tl.segments[c.seg]!;
-      const show = c.pulse === this.pulse && this.st >= seg.t0;
       const el = this.chipEls[i]!;
+      // A stored charge stays shown once it has landed, through later strikes and the result.
+      const show =
+        el.dataset.store !== undefined
+          ? this.pulse > c.pulse || (c.pulse === this.pulse && this.st >= seg.t1)
+          : c.pulse === this.pulse && this.st >= seg.t0;
       if (el.hidden === show) el.hidden = !show;
     }
   },

@@ -235,20 +235,35 @@ export const placeMethods = {
           // The notch stays under the gauge.
           el.style.setProperty('--lr-notch', dpx(Math.round((b0.r - b0.l) / 2 - shift)));
         }
-        // Squeezed back over the sockets (no room before the column): down past them instead.
+        // Squeezed back over the sockets (no room before the column): down past them, or
+        // (dense-board-3) up over the gauge past them, whichever leaves the card nearer its
+        // gauge, so it still reads as that gauge's.
+        const rings = (bx: Box, dir: 1 | -1) => {
+          let move = 0;
+          for (let y = 0; y < L.rows; y++)
+            for (let x = 0; x < L.cols; x++) {
+              if (this.puzzle.blocked.some((c) => c.x === x && c.y === y)) continue;
+              const r = L.pitch * 0.38;
+              const cx = L.left + L.margin + L.pitch * (x + 0.5);
+              const cy = L.top + L.margin + L.pitch * (y + 0.5);
+              if (bx.l < cx + r && bx.r > cx - r && bx.t < cy + r && bx.b > cy - r)
+                move = Math.max(move, dir > 0 ? cy + r + 2 - bx.t : bx.b - (cy - r - 2));
+            }
+          return move;
+        };
         const b1 = box(el);
-        let under = 0;
-        for (let y = 0; y < L.rows; y++)
-          for (let x = 0; x < L.cols; x++) {
-            if (this.puzzle.blocked.some((c) => c.x === x && c.y === y)) continue;
-            const r = L.pitch * 0.38;
-            const cx = L.left + L.margin + L.pitch * (x + 0.5);
-            const cy = L.top + L.margin + L.pitch * (y + 0.5);
-            if (b1.l < cx + r && b1.r > cx - r && b1.t < cy + r && b1.b > cy - r)
-              under = Math.max(under, cy + r + 2 - b1.t);
-          }
-        if (under > 0 && el.dataset.align === 'below' && b1.b + under <= band.visB - band.edge)
-          el.style.marginTop = dpx(Math.ceil(under));
+        const under = el.dataset.align === 'below' ? rings(b1, 1) : 0;
+        if (under > 0) {
+          const g = gauge(sp);
+          const h = b1.b - b1.t;
+          const lift = rings({ ...b1, t: g.t - h, b: g.t }, -1);
+          const downOk = b1.b + under <= band.visB - band.edge;
+          const upOk = g.t - h - lift >= band.visT + band.edge;
+          if (upOk && (!downOk || lift < under)) {
+            el.dataset.align = 'above';
+            el.style.top = dpx(Math.round(g.t - lift));
+          } else if (downOk) el.style.marginTop = dpx(Math.ceil(under));
+        }
         placed.push(box(el));
         continue;
       }

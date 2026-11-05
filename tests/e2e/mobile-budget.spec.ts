@@ -119,7 +119,14 @@ async function measure(page: Page) {
       const cs = getComputedStyle(el);
       return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none';
     };
-    const slab: Box = { l: X(L.left), t: Y(L.top), r: X(L.right), b: Y(L.frontBottom) };
+    // dense-board-2: carved edge rows/columns trimmed from a dense phone fit are not slab.
+    const sp = L.span ?? { x0: 0, y0: 0, x1: L.cols - 1, y1: L.rows - 1 };
+    const slab: Box = {
+      l: X(L.left + sp.x0 * L.pitch),
+      t: Y(L.top + sp.y0 * L.pitch),
+      r: X(L.right - (L.cols - 1 - sp.x1) * L.pitch),
+      b: Y(L.frontBottom - (L.rows - 1 - sp.y1) * L.pitch),
+    };
     const board = { ...slab };
     const grow = (b: Box) => {
       board.l = Math.min(board.l, b.l);
@@ -417,7 +424,8 @@ function cardProblems(m: M, label: string): string[] {
     // (0.25 px: the text scale is rounded through calc().)
     if (t.px < min - 0.25) out.push(`${label}: ${t.sel} text ${t.px.toFixed(1)}px "${t.text}"`);
   }
-  for (const s of m.sockets)
+  // (A carved cell is no socket on a phone, and may lie in a trimmed edge: dense-board-2.)
+  for (const s of open)
     if (s.l < m.slab.l || s.r > m.slab.r || s.t < m.slab.t || s.b > m.slab.b)
       out.push(`${label}: a socket hangs off the slab`);
   if (m.tip && m.tray.some((t) => hit(m.tip!, t))) out.push(`${label}: gem chip over the tray`);

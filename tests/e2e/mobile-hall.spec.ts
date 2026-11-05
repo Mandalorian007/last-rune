@@ -340,6 +340,18 @@ for (const vp of PHONES) {
         };
       });
       if (!menu.panel) problems.push('the open menu has no panel');
+      // polish-10: no door name is cut mid-word by the open list: a plate under it steps out.
+      const cut = await page.evaluate(() => {
+        const m = document.querySelector('.lr-hud')!.getBoundingClientRect();
+        return [...document.querySelectorAll<HTMLElement>('.lr-door')]
+          .filter((el) => getComputedStyle(el).visibility !== 'hidden')
+          .filter((el) => {
+            const r = el.getBoundingClientRect();
+            return r.left < m.right && m.left < r.right && r.top < m.bottom && m.top < r.bottom;
+          })
+          .map((el) => el.textContent ?? '');
+      });
+      for (const name of cut) problems.push(`the open menu cuts the plate "${name}"`);
       if (menu.note * menu.scale < 11)
         problems.push(`the menu note is ${(menu.note * menu.scale).toFixed(1)} px`);
       await page.locator('.lr-hud-menu').click();

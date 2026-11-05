@@ -97,7 +97,12 @@ describe('new gems', () => {
 
   it('is quiet when replaying a solved altar', () => {
     const all = Object.values(PUZZLES);
-    expect(newGems(puzzleFor('furnace'), all)).toEqual({ fixed: [], tray: [], turns: [] });
+    expect(newGems(puzzleFor('furnace'), all)).toEqual({
+      fixed: [],
+      tray: [],
+      turns: [],
+      remind: [],
+    });
   });
 
   it('teaches turning on the first altar that puts a Bend, Gate or Split in the hand', () => {

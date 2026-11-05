@@ -22,12 +22,13 @@ import { codexNote, machineLine } from '../../content/lines';
 import { puzzleFor } from '../../content/puzzles';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
-import type { Placement } from '../../rules';
+import { type Placement, simulate } from '../../rules';
 import { capabilityLabel, getMachine, socketColour } from '../../rules/progression';
 import { dpx } from '../../ui/frame-units';
 import { CSS_PALETTE } from '../../ui/styles';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, GOLD } from './altar-view';
+import { idleAmpCells } from './amp-idle';
 import { BoardState } from './board';
 import { socketLooks } from './socket-looks';
 import { solvedLook } from './solved-board';
@@ -100,9 +101,16 @@ export class SolveScene implements GameScene {
     // fixed gems keep their collar and padlock (plus the phone's open-socket rims).
     const look = solvedLook(puzzle, board.serialise(), board.lockedPlacements);
     view.faceAlong(look.hops, true);
+    // held-gem: an Amplify every bolt passed undoubled rests idle, as it did in play.
+    const placed = board.serialise();
+    const idle = idleAmpCells(
+      simulate(puzzle, placed).trace,
+      [...puzzle.fixed, ...placed].filter((g) => g.gem === 'amplify').map((g) => g.cell),
+    );
     for (const b of view.board) {
       b.g.rot = b.rotTarget;
-      const on = look.lit.some((c) => c.x === b.cell.x && c.y === b.cell.y);
+      b.idle = idle.some((c) => c.x === b.cell.x && c.y === b.cell.y);
+      const on = !b.idle && look.lit.some((c) => c.x === b.cell.x && c.y === b.cell.y);
       b.energy = on ? 1 : 0;
       b.energyTarget = on ? 1 : 0;
     }
@@ -111,7 +119,11 @@ export class SolveScene implements GameScene {
     for (const s of socketLooks(!!L0.phone, L0.cols, L0.rows, puzzle.blocked, look.collars)) {
       view.mark(s.x, s.y, s.state, GOLD, 1);
     }
-    for (const mm of view.machines) mm.solve();
+    // polish-9: the charge already arrived; the needle is on the mark from the first frame.
+    for (const mm of view.machines) {
+      mm.solve();
+      mm.settle();
+    }
     view.wake = 1;
 
     this.postSnapshot = structuredClone(ctx.post.settings);
@@ -185,11 +197,17 @@ export class SolveScene implements GameScene {
     const m = this.moment;
     const def = getMachine(m.machine);
     const band = this.view.layout.phone;
+    // teach-5: the card says what the gauge got, in the gauge's own terms: "Got 8 ✓".
+    const got = puzzleFor(m.machine)
+      .machines.map((x) => x.need)
+      .join(' and ');
     const kids: (HTMLElement | string)[] = [
       h('h2', null, `${def.name} restored`),
       h(
         'p',
         { class: 'lr-solve-sub' },
+        h('b', { class: 'lr-solve-got' }, `Got ${got.replaceAll(' ', ' ')} ✓`),
+        ' ',
         m.firstTime ? 'Exactly the right charge. It wakes.' : 'Already restored. It hums anyway.',
       ),
     ];

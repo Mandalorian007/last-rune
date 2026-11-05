@@ -46,22 +46,28 @@ ${HEAD} .lr-altar-holding {
   text-shadow: none; box-shadow: 0 1px 5px rgba(0,0,0,0.7);
 }
 ${HEAD} .lr-altar-holding[hidden] { display: none; }
+/* dense-board-4: the slim strip is ~100 px; its title (and "Holding Capacitor") may reach a
+   little past the strip into the open stone either side, and the pill packs tighter. */
+${HEAD}[data-slim] .lr-altar-title { left: -14px; right: -14px; }
+${HEAD}[data-slim] .lr-altar-holding { gap: 4px; padding: 0 6px 0 4px; }
 ${HEAD} .lr-altar-holding b { color: #fff6dd; font-weight: 700; }
 ${HEAD} .lr-altar-holding i {
   flex: none; width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 4px currentColor;
 }
 
-/* Slot rings over the canvas gems: held, taught, and the first visit's breathing tray. */
+/* Slot rings over the canvas gems: held, and the first visit's breathing tray. polish-11: an
+   arrival card no longer rings its tray gem (it read as picked up). */
 ${HEAD} .lr-altar-slot {
   position: absolute; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; display: none;
 }
+/* held-gem: the held slot's box is the ring's footprint (placeHead keeps it clear of the
+   counts), but nothing is painted over the canvas gem: any DOM paint laid over it paled the
+   gem and its glyph in the shots (blind review 9, finding A). The canvas draws the ring, the
+   gem's own outline just outside it, turned with it (altar-view.ts, gem state "ring"). */
 ${HEAD} .lr-altar-slot[data-held]:not([data-empty]) {
-  display: block; transform: translate(-50%, -50%) scale(1.22);
-  box-shadow: 0 0 0 2.5px #ffd77a, 0 0 0 4px rgba(20,12,4,0.85), 0 0 14px 3px rgba(255,205,110,0.5);
-  background: radial-gradient(circle, rgba(255,215,122,0.16) 0 60%, transparent 72%);
+  display: block; width: var(--lr-held-d) !important; height: var(--lr-held-d) !important;
 }
-${HEAD}[data-first] .lr-altar-slot:not([data-empty]):not([data-held]),
-${HEAD} .lr-altar-slot[data-teach]:not([data-empty]):not([data-held]) {
+${HEAD}[data-first] .lr-altar-slot:not([data-empty]):not([data-held]) {
   display: block; box-shadow: 0 0 0 2px #ffd77a, 0 0 12px 2px rgba(255,205,110,0.6);
   animation: lr-col-breathe 1.6s ease-in-out infinite;
 }
@@ -80,8 +86,15 @@ ${HEAD} .lr-altar-count {
 ${HEAD} .lr-altar-count .lr-n { font: inherit; letter-spacing: inherit; }
 ${HEAD} .lr-altar-count[data-held] { color: #fff6dd; border-color: #ffd77a; box-shadow: 0 0 0 1px #ffd77a; }
 ${HEAD} .lr-altar-count[data-empty] {
-  opacity: 1; color: #a89a80; text-decoration: none; background: rgba(14,12,10,0.9); border-color: rgba(168,154,128,0.45);
+  opacity: 1; color: #a89a80; background: rgba(14,12,10,0.9); border-color: rgba(168,154,128,0.45);
 }
+/* polish-10: spent reads at a glance: the "×0" is struck through. */
+${HEAD} .lr-altar-count[data-empty] .lr-n {
+  text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: #e8c06a;
+}
+
+/* dense-board-4: on a dense board the badge is set at the 14 px floor (layout PH.countDense). */
+${HEAD}[data-dense] .lr-altar-count { height: 15px; padding: 0 5px; border-radius: 8px; font: 700 14px/13px ${SERIF}; }
 
 /* ── The cards ─────────────────────────────────────────────────────────── */
 ${CL} .tc-region[data-region="cardLane"]:has(> .lr-altar-lane) { gap: 6px; padding-top: 2px; padding-bottom: 8px; }
@@ -110,6 +123,9 @@ ${LANE} > .lr-altar-tip b { margin-right: 4px; }
 ${LANE} > .lr-altar-tip .lr-info-eg {
   display: block; margin-top: 2px; font: 14px/1.3 ${SERIF}; color: #a8ccf5; white-space: normal;
 }
+/* polish-11: Amplify's second sentence runs on after the first (a line of its own cost the SE's
+   lane the line it lacked). */
+${LANE} > .lr-altar-tip .lr-info-eg[data-flow] { display: inline; margin-top: 0; }
 /* teach-4: the first Gate, Split or Capacitor card shows the gem as the codex draws it (the
    real gem material), turned as it sits here, with the charge going in and out. It floats
    beside the rule so the card stays the height of its words (SE lane: 163 px). */
@@ -144,24 +160,79 @@ ${LANE} > .lr-altar-tip .lr-fig-nogo::before, ${LANE} > .lr-altar-tip .lr-fig-no
   border-radius: 1px; transform: translate(-50%, -50%) rotate(45deg);
 }
 ${LANE} > .lr-altar-tip .lr-fig-nogo::after { transform: translate(-50%, -50%) rotate(-45deg); }
-/* The Capacitor's two strikes, each on its own line, never broken mid-way. */
+/* teach-6: the strikes card's title wears the Strike button's marks, unlit, in the card's gold. */
+${LANE} > .lr-altar-tip .lr-info-pips { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: 0; }
+${LANE} > .lr-altar-tip .lr-info-pips i {
+  display: block; width: 9px; height: 9px; box-sizing: border-box; border: 2px solid #e8c06a; border-radius: 50%;
+}
+/* The Capacitor's two strikes, each on its own line. polish-11: a line may wrap (a nowrap line
+   ran off the SE's card). */
 ${LANE} > .lr-altar-tip .lr-info-strip { display: block; color: #a8ccf5; }
-${LANE} > .lr-altar-tip .lr-info-strip > span { display: block; white-space: nowrap; }
+${LANE} > .lr-altar-tip .lr-info-strip > span { display: block; white-space: normal; }
 /* teach-4: the gauge-dot line starts with the dot it explains. */
 ${LANE} > .lr-altar-hint .lr-need-lamp {
   display: inline-block; width: 10px; height: 10px; margin: 0 6px 0 0; border-radius: 50%; vertical-align: 0.05em;
   background: radial-gradient(circle at 40% 35%, #effdff 0 25%, #5fe6ff 60%, #1fb5e0);
   box-shadow: 0 0 0 1px #d6fbff, 0 0 6px 2px rgba(63,224,255,0.85);
 }
-${LANE} > .lr-altar-hint .lr-need-lamp[data-red='true'] {
-  background: radial-gradient(circle at 40% 35%, #fff0ea 0 25%, #ff7a5c 60%, #d8341c);
-  box-shadow: 0 0 0 1px #ffd6cc, 0 0 6px 2px rgba(255,90,60,0.85);
+/* teach-5: the dot's legend, once per game: a short head, then one row per look of the dot. */
+${LANE} > .lr-altar-hint[data-legend] { text-wrap: wrap; text-align: left; padding: 2px 8px 3px; }
+/* card-fit: the legend never stacks with another card. It waits for a gem's card, the verdict or
+   a live read-out (altar-column.ts arrangeColumn), and the Capacitor plan waits for it. */
+${LANE} > .lr-altar-hint[data-legend][data-wait] { display: none; }
+${LANE}:has(> .lr-altar-hint[data-legend]:not([data-wait])) > .lr-altar-cap[data-plan] { display: none; }
+/* teach-6: the legend outranks a gem's chip; the chip waits until it retires (arrangeColumn). */
+${LANE} > .lr-altar-tip[data-yield] { display: none; }
+${LANE} > .lr-altar-hint[data-legend] { pointer-events: auto; }
+${LANE} > .lr-altar-hint .lr-dot-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  color: #c9b995; font-size: 13px;
 }
+${LANE} > .lr-altar-hint .lr-dot-ok {
+  position: relative; flex: none; min-width: 0; min-height: 20px; padding: 0 10px;
+  font: 600 13px/1 var(--tc-font-display, serif); border-radius: 8px; border-width: 1px;
+}
+/* A 44 px hit area round the small button. */
+${LANE} > .lr-altar-hint .lr-dot-ok::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%);
+}
+/* Each row hangs from its dot, so a narrow column wraps it under its words, never cut. The 'off'
+   row has no dot: its words start where the others' do. */
+${LANE} > .lr-altar-hint .lr-dot-row { display: block; padding-left: 16px; text-indent: -16px; }
+${LANE} > .lr-altar-hint .lr-dot-row[data-look='off'] { text-indent: 0; }
 ${LANE} > .lr-altar-tip .lr-info-foot {
   order: 1; position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between;
   gap: 8px; margin: 2px -10px 0; padding: 1px 10px; min-width: 0; float: none;
   background: rgba(20,16,12,0.98); border-top: 1px solid rgba(232,192,106,0.28);
 }
+/* teach-5: a pictured page leads with its picture. The picture, "New here" and the button make a
+   head row, and the words run the card's full width under it. */
+${LANE} > .lr-altar-tip[data-fig] .lr-info-foot {
+  order: -1; position: relative; bottom: auto; align-items: center; margin: -2px -10px 2px; padding: 2px 10px 3px 6px;
+  background: none; border-top: 0; border-bottom: 1px solid rgba(232,192,106,0.28);
+}
+${LANE} > .lr-altar-tip[data-fig] .lr-info-foot .lr-fig { float: none; flex: none; margin: 0; zoom: 0.8; }
+/* card-fit: in the head row "1 of 2" goes on its own line under "New here" (on a 165 px column it
+   ran past its box after a lone "·"), and the button keeps less side padding (its 44 px hit area
+   stays). */
+${LANE} > .lr-altar-tip[data-fig] .lr-info-foot .lr-info-of { display: block; white-space: nowrap; }
+${LANE} > .lr-altar-tip[data-fig] .lr-info-foot .lr-info-of::before { content: none; }
+${LANE} > .lr-altar-tip[data-fig] .lr-info-foot .lr-info-next { padding: 0 8px; }
+/* A short lane: the picture shrinks so the words still fit without a scroll (altar-column). */
+${LANE} > .lr-altar-tip[data-fig][data-tight] .lr-info-foot { padding-top: 1px; padding-bottom: 1px; margin-bottom: 1px; }
+${LANE} > .lr-altar-tip[data-fig][data-tight] .lr-info-foot .lr-fig { zoom: 0.62; }
+/* polish-11: still too tall, the picture is the button's height and drops its number chips
+   (at that size they were under the 14 px floor); the gem and its bolts still show which piece. */
+${LANE} > .lr-altar-tip[data-fig][data-tighter] .lr-info-foot .lr-fig:not([data-small='true']) { zoom: 0.5; }
+${LANE} > .lr-altar-tip[data-fig][data-tighter] .lr-info-foot :is(.lr-fig-chip, .lr-fig-nogo) { display: none; }
+${LANE} > .lr-altar-tip[data-fig][data-tighter] { padding-top: 4px; }
+/* polish-11: a piece taught at another altar names itself in the head row ("Again" read as a
+   button). */
+${LANE} > .lr-altar-tip .lr-info-page > b { display: block; margin: 0; font-size: 14px; line-height: 1.2; }
+${LANE} > .lr-altar-tip:not([data-named]) .lr-info-page > b,
+${LANE} > .lr-altar-tip[data-named] .lr-info-row > b { display: none; }
+/* polish-11: a tight lane runs the Capacitor's two strikes on, not a line each. */
+${LANE} > .lr-altar-tip[data-tight] .lr-info-strip > span { display: inline; }
 ${LANE} > .lr-altar-tip .lr-info-page {
   flex: 1 1 auto; min-width: 0; margin: 0; white-space: normal; text-align: left;
   font: 13px/1.2 ${SERIF}; letter-spacing: 0; color: #c9b995;
@@ -203,13 +274,13 @@ ${LANE} > .lr-altar-verdict {
   font-family: var(--tc-font-display, serif); font-size: 15px; line-height: 1.25;
 }
 ${LANE} > .lr-altar-verdict[hidden] { display: none; }
-${LANE} > .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-hint, .lr-verdict-cause, .lr-verdict-strikes, .lr-verdict-free) {
+${LANE} > .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-hint, .lr-verdict-cause, .lr-verdict-strikes, .lr-verdict-also, .lr-verdict-free) {
   display: block; max-width: none; margin: 2px 0 0; white-space: normal; text-align: left;
   font: 14px/1.25 ${SERIF}; letter-spacing: 0;
 }
 ${LANE} > .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-hint, .lr-verdict-cause)::before { content: none; }
 ${LANE} > .lr-altar-verdict .lr-verdict-cause { color: #ffb3a0; }
-${LANE} > .lr-altar-verdict .lr-verdict-strikes { color: #f4e6c4; }
+${LANE} > .lr-altar-verdict :is(.lr-verdict-strikes, .lr-verdict-also) { color: #f4e6c4; }
 ${LANE} > .lr-altar-verdict .lr-verdict-free { color: #bfe9f2; }
 
 /* Capacitor read-outs: the plan steps aside while a gem is in hand, FUSE speaks or the arrival
@@ -253,6 +324,30 @@ ${CL}:has(.lr-altar-head):has(.lr-hud[data-open])::before {
 }
 .tc-overlay:has(.lr-altar) .lr-hud-scrim { background: transparent; }
 ${CL}:has(.lr-altar-head) .lr-hud[data-open]::before { top: 36px; }
+/* teach-5 (06-menu-altar): the list's panel sits over the lane, so the hint it would cut in
+   half ("Tap a gem, ther…") steps out while the list is open and comes back when it closes. */
+${CL}:has(.lr-altar-head):has(.lr-hud[data-open]) .lr-altar-hint { visibility: hidden; }
+/* polish-8 (06-menu-altar): under the scrim Strike's gold and FUSE's cream line still read as
+   live. While the list is open his line steps out (it comes back when the list closes) and
+   Strike goes grey like the rest of the altar's controls. */
+${CL}:has(.lr-altar-head):has(.lr-hud[data-open]) .tc-caption { visibility: hidden; }
+${CL}:has(.lr-altar-head):has(.lr-hud[data-open]) [data-action="strike"] { filter: saturate(0.1) brightness(0.55); }
+
+/* dense-board-4: the slim column's Rule tab. The held gem's card folds behind it; a tap opens
+   it, the next tap (or setting the gem down) closes it. 44 px tall, at the lane's top. */
+${LANE} > .lr-rule-tab {
+  flex: none; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px; min-width: 44px; margin: 0; padding: 0 14px; box-sizing: border-box;
+  pointer-events: auto; border-radius: 22px; border: 1px solid rgba(232,192,106,0.7);
+  background: rgba(20,16,12,0.94); color: #f4e6c4; box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  font: 600 15px/1 ${SERIF}; letter-spacing: 0.3px;
+}
+${LANE} > .lr-rule-tab[hidden] { display: none; }
+${LANE} > .lr-rule-tab b {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  background: #e8c06a; color: #1a120a; font: 700 14px/1 ${SERIF};
+}
+${LANE} > .lr-rule-tab[data-open] { border-color: #ffd77a; box-shadow: 0 0 0 1px #ffd77a, 0 2px 8px rgba(0,0,0,0.6); }
 
 /* The teach leader (in the scaled overlay, over the board). */
 .tc-overlay .lr-teach-leader polyline { fill: none; stroke-linejoin: round; }

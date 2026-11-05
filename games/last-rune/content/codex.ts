@@ -5,8 +5,8 @@
  *
  * Consistent with `docs/design/rules.md`, written as the player sees it. "Charge" is the one
  * noun for what flows (mobile-6-moments): no bolts, fizzles, stems or arms. Each rule names
- * what the gem's glyph shows (the Bend's bent line, the Split's plain end and arrows, the
- * Gate's side lines and arrow). A 1× storm gives 4 (2× = 8, 4× = 16), and the gauge wants an
+ * what the gem's glyph shows (the Bend's bent line, the Split's round port and arrows, the
+ * Gate's ports and arrow). A 1× storm gives 4 (2× = 8, 4× = 16), and the gauge wants an
  * exact fill. Card limits: `rule` ≤ CODEX_RULE_MAX_WORDS
  * words, `maths` ≤ CODEX_MATHS_MAX_CHARS characters on one line.
  */
@@ -26,7 +26,7 @@ export interface CodexEntry {
   readonly chip: string;
   /**
    * A worked example: one line with real numbers, in the Capacitor read-out's style ("Strike 1:
-   * keeps 4. Strike 2: 4 + 4 → 8."). The codex card, the phone's gem chip and the arrival card
+   * stores 4. Strike 2: 4 + 4 → 8."). The codex card, the phone's gem chip and the arrival card
    * all show it (mobile-7-teach).
    */
   readonly maths: string;
@@ -37,6 +37,34 @@ export const CODEX_MATHS_MAX_CHARS = 44;
 export const CODEX_CHIP_MAX_CHARS = 68;
 
 /** Shown on every card's footer: how charge is counted. */
+/**
+ * teach-7 (D-040 add. 10, D): the Gate in one sentence, the same on the teach card, the gem
+ * chip and the codex (blind review 9 met it worded two ways: "from above and below" on Relay
+ * Tower's card, "both sides beside the arrow" on Foundry's chip). It names what the glyph draws
+ * (ws/held-gem): an inward port on each input side, one arrow out.
+ */
+export const GATE_RULE = 'Both ports, same strike: the sum leaves by the arrow.';
+/**
+ * teach-8 (D-040 add. 11, C): on a one-strike altar "same strike" confused players (Relay Tower,
+ * Foundry), and nothing said what one port alone does. There the Gate reads this way; altars
+ * with more than one strike, and the codex, keep `GATE_RULE`.
+ */
+export const GATE_RULE_ONE =
+  'Feed both round ports; their sum leaves by the arrow. One port alone: lost.';
+/** The Gate's sentence for an altar that strikes `pulses` times. */
+/** teach-8: the one-strike chip, short enough for a held gem's lane on an SE. */
+/**
+ * teach-8 (polish-10, blind review 10): a Capacitor on an altar that strikes once is a red
+ * herring (Control Booth); its card says so, or it reads as a trap or a bug.
+ */
+export const CAP_ONE_STRIKE = 'One strike here: what a Capacitor stores never comes out.';
+export const CAP_CHIP_ONE = 'Stores its first charge. One strike here: it never comes out.';
+
+export const GATE_CHIP_ONE = 'Feed both round ports: the sum leaves by the arrow.';
+export function gateRule(pulses: number): string {
+  return pulses > 1 ? GATE_RULE : GATE_RULE_ONE;
+}
+
 export const CODEX_SPARKS = 'The numbers are charge. A storm gives 4 a strike; 2× gives 8, 4× 16.';
 
 export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
@@ -57,31 +85,37 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
   split: {
     gem: 'split',
     name: 'Split',
-    rule: 'Power the end with no arrow; half the charge comes out of each arrow. Odd charge, or charge from another side, is lost.',
-    chip: 'Power the no-arrow end: half out each arrow, odd charge lost.',
+    rule: 'Charge goes in at the round port; half comes out of each arrow. Odd charge, or charge from another side, is lost.',
+    chip: 'In at the round port, half out of each arrow; odd charge lost.',
     maths: 'In 4 → out 2 and 2. Odd charge is lost.',
   },
   amplify: {
     gem: 'amplify',
     name: 'Amplify',
-    rule: 'Doubles the charge, once per path. Charge that has already passed an Amplify, even split since, goes through unchanged.',
-    chip: 'Doubles the charge, once per path. Already doubled: unchanged.',
+    // teach-8: "once per path" never said what a path was (blind review 10); in plain words.
+    rule: 'Doubles the charge once. Charge that has already been doubled, even split since, passes through unchanged.',
+    chip: 'Doubles the charge once. Already doubled: passes unchanged.',
     maths: 'In 4 → out 8. Doubled already: 8 stays 8.',
   },
   gate: {
     gem: 'gate',
     name: 'Gate',
-    rule: 'Feed the two sides beside the arrow in one strike; their sum leaves by the arrow. Feed only one and it is lost.',
-    // teach-4: "both sides" alone read as the board's left and right; they are the arrow's sides.
-    chip: 'Feed both sides of the arrow in one strike; the sum leaves by it.',
+    // teach-4: "both sides" alone read as the board's left and right; teach-6: "both sides of
+    // the arrow" read as its head and tail. teach-7: the inputs are ports, the output the arrow.
+    rule: `${GATE_RULE} One port alone, or charge at the back, is lost.`,
+    chip: GATE_RULE,
     maths: 'In 4 and 4 → out 8. Only one in: lost.',
   },
   capacitor: {
     gem: 'capacitor',
     name: 'Capacitor',
-    rule: 'Keeps the first charge it gets; nothing comes out. Next strike, the new charge pushes both out together, straight on.',
-    chip: 'Holds its first charge; next strike, lets out both.',
-    maths: 'Strike 1: keeps 4. Strike 2: 4 + 4 → 8.',
+    // teach-7: "stores" everywhere (blind review 9: "keeps" was jargon).
+    // polish-11 (D-040 add. 12, C): it lies along its run on the board but stands upright in the
+    // tray and the Codex (as a Channel does); it says it works any way round, so the turn it is
+    // drawn at never reads as something to fix.
+    rule: 'Stores the first charge it gets; nothing comes out. Next strike, the new charge pushes both out, straight on. Works any way round.',
+    chip: 'Stores its first charge; next strike, lets out both. Any way round.',
+    maths: 'Strike 1: stores 4. Strike 2: 4 + 4 → 8.',
   },
 };
 

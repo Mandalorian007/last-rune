@@ -24,7 +24,7 @@ Last Rune he says nothing until the final gem. Tested "I" counts: Tier 1 = 0 < T
 
 | Rung | Clue | Where it is laid |
 |---|---|---|
-| 1 | He knows every solution but can't place gems | Tier 1: conveyor arrive, page 5 ("Knew where each one went. Hands didn't."). Tier 2: press arrive ("amber before magenta"), crane arrive ("Clamps can't hold a gem"), page 9 |
+| 1 | He knows every solution but can't place gems | Tier 1: conveyor arrive, page 5 ("Knew where each one went. Hands didn't."). Tier 2: press arrive ("Amplify before Split"), crane arrive ("Clamps can't hold a gem"), page 9 |
 | 2 | Journal handwriting matches his report font | Page 1 is drawn in his report face. Page 4's plate: "Similar handwriting. Common handwriting." Page 9 is written *as* an incident report, and its plate notices. Page 16's signature runs on into his sign-off, "Monitoring.", and the booth solve says "My handwriting." |
 | 3 | He quotes a page he says he never read | Page 4 (relay, Tier 1) holds "They say nothing on this floor runs hot enough." The archive solve (Tier 2) quotes it. The relay is a prerequisite of the archive, so page 4 is always found first (tested). Page 6's plate: "This unit has not read that page." |
 | 4 | The Builder's last entry is dated the day his count started | Page 16 is dated **Day 1**. FUSE's count is on screen from the intake desk ("Day 14,610"). The other pages count up from Day 9,131, so Day 1 jumps out |
@@ -40,7 +40,7 @@ Last Rune he says nothing until the final gem. Tested "I" counts: Tier 1 = 0 < T
 | 3 split the team | splitter arrive: "Management loved committees." |
 | 4 Regulation 9 | relay arrive: "Two signatures. Regulation 9. Nobody remembers who signed." |
 | 5 carried the parts | conveyor arrive: "Carried parts to the big one. Then carried them back." |
-| 6 amber before magenta | press arrive and solve |
+| 6 Amplify before Split | press arrive and solve |
 | 7 six hundred and twelve | foundry solve |
 | 8 shutdown order | storm cell arrive: "The committee said it couldn't be built." |
 | 9 incident report: dropped a Bend | crane arrive: "Clamps can't hold a gem. Noted. Resented." |
@@ -65,7 +65,7 @@ Last Rune he says nothing until the final gem. Tested "I" counts: Tier 1 = 0 < T
 | 7 | Floors are not filing | page 1 plate |
 | 8 | Don't ask where Management went | relay solve, crane solve, archive solve, booth arrive ("covers coincidences"), booth solve ("does not cover this"), page 8 plate |
 | 9 | Two signatures | relay arrive, gate codex, page 4 (the Builder wrote it) |
-| 12 | Press Unit 4: a magenta and an amber | press locked, Tier 3 hall echo ("I wrote Regulation 12") |
+| 12 | Press Unit 4: a Split and an Amplify | press locked, Tier 3 hall echo ("I wrote Regulation 12") |
 | 14 | Drawers open only for their owner | archive arrive, page 10 (the Builder wrote it). Pays off in "Turns out I had a key the whole time." |
 
 Visitor #4,211 is the player's running incident file. The safety record on the ending
@@ -165,7 +165,7 @@ ending. They stop the moment the player starts.
 
 **Press Unit 4** (until `gem:split`)
 
-> Needs a magenta. Regulation 12. Someone wrote Regulation 12 while having a day.  
+> Needs a Split. Regulation 12. Someone wrote Regulation 12 while having a day.  
 > <sub>`press-unit-4.locked` · 13w</sub>
 
 **Boiler Room** (until `storm:2`)
@@ -180,7 +180,7 @@ ending. They stop the moment the player starts.
 
 **Foundry** (until `gem:gate`)
 
-> Foundry. Wants amber and emerald. It cut them both, once. Now it wants them back. Typical foundry. **[NEW]**  
+> Foundry. Wants an Amplify and a Gate. It cut them both, once. Now it wants them back. Typical foundry. **[NEW]**  
 > <sub>`foundry.locked` · 17w</sub>
 
 **The Last Rune** (until `altar:10x8`)
@@ -222,7 +222,7 @@ FUSE's plate **[NEW]**:
 
 *Solve*
 
-> Amber gem doubles the charge. Stack two and the second one just feels important. Like a deputy foreman.  
+> An Amplify doubles the charge. Stack two and the second one just feels important. Like a deputy foreman.  
 > <sub>`furnace.solve` · 18w</sub>
 
 **Journal page 2** · Day 9,402
@@ -262,7 +262,7 @@ FUSE's plate **[NEW]**:
 
 *Solve*
 
-> Emerald. Good. Regulation 8: don't ask where Management went. Regulation 8 is new. Regulation 8 is for you.  
+> A Gate. Good. Regulation 8: don't ask where Management went. Regulation 8 is new. Regulation 8 is for you.  
 > <sub>`relay-tower.solve` · 18w</sub>
 
 **Journal page 4** · Day 10,366 **[NEW]**
@@ -323,21 +323,21 @@ FUSE's plate **[NEW]**:
 
 *Arrive*
 
-> Press Unit 4. Sulking since the committee. The trick is amber before magenta, never after. Not that anyone asked. Nobody asks.  
+> Press Unit 4. Sulking since the committee. The trick is Amplify before Split, never after. Not that anyone asked. Nobody asks.  
 > <sub>`press-unit-4.arrive` · 21w</sub>
 
 *Solve*
 
-> Amber before magenta. Told you. Didn't tell you. Thought it loudly. Incident report: visitor hears thoughts. Monitoring harder.  
+> Amplify before Split. Told you. Didn't tell you. Thought it loudly. Incident report: visitor hears thoughts. Monitoring harder.  
 > <sub>`press-unit-4.solve` · 18w</sub>
 
 **Journal page 6** · Day 11,288
 
-> *Amber before magenta. Wrote it on the wall so I'd stop forgetting.*
+> *Amplify before Split. Wrote it on the wall so I'd stop forgetting.*
 
 FUSE's plate **[NEW]**:
 
-> This unit has not read that page. Correct, though. Amber before magenta.
+> This unit has not read that page. Correct, though. Amplify before Split.
 
 ### Storm Cell II `storm-cell-2`
 
@@ -436,7 +436,7 @@ FUSE's plate **[NEW]**:
 
 *Arrive*
 
-> Foundry. Where the gems were cut. The magenta ones never came out right. Too proud. Cut them anyway.  
+> Foundry. Where the gems were cut. The Splits never came out right. Too proud. Cut them anyway.  
 > <sub>`foundry.arrive` · 18w</sub>
 
 *Solve*
@@ -446,7 +446,7 @@ FUSE's plate **[NEW]**:
 
 **Journal page 7** · Day 11,604
 
-> *Six hundred and twelve gems. The magenta ones are too proud. Keeping them anyway.*
+> *Six hundred and twelve gems. The Splits are too proud. Keeping them anyway.*
 
 FUSE's plate **[NEW]**:
 
@@ -458,7 +458,7 @@ FUSE's plate **[NEW]**:
 
 *echo*
 
-> Press Unit 4 wants a magenta and an amber. Regulation 12. I wrote Regulation 12. I was having a day.  
+> Press Unit 4 wants a Split and an Amplify. Regulation 12. I wrote Regulation 12. I was having a day.  
 > <sub>`hall.echo.t3.1` · 20w</sub>
 
 *echo*
@@ -638,22 +638,22 @@ post: Builder, then foreman. Hobbies: Pending.):
 
 **`gem:bend`**
 
-> Amethyst socket. Bends are issued at the front desk. Everything is issued at the front desk. **[NEW]**  
+> Bend socket. Bends are issued at the front desk. Everything is issued at the front desk. **[NEW]**  
 > <sub>`socket.gem:bend` · 16w</sub>
 
 **`gem:split`**
 
-> Magenta socket. Splitter Mill. Magenta is a proud colour. It knows it. Don't encourage it. **[NEW]**  
+> Split socket. Splitter Mill. Split is a proud gem. It knows it. Don't encourage it. **[NEW]**  
 > <sub>`socket.gem:split` · 15w</sub>
 
 **`gem:amplify`**
 
-> Amber socket. The furnace keeps the amber. The furnace went cold. It's still sulking about it. **[NEW]**  
+> Amplify socket. The furnace keeps the Amplifies. The furnace went cold. It's still sulking about it. **[NEW]**  
 > <sub>`socket.gem:amplify` · 16w</sub>
 
 **`gem:gate`**
 
-> Emerald socket. The relay hands those out. Two signatures required. Bring a friend. You are the friend. **[NEW]**  
+> Gate socket. The relay hands those out. Two signatures required. Bring a friend. You are the friend. **[NEW]**  
 > <sub>`socket.gem:gate` · 17w</sub>
 
 **`gem:capacitor`**
@@ -788,7 +788,7 @@ A breaker trip always gets an "over" line.
 
 **split**
 
-> Magenta's proud of this. Don't tell it the halves are smaller. **[NEW]**  
+> Split's proud of this. Don't tell it the halves are smaller. **[NEW]**  
 > <sub>`codex.split` · 11w</sub>
 
 **amplify**
@@ -803,7 +803,7 @@ A breaker trip always gets an "over" line.
 
 **capacitor**
 
-> Keeps a charge for later. Ice keeps things. That's what ice is for. **[NEW]**  
+> Stores a charge for later. Ice stores things. That's what ice is for. **[NEW]**  
 > <sub>`codex.capacitor` · 13w</sub>
 
 ## At the altar
@@ -837,10 +837,10 @@ Heard at the altar itself, not in the hall. Written for the altar in the same vo
 > New gem on the altar. It has opinions about straight lines. **[NEW]**  
 > <sub>`nudge.bend` · 10w</sub>
 
-> Amber on the altar. Handle it like the meter is watching. **[NEW]**  
+> Amplify on the altar. Handle it like the meter is watching. **[NEW]**  
 > <sub>`nudge.amplify` · 10w</sub>
 
-> Magenta's on the altar now. It's been waiting all morning. **[NEW]**  
+> Split's on the altar now. It's been waiting all morning. **[NEW]**  
 > <sub>`nudge.split` · 10w</sub>
 
 > New one on the altar. It won't work alone. Nobody here does. **[NEW]**  
@@ -863,12 +863,19 @@ depends on them. Source: `content/codex.ts` (rule, chip, maths), `scenes/altar/s
 | Codex footer | The numbers are charge. A storm gives 4 a strike; 2× gives 8, 4× 16. |
 | Channel | Carries the charge straight through, whichever way it enters. The charge is unchanged. · chip: Carries the charge straight through, unchanged. · `out = in` |
 | Bend | Turns the charge round the corner along its bent line, either way. Charge entering any other side is lost. · chip: Turns the charge along its bent line. Other sides lose it. · `out = in, round the corner` |
-| Split | Charge enters at the plain end and leaves by both arrows, half each. Odd charge, or charge from any other side, is lost. · chip: In at the plain end, half out each arrow. Odd or wrong side: lost. · `4 → 2 + 2 · odd → lost` |
-| Amplify | Doubles the charge, once per path. Charge that has already passed an Amplify, even split since, goes through unchanged. · chip: Doubles the charge, once per path. Already doubled: unchanged. · `4 → 8 · 8 → 8 (already doubled)` |
-| Gate | Takes charge in on both side lines. If both arrive in the same strike, their sum leaves by the arrow. Otherwise it is lost. · chip: Both side lines in one strike: their sum leaves by the arrow. · `out = a + b, only if both arrive` |
-| Capacitor | Keeps the first charge it gets; nothing comes out. Next strike, the new charge pushes both out together, straight on. · chip: Keeps its first charge. Next strike, lets out both together. |
+| Split | Charge enters at the round port and leaves by both arrows, half each. Odd charge, or charge from any other side, is lost. · chip: In at the round port, half out each arrow. Odd or wrong side: lost. · `4 → 2 + 2 · odd → lost` |
+| Amplify | Doubles the charge once. Charge that has already been doubled, even split since, passes through unchanged. · chip: Doubles the charge once. Already doubled: passes unchanged. · teach card: Doubles the charge once. Charge already doubled passes through unchanged. (teach-8: "path" was never defined; polish-11: "A second Amplify" left "second where?" open) · `4 → 8 · 8 → 8 (already doubled)` |
+| Gate | Both ports, same strike: the sum leaves by the arrow. One port alone, or charge at the back, is lost. · chip: Both ports, same strike: the sum leaves by the arrow. · `out = a + b, only if both arrive` (teach-7: one sentence on the codex, the chip and the teach card) · teach-8, one-strike altars (card and chip): Feed both round ports, left and right; their sum leaves by the arrow. One port alone: lost. Multi-strike altars keep "same strike"; the codex shows the general rule. |
+| Capacitor | Stores the first charge it gets; nothing comes out. Next strike, the new charge pushes both out, straight on. Works any way round. · chip: Stores its first charge; next strike, lets out both. Any way round. (polish-11: upright in the tray and codex, along its run on the board) · teach card: Strike 1: stores, sends nothing. / Strike 2: sends stored + new. (polish-11: no numbers; on a tight lane the two run on) |
 | Ring (teach) | A socket the charge must reach. Set a gem there. |
 | Can't turn | Can't turn: charge goes straight through |
-| Causes | Empty socket: charge lost · Carved stone: charge lost · Charge ran off the altar · Turned the wrong way: charge lost · Odd charge can't split: lost · Gate needs charge on both sides · Gem already used this strike |
-| Try lines (changed) | Try: lead the charge to the machine before it runs off the altar. · Try: bring charge into the Gate's other side line too. · Try: give each path its own gems. A gem carries charge once per strike. · (touch) Try: turn the gem at the red mark (↻ Turn). |
-| Teach card | New here · 1 of 3 · Next › · Got it |
+| Causes | Empty socket: charge lost · Carved stone: charge lost · Charge ran off the altar · Turned the wrong way: charge lost · Odd charge can't split: lost · Gate needs both ports fed on the same strike · Gem already used this strike |
+| Try lines (changed) | Try: lead the charge to the machine before it runs off the altar. · Try: feed the Gate's other port on the same strike. · Try: give each path its own gems. A gem carries charge once per strike. · (touch) Try: turn the gem at the red mark (↻ Turn). |
+| Teach card | New here · 1 of 3 · Next › · Got it · (teach-8) a reminder of a piece taught at another altar and not yet placed by the player (Splitter Mill's Split, Press Unit 4's Amplify, Roof Array's Capacitor), with its picture: polish-11 dropped "Again" (it read as a replay button); the head row names the piece where "New here" goes · 1 of 2 |
+| Strikes page (teach-8) | Strike ×2 ○○: your two strikes, one tap sends both. A miss resets for free. (polish-11: the marks once; "○○ ○○" read as four strikes) |
+| One-strike rule (teach-8) | On one strike · Each strike is checked on its own. Exactly the gauge's number on one strike wakes it. Less does nothing; more trips it. (also the a11y briefing on multi-strike altars) · polish-11, the arrival card under its title "On one strike": Exactly the gauge's number wakes it. Less does nothing; more trips it. (the whole rule ran a line past an SE's lane) |
+| Gate chip, one-strike altars (teach-8) | Feed both round ports: the sum leaves by the arrow. |
+| Gauge note (teach-8) | Needs 8 / on one strike (any strike count) · after Strike, phones: Needs 8 / strike 1: 0 · 2: 16 ✕ |
+| Verdict strikes (teach-8) | Strike 2: 16. Needs 8 on one strike. (a trip names its strike; a miss lists them: Strike 1: 0 · 2: 4. Needs 8 on one strike.) · Also missed: Needs 2 (strike 1: 0, strike 2: 1). |
+| Capacitor plan (teach-8) | Strike 1: stores, sends nothing. · Strike 2: lets out both. (numbers only as each strike lands: Strike 1: stores 8 · Strike 2: 8 + 8 → 16) |
+| Capacitor on a one-strike altar (Control Booth, teach-8) | Card: One strike here: what a Capacitor stores never comes out. · Chip: Stores its first charge. One strike here: it never comes out. |

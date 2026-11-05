@@ -162,6 +162,13 @@ for (const ph of PHONES) {
             }
             await page.evaluate(() => (window as G).__game.fuse.hush());
             await waitFrames(page, 6);
+            // teach-8: with no red forecast (D-043) the dot legend comes next; it holds the
+            // plan's place until its own "Got it".
+            const legendOk = page.locator('.lr-altar-hint[data-legend] .lr-dot-ok');
+            if ((await legendOk.count()) > 0 && (await legendOk.isVisible())) {
+              await legendOk.tap();
+              await waitFrames(page, 6);
+            }
             const after = await measure(page);
             await snap(page, ph.name, `${id}-${label}-closed`);
             if (after.up) problems.push(`${tag}: arrival card did not close`);

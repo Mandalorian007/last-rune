@@ -41,7 +41,12 @@ const STROLL_SPEED = 1.4;
 const KNOCK_STARE = 6;
 const TITLE_Y = 228;
 /** Upright phones: the name over the visible slice, smaller so it fits across it. */
-const UPRIGHT_TITLE = { x: TITLE_UPRIGHT.focusX, y: 150, scale: 0.6 } as const;
+const UPRIGHT_TITLE = { x: TITLE_UPRIGHT.focusX, y: 160, scale: 0.54 } as const;
+/**
+ * Phones on their side (polish-8): the visible band starts near y 220 and runs past FUSE's
+ * feet, so the name sits lower and a size down, under the Full screen row.
+ */
+const COMPACT_TITLE = { x: W / 2, y: 330, scale: 0.8 } as const;
 /** Upright, the lancet windows stand shorter, under the name and its subtitle. */
 const UPRIGHT_WINDOW = { y: 520, h: 380 } as const;
 const WINDOWS = [
@@ -121,6 +126,11 @@ export class StormTitleView implements TitleView {
     candle(1690, 1058, 150, 14, 0.7),
     candle(1250, 950, 90, 15, 0.5),
   ];
+  /**
+   * Phones on their side (polish-8): Copy link and the coffee link run along the bottom right
+   * of the storm, so the short candles there (x 1250, 1690) would burn through them.
+   */
+  private readonly compactSet: CandleInstance[] = [this.all[0]!, this.all[1]!, this.all[2]!];
 
   constructor(private readonly vc: ViewContext) {
     const r = vc.renderer;
@@ -180,15 +190,16 @@ export class StormTitleView implements TitleView {
     hall.wall.draw(frame, W / 2, H / 2, W, H, undefined, 1, 0.07);
     hall.floor.draw(frame, W / 2, (FLOOR_Y + H) / 2, W, H - FLOOR_Y, undefined, 1, 0.16);
     this.drawWindows(frame, L, !!s.upright);
-    if (s.upright) {
-      const t = UPRIGHT_TITLE;
+    if (s.upright || s.compact) {
+      const t = s.upright ? UPRIGHT_TITLE : COMPACT_TITLE;
       kit.emboss.draw(frame, kit.title, t.x, t.y, { shine: 1.2, glow: 0.6, scale: t.scale });
     } else {
       kit.emboss.draw(frame, kit.title, W / 2, TITLE_Y, { shine: 1.2, glow: 0.6 });
     }
     this.storm.draw(frame, L);
-    kit.candles.drawBodies(frame, this.all);
-    kit.candles.drawFlames(frame, this.all);
+    const candles = s.compact ? this.compactSet : this.all;
+    kit.candles.drawBodies(frame, candles);
+    kit.candles.drawFlames(frame, candles);
     hall.fuse.draw(frame, L);
     frame.drawable(this.vc.particles);
   }

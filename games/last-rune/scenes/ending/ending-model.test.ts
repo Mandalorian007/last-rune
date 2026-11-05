@@ -144,8 +144,8 @@ describe('endCard', () => {
 });
 
 describe('endingSkippable', () => {
-  it('is skippable only after the first viewing', () => {
-    expect(endingSkippable({ firstTime: true })).toBe(false);
+  it('is skippable on the first viewing and on replays (teach-5)', () => {
+    expect(endingSkippable({ firstTime: true })).toBe(true);
     expect(endingSkippable({ firstTime: false })).toBe(true);
   });
 });

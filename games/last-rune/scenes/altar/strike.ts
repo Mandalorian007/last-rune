@@ -116,13 +116,21 @@ const CAUSE_TEXT: Record<FizzleCause, string> = {
   ground: 'Charge ran off the altar',
   facing: 'Turned the wrong way: charge lost',
   'odd-split': "Odd charge can't split: lost",
-  'gate-alone': 'Gate needs charge on both sides of its arrow',
+  'gate-alone': 'Gate needs both ports fed on the same strike',
   spent: 'Gem already used this strike',
 };
 
+/**
+ * teach-8: "on the same strike" only where there is more than one strike (blind review 10:
+ * it confused players in one-strike rooms like Relay Tower and Foundry).
+ */
+function oneStrike(text: string, pulses: number): string {
+  return pulses > 1 ? text : text.replace(' on the same strike', '');
+}
+
 /** Short UI label for a fizzle cause. */
-export function causeText(c: FizzleCause): string {
-  return CAUSE_TEXT[c];
+export function causeText(c: FizzleCause, pulses = 2): string {
+  return oneStrike(CAUSE_TEXT[c], pulses);
 }
 
 function gemOn(p: PuzzleDef, placements: readonly Placement[], c: Cell): Placement | undefined {
@@ -237,7 +245,8 @@ const CAUSE_HINT: Record<FizzleCause, string> = {
   ground: 'Try: lead the charge to the machine before it runs off the altar.',
   blocked: 'Try: route around the carved stone.',
   'odd-split': 'Try: feed the Split an even charge.',
-  'gate-alone': "Try: power the Gate's other side input on the same strike.",
+  // One-strike altars drop "on the same strike" (`oneStrike`, teach-8).
+  'gate-alone': "Try: feed the Gate's other port on the same strike.",
   spent: 'Try: give each path its own gems. A gem carries charge once per strike.',
 };
 
@@ -284,6 +293,8 @@ export interface HintRoom {
   readonly beats: readonly CapBeat[];
   /** The machine the verdict is about, if any. */
   readonly machine?: MachineResult;
+  /** Strikes per Strike on this altar (teach-8: the Gate's Try line says "same strike" only past 1). */
+  readonly pulses?: number;
 }
 
 /** Gem kinds on this altar: fixed in place, or in the tray at the start. */
@@ -321,6 +332,7 @@ export function hintRoom(
     gems: roomGems(p),
     path: pathGems(p, placements, result),
     beats,
+    pulses: p.pulses,
     ...(machine ? { machine } : {}),
   };
 }
@@ -329,7 +341,7 @@ export function hintRoom(
 function overStep(room: HintRoom | undefined): string {
   if (!room) return 'Try: less charge.';
   const halve = room.gems.has('split') ? ' A Split halves it.' : '';
-  // A Capacitor let out more than the machine takes: what it kept plus the new charge.
+  // A Capacitor let out more than the machine takes: what it stored plus the new charge.
   const m = room.machine;
   const k = m ? m.readings.findIndex((r) => r > m.need) : -1;
   const out = room.beats
@@ -341,7 +353,7 @@ function overStep(room: HintRoom | undefined): string {
     return room.gems.has('split')
       ? 'Try: less charge. Skip an Amplify, or halve the charge with a Split.'
       : 'Try: less charge. Skip an Amplify.';
-  if (room.path.has('gate')) return `Try: less charge. A Gate adds its two sides together.${halve}`;
+  if (room.path.has('gate')) return `Try: less charge. A Gate adds its two ports together.${halve}`;
   return `Try: less charge.${halve}`;
 }
 
@@ -357,9 +369,9 @@ function underStep(room: HintRoom | undefined): string {
       ? 'Try: more charge. A Split halves it; an Amplify doubles it.'
       : 'Try: more charge. A Split halves it.';
   if (amp) return 'Try: more charge. An Amplify doubles it.';
-  if (room.gems.has('gate')) return 'Try: more charge. A Gate adds its two sides together.';
+  if (room.gems.has('gate')) return 'Try: more charge. A Gate adds its two ports together.';
   if (room.gems.has('capacitor'))
-    return 'Try: more charge. A Capacitor adds what it kept to the next strike.';
+    return 'Try: more charge. A Capacitor adds what it stored to the next strike.';
   return 'Try: more charge.';
 }
 
@@ -381,26 +393,26 @@ export function nextStep(
   const first = rootCause(causes);
   // A finger has no R key or wheel: name the on-screen Turn control instead.
   if (first === 'facing' && touch) return 'Try: turn the gem at the red mark (↻ Turn).';
-  if (first) return CAUSE_HINT[first];
+  if (first) return oneStrike(CAUSE_HINT[first], room?.pulses ?? 2);
   if (outcome === 'under') return underStep(room);
   return 'Try: lay gems from the storm to the machine.';
 }
 
 /**
  * On a multi-strike altar that failed, what happened on each strike in plain words, under the
- * verdict: what each Capacitor kept and let out ("Strike 1: the Capacitor kept 8. Strike 2: the
+ * verdict: what each Capacitor stored and let out ("Strike 1: the Capacitor stored 8. Strike 2: the
  * Capacitor let out 8 + 8 = 16."), or, with none in play, that strikes never add up.
  */
 export function strikeStory(pulses: number, result: SimResult, beats: readonly CapBeat[]): string {
   if (pulses < 2 || result.outcome === 'exact' || result.outcome === 'dead') return '';
   if (beats.length === 0)
-    return result.pulsesRun > 1 ? 'Each strike is read on its own: strikes never add up.' : '';
+    return result.pulsesRun > 1 ? 'Each strike is checked on its own: strikes never add up.' : '';
   const parts: string[] = [];
   for (let i = 0; i < result.pulsesRun; i++) {
     const said = beats
       .filter((b) => b.pulse === i)
       .map((b) =>
-        b.kind === 'keep' ? `kept ${b.stored}` : `let out ${b.stored} + ${b.incoming} = ${b.out}`,
+        b.kind === 'keep' ? `stored ${b.stored}` : `let out ${b.stored} + ${b.incoming} = ${b.out}`,
       );
     if (said.length > 0) parts.push(`Strike ${i + 1}: the Capacitor ${said.join(' and ')}.`);
   }
@@ -420,7 +432,7 @@ const CAUSE_HEAD: Record<FizzleCause, string> = {
   ground: 'The charge ran off the altar.',
   facing: 'The charge hit a gem turned the wrong way.',
   'odd-split': "A Split can't halve an odd charge.",
-  'gate-alone': 'The Gate got charge on one side only.',
+  'gate-alone': 'The Gate got charge in one port only.',
   spent: 'The charge met a gem already used this strike.',
 };
 
@@ -438,16 +450,59 @@ export function failHead(m: MachineResult, outcome: 'over' | 'under'): string {
 }
 
 /**
+ * A multi-strike gauge's second line, and the verdict's. Three phrases failed blind review
+ * ("in one strike", "in either strike", "on strike 1 or 2": read as "on both" or "on either",
+ * and nobody could tell whether the other strike may be anything). teach-8 (D-040 add. 11):
+ * "on one strike", for any count of strikes, with the rule said once in plain words where
+ * Strike ×2 is taught (`ONE_STRIKE_RULE`). The sim's rule (rules/sim.ts): each strike, a gauge
+ * that hasn't woken reads that strike alone; exactly its number wakes it (later strikes don't
+ * count), more trips it, less does nothing.
+ */
+export function needNote(_pulses: number): string {
+  return 'on one strike';
+}
+
+/** teach-8: "strike 1: 0, strike 2: 16": what each strike brought, each one named. */
+export function readingsText(rs: readonly number[]): string {
+  if (rs.length <= 1) return `${rs[0] ?? 0}`;
+  return rs.map((r, i) => `strike ${i + 1}: ${r}`).join(', ');
+}
+
+/**
  * Phones, multi-strike altars: what each strike gave the machine the verdict is about, and
- * what it needs: "Got 0, then 8; needs 20 in one strike." Short enough that the verdict's Try
- * line still fits an SE's lane under it (port-altar-3). Empty on a one-strike altar (the
- * gauge's "got" says it all).
+ * what it needs: "Strike 1: 0 · 2: 4. Needs 8 on one strike." (as the gauge's card reads it, short
+ * enough to leave the Try line room on an SE). teach-8: each number
+ * names its strike (blind review 10: "got 0, then 16" didn't say which strike failed). Empty
+ * on a one-strike altar (the gauge's "got" says it all).
  */
 export function strikesLine(m: MachineResult, pulses: number): string {
   if (pulses < 2 || m.readings.length === 0) return '';
-  const r = m.readings;
-  const got = r.length > 1 ? `${r.slice(0, -1).join(', ')}, then ${r[r.length - 1]}` : `${r[0]}`;
-  return `Got ${got}; needs ${m.need} in one strike.`;
+  // A trip names the strike that tripped it, "Strike 2: 16. Needs 8 on one strike." (the card
+  // shows every strike; an SE's verdict keeps room for its Try line).
+  const trip = m.outcome === 'over' ? m.readings.findIndex((r) => r > m.need) : -1;
+  if (trip >= 0)
+    return `Strike ${trip + 1}: ${m.readings[trip]}. Needs ${m.need} ${needNote(pulses)}.`;
+  const each = m.readings.map((r, i) => (i === 0 ? `Strike 1: ${r}` : `${i + 1}: ${r}`));
+  return `${each.join(' \u00b7 ')}. Needs ${m.need} ${needNote(pulses)}.`;
+}
+
+/**
+ * teach-7 (D-040 add. 10): the verdict names every gauge that missed, not just the one it is
+ * about (blind review 9: Capacitor Bay's top gauge, "Needs 2 got 0", went unmentioned). The
+ * numbers name each gauge, as its card does: "Also missed: Needs 2, got nothing." Several:
+ * "Also missed: Needs 2, got nothing; Needs 6 (strike 1: 4, strike 2: 0)." Empty when only
+ * `main` missed.
+ */
+export function alsoMissed(ms: readonly MachineResult[], main: number): string {
+  const rest = ms.filter((m, i) => i !== main && m.outcome !== 'exact');
+  if (rest.length === 0) return '';
+  const one = (m: MachineResult) =>
+    m.readings.every((r) => r === 0)
+      ? `Needs ${m.need}, got nothing`
+      : m.readings.length > 1
+        ? `Needs ${m.need} (${readingsText(m.readings)})`
+        : `Needs ${m.need}, got ${readingsText(m.readings)}`;
+  return `Also missed: ${rest.map(one).join('; ')}.`;
 }
 
 /**
@@ -460,14 +515,13 @@ export function verdictParts(text: string): [string, string] {
 }
 
 /**
- * What Strike says it will do (phones): "Strike", or on a multi-strike altar "Strike (2 left)";
- * while the strikes run, how many are left, then "Strike again" for the last; after a fail,
- * "Try again". Always one short line.
+ * What Strike says it will do (phones): "Strike", or on a multi-strike altar "Strike ×2"
+ * (teach-5: one tap sends two strikes; the button's pips light one per strike as they fire, so
+ * nothing on the label counts down). teach-7: after a miss it still says "Strike" (it said "Try
+ * again", which read as if it wiped the board): a strike is a free test (D-043) and the gems
+ * stay where they are. Always one short line.
  */
-export function strikeLabel(pulses: number, state: 'edit' | 'strike' | 'fail', now = -1): string {
-  if (state === 'fail') return 'Try again';
+export function strikeLabel(pulses: number): string {
   if (pulses < 2) return 'Strike';
-  if (state === 'edit' || now < 0) return `Strike (${pulses} left)`;
-  if (now >= pulses - 1) return 'Strike again';
-  return `Strike (${pulses - now - 1} left)`;
+  return `Strike ×${pulses}`;
 }

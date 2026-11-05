@@ -408,9 +408,9 @@ ${C} .tc-region[data-region="cardLane"] { justify-content: center; }
    right of the storm cell like FUSE's line. */
 ${CL} .tc-region[data-region="cardLane"]:has(.lr-title-menu) { justify-content: flex-end; padding-bottom: 6px; }
 ${CL} .tc-region[data-region="bottom"]:has(.lr-title-links) { padding-left: 41%; justify-content: center; }
-/* Upright: the menu right under the picture; the group stands mid-screen, Full screen at the
-   top of the slack above it, the links at the bottom of the slack below. */
-${CP} .tc-region[data-region="cardLane"]:has(.lr-title-menu) { justify-content: flex-start; padding-top: 14px; }
+/* Upright: the menu centred in its lane under the picture (polish-8: no dead band below it);
+   Full screen at the top of the slack above, the links at the bottom of the slack below. */
+${CP} .tc-region[data-region="cardLane"]:has(.lr-title-menu) { justify-content: center; }
 ${CP} .tc-region[data-region="top"] { align-items: flex-start; }
 ${CP} .tc-region[data-region="bottom"] { align-items: flex-end; }
 ${C} .tc-region[data-region="cardLane"] .lr-title-menu { align-self: center; }
@@ -426,7 +426,11 @@ ${C} .tc-region[data-region="bottom"] .lr-title-menu .lr-gold-button { min-heigh
 ${C} .tc-caption[data-docked] { box-sizing: border-box; }
 /* Title, landscape (chrome-polish-3): the lane runs right of the storm cell (design x ≤ 740 of
    1920, under 40% of the width) and FUSE's strolls, so his line never covers either. */
-${CL}:has(.lr-title-menu) .tc-caption[data-docked] { width: auto; margin-left: 41%; }
+${CL}:has(.lr-title-menu) .tc-caption[data-docked] {
+  width: auto; margin-left: 41%;
+  /* teach-5: the box hugs its one line, not the lane's height. */
+  align-self: center; height: auto; min-height: 0; padding-top: 6px; padding-bottom: 6px;
+}
 /* Upright (chrome-polish-4): the box hugs his line, centred in the lane, rather than standing
    three times its height. */
 ${CP}:has(.lr-title-menu) .tc-caption[data-docked] { align-self: center; height: auto; padding-top: 8px; padding-bottom: 8px; }
@@ -450,6 +454,9 @@ ${C} .lr-codex-spread::after { left: calc(50% - 14px); width: 28px; }
 
 /* While a panel is open, the ☰ steps back. */
 ${ch(':has(.tc-panel-host[data-modal="true"])')} .lr-hud { visibility: hidden; }
+/* polish-10: and the title's buttons and links: on an upright phone Settings stood over Play,
+   and a ghost "Pl" showed through its lower edge. */
+${ch(':has(.tc-panel-host[data-modal="true"])')} :is(.lr-title-menu, .lr-title-links) { visibility: hidden; }
 
 /* Settings on an upright phone: the tabs get their own row under the title, and each tab
    becomes one column with each choice under its label. */

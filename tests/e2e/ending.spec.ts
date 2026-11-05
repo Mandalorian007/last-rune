@@ -70,8 +70,8 @@ test('the ending plays to the end card with the ThunderClap Gaming and Ko-fi lin
     return g.flow.state;
   });
   expect(state).toBe('ending');
-  // First viewing: no skip.
-  await expect(page.locator('.lr-end-skip')).toHaveCount(0);
+  // teach-5: the first viewing shows Skip too (a newcomer sees a way out); it is not pressed here.
+  await expect(page.locator('.lr-end-skip')).toBeVisible();
   // The end card (and its links) is not there to click until the ending reaches it.
   await expect(page.locator('.lr-end-card a.lr-end-join')).toBeHidden();
   await expect(page.locator('.lr-end-back')).toBeHidden();
@@ -182,6 +182,42 @@ test('a replay of the ending can be skipped straight to the end card', async ({ 
   const skip = page.locator('.lr-end-skip');
   await expect(skip).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(page.locator('.lr-end-card a.lr-end-join')).toBeVisible({ timeout: 10_000 });
+  await expect(skip).toBeHidden();
+  expect(problems).toEqual([]);
+});
+
+test('the first viewing of the ending shows Skip, and Skip goes to the end card (teach-5)', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const problems = trackProblems(page);
+  await page.goto(DEV_URL);
+  await page.waitForFunction(
+    () => (window as unknown as { __game?: GameHandle }).__game?.flow.state === 'title',
+    null,
+    { timeout: 30_000 },
+  );
+  const state = await page.evaluate(async () => {
+    const g = (window as unknown as { __game: GameHandle }).__game;
+    const typesUrl = '/games/last-rune/rules/types.ts';
+    const { MACHINE_IDS } = (await import(/* @vite-ignore */ typesUrl)) as {
+      MACHINE_IDS: string[];
+    };
+    g.save.update((d) => {
+      d.flags.hallIntro = true;
+      d.progress.solved = MACHINE_IDS.filter((id) => id !== 'the-last-rune');
+    });
+    g.flow.continueGame();
+    g.flow.openPuzzle('the-last-rune');
+    g.flow.completePuzzle('the-last-rune');
+    g.flow.finishSolve();
+    return g.flow.state;
+  });
+  expect(state).toBe('ending');
+  const skip = page.locator('.lr-end-skip');
+  await expect(skip).toBeVisible();
+  await skip.click();
   await expect(page.locator('.lr-end-card a.lr-end-join')).toBeVisible({ timeout: 10_000 });
   await expect(skip).toBeHidden();
   expect(problems).toEqual([]);

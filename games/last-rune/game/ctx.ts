@@ -70,7 +70,9 @@ export const DESIGN_H = 1080;
  * about the storm cell and FUSE (the view draws the name over that part, `TITLE_UPRIGHT`).
  */
 const FILL_BANDS: Record<string, FillWidthOptions> = {
-  title: { minVisible: 760, focusY: 505, ...TITLE_UPRIGHT },
+  // polish-8: centred low enough that FUSE (ground y 968) stands whole on wide phones; the view
+  // draws the name lower there to match (title-view COMPACT_TITLE).
+  title: { minVisible: 760, focusY: 600, ...TITLE_UPRIGHT },
   hall: { minVisible: 667, focusY: 544 },
   // The journal (chrome-polish-3): as wide as the head (y 34) and FUSE's plate (to y 1001)
   // allow; what bars remain are the desk's own dark wood (ui/chrome.ts DESK_BARS).

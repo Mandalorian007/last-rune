@@ -147,6 +147,11 @@ const CSS = /* css */ `
 .tc-overlay .lr-altar-chip[data-state="exact"] { border-color: #3fe0ff; color: #dff9ff; }
 .tc-overlay .lr-altar-chip[data-state="under"] { border-color: #ffb03f; color: #ffe1b0; box-shadow: 0 0 12px rgba(255,176,63,0.5); }
 .tc-overlay .lr-altar-chip[data-state="over"] { border-color: #ff5a3c; color: #ffd7cc; box-shadow: 0 0 14px rgba(255,90,60,0.6); }
+/* teach-7: what a Capacitor stored on strike 1, kept on the board (phones). */
+.tc-overlay .lr-altar-chip[data-store] {
+  min-width: 0; padding: 0 7px; white-space: nowrap; font-family: var(--tc-font-ui); letter-spacing: 0;
+  color: #dff4ff; border-color: rgba(170,225,255,0.9); background: rgba(14,26,38,0.92); box-shadow: 0 0 10px rgba(140,210,255,0.45);
+}
 @keyframes lr-chip-in { from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } to { opacity: 1; } }
 
 /* Preview chips: the charge into and out of a new gem on the route, before the first strike. */
@@ -184,9 +189,6 @@ const CSS = /* css */ `
 .tc-overlay .lr-cap-line[data-kind="release"] { color: #fff6dd; }
 .tc-overlay .lr-cap-line[data-now] { color: #ffffff; text-shadow: 0 0 8px rgba(160,220,255,0.9); font-weight: 600; }
 /* altar-truth: the plan lets out more than a machine takes: the line and that gauge warn. */
-.tc-overlay .lr-cap-line[data-warn] { color: #ff9c86; font-weight: 600; }
-.tc-overlay .lr-altar-cap:has(.lr-cap-line[data-warn]) { border-color: #ff6a4d; }
-.tc-overlay .lr-altar-need[data-warn] { border-color: #ff6a4d; box-shadow: 0 0 18px rgba(255,90,60,0.55); }
 
 /* Preview: a wrong-facing gem turns the bolt away here (a small ✕ on its rim). */
 .tc-overlay .lr-altar-nogo {
@@ -221,6 +223,8 @@ const CSS = /* css */ `
   background: rgba(20,16,12,0.92); border: 2px solid rgba(232,192,106,0.85); box-shadow: 0 3px 12px rgba(0,0,0,0.7);
 }
 .tc-overlay .lr-altar .lr-altar-turnbtn b { color: var(--lr-gold); font-size: 1.4em; line-height: 1; vertical-align: -0.1em; }
+.tc-overlay .lr-altar .lr-altar-turnbtn .lr-turn-what { font-size: 0.6em; color: var(--lr-gold); margin-left: 0.3em; }
+.tc-overlay .lr-altar .lr-altar-turnbtn .lr-turn-what:empty { display: none; }
 .tc-overlay .lr-altar .lr-altar-turnbtn:active { background: rgba(70,56,30,0.95); }
 .tc-overlay .lr-altar .lr-altar-turnbtn[hidden], .tc-overlay .lr-altar-turnmark[hidden] { display: none; }
 .tc-overlay .lr-altar-turnmark {
@@ -238,7 +242,7 @@ const CSS = /* css */ `
   animation: lr-altar-pop 260ms var(--tc-easing) both;
 }
 .tc-overlay .lr-altar-verdict[hidden] { display: none; }
-.tc-overlay .lr-altar-verdict .lr-verdict-story {
+.tc-overlay .lr-altar-verdict :is(.lr-verdict-story, .lr-verdict-also) {
   display: block; max-width: 640px; margin: 4px auto 0; white-space: normal; font-family: var(--tc-font-body, serif);
   font-size: 20px; line-height: 1.3; letter-spacing: 0; color: #e8dcc0;
 }
@@ -293,6 +297,8 @@ const CSS = /* css */ `
   background: #000; box-shadow: 0 6px 22px rgba(0,0,0,0.7), 0 0 0 1px #000; transition: opacity 0.15s ease-out;
 }
 [data-reduced-motion] .lr-loupe { transition: none; }
+/* dense-board-4: the thin gold leader from the lens to the socket it magnifies. */
+.lr-loupe-leader { z-index: 29; background: #e8c06a !important; border-radius: 1px; }
 [data-reduced-motion] .tc-overlay .lr-altar-verdict,
 [data-reduced-motion] .tc-overlay .lr-altar-chip, [data-reduced-motion] .tc-overlay .lr-turn-arrow,
 [data-reduced-motion] .tc-overlay .lr-altar-cap,
@@ -322,6 +328,11 @@ const CSS = /* css */ `
 }
 .tc-overlay .lr-solve-card h2 { margin: 0; font-family: var(--tc-font-display); font-size: 42px; line-height: 1.1; letter-spacing: 1px; }
 .tc-overlay .lr-solve-card .lr-solve-sub { margin: 6px 0 0; font-size: 24px; opacity: 0.8; }
+/* teach-5: what the gauge got, "Got 8 ✓", as a small dark pill ahead of the line. */
+.tc-overlay .lr-solve-card .lr-solve-got {
+  display: inline-block; padding: 0 0.45em; border-radius: 999px; white-space: nowrap;
+  background: #2a1906; color: #ffe6a6; font-weight: 700;
+}
 .tc-overlay .lr-solve-grant {
   margin: 20px 0 0; display: flex; align-items: center; gap: 16px;
   font-family: var(--tc-font-display); font-size: 36px; animation: lr-solve-in 500ms var(--tc-easing) both;

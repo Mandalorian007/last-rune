@@ -91,13 +91,18 @@ export interface TitleViewFrame extends ViewFrame {
    * design's `TITLE_UPRIGHT` slice, so the view draws the name smaller, over that slice.
    */
   readonly upright?: boolean;
+  /**
+   * A phone on its side (polish-8): the band is cropped to the storm, the candles and all of
+   * FUSE, so the view draws the name lower and smaller and leaves the link lane free of candles.
+   */
+  readonly compact?: boolean;
 }
 
 /**
  * The title's slice on an upright phone (a fill band's side crop, `FillWidthOptions`): at least
  * this much of the design's width, centred on the storm cell and FUSE's strolls.
  */
-export const TITLE_UPRIGHT = { minVisibleWidth: 900, focusX: 560 } as const;
+export const TITLE_UPRIGHT = { minVisibleWidth: 740, focusX: 560 } as const;
 
 export interface TitleView {
   /** The view draws the game's name itself; the scene keeps its DOM heading for screen readers only. */

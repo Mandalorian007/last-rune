@@ -7,12 +7,19 @@ import type { BoltOutcome } from '../../game/flow';
 import { type SimResult, stormCharge } from '../../rules';
 import { getMachine } from '../../rules/progression';
 import { dpx } from '../../ui/frame-units';
-import { listText, OUTCOME_WORD, RING_NAME, RING_RULE, timesWord } from './altar-defs';
+import {
+  listText,
+  ONE_STRIKE_RULE,
+  OUTCOME_WORD,
+  RING_NAME,
+  RING_RULE,
+  timesWord,
+} from './altar-defs';
 import type { AltarScene } from './altar-scene';
-import { type CapBeat, capBeatText, planOver } from './circuit-model';
+import { type CapBeat, capBeatText } from './circuit-model';
 import { cellCenter } from './layout';
 import { keepTogether } from './nowrap';
-import { strikeLabel } from './strike';
+import { needNote, readingsText, strikeLabel } from './strike';
 
 export const readoutMethods = {
   /**
@@ -20,13 +27,13 @@ export const readoutMethods = {
    * once strike `now` fires, with that many pips lit.
    */
   setStrikeRow(this: AltarScene, now: number): void {
-    this.setStrikeWord(now < 0 ? 'edit' : 'strike', now);
+    this.setStrikeWord(now < 0 ? 'edit' : 'strike');
     if (!this.strikeRow) return;
     const n = this.puzzle.pulses;
-    // Phones (mobile-5-board): the storm's card says the number is per strike ("Gives 8" /
-    // "per strike") and Strike says what one tap does ("Strike" / "twice"), then counts the run
-    // ("1 of 2"). The pips are hidden there, and the card keeps "per strike" through the run
-    // (the button counts it), so it fits the gauge's gutter at 13 px.
+    // Phones (mobile-5-board, teach-5): the storm's card says the number is per strike ("Gives
+    // 8" / "per strike") and Strike says what one tap does ("Strike ×2"); its pips light one
+    // per strike as they fire. The storm's pips are hidden there, and the card keeps "per
+    // strike" through the run, so it fits the gauge's gutter at 13 px.
     const phone = !!this.view.layout.phone;
     this.strikeRow.textContent = phone
       ? 'per strike'
@@ -49,10 +56,16 @@ export const readoutMethods = {
    * Phones (mobile-7-strike): Strike says what a tap will do, on one line (`strikeLabel`).
    * Big screens keep "Strike" and the pips.
    */
-  setStrikeWord(this: AltarScene, state: 'edit' | 'strike' | 'fail', now = -1): void {
+  setStrikeWord(this: AltarScene, state: 'edit' | 'strike' | 'fail'): void {
     if (!this.strikeWord || !this.view.layout.phone) return;
-    const text = keepTogether(strikeLabel(this.puzzle.pulses, state, now));
+    const text = keepTogether(strikeLabel(this.puzzle.pulses));
     if (this.strikeWord.textContent !== text) this.strikeWord.textContent = text;
+    // teach-5: the pips stand beside "Strike ×2" and light one per strike as they fire.
+    // teach-7: after a miss the button reads as it did before ("Try again" read as a wipe):
+    // same word, pips unlit, ready for another free strike (D-043).
+    if (state === 'fail')
+      for (const pip of this.strikeBtn?.querySelectorAll('.lr-strike-pips i') ?? [])
+        pip.removeAttribute('data-lit');
   },
 
   /**
@@ -66,19 +79,11 @@ export const readoutMethods = {
     sim: SimResult | null,
     live: boolean,
   ): void {
-    // altar-truth: in the plan, a release over a machine's need reads as a warning, and so
-    // does that gauge (the plan already shows the number).
-    const over = !live && sim ? planOver(beats, sim) : null;
-    this.needs.forEach((n, i) => {
-      n?.toggleAttribute('data-warn', !!over?.machines.has(i));
-    });
+    // teach-8 (D-043): before Strike the plan says the rule only; no gauge or line warns.
     const key =
       (live ? 'L' : 'P') +
       beats
-        .map(
-          (b, i) =>
-            `${b.cell.x},${b.cell.y}:${b.pulse}${b.kind}${b.stored}+${b.incoming}${over?.beats.get(i) ?? ''}`,
-        )
+        .map((b) => `${b.cell.x},${b.cell.y}:${b.pulse}${b.kind}${b.stored}+${b.incoming}`)
         .join(';');
     if (key === this.capKey) return;
     this.capKey = key;
@@ -113,15 +118,10 @@ export const readoutMethods = {
       const x = side === 'left' ? pt.x - off : side === 'right' ? pt.x + off : pt.x;
       const y = side === 'above' ? pt.y - off : side === 'below' ? pt.y + off : pt.y;
       const lines = list.map((b) => {
-        const need = over?.beats.get(beats.indexOf(b));
         const el = h(
           'span',
-          {
-            class: 'lr-cap-line',
-            'data-kind': b.kind,
-            ...(need === undefined ? {} : { 'data-warn': '' }),
-          },
-          keepTogether(capBeatText(b, this.puzzle.pulses, need)),
+          { class: 'lr-cap-line', 'data-kind': b.kind },
+          keepTogether(capBeatText(b, this.puzzle.pulses, !live)),
         );
         if (live) el.hidden = true;
         this.capLines.push(el);
@@ -174,6 +174,7 @@ export const readoutMethods = {
     hint = '',
     cause = '',
     strikes = '',
+    also = '',
   ): void {
     // The verdict sits where the subtitle is; the subtitle steps aside until the next edit.
     this.subtitle.style.display = 'none';
@@ -181,6 +182,9 @@ export const readoutMethods = {
     // Phones, multi-strike: each strike's reading, in words, right under the headline.
     if (strikes)
       this.verdict.append(h('small', { class: 'lr-verdict-strikes' }, keepTogether(strikes)));
+    // teach-7: every other gauge that missed, named by its numbers ("Also missed: Needs 2, got
+    // nothing.").
+    if (also) this.verdict.append(h('small', { class: 'lr-verdict-also' }, keepTogether(also)));
     // Phones: where it went wrong rides in the verdict, not in a tag over the board.
     if (cause) this.verdict.append(h('small', { class: 'lr-verdict-cause' }, keepTogether(cause)));
     if (story) this.verdict.append(h('small', { class: 'lr-verdict-story' }, keepTogether(story)));
@@ -242,9 +246,13 @@ export const readoutMethods = {
         : `${needs.length} machines need exactly ${listText(needs.map(String))}.`;
     const strikes = p.pulses > 1 ? `, ${p.pulses} strikes` : '';
     const gives = stormCharge(p.storm.strength);
-    const intro = this.introRows().map((r) => `New: ${this.infoText(r)}`);
+    const intro = this.introRows().map(
+      (r) => `${r.again ? 'Reminder' : 'New'}: ${this.infoText(r)}`,
+    );
+    // teach-8: a multi-strike altar says its rule in the gauge's and the teach page's words.
+    const rule = p.pulses > 1 ? ` ${ONE_STRIKE_RULE}` : '';
     return [
-      `${getMachine(this.machine).name} altar. Storm ×${p.storm.strength} gives ${gives}${strikes}. ${ask}`,
+      `${getMachine(this.machine).name} altar. Storm ×${p.storm.strength} gives ${gives}${strikes}. ${ask}${rule}`,
       ...intro,
       ...(this.teachCell ? [`${RING_NAME}: ${RING_RULE}`] : []),
     ].join(' ');
@@ -259,7 +267,7 @@ export const readoutMethods = {
       const reads = this.strikeReadings[i] ?? [];
       const got =
         this.puzzle.pulses > 1 && reads.length > 0
-          ? `strikes gave ${listText(reads.map(String))}`
+          ? readingsText(reads)
           : `got ${this.lastReading(m)}`;
       if (multi || this.puzzle.pulses > 1) {
         const who = multi ? `Machine ${i + 1}` : 'The machine';
@@ -307,18 +315,50 @@ export const readoutMethods = {
         : null;
     this.lampEls[i] = lamp;
     el.toggleAttribute('data-lamp', !!lamp);
+    el.toggleAttribute('data-multi', this.puzzle.pulses > 1);
     const kids: (HTMLElement | string)[] = [
       h('span', { class: 'lr-need-row' }, lamp, 'Needs ', h('b', null, String(need))),
     ];
     // Multi-strike: each strike is read on its own; the strikes never add up at the machine.
+    // teach-7: "on strike 1 or 2" (one of them, exactly; the arrival card says more trips it).
     if (got === null && this.puzzle.pulses > 1)
-      kids.push(h('span', { class: 'lr-need-note' }, 'in\u00a0one\u00a0strike'));
-    if (got !== null) {
+      kids.push(h('span', { class: 'lr-need-note' }, keepTogether(needNote(this.puzzle.pulses))));
+    const rs = this.strikeReadings[i] ?? [];
+    // Mid-strike, `got` is the strike still landing: show it as a live entry so "got 4"
+    // never sits beside only "Strike 1: 2" and reads as strike 1's total.
+    const live = got !== null && this.pulse >= 0 && rs.length <= this.pulse;
+    if (got !== null && phone && this.puzzle.pulses > 1) {
+      // teach-7 (D-040 add. 10, B): phones, multi-strike, once charge has landed: what each
+      // strike brought, in order, "got 0, then 16 ✕", each number in its own outcome colour,
+      // ✓ on the strike that woke the gauge and ✕ on the one that tripped it. A result, never
+      // a forecast (D-043): it fills in only as each strike lands.
+      const seen = live ? [...rs, got] : rs;
+      const num = (r: number, k: number) => {
+        const state =
+          live && k === seen.length - 1
+            ? 'live'
+            : r === need
+              ? 'exact'
+              : r > need
+                ? 'over'
+                : 'under';
+        return h('b', { 'data-state': state }, String(r));
+      };
+      // teach-8 (D-040 add. 11, A): each number names its strike, "strike 1: 0 · 2: 16 ✕"
+      // (blind review 10: "got 0, then 16 ✕" didn't say which strike failed). The word
+      // "strike" once, then the strikes' numbers, so it stays one line at SE size.
+      const parts: (HTMLElement | string)[] = [];
+      seen.forEach((r, k) => {
+        parts.push(k === 0 ? `strike ${k + 1}: ` : ` · ${k + 1}: `);
+        parts.push(num(r, k));
+      });
+      const last = seen.at(-1);
+      if (!live && last === need) parts.push(h('i', { class: 'lr-need-mark' }, '✓'));
+      else if (!live && last !== undefined && last > need)
+        parts.push(h('i', { class: 'lr-need-mark', 'data-state': 'over' }, '✕'));
+      kids.push(h('span', { class: 'lr-need-got', 'data-each': '' }, ...parts));
+    } else if (got !== null) {
       kids.push(h('span', { class: 'lr-need-got' }, 'got ', h('b', null, String(got))));
-      const rs = this.strikeReadings[i] ?? [];
-      // Mid-strike, `got` is the strike still landing: show it as a live entry so "got 4"
-      // never sits beside only "Strike 1: 2" and reads as strike 1's total.
-      const live = this.pulse >= 0 && rs.length <= this.pulse;
       // Phones (mobile-7-strike): the card stays compact, "Needs 20 · got 0" (the strike now
       // landing, or the last); each strike's reading is told in words in the verdict.
       if (!phone && this.puzzle.pulses > 1 && (rs.length > 0 || live)) {

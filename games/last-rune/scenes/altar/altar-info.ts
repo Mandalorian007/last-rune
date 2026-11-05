@@ -4,14 +4,27 @@
  */
 import { button, h } from '@thunderclap/engine/ui';
 import { createGemPortraits } from '../../art/gem-portraits';
-import { codexEntry, FIXED_NOTE, FIXED_NOTE_FULL, YOURS_NOTE } from '../../content/codex';
+import {
+  CAP_CHIP_ONE,
+  CAP_ONE_STRIKE,
+  codexEntry,
+  FIXED_NOTE,
+  FIXED_NOTE_FULL,
+  GATE_CHIP_ONE,
+  GATE_RULE_ONE,
+  YOURS_NOTE,
+} from '../../content/codex';
 import { gemNudge, TEACH_NUDGE } from '../../content/lines';
-import { isRotational, stormCharge } from '../../rules';
+import { isRotational } from '../../rules';
 import type { Cell, Dir, GemKind } from '../../rules/types';
 import { chipAt, diagramSvg, fizzleAt, GEM_DIAGRAMS, turnSide } from '../../ui/codex-diagram';
 import { dpx } from '../../ui/frame-units';
 import {
-  capacitorStrip,
+  AMPLIFY_AGAIN,
+  AMPLIFY_ONCE,
+  CAPACITOR_STRIP,
+  eitherName,
+  eitherRule,
   GEM_NAME,
   GOAL_NAME,
   GOAL_RULE,
@@ -29,7 +42,15 @@ import { introButton, pickInfo } from './moments';
 import { keepTogether } from './nowrap';
 import { legalSockets } from './socket-looks';
 import { strikeLabel } from './strike';
-import { firstSentence, hasPicture, type TeachPage, teachPages } from './teach';
+import {
+  firstSentence,
+  gateSides,
+  hasPicture,
+  type TeachPage,
+  type TeachRow,
+  teachPages,
+  teachRows,
+} from './teach';
 
 /** teach-4: the in→out picture on a Gate's or Split's first card, CSS px square. */
 const FIG_PX = 72;
@@ -102,12 +123,16 @@ export const infoMethods = {
   },
 
   /** What this altar introduces, for the arrival card and the briefing. */
-  introRows(this: AltarScene): { gem: GemKind; how: 'fixed' | 'tray' | 'turns' }[] {
-    return [
-      ...this.news.fixed.map((f) => ({ gem: f.gem, how: 'fixed' as const })),
-      ...this.news.tray.map((gem) => ({ gem, how: 'tray' as const })),
-      ...this.news.turns.map((gem) => ({ gem, how: 'turns' as const })),
-    ];
+  introRows(this: AltarScene): TeachRow[] {
+    return teachRows(this.news);
+  },
+
+  /** The socket of this altar's built-in gem of this kind, if its card teaches one (teach-8). */
+  teachCellOf(this: AltarScene, gem: GemKind): Cell | undefined {
+    return (
+      this.news.fixed.find((f) => f.gem === gem)?.cell ??
+      this.news.remind.find((f) => f.gem === gem)?.cell
+    );
   },
 
   /** One gem's card text: what it does, and whether it is fixed or turns. */
@@ -132,7 +157,13 @@ export const infoMethods = {
   },
 
   infoRule(this: AltarScene, r: { gem: GemKind; how: InfoHow }): string {
-    const rule = this.rules[r.gem] ?? '';
+    // teach-8: an altar that strikes once says the Gate's rule without "same strike".
+    const rule =
+      r.gem === 'gate' && this.puzzle.pulses <= 1
+        ? `${GATE_RULE_ONE} Charge at the back: lost.`
+        : r.gem === 'capacitor' && this.puzzle.pulses <= 1
+          ? `${this.rules[r.gem] ?? ''} ${CAP_ONE_STRIKE}`
+          : (this.rules[r.gem] ?? '');
     // Restate what it does: a newcomer meeting it in the tray may not remember the codex.
     if (r.how === 'turns') return `${firstSentence(rule)} Yours to place now; turn it to fit.`;
     // A Capacitor's first sentence (it stores) is only half of it: the release is the point.
@@ -149,7 +180,13 @@ export const infoMethods = {
    * place Channels" (mobile-7-teach).
    */
   chipRule(this: AltarScene, r: { gem: GemKind; how: InfoHow }, intro = false): string {
-    const line = codexEntry(r.gem).chip;
+    const one = this.puzzle.pulses <= 1;
+    const line =
+      r.gem === 'gate' && one
+        ? GATE_CHIP_ONE
+        : r.gem === 'capacitor' && one
+          ? CAP_CHIP_ONE
+          : codexEntry(r.gem).chip;
     if (r.how === 'turns') return `${line} Turn to fit.`;
     // The arrival card's gold line already shows which gem; it says just "Built in." so the card
     // fits an SE. A tap on the gem says the whole line.
@@ -210,12 +247,17 @@ export const infoMethods = {
     let slot = strike ? -1 : this.hoverSlot;
     // A finger has no hover: the held gem's card shows for a moment after the pick, then
     // steps aside so the gem in hand (and its turn) stays in sight above the tray.
-    const cardOff = this.touch && !this.keyboard && this.time - this.handAt > TOUCH_CARD_SECS;
+    // dense-board-4: a slim column never flashes it; its card waits behind the Rule tab.
+    const cardOff =
+      (this.touch && !this.keyboard && this.time - this.handAt > TOUCH_CARD_SECS) ||
+      !!L.phone?.slim;
     if (slot < 0 && this.hand && !this.hand.from && !strike && !overPlaced && !cardOff) {
       slot = L.tray.findIndex((t) => t.gem === this.hand!.kind);
     }
     if (strike) this.infoPin = null;
     const pin = this.infoPin;
+    // dense-board-4: the Rule tab's card is the chip (a long press still pins the full card).
+    if (!pin) this.ruleOpen = false;
     const s = !pin && slot >= 0 ? L.tray[slot] : undefined;
     const focus =
       !strike && (!this.hand || overPlaced)
@@ -243,7 +285,7 @@ export const infoMethods = {
     });
     if (source === 'pin' && pin) {
       rows = [pin];
-      key = `p${pin.gem}${pin.how}`;
+      key = `p${pin.gem}${pin.how}${this.ruleOpen ? 'r' : ''}`;
     } else if (source === 'teach') {
       rows = news;
       key = L.phone ? `intro${introAt}` : 'intro';
@@ -283,7 +325,7 @@ export const infoMethods = {
     this.tip.dataset.source = intro ? 'intro' : key[0] === 't' ? 'tray' : 'board';
     // Phones: a chip, each row its gem's name and first whole sentence (never cut mid-rule);
     // a long-press pins the full card.
-    const chip = !!L.phone && !key.startsWith('p');
+    const chip = !!L.phone && (!key.startsWith('p') || key.endsWith('r'));
     // Phones: the arrival card's pages (teach-4: the goal and the strikes too, and a picture of
     // the charge going in and out on a Gate's, Split's or Capacitor's first card).
     const pageEls = intro && chip ? pages.map((p) => this.pageEl(p)) : null;
@@ -340,14 +382,42 @@ export const infoMethods = {
       );
       // "New here" (and "1 of 3") over the button, top-right; the rule wraps round them, so
       // the card is no taller than its words (on an iPhone SE it fits between tray and FUSE).
+      // polish-11 (D-040 add. 12, A): a piece taught at another altar, first in the player's
+      // hand here, says no "Again" (it read as a replay button, 4 of 4): its head row names the
+      // piece where "New here" goes, beside its picture, and the words below start with its
+      // rule (a line the SE's lane lacked). "2 of 3" still counts the pages.
+      const again = pages[i]?.kind === 'gem' && !!pages[i].again;
+      // teach-5: a pictured page (Gate, Split, Amplify, Capacitor) leads with its picture, in a
+      // head row with "New here" and the button, so the words below get the card's full width
+      // (no "Power / the no- / arrow end" wraps beside a floated picture).
+      const item = items[i]!;
+      const fig = item.querySelector<HTMLElement>(':scope > .lr-fig');
+      // The head-row name is a copy: where the row is too narrow for it, the words keep their
+      // own (altar-column.ts arrangeColumn drops data-named).
+      const name = again && fig ? item.querySelector<HTMLElement>(':scope > b') : null;
       const page = h(
         'span',
         { class: 'lr-info-page' },
-        'New here',
+        name
+          ? h('b', { 'aria-hidden': 'true' }, name.textContent ?? '')
+          : again
+            ? null
+            : 'New here',
         n > 1 ? h('span', { class: 'lr-info-of' }, keepTogether(` ${i + 1} of ${n}`)) : null,
       );
-      this.tip.replaceChildren(h('div', { class: 'lr-info-foot' }, page, next), items[i]!);
-    } else this.tip.replaceChildren(...items);
+      const foot = h('div', { class: 'lr-info-foot' }, fig, page, next);
+      this.tip.toggleAttribute('data-fig', !!fig);
+      this.tip.removeAttribute('data-tight');
+      this.tip.removeAttribute('data-tighter');
+      this.tip.toggleAttribute('data-named', !!name);
+      this.tip.replaceChildren(foot, item);
+    } else {
+      this.tip.removeAttribute('data-fig');
+      this.tip.removeAttribute('data-tight');
+      this.tip.removeAttribute('data-tighter');
+      this.tip.removeAttribute('data-named');
+      this.tip.replaceChildren(...items);
+    }
     // A card with a button is read and used, not a hover tooltip (the announcer reads the rest).
     this.tip.setAttribute('aria-hidden', String(!paged));
     this.tip.toggleAttribute('data-full', key.startsWith('p'));
@@ -376,27 +446,76 @@ export const infoMethods = {
     if (p.kind === 'ring') return row('ring', RING_NAME, null, rule(RING_RULE));
     if (p.kind === 'strikes') {
       const n = this.puzzle.pulses;
-      return row('strikes', keepTogether(strikeLabel(n, 'edit')), null, rule(strikesRule(n)));
+      // teach-6: the title wears the same unlit marks as the Strike button, so "a mark lights
+      // as each one fires" points at something the player can see.
+      const marks = h(
+        'span',
+        { class: 'lr-info-pips', 'aria-hidden': 'true' },
+        ...Array.from({ length: n }, () => h('i')),
+      );
+      // polish-11: the marks once, in the title; the rule follows it after a colon.
+      return h(
+        'div',
+        { class: 'lr-info-row', 'data-how': 'strikes' },
+        h('b', null, keepTogether(strikeLabel(n)), marks, ':'),
+        ' ',
+        rule(strikesRule(n)),
+      );
     }
-    const fig = hasPicture(p) ? this.gemFigure(p.gem, p.how === 'fixed') : null;
+    if (p.kind === 'either')
+      return row(
+        'either',
+        keepTogether(eitherName(this.puzzle.pulses)),
+        null,
+        rule(eitherRule(this.puzzle.pulses)),
+      );
+    const fixed = p.how === 'fixed';
+    const fig = hasPicture(p) ? this.gemFigure(p.gem, fixed) : null;
+    // teach-8: pictured pages are not always fixed gems (a Gate first in the hand, a reminder).
+    const built = (text: string) => (fixed ? `${FIXED_NOTE} ${text}` : text);
+    const turn = p.how === 'turns' ? ' Turn to fit.' : '';
     if (fig && p.gem === 'capacitor') {
-      // The Capacitor's lesson is its two strikes, with this altar's own charge (teach-4).
-      const [one, two] = capacitorStrip(stormCharge(this.puzzle.storm.strength));
+      // The Capacitor's lesson is its two strikes (teach-4), said for any charge (polish-11).
+      const [one, two] = CAPACITOR_STRIP;
+      // teach-8: on an altar that strikes once there is no strike 2; the card says what that means.
+      if (this.puzzle.pulses <= 1) return row(p.how, GEM_NAME[p.gem], fig, rule(CAP_ONE_STRIKE));
       return row(
         p.how,
         GEM_NAME[p.gem],
         fig,
         rule(p.how === 'fixed' ? FIXED_NOTE : ''),
-        h(
-          'span',
-          { class: 'lr-info-strip' },
-          h('span', null, keepTogether(one)),
-          ' ',
-          h('span', null, keepTogether(two)),
-        ),
+        h('span', { class: 'lr-info-strip' }, h('span', null, one), ' ', h('span', null, two)),
+      );
+    }
+    if (fig && p.gem === 'amplify') {
+      // teach-5: the picture says 4 → 8; the line under it says charge already doubled passes.
+      return row(
+        p.how,
+        GEM_NAME[p.gem],
+        fig,
+        rule(built(AMPLIFY_ONCE)),
+        document.createTextNode(' '),
+        h('span', { class: 'lr-info-eg', dataset: { flow: '' } }, AMPLIFY_AGAIN),
+      );
+    }
+    if (fig && p.gem === 'gate') {
+      // teach-6: the Gate's sides named as the picture shows them, this altar's way round
+      // (blind review 8: "both sides of the arrow" was read as head and tail).
+      return row(
+        p.how,
+        GEM_NAME[p.gem],
+        fig,
+        rule(built(`${gateSides(fixed ? this.shownRot(p.gem) : 0, this.puzzle.pulses)}${turn}`)),
       );
     }
     return row(p.how, GEM_NAME[p.gem], fig, rule(this.chipRule(p, true)));
+  },
+
+  /** The quarter turns a fixed gem of this kind shows on this altar (its picture's turn). */
+  shownRot(this: AltarScene, gem: GemKind): number {
+    const cell = this.teachCellOf(gem);
+    const shown = cell ? this.view.gemAt(cell) : undefined;
+    return shown ? ((Math.round(shown.rotTarget) % 4) + 4) % 4 : 0;
   },
 
   /**
@@ -406,10 +525,10 @@ export const infoMethods = {
    */
   gemFigure(this: AltarScene, gem: GemKind, fixed: boolean): HTMLElement {
     const d = GEM_DIAGRAMS[gem];
-    const cell = fixed ? this.news.fixed.find((f) => f.gem === gem)?.cell : undefined;
-    const rot = cell
-      ? (this.puzzle.fixed.find((f) => f.cell.x === cell.x && f.cell.y === cell.y)?.rot ?? 0)
-      : 0;
+    // A built-in gem's picture is turned as that gem shows on this altar: its rule turn, or for
+    // a straight gem the run it lies along (glyph-truth-2: the Capacitor card ran upright while
+    // the board's ice lay across). Tray gems are drawn upright, as in the tray and the Codex.
+    const rot = fixed ? this.shownRot(gem) : 0;
     const small = gem === 'capacitor';
     this.pictures ??= createGemPortraits(this.ctx.renderer);
     const pic = this.pictures.canvas(gem, small ? CAP_FIG_PX : FIG_PX);

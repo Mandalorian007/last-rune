@@ -15,9 +15,9 @@
 import { mkdirSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
-import { MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
+import { type Cell, MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import { trayRemaining } from '../../games/last-rune/rules/validate';
-import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
+import { type AltarLayout, cellCenter } from '../../games/last-rune/scenes/altar/layout';
 import { playOrder } from './altar-audit';
 import { DEV_URL, settled, waitFrames } from './helpers';
 
@@ -45,7 +45,7 @@ function wanted(phone: string, part?: Part) {
 }
 
 const ORDER = playOrder();
-/** Capacitor Bay's first try (capacitor.spec): strike 1 keeps 8, strike 2 lets out 16 into 8. */
+/** Capacitor Bay's first try (capacitor.spec): strike 1 stores 8, strike 2 lets out 16 into 8. */
 const BAY_FIRST_TRY = [
   { cell: { x: 4, y: 5 }, gem: 'channel', rot: 0 },
   { cell: { x: 4, y: 4 }, gem: 'channel', rot: 0 },
@@ -112,9 +112,13 @@ async function seed(
       if (g.flow.state === 'puzzle') g.flow.closePuzzle();
       g.save.update((d: G) => {
         d.flags.hallIntro = true;
+        // Past the first altar a player has struck, which retires the dot legend (teach-6).
+        d.flags.dotTold = solved.length > 0;
         d.settings.captionSpeed = 'instant';
         d.progress.solved = solved;
         d.puzzles = puzzles;
+        // teach-8: each altar as a player meets it in play order (no cards taught out of order).
+        d.codex.taught = {};
         if (journal) {
           d.journal.found = journal.found;
           d.journal.read = journal.read;
@@ -183,6 +187,78 @@ async function holdOne(page: Page, id: MachineId, placed: unknown[]) {
   await page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);
   await page.waitForFunction((g) => (window as G).__altarView?.held?.kind === g, slot.gem);
   return slot.gem;
+}
+
+/**
+ * polish-8: every half-board above holds a Channel, so Turn is always dim there. These hold a
+ * gem that turns, where it first comes to the tray (Bend at the Furnace, Split at Press Unit 4),
+ * once as picked up (Turn lit) and once after one Turn.
+ */
+const TURN_HELD: readonly { id: MachineId; gem: string }[] = [
+  { id: 'furnace', gem: 'bend' },
+  { id: 'press-unit-4', gem: 'split' },
+];
+
+/** Tap the tray's `gem` (it must still be in stock). */
+async function holdKind(page: Page, id: MachineId, placed: unknown[], gem: string) {
+  const L = await page.evaluate(
+    () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+  );
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
+  const k = ob.width / 1920;
+  const slot = L.tray.find(
+    (s) => s.gem === gem && trayRemaining(puzzleFor(id), placed as never, s.gem) > 0,
+  );
+  expect(slot, `${id}: no ${gem} in the tray`).toBeTruthy();
+  await page.touchscreen.tap(ob.x + slot!.x * k, ob.y + slot!.y * k);
+  await page.waitForFunction((g) => (window as G).__altarView?.held?.kind === g, gem);
+}
+
+/** dense-board: the densest boards get an aim shot: a finger held over a socket, loupe up. */
+const AIM: readonly MachineId[] = ['the-last-rune', 'lift-shaft'];
+
+/**
+ * Drag a gem from the tray toward a socket the design still wants and hold it there, the
+ * finger 56 CSS px under the aim, until the loupe shows; returns the finger's release.
+ */
+async function aimOne(page: Page, id: MachineId, placed: readonly unknown[]) {
+  const L = await page.evaluate(
+    () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+  );
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
+  const k = ob.width / 1920;
+  const view = page.viewportSize()!;
+  const pz = puzzleFor(id);
+  const client = (x: number, y: number) => ({ x: ob.x + x * k, y: ob.y + y * k });
+  const at = { x: 0, y: 0 };
+  // The highest socket the design still wants, so the finger under it stays on the screen.
+  const g = pz.design.intended
+    .slice(placed.length)
+    .filter((q) => trayRemaining(pz, placed as never, q.gem) > 0)
+    .sort((a, b) => a.cell.y - b.cell.y)[0]!;
+  const slot = L.tray.find((s) => s.gem === g.gem)!;
+  cellCenter(L, g.cell as Cell, at);
+  const from = client(slot.x, slot.y);
+  const aim = client(at.x + L.pitch * 0.2, at.y);
+  const end = { x: aim.x, y: Math.min(view.height - 4, aim.y + 56) };
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x = 0, y = 0) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: type === 'touchEnd' ? [] : [{ x, y }],
+    });
+  await touch('touchStart', from.x, from.y);
+  for (let i = 1; i <= 10; i++) {
+    await touch(
+      'touchMove',
+      from.x + (end.x - from.x) * (i / 10),
+      from.y + (end.y - from.y) * (i / 10),
+    );
+    await waitFrames(page, 1);
+  }
+  await waitFrames(page, 3);
+  await expect(page.locator('.lr-loupe')).toHaveAttribute('data-on', '');
+  return () => touch('touchEnd');
 }
 
 /** Tap Strike (and confirm empty sockets if asked); wait for the verdict. */
@@ -303,6 +379,35 @@ for (const vp of PHONES) {
         const held = await holdOne(page, id, half);
         expect(held, `${id}: no tray gem left to hold`).not.toBeNull();
         await shot(page, `12-${id}-held`);
+        // dense-board-4: a slim column folds the held gem's card behind its Rule tab; open it.
+        const ruleTab = page.locator('.lr-rule-tab');
+        if (await ruleTab.isVisible()) {
+          await ruleTab.tap();
+          await expect(page.locator('.lr-altar-tip')).toBeVisible();
+          await shot(page, `12-${id}-held-rule`);
+        }
+        const turn = TURN_HELD.find((t) => t.id === id);
+        if (turn) {
+          await meet(page, id, half);
+          await dismissCard(page);
+          await page.evaluate(() => (window as G).__game.fuse.hush());
+          await holdKind(page, id, half, turn.gem);
+          const turnBtn = page.locator('.lr-altar-turnbtn');
+          await expect(turnBtn).toBeEnabled();
+          await shot(page, `12-${id}-held-${turn.gem}`);
+          await turnBtn.tap();
+          // The held gem eases round; shoot it once it rests.
+          await waitFrames(page, 40);
+          await shot(page, `12-${id}-held-${turn.gem}-turned`);
+        }
+        if (AIM.includes(id)) {
+          await meet(page, id, half);
+          await dismissCard(page);
+          await page.evaluate(() => (window as G).__game.fuse.hush());
+          const lift = await aimOne(page, id, half);
+          await shot(page, `12-${id}-aim`);
+          await lift();
+        }
       }
     });
 
@@ -322,19 +427,51 @@ for (const vp of PHONES) {
         g.flow.openPuzzle('intake-desk');
       });
       await expect(page.locator('.lr-altar-tip:not([hidden])')).toBeVisible();
-      await shot(page, '14-intake-desk-teach');
-      // Its last page (the gold ring) when it has more than one.
+      // polish-8: the card's first page is 10-intake-desk already; these are what comes next.
+      // Its next page (the gold ring) when it has more than one.
       const next = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
       if (await next.isVisible()) {
         await next.tap();
         await waitFrames(page, 4);
         await shot(page, '14-intake-desk-teach-2');
       }
+      // The first gem set on the board: what the card and the board say back.
+      {
+        const first = puzzleFor('intake-desk').design.intended[0]!;
+        await holdKind(page, 'intake-desk', [], first.gem);
+        const L = await page.evaluate(
+          () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
+        );
+        const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
+        const k = ob.width / 1920;
+        const pt = { x: 0, y: 0 };
+        cellCenter(L, first.cell as Cell, pt);
+        await page.touchscreen.tap(ob.x + pt.x * k, ob.y + pt.y * k);
+        await page.waitForFunction(() => !(window as G).__altarView?.held);
+        await shot(page, '14-intake-desk-first-gem');
+      }
 
-      // A new gem's card: Relay Tower right after the Intake Desk (Split, and a fixed Gate).
+      // The gauge dot's legend (teach-5/6): the first time a dot lights, once per game. Keyed
+      // on the legend itself, so it follows teach-6 when that changes when it shows.
+      {
+        await meet(page, 'intake-desk', puzzleFor('intake-desk').design.intended);
+        await dismissCard(page);
+        await page.evaluate(() => (window as G).__game.fuse.hush());
+        const legend = page.locator('.lr-altar-hint[data-legend]:not([data-wait])');
+        await expect.soft(legend, 'the dot legend on a lit dot').toBeVisible({ timeout: 10_000 });
+        if (await legend.isVisible()) await shot(page, '16-dot-legend');
+      }
+
+      // A new gem's card past its first page (its first page is 10-relay-tower).
       await meet(page, 'relay-tower');
       await expect(page.locator('.lr-altar-tip:not([hidden])')).toBeVisible();
-      await shot(page, '14-relay-tower-teach');
+      const relayNext = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
+      if (await relayNext.isVisible()) {
+        await relayNext.tap();
+        await waitFrames(page, 4);
+        if (await page.locator('.lr-altar-tip:not([hidden])').isVisible())
+          await shot(page, '14-relay-tower-teach-2');
+      }
 
       // The Capacitor's card at Capacitor Bay.
       await meet(page, 'capacitor-bay');
@@ -363,7 +500,7 @@ for (const vp of PHONES) {
       await page.evaluate(() => (window as G).__game.fuse.hush());
       await shot(page, '13-capacitor-bay-before');
       await strike(page);
-      await expect(page.locator('.lr-altar-verdict')).toContainText('then 16');
+      await expect(page.locator('.lr-altar-verdict')).toContainText('Strike 2: 16.');
       await shot(page, '13-capacitor-bay-multi');
 
       // A solve: the Furnace really solved, under its solve card.

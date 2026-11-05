@@ -60,7 +60,6 @@ ${P} .lr-hg-top {
   height: ${HEAD}; gap: ${cpx(4)}; padding: 0 calc(${LANE} + ${cpx(12)}) 0 ${cpx(12)};
   font-size: ${tpx(15)}; white-space: nowrap; background: #3a2a1c;
 }
-${P} .lr-hg-top .lr-emo { font-size: ${tpx(15)}; margin-right: ${cpx(3)}; }
 ${P} .lr-hg-top .lr-hg-hash { font-size: ${tpx(16)}; min-width: 0; color: #8f887b; }
 ${P} .lr-hg-top-name { color: #fff0b8; }
 ${P} .lr-hg-top-server {

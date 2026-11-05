@@ -6,6 +6,7 @@ import {
   CODEX_MATHS_MAX_CHARS,
   CODEX_RULE_MAX_WORDS,
   CODEX_SPARKS,
+  GATE_RULE,
 } from './codex';
 import { wordCount } from './lines';
 
@@ -45,10 +46,15 @@ describe('codex content', () => {
     expect(CODEX_SPARKS).toContain('8');
     expect(CODEX_SPARKS).toContain('16');
     expect(CODEX.split.rule).toMatch(/odd/i);
-    expect(CODEX.amplify.rule).toMatch(/once per path/i);
-    expect(CODEX.gate.rule).toMatch(/one strike/i);
-    // teach-4: the inputs are named relative to the arrow, the way the gem is drawn.
-    expect(CODEX.gate.rule).toMatch(/beside the arrow/i);
+    // teach-8: "path" was never defined; it says once, and what a second one does.
+    expect(CODEX.amplify.rule).toMatch(/^Doubles the charge once\./);
+    expect(CODEX.amplify.rule).not.toMatch(/path/);
+    expect(CODEX.gate.rule).toMatch(/same strike/i);
+    // teach-7: one sentence everywhere: ports in, the sum out by the arrow, as the gem is drawn.
+    expect(CODEX.gate.chip).toBe(GATE_RULE);
+    expect(CODEX.gate.rule.startsWith(GATE_RULE)).toBe(true);
+    expect(GATE_RULE).toMatch(/Both ports, same strike/);
+    expect(GATE_RULE).toMatch(/by the arrow/);
   });
 
   it('gives every gem a worked example with real numbers (mobile-7-teach)', () => {
@@ -65,6 +71,8 @@ describe('codex content', () => {
     expect(CODEX.amplify.maths).toMatch(/8 stays 8/);
     expect(CODEX.gate.maths).toContain('In 4 and 4 → out 8');
     expect(CODEX.gate.maths).toMatch(/only one/i);
-    expect(CODEX.capacitor.maths).toBe('Strike 1: keeps 4. Strike 2: 4 + 4 → 8.');
+    expect(CODEX.capacitor.maths).toBe('Strike 1: stores 4. Strike 2: 4 + 4 → 8.');
+    // teach-7: "stores", never "keeps" (blind review 9).
+    expect(`${CODEX.capacitor.rule} ${CODEX.capacitor.chip}`).not.toMatch(/\bkeeps?\b/i);
   });
 });

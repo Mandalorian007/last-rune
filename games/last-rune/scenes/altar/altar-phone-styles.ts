@@ -27,7 +27,7 @@ ${T} .lr-altar:not([data-phone]):has(.lr-altar-tip[data-source="tray"]:not([hidd
 ${P} .lr-altar-tag { font-size: ${tpx(11)}; padding: ${cpx(1)} ${cpx(5)}; border-radius: ${cpx(5)}; }
 ${A} .lr-altar-need { white-space: normal; text-align: center; }
 ${A} .lr-altar-need[data-align="above"] { transform: translate(-50%, calc(-100% - ${cpx(4)})); }
-${A} .lr-altar-need[data-align="above"]::before { top: auto; bottom: -9px; transform: translateX(-50%) rotate(225deg); left: 50%; border-left-width: 2px; border-top-width: 2px; }
+${A} .lr-altar-need[data-align="above"]::before { top: auto; bottom: -9px; transform: translateX(-50%) rotate(225deg); left: var(--lr-notch, 50%); border-left-width: 2px; border-top-width: 2px; }
 ${A} .lr-altar-need:is([data-align="up"], [data-align="down"]) {
   flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0 ${cpx(4)};
   max-width: ${cpx(118)}; white-space: nowrap;
@@ -46,7 +46,7 @@ ${A} .lr-altar-need:is([data-align="up"], [data-align="down"]) .lr-need-strikes 
 ${A} .lr-altar-storm .lr-strike-pips { display: none; }
 
 /* Strike: full gold whenever it can fire (it glows once the route reaches a machine); a
-   multi-strike altar says "×2", then "1/2", in words not pips. */
+   multi-strike altar says "Strike ×2", and its pips light as each strike fires (teach-5). */
 .tc-overlay .lr-strike-n { display: none; }
 
 /* Solve moment: card, journal page and Continue fill the altar's column and the free right
@@ -108,7 +108,11 @@ ${ph(':has(.lr-solve[data-phone])')} .tc-caption {
   max-width: min(calc(var(--lr-scap-w) + var(--tc-bar, 0px) - ${cpx(12)}), var(--tc-third)) !important;
 }
 ${ph(':has(.lr-solve[data-phone])')} .tc-caption::after {
-  content: ''; position: absolute; left: ${cpx(-5)}; bottom: calc(var(--lr-scap-face, ${cpx(40)}) - ${cpx(8)} - ${cpx(4)});
+  /* polish-8 (20-solve, Android): when his face sits higher than a one-line caption is tall,
+     the unclamped tail floated above the line as a stray dark diamond under the card. Keep it
+     on the caption's own edge. */
+  content: ''; position: absolute; left: ${cpx(-5)};
+  bottom: clamp(${cpx(6)}, calc(var(--lr-scap-face, ${cpx(40)}) - ${cpx(8)} - ${cpx(4)}), calc(100% - ${cpx(14)}));
   width: ${cpx(8)}; height: ${cpx(8)}; background: inherit; border: 1px solid var(--tc-color-border);
   border-width: 0 0 1px 1px; transform: rotate(45deg); pointer-events: none;
 }
@@ -126,14 +130,28 @@ ${A} .lr-altar-turnmark { display: none !important; }
 ${A} .lr-altar-need { font-size: ${tpx(13)}; color: #f4e6c4; }
 ${A} .lr-altar-need .lr-need-row b { font-size: ${tpx(15)}; }
 ${A} .lr-altar-need :is(.lr-need-note, .lr-storm-row, .lr-need-got, .lr-need-got b, .lr-need-strikes) { font-size: ${tpx(13)}; opacity: 1; }
-${A} .lr-altar-need .lr-need-note { color: #e6d6b2; }
+${A} .lr-altar-need .lr-need-note { color: #e6d6b2; letter-spacing: -0.1px; word-spacing: -0.1em; }
+/* teach-7: after a multi-strike, what each strike brought ("got 0, then 16 ✕"), each number in
+   its own outcome colour (the card's own state colours only the last). */
+${A} .lr-altar-need .lr-need-got[data-each] { white-space: nowrap; }
+${A} .lr-altar-need .lr-need-got[data-each] b { margin-left: 0; }
+${A} .lr-altar-need .lr-need-got[data-each] b[data-state="exact"] { color: #7ff0ff; }
+${A} .lr-altar-need .lr-need-got[data-each] b[data-state="under"] { color: #ffc46a; }
+${A} .lr-altar-need .lr-need-got[data-each] b[data-state="over"] { color: #ff8a6e; }
+${A} .lr-altar-need .lr-need-got[data-each] b[data-state="live"] { color: #f4e6c4; }
+${A} .lr-altar-need .lr-need-mark { font-style: normal; font-weight: 700; margin-left: ${cpx(3)}; color: #7ff0ff; }
+${A} .lr-altar-need .lr-need-mark[data-state="over"] { color: #ff8a6e; }
 ${A} .lr-altar-need .lr-need-strikes .lr-need-strike-lead { font-style: normal; align-self: center; color: #e6d6b2; }
 /* A one-strike north/south card keeps one line after a strike: "Needs 4  got 0" side by side
    (the layout gives it one line of room, and the board fills the height). */
-${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not(:has(.lr-need-note, .lr-need-strikes)) {
+${A} .lr-altar-need:is([data-align="up"], [data-align="down"]):not([data-multi]):not(:has(.lr-need-note, .lr-need-strikes)) {
   flex-direction: row; align-items: baseline; gap: ${cpx(6)};
 }
 ${P} .lr-solve[data-phone] .lr-page-note, ${P} .lr-solve[data-phone] .lr-page-note b { font-size: ${tpx(12)}; }
+/* dense-board-4: a dense board's Gives/Needs cards at the 14 px floor (D-039). A slimmer side
+   padding and a hair of tracking keep them as wide as their 13 px budget (layout labelW*). */
+${A}[data-dense] .lr-altar-need { font-size: ${tpx(14)}; padding-left: ${cpx(3)}; padding-right: ${cpx(3)}; letter-spacing: -0.015em; }
+${A}[data-dense] .lr-altar-need :is(.lr-need-note, .lr-storm-row, .lr-need-got, .lr-need-got b, .lr-need-strikes) { font-size: ${tpx(14)}; }
 
 /* The arrival card points at what it teaches: a gold line from the card to a fixed gem, ringed
    (altar-dom leader, in the scaled overlay over the board). */

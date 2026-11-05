@@ -27,8 +27,11 @@ export interface MagnifyTarget {
 export interface MagnifyOptions {
   /** The loupe shows while the target pitch is below this many CSS px. Default 44. */
   below?: number;
-  /** Loupe diameter, CSS px. Default 128. */
-  size?: number;
+  /**
+   * Loupe diameter, CSS px. Default 128. A function is read each tick, so the loupe can be
+   * smaller where targets are dense (it is rebuilt when the size changes).
+   */
+  size?: number | (() => number);
   /** Loupe magnification. Default 2.5. */
   zoom?: number;
   /** CSS px the aim point sits above a dragging finger. Default 56. */
@@ -49,6 +52,27 @@ export interface MagnifyOptions {
   className?: string;
   /** Where the loupe element goes. Default the source canvas's document body. */
   parent?: HTMLElement;
+  /**
+   * Areas (client CSS px) the loupe must leave in sight while it shows `target`, for example
+   * the target and its neighbours (`keep`), areas it should leave in sight when it can
+   * (`spare`, for example labels; ranked below `keep` and the fingertip), and areas it should
+   * rather not cover (`avoid`, ranked below `spare`). With one, the loupe goes where
+   * `loupeClear` puts it; without, beside the finger (`loupeSpot`).
+   */
+  clear?: (
+    target: MagnifyTarget | null,
+    aim: { x: number; y: number },
+  ) => { keep: Rect[]; spare?: Rect[]; avoid?: Rect[] } | null;
+  /** Draw a thin leader from the loupe's rim to the snapped target (`Loupe` `leader`). */
+  leader?: boolean;
+}
+
+/** An axis-aligned rectangle, client CSS px. */
+export interface Rect {
+  l: number;
+  t: number;
+  r: number;
+  b: number;
 }
 
 /** One tick's aim (see `Gestures.aim`). */
@@ -78,6 +102,12 @@ export interface Aim {
 }
 
 export const MAGNIFY_DEFAULTS = { below: 44, size: 128, zoom: 2.5, lift: 56 } as const;
+
+/** The loupe diameter `m` asks for now (CSS px). */
+export function magnifySize(m: Pick<MagnifyOptions, 'size'>): number {
+  const s = typeof m.size === 'function' ? m.size() : m.size;
+  return s ?? MAGNIFY_DEFAULTS.size;
+}
 
 /** A square grid of cells: `cols × rows`, cell (i, j) spans `left + i·pitch` to `+ pitch`. */
 export interface Grid {
@@ -140,4 +170,80 @@ export function loupeSpot(
     x: clamp(finger.x + side * (half + 28), half + 4, view.width - half - 4),
     y: clamp(aim.y - half * 0.6, half + 4, view.height - half - 4),
   };
+}
+
+/**
+ * Where a loupe of diameter `size` goes when it must leave `keep` in sight: the nearest spot to
+ * the aim point, 6 px clear of every `keep` rect and of the fingertip (a 44 px disc), its centre
+ * never below the finger's (the hand is there), kept 4 px inside the view. Among those spots it
+ * takes one that covers the fewest `spare` rects, then one that covers no `avoid` rect, then the
+ * nearest. With no spot clear of `keep` it falls back to `loupeSpot`.
+ */
+export function loupeClear(
+  finger: { x: number; y: number },
+  aim: { x: number; y: number },
+  size: number,
+  view: { width: number; height: number },
+  keep: Rect[],
+  avoid: Rect[] = [],
+  spare: Rect[] = [],
+): { x: number; y: number } {
+  const half = size / 2;
+  const gap = 6;
+  const inView = (x: number, y: number) =>
+    x >= half + 4 && x <= view.width - half - 4 && y >= half + 4 && y <= view.height - half - 4;
+  const hits = (x: number, y: number, q: Rect, pad: number) => {
+    const dx = Math.max(q.l - x, 0, x - q.r);
+    const dy = Math.max(q.t - y, 0, y - q.b);
+    return Math.hypot(dx, dy) < half + pad;
+  };
+  const clearOf = (x: number, y: number) =>
+    inView(x, y) &&
+    y <= finger.y &&
+    Math.hypot(x - finger.x, y - finger.y) >= half + 22 + gap &&
+    !keep.some((q) => hits(x, y, q, gap));
+  // Candidates: tangent to the kept area on each side and corner, slid along it, beside the
+  // finger, and (so a spot clear of the spared rects is found when there is one) a coarse grid
+  // over the view.
+  const box = keep.reduce(
+    (a, q) => ({
+      l: Math.min(a.l, q.l),
+      t: Math.min(a.t, q.t),
+      r: Math.max(a.r, q.r),
+      b: Math.max(a.b, q.b),
+    }),
+    { l: aim.x, t: aim.y, r: aim.x, b: aim.y },
+  );
+  const xs = [box.l - half - gap, box.r + half + gap];
+  const ys = [box.t - half - gap, box.b + half + gap];
+  const cands: { x: number; y: number }[] = [loupeSpot(finger, aim, size, view)];
+  for (let k = -4; k <= 4; k++) {
+    const sx = (k * half) / 2;
+    for (const x of xs) cands.push({ x, y: aim.y + sx });
+    for (const y of ys) cands.push({ x: aim.x + sx, y });
+  }
+  if (spare.length > 0 && Number.isFinite(view.width) && Number.isFinite(view.height)) {
+    const step = Math.max(8, half / 4);
+    for (let y = half + 4; y <= view.height - half - 4; y += step)
+      for (let x = half + 4; x <= view.width - half - 4; x += step) cands.push({ x, y });
+  }
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  let best: { x: number; y: number } | null = null;
+  let bestCost = Number.POSITIVE_INFINITY;
+  for (const c0 of cands) {
+    const c = {
+      x: clamp(c0.x, half + 4, view.width - half - 4),
+      y: clamp(c0.y, half + 4, view.height - half - 4),
+    };
+    if (!clearOf(c.x, c.y)) continue;
+    const cost =
+      Math.hypot(c.x - aim.x, c.y - aim.y) +
+      (avoid.some((q) => hits(c.x, c.y, q, 0)) ? 1e4 : 0) +
+      spare.filter((q) => hits(c.x, c.y, q, 0)).length * 1e6;
+    if (cost < bestCost) {
+      bestCost = cost;
+      best = c;
+    }
+  }
+  return best ?? loupeSpot(finger, aim, size, view);
 }

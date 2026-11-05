@@ -95,6 +95,11 @@ const Flags = s.object({
    * test). Optional so older saves still validate (missing = not yet said).
    */
   missTold: s.optional(s.boolean()),
+  /**
+   * teach-5: the gauge dot's legend (hollow, lit, red) has been shown once. Optional so older
+   * saves still validate (missing = not yet shown).
+   */
+  dotTold: s.optional(s.boolean()),
 });
 
 export const SaveV1 = s.object({
@@ -113,6 +118,13 @@ export const SaveV1 = s.object({
      * before it existed are backfilled on load (`repairSave`).
      */
     met: s.optional(s.array(Gem, { maxLength: 16 })),
+    /**
+     * teach-8 (D-040 add. 11, C): gems whose arrival card the player has been shown, each with
+     * the altar it was shown at. A gem is taught once, at whichever altar it is first met, in
+     * whatever order the hall is played; that altar keeps teaching it until it is solved.
+     * Optional: missing = none (gems on solved altars count as taught anyway, `teach.ts`).
+     */
+    taught: s.optional(s.record(s.string())),
   }),
   /** In-progress altar per machine id. */
   puzzles: s.record(PuzzleProgress),
@@ -234,6 +246,24 @@ export function gemsAt(machine: MachineId): GemKind[] {
 /** Gems met at an altar so far (see `codex.met`). */
 export function metGems(d: SaveData): readonly GemKind[] {
   return d.codex.met ?? [];
+}
+
+/** Gems whose arrival card has been shown, and the altar each was shown at (`codex.taught`). */
+export function taughtGems(d: SaveData): Readonly<Record<string, string>> {
+  return d.codex.taught ?? {};
+}
+
+/** Record `gems` as taught at `machine` (first altar wins). Returns true if anything changed. */
+export function markTaught(d: SaveData, gems: readonly GemKind[], machine: MachineId): boolean {
+  const t = d.codex.taught ?? {};
+  let changed = false;
+  for (const g of gems)
+    if (!t[g]) {
+      t[g] = machine;
+      changed = true;
+    }
+  if (changed) d.codex.taught = t;
+  return changed;
 }
 
 /** Record gems as met. Returns the ones that were new. */

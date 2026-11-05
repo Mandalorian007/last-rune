@@ -12,7 +12,14 @@ import { type AltarColumn, placeAltarChrome } from './altar-chrome';
 import { GEM_NAME, type HintMode, hintLine, SVG_NS, timesWord } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import { TRAY_CENTER_X } from './layout';
-import { type HintSlot, LAMP_LINE, phoneHint, pickHint } from './moments';
+import {
+  DOT_LEGEND,
+  DOT_LEGEND_HEAD,
+  type HintSlot,
+  LAMP_LINE,
+  phoneHint,
+  pickHint,
+} from './moments';
 import { keepTogether } from './nowrap';
 
 export const domMethods = {
@@ -49,6 +56,33 @@ export const domMethods = {
     const key = other ? `slot:${other}` : `${mode}${turns ? '+' : ''}`;
     if (key === this.hintMode) return;
     this.hintMode = key;
+    if (other && slot === 'lamp' && other === LAMP_LINE.reach) {
+      // teach-5: the dot's legend, once per game: each row led by the dot as the gauge draws it.
+      // teach-6: 'off' rows draw no dot (the gauge shows none), and "Got it" retires it.
+      const dot = (look: string) =>
+        look === 'off'
+          ? null
+          : h('i', { class: 'lr-need-lamp', dataset: { look }, 'aria-hidden': 'true' });
+      const ok = button(
+        'Got it',
+        (e) => {
+          (e.currentTarget as HTMLElement).blur();
+          this.retireDotLegend();
+        },
+        { className: 'lr-dot-ok', ariaLabel: 'Got it: close the dot legend' },
+      );
+      this.hint.replaceChildren(
+        h('span', { class: 'lr-dot-head' }, DOT_LEGEND_HEAD, ok),
+        ...DOT_LEGEND.map((r) =>
+          h('span', { class: 'lr-dot-row', dataset: { look: r.look } }, dot(r.look), r.text),
+        ),
+      );
+      this.hint.dataset.mode = 'slot';
+      this.hint.dataset.legend = '';
+      this.avoidTray();
+      return;
+    }
+    delete this.hint.dataset.legend;
     if (other) {
       // teach-4: the gauge-dot line starts with the dot it explains, lit as on the gauge.
       const dot =
@@ -56,7 +90,6 @@ export const domMethods = {
           ? h('i', {
               class: 'lr-need-lamp',
               'data-on': '',
-              'data-red': String(other === LAMP_LINE.over),
               'aria-hidden': 'true',
             })
           : null;
@@ -149,7 +182,14 @@ export const domMethods = {
       h('span', { class: 'lr-turn-arrow' }, '\u21bb'),
     );
     this.turnBtn = button(
-      h('span', null, h('b', { 'aria-hidden': 'true' }, '\u21bb'), ' Turn'),
+      h(
+        'span',
+        null,
+        h('b', { 'aria-hidden': 'true' }, '\u21bb'),
+        ' Turn',
+        // glyph-truth-2: what Turn acts on, named under the word ("Bend"), set while it is lit.
+        h('small', { class: 'lr-turn-what', 'aria-hidden': 'true' }),
+      ),
       (e) => {
         (e.currentTarget as HTMLElement).blur();
         this.turnTapped();
@@ -274,6 +314,7 @@ export const domMethods = {
     this.dom.toggleAttribute('data-picked', this.picked);
     const band = L.phone;
     this.dom.toggleAttribute('data-phone', !!band);
+    this.dom.toggleAttribute('data-dense', !!band?.dense);
     let col: AltarColumn | null = null;
     if (band) {
       // port-altar-3: the column right of the board is a region on the CSS-px chrome
@@ -283,10 +324,29 @@ export const domMethods = {
       this.verdict.style.maxWidth = '';
       delete this.verdict.dataset.narrow;
       this.lane = h('div', { class: 'lr-altar-lane' }, this.tip, this.verdict, this.hint);
+      this.ruleTab = null;
+      if (band.slim) {
+        // dense-board-4: the slim column folds the held gem's card behind a tab (arrangeColumn).
+        const tab = button(
+          h('span', null, h('b', { 'aria-hidden': 'true' }, '?'), ' Rule'),
+          (e) => {
+            (e.currentTarget as HTMLElement).blur();
+            this.ruleTapped();
+          },
+          { className: 'lr-rule-tab', ariaLabel: 'Show the held gem\u2019s rule' },
+        );
+        tab.hidden = true;
+        this.ruleTab = tab;
+        this.lane.prepend(tab);
+      }
       this.slotEls = L.tray.map(() => h('div', { class: 'lr-altar-slot', 'aria-hidden': 'true' }));
       this.head = h(
         'div',
-        { class: 'lr-altar-head' },
+        {
+          class: 'lr-altar-head',
+          'data-dense': band.dense ? '' : null,
+          'data-slim': band.slim ? '' : null,
+        },
         this.titleEl,
         ...this.slotEls,
         ...this.counts,

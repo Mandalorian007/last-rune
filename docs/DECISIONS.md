@@ -334,3 +334,70 @@ The user brought an external review of the engine at 0.2.0-alpha.1 (full text: `
 - **ws/render-call absorbs debts 4 and 5.** `Renderer.render(frame, camera, target)`; `Host.requestFrame` (rAF on web and Electron, `XRSession.requestAnimationFrame` later); `GameLoop` takes its frame source from the host. The `Host` change is logged in DECISIONS and `CHANGELOG.md` when it lands.
 - **No Forgewilds engine work until Gate 3.** It would inherit the two-overlay model and the fixed pipeline. PLAN row 17's "Forgewilds ws 1" starts after Gate 3.
 - **Timing (PM).** ws/one-overlay starts now in a worktree, because phones already run CSS px and Gate 2 judges phones. It is **held from main** until blind review 7 is compiled, and must keep the desktop and iPad baselines (`pnpm baseline`) unchanged, or within the baseline tolerance with each diff explained. ws/camera and the other Phase 3 rows wait for it and for Gate 2.
+
+### D-040 addendum 8: gate review 7 (Gate 2 blind review, PM, 2026-11-04)
+Blind review 7 on `gate7` (main after glyph-truth, teach-4, chrome-polish-4, menu-flow, strike-free and strike-free-2) scored **7 / 7 / 7 / 7** (SE, iPhone, Pro Max, Android), so Gate 2 fails again. All four say the art, the chrome, the failure feedback and the teaching are close to shippable, and the visuals match the rules wherever they traced them. They agree on:
+- **Dense boards are too small (1 blocker, 3 major).** Pitch is about 26–31 px on The Last Rune, about 30–33 on Lift Shaft and Capacitor Bay, and about 33–39 on Archive and Control Booth. Meanwhile the right ~40% of the screen holds only the tray, one card and FUSE. The magnify loupe exists, but no still shows it. A 10×8 board on a 320 px-high SE at full height can't reach 44 px. **Call:**
+  - the board takes the space: full height, with the column shrinking on dense boards;
+  - hit areas larger than the ring;
+  - badges and the source orb clear of neighbouring sockets;
+  - a held-aim shot with the loupe added to the gate set.
+
+  → ws/dense-board. This is the external review's debt 3 seen from the product side. It is done with today's `layout.setForms` and `surface.setFrame`, without pulling ws/camera forward.
+- **"Strike (2 left)" reads as a lives counter (4/4 major).** That contradicts D-043. It becomes "Strike ×2", with two pips that light one per pulse. The Capacitor card says that one tap sends two pulses and that a miss resets for free. → ws/teach-5.
+- **Teaching cards (3/4).**
+  - The Split and Gate diagram cards wrap into a narrow column ("Power / the no- / arrow end").
+  - Amplify's "once per path" has no picture.
+  - The Furnace line about Channels is cryptic.
+  - The Needs dot (hollow, lit, red) is never explained.
+  - The Capacitor warning is clipped.
+
+  → ws/teach-5. There is still no "would get N" readout (D-043 stands).
+- **Orientation on the board (3/4).**
+  - The Split's input end and the Gate's input sides blur at board size.
+  - The Channel's tray icon flips orientation between levels.
+  - Some locked Channels look drawn across their run (Splitter Mill r2c1, the Lift Shaft rows).
+  - Turn, Undo and Clear have no disabled state.
+  - The teach callout's leader line through the lock badge reads as ⊘.
+
+  → ws/glyph-truth-2.
+- **Minors**, folded into the workstreams above:
+  - the solve card shows no "got 8 ✓";
+  - the ending has no visible skip;
+  - the ☰ menu covers the hint;
+  - the title FUSE box is oversized.
+
+  → ws/teach-5.
+- **Gate unchanged:** an average of at least 8 with no blocker or major issue, then the real-phone retest. ws/one-overlay stays held until these three workstreams have merged and blind review 8 is compiled.
+- **Addendum 8a (PM, on the teach-5 merge):** the ending can be skipped on every viewing, the first included (Skip button and Esc). The rule against skipping the first viewing came from the design doc, not from a user decision. Blind review 7 flagged the missing skip as a phone issue, and a player who can't skip is worse off than one who skips the twist. `docs/design/ending.md` is updated to match.
+- **Addendum 9 (PM, blind review 8, 2026-11-04):** SE 8, iPhone 7.5, Pro Max 7.5, Android 7.5 (avg 7.6). No blockers. Gate 2 not passed (majors remain). Up from 7/7/7/7. Majors and their routes:
+  - (a) Gauge-dot language: only red is captioned in shots; cyan read as "exact"; the hollow ring reads as "0". → ws/teach-6. D-043 holds: the dot means "charge reaches it", no number and no "will be met".
+  - (b) Two-strike rule: "in one strike" is ambiguous; ○○ on Strike is unexplained; the Capacitor card's "stores 8 →" dangles. → ws/teach-6.
+  - (c) Gate card copy and break ("both sides of the arrow"). → ws/teach-6.
+  - (d) A lit Bend reads as a T on the solve screen (the elbow stub glows past the turn). → ws/glyph-truth-3.
+  - (e) Dense boards still tight (The Last Rune on iPhone, Pro Max and Android). The board uses about 55% of the width while the right column is mostly empty; the loupe covers the cells around the target; the "Needs 20" label sits a row from its gauge. → ws/dense-board-3.
+  - (f) Turn is never shown enabled, and 14-* teach shots duplicate 10-*. → shot coverage in ws/polish-8.
+  Minors go to the same streams (Amber/Amplify naming → teach-6; torn carved edges and small-size Split/built-in contrast → glyph-truth-3; source orbs clipped at the bottom → dense-board-3; hall label over "Start here", title FUSE cut, candle over links, Strike lit under the open menu, stray diamond on the solve card → polish-8). Reviewer asks for a "will get N" readout are declined under D-043.
+- **Addendum 10 (PM, blind review 9, 2026-11-04):** SE 7, iPhone 7.5, Pro Max 7.5, Android 7 (avg 7.25). No blockers. Gate 2 not passed. Down from 7.6: the review-8 majors (a)–(f) are fixed and not raised again, but new ones surfaced. All four reviewers raised (A) and (B). Majors and their routes:
+  - (A) A held Split's orientation can't be read: the selection glow washes the tray icon white, so Turn shows no visible change, and nothing previews the gem on the aimed socket. → ws/held-gem.
+  - (B) "in either strike" reads as "each" or "one of them" (the second wording to fail, after "in one strike"). The result shows strike 2 only; strike 1 and what the Capacitor stores are text-only. → ws/teach-7. Rule wording: "on strike 1 or 2" ("on any strike" when there are 3 or more). After Strike, each gauge shows what it got on each strike. This is a result, not a forecast, so D-043 holds.
+  - (C) Split and Gate look alike at board size, and their arrows mean opposite things (the Gate's inputs read as outward arrows). → ws/held-gem: arrows always mean out, and inputs are drawn as inward ports.
+  - (D) The Gate is explained two ways (Relay Tower card vs Foundry chip). → ws/teach-7: one sentence everywhere.
+  - (E) Amplify's "once per path" rule is text-only. → ws/held-gem: a lit Amplify that won't double is drawn idle (no number).
+  - (F) Late-board sockets are about 30–37 px, the magnifier covers the "Needs" label and the hint card, and on the SE the reviewer thinks it sits under the thumb. Pitch is at its landscape ceiling (dense-board-3: iPhone ≤ 39.6). The loupe staying clear of labels and cards → ws/polish-9; anything beyond is the Phase 3 camera (D-044). Not a Gate 2 fix.
+  Minors (three reviewers): the gauge needle never moves, so it looks like a meter → ws/polish-9 (it rests at zero and swings to what arrived after Strike). Also: blocked cells look like square sockets and dark marks on wall blocks look like glitches → ws/held-gem; "keeps 8" → "stores 8" and "Try again" → ws/teach-7; the stray emoji in the hangout header → ws/polish-9. Declined: a three-state "too little / exact" dot (D-043); moving the coffee link or the end-card community buttons (user decisions).
+- **Addendum 11 (PM, blind review 10, 2026-11-04):** SE 7, iPhone 7, Pro Max 7, Android 7 (avg 7.0). No blockers. Gate 2 not passed. The review-9 fixes held: the held gem, per-strike results, one Gate sentence, the needle and the loupe keep-clear weren't raised again, and the round port and arrow on Split and Gate read correctly at codex size. What's left is the same three themes as before plus one regression, so this round fixes them structurally, not with more rewording. Majors and their routes:
+  - (A) Multi-strike target still ambiguous (3 of 4): "on strike 1 or 2" still leaves open whether it means both or either, and whether the other strike can be anything. This is the third wording to fail. → ws/teach-8. One phrase, tested against the sim: gauge note "Needs 8 on one strike". The rule, stated once on the teach page and the Strike ×2 card: each strike is checked on its own; exactly 8 wakes it, less does nothing, more trips it. Result labels name each strike ("1: 0 · 2: 16 ✕"). The Capacitor plan's pre-Strike "Strike 2 sends 16; needs 8" is a forecast, so it goes (D-043).
+  - (B) Regression: codex pictures for two-way gems (Channel, Bend) carry a round port in and an arrow out, which contradicts "either way" (2 of 4). → ws/glyph-truth-4. Port and arrow appear only on one-way gems (Split, Gate). Two-way gems show plain ends both sides. The Capacitor needs a visible straight-through line (no ports).
+  - (C) Pieces met without a lesson: Splitter Mill's fixed Split gets only a FUSE joke; Foundry's Gate has no picture; "same strike" appears in single-strike rooms; "once per path" is undefined (3 of 4). → ws/teach-8. Every piece gets its picture card the first time it appears, fixed or in the tray. The Gate sentence drops "same strike" where there's one strike and says what one port alone does. Amplify defines "path" in plain words.
+  - (D) Dense boards (Archive, The Last Rune, Lift Shaft) are hard to read and tap, and the loupe hides neighbours (3 of 4). Pitch is at the ceiling for the current column. Reviewers point at the lever not yet pulled: the right column (tray, hint, empty wall) takes ~40% of the width. → ws/dense-board-4. On dense altars, slim the column (tray as a compact strip, the hint card behind a tap) and give the width to the board, and keep the loupe smaller and off the aimed neighbours. Not the camera; that stays Phase 3.
+  - (E) Split's round port reads as a highlight at board size, Split vs Gate is told apart mainly by colour, and Capacitor vs Channel are close in hue (Pro Max). → ws/glyph-truth-4: a hollow ring with a dark rim for the port, distinct silhouettes, shape (not just hue) for the Capacitor.
+  Minors → ws/polish-10: the aim ghost reads as placed (make it translucent), ×0 tray gems shrink and brown (keep colour, mark spent), "each lighting a mark", portrait Settings over Play, menu cutting off the hall label, the Capacitor in single-strike Control Booth (check it's an intended decoy and the card says so). Android's "first gem drops the hold" is checked by polish-10. Declined: showing the live charge path or dimming unreached gems before Strike (D-043: no forecast); moving the coffee link or reframing the hangout (user decisions); "Next" order in the hall (by design: next unsolved in story order).
+- **Addendum 12 (PM, blind review 11, 2026-11-04):** SE 7, iPhone 7, Pro Max 7, Android 7 (avg 7.0). No blockers. Gate 2 not passed: third round in a row at 7. The review-10 fixes held: no one raised the codex port/arrow regression, Split vs Gate by colour only, Splitter Mill's untaught Split, or the pre-Strike forecast again. What remains:
+  - (A) Regression from teach-8: the new "Again" cards overflow on the SE (Roof Array's Capacitor line runs off the right edge, Press Unit 4's Amplify line is clipped at the bottom), and the "Again" label reads as a replay button (4 of 4). altar-column's no-clip check did not catch it.
+  - (B) Dense boards (The Last Rune, Lift Shaft, Archive, Capacitor Bay): pieces too small to read port direction, and the loupe still covers the neighbours on The Last Rune (4 of 4). dense-board-4 reached +12.5% on SE Archive only; The Last Rune is height-bound, so a slim column cannot fix it. This is the Phase 3 camera (D-044).
+  - (C) Wording still asked about: "on one strike" (4 of 4, major for 2), "A second Amplify doesn't double again" (3 of 4), "○○ ○○ = your two strikes" (3 of 4), the Capacitor card's fixed numbers, the Control Booth decoy being gold-ringed in the tray (Pro Max), the tray Capacitor drawn vertical vs horizontal on the board (Pro Max).
+  - PM call: rewording has not moved the score for three rounds, and the biggest remaining major (B) needs the camera. Iteration stops here; the user chooses between a real-phone check now and bringing the Phase 3 camera forward. The regression (A) and the small copy items in (C) are fixed either way. Decided (PM, same day): Phase 3 comes forward. polish-11 fixes (A) and (C); one-overlay is rebased and merged, then ws/camera starts with The Last Rune and Lift Shaft as its acceptance boards; blind review 12 follows the camera.
+
+## D-045: The save records which gems have been taught (2026-11-04, PM)
+Proposed by teach-8 (D-040 add. 11, major C). The save gains an optional `codex.taught`, a map from gem kind to the altar whose arrival card taught it. It is written when an arrival card opens. Any gem kind on an altar that is not in `taught` gets its pictured card ("Again" if it was earned but never handled), whether the gem is fixed or in the tray and in any play order. Older saves load unchanged: a missing field means nothing has been taught yet. The field is stored in localStorage only, like the rest of the save. Also ruled with it: the Capacitor plan's red "this gauge will trip" warning before Strike is a forecast under D-043 and is removed. Per-strike results after Strike stay.

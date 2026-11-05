@@ -258,7 +258,9 @@ export class Hud {
     const g = at.gap ?? 6;
     const b = at.bounds;
     const ring = { x: at.x - at.w / 2, y: at.y - at.h / 2, width: at.w, height: at.h };
-    const obstacles: Obstacle[] = [{ rect: ring, weight: 4 }, ...this.plateBoxes(null, 10)];
+    // A margin round each plate (polish-8): a tag flush under a plate read as one label with it
+    // ("The Last Rune: Start here"), so the tag keeps a gap's clearance or moves beside the ring.
+    const obstacles: Obstacle[] = [{ rect: ring, weight: 4 }, ...this.plateBoxes(null, 10, g)];
     const menu = this.box(this.menuBtn);
     if (menu) obstacles.push({ rect: menu, weight: 10 });
     const inner = { left: b.left + g, top: b.top + g, right: b.right - g, bottom: b.bottom - g };
@@ -309,13 +311,20 @@ export class Hud {
     };
   }
 
-  /** Every door plate's box as an obstacle (but `skip`'s), design px. */
-  private plateBoxes(skip: string | null, weight: number): Obstacle[] {
+  /** Every door plate's box as an obstacle (but `skip`'s), grown by `pad` each side, design px. */
+  private plateBoxes(skip: string | null, weight: number, pad = 0): Obstacle[] {
     const out: Obstacle[] = [];
     for (const el of this.doorLayer.querySelectorAll<HTMLElement>('.lr-door')) {
       if (skip && el.dataset.door === skip) continue;
-      const rect = this.box(el);
-      if (rect) out.push({ rect, weight });
+      const r = this.box(el);
+      if (!r) continue;
+      const rect = {
+        x: r.x - pad,
+        y: r.y - pad,
+        width: r.width + 2 * pad,
+        height: r.height + 2 * pad,
+      };
+      out.push({ rect, weight });
     }
     return out;
   }
@@ -404,6 +413,21 @@ export class Hud {
   menu(open: boolean): void {
     this.root.toggleAttribute('data-open', open);
     this.scrim.hidden = !open;
+    // polish-10: a door plate the open list would cut mid-word ("Lift S…") steps out while
+    // the list is open, so the dimmed hall shows only whole names. The sheet is the list's
+    // panel (chrome-styles.ts `.lr-hud[data-open]::before`, 6 px past it), plus its shadow.
+    const sheet = open ? this.root.getBoundingClientRect() : null;
+    for (const el of this.doorLayer.querySelectorAll<HTMLElement>('.lr-door')) {
+      const r = sheet ? el.getBoundingClientRect() : null;
+      const under =
+        !!sheet &&
+        !!r &&
+        r.left < sheet.right + 8 &&
+        sheet.left - 8 < r.right &&
+        r.top < sheet.bottom + 8 &&
+        sheet.top - 8 < r.bottom;
+      el.toggleAttribute('data-under-menu', under);
+    }
     // The list and a door's card never show together (mobile-6-chrome).
     if (open) this.plate(null);
     this.menuBtn.setAttribute('aria-expanded', String(open));

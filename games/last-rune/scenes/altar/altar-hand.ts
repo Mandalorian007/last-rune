@@ -162,7 +162,11 @@ export const handMethods = {
     this.logPlace(cell, null);
     // Phones (mobile-5-board): setting a gem down ends the hold, so the valid-socket rings
     // clear and Turn turns the gem just placed; the next tap on the tray takes another.
-    if (this.view.layout.phone) this.hand = null;
+    if (this.view.layout.phone) {
+      this.hand = null;
+      // dense-board-4: setting the gem down folds its rule card behind the tab again.
+      if (this.ruleTab) this.infoPin = null;
+    }
     this.changed(cell);
   },
 
@@ -422,9 +426,9 @@ export const handMethods = {
       const n = this.board.remaining(s.gem);
       const held = this.hand && !this.hand.from && this.hand.kind === s.gem;
       t.state = n === 0 ? 'spent' : held || i === this.hoverSlot ? 'hover' : 'idle';
-      // All of a kind on the board: a dimmed, smaller copy of the gem stays in its slot ("all
-      // placed" under it), so the tray keeps its shape and nothing there reads as a button.
-      t.size = n === 0 && L.phone ? s.size * 0.8 : s.size;
+      // All of a kind on the board: a slightly dimmed copy of the gem stays in its slot at full
+      // size (polish-10: a smaller one read as another gem), its "×0" badge struck through.
+      t.size = s.size;
       const lift = this.view.trayLift[i]!;
       const fresh = (i === 0 && this.teaching) || this.teachTray.has(s.gem);
       const bob =
@@ -443,6 +447,8 @@ export const handMethods = {
     // Held gem: follows the pointer, snaps to the socket it would land in.
     const hand = this.hand;
     const showHeld = hand && (hand.from ? this.press?.dragging : true);
+    // Every tray gem sits upright unless it is the one in hand (set below).
+    for (const t of this.view.tray) t.rot = 0;
     if (!hand || !showHeld) {
       this.view.held = null;
       this.showRefusal(null, null);
@@ -452,6 +458,7 @@ export const handMethods = {
     let snapped = false;
     let size: number | undefined;
     let lift: number | undefined;
+    let rest = false;
     const p = this.ctx.input.pointer;
     const cell = this.keyboard ? this.cursor : this.hoverCell;
     let refused: string | null = null;
@@ -487,10 +494,29 @@ export const handMethods = {
         if (L.phone) {
           size = Math.round(s.size * TRAY_HELD_SCALE);
           lift = 0;
+          rest = true;
         }
       }
     }
     this.showRefusal(refused ? cell : null, refused);
+    // held-gem: on a phone, while the gem is a ghost on a socket, a calm copy at its turn stays
+    // in its tray slot (inside its ring), so the tray still says what is in hand.
+    const si = hand.from ? -1 : L.tray.findIndex((s) => s.gem === hand.kind);
+    const ts = si >= 0 ? L.tray[si]! : null;
+    const slot =
+      L.phone && snapped && ts
+        ? { x: ts.x, y: ts.y, size: Math.round(ts.size * TRAY_HELD_SCALE) }
+        : null;
+    // The slot's own (unturned) copy steps aside while the held gem or its copy sits there.
+    // Resting in its slot, the held gem is the tray's own copy, flat and turned to the hand's
+    // turn (the view draws no second gem there). Snapped, a calm turned copy stays in the slot.
+    if (ts && (rest || slot)) {
+      const t = this.view.tray[si]!;
+      t.state = 'idle';
+      t.rot = isRotational(hand.kind) ? hand.rot : 0;
+      t.lift = 0;
+      this.view.trayLift[si] = 0;
+    }
     const h0 = this.view.held;
     if (h0) {
       h0.kind = hand.kind;
@@ -500,8 +526,20 @@ export const handMethods = {
       h0.snapped = snapped;
       h0.size = size;
       h0.lift = lift;
+      h0.rest = rest;
+      h0.slot = slot;
     } else
-      this.view.held = { kind: hand.kind, rot: hand.rot, x: pt.x, y: pt.y, snapped, size, lift };
+      this.view.held = {
+        kind: hand.kind,
+        rot: hand.rot,
+        x: pt.x,
+        y: pt.y,
+        snapped,
+        size,
+        lift,
+        rest,
+        slot,
+      };
   },
 
   /** With a gem in hand (not dragging), is the pointer or cursor on one of the player's gems? */

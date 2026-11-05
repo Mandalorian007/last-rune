@@ -4,7 +4,7 @@ Owner: story-scenes. Code: `games/last-rune/scenes/ending/`. The script is `cont
 
 ## How it is reached
 
-When the Last Rune is solved and the facility is complete, `flow.finishSolve()` hands the `SolveMoment` to the `ending` scene factory (`main.ts`). "Back to the hall" calls `flow.finishEnding()`. The save is kept and the hall is in its post-game state. A replay of the Last Rune (`moment.firstTime === false`) plays the ending again, and that replay can be skipped with the Skip button or Esc.
+When the Last Rune is solved and the facility is complete, `flow.finishSolve()` hands the `SolveMoment` to the `ending` scene factory (`main.ts`). "Back to the hall" calls `flow.finishEnding()`. The save is kept and the hall is in its post-game state. A replay of the Last Rune (`moment.firstTime === false`) plays the ending again. Any viewing, the first one too (teach-5, blind review 7), can be skipped with the Skip button or Esc; on phones "Plays by itself" stands beside Skip.
 
 ## Beats as implemented
 
@@ -51,7 +51,7 @@ The Join ThunderClap Gaming link and the Ko-fi link are plain `<a href target="_
 - **Screen readers:** the hangout window is `aria-hidden`; a polite live region says what happens in two short lines (`HANGOUT_SUMMARY`).
 - **Text size:** at 125% or 150% the window grows to 1680×920 design px and the sidebar widens to 560 so every channel name fits whole.
 - **Captions:** FUSE's lines go through `ctx.fuse.say`, so they use the player's caption speed.
-- **Keyboard and pad:** Back to the hall is focused on the end card. Tab, the arrow keys or the d-pad move between Join, Ko-fi and Back (`ui/menu-nav.ts`); the pad's A clicks the focused control. Esc skips on replays.
+- **Keyboard and pad:** Back to the hall is focused on the end card. Tab, the arrow keys or the d-pad move between Join, Ko-fi and Back (`ui/menu-nav.ts`); the pad's A clicks the focused control. Esc skips (any viewing).
 - **Text size:** the three-line title card sits at top 92 with tighter follow-up lines so it clears the safety slip at 100% and 150%.
 - **Reduce flashes** (`ctx.settings.reduceFlashes`):
   - The white-out fades over 2.8 s instead of 1.6 s, to a dimmer warm white.

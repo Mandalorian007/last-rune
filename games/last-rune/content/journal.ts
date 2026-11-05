@@ -100,8 +100,8 @@ export const JOURNAL: readonly JournalPage[] = [
     unlockedBy: 'press-unit-4',
     dateline: 'Day 11,288',
     source: 'pitch',
-    text: "Amber before magenta. Wrote it on the wall so I'd stop forgetting.",
-    rebuttal: 'This unit has not read that page. Correct, though. Amber before magenta.',
+    text: "Amplify before Split. Wrote it on the wall so I'd stop forgetting.",
+    rebuttal: 'This unit has not read that page. Correct, though. Amplify before Split.',
     clues: [3],
   },
   {
@@ -110,7 +110,7 @@ export const JOURNAL: readonly JournalPage[] = [
     unlockedBy: 'foundry',
     dateline: 'Day 11,604',
     source: 'pitch',
-    text: 'Six hundred and twelve gems. The magenta ones are too proud. Keeping them anyway.',
+    text: 'Six hundred and twelve gems. The Splits are too proud. Keeping them anyway.',
     rebuttal: 'Six hundred and twelve. Somebody counted them. Somebody here counts everything.',
   },
   {
