@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "The Last Rune — a gem-circuit puzzle game for the browser (WebGPU). First game on the ThunderClap engine.",
+  "description": "The Last Rune \u2014 a gem-circuit puzzle game for the browser (WebGPU). First game on the ThunderClap engine.",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
@@ -31,7 +31,8 @@
     "check:host-electron": "pnpm --filter @thunderclap/host-electron check",
     "check:game": "pnpm typecheck && pnpm lint && pnpm check:boundaries && pnpm test",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "puzzle": "tsx tools/puzzle.ts"
+    "puzzle": "tsx tools/puzzle.ts",
+    "social": "playwright test -c scripts/cover/playwright.config.ts"
   },
   "dependencies": {
     "@thunderclap/engine": "workspace:*",
