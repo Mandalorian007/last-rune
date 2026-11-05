@@ -3,6 +3,7 @@ import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { trayRemaining } from '../../games/last-rune/rules';
 import { type Cell, MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
+import { playOrder } from './altar-audit';
 import { DEV_URL, settled, waitFrames } from './helpers';
 
 // port-altar-3: the altar's right column lives on the chrome's layout regions, so on every
@@ -221,6 +222,79 @@ async function unfit(page: Page): Promise<string[]> {
   });
 }
 
+/**
+ * polish-11 (D-040 add. 12, A): the words on a card, line by line. teach-8's "Again" cards ran
+ * a nowrap line off the SE's card ("sends nothin") and clipped the Amplify card's last line at
+ * its foot; the card-level checks above missed both because they only met each card's first
+ * page, in hall order. Every element in a lane card with words of its own must not scroll (its
+ * scroll size within its client box), and every line box of every text node must sit inside
+ * the card's visible box (inside its border).
+ */
+async function cardText(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const out: string[] = [];
+    const shown = (el: Element) => {
+      if (el.closest('[hidden]')) return false;
+      const cs = getComputedStyle(el);
+      return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) >= 0.05;
+    };
+    for (const card of document.querySelectorAll<HTMLElement>('.lr-altar-lane > *')) {
+      if (!shown(card) || card.offsetHeight === 0 || !card.textContent?.trim()) continue;
+      const what = card.className.split(' ')[0];
+      const r = card.getBoundingClientRect();
+      const cs = getComputedStyle(card);
+      const box = {
+        l: r.left + Number.parseFloat(cs.borderLeftWidth),
+        r: r.right - Number.parseFloat(cs.borderRightWidth),
+        t: r.top + Number.parseFloat(cs.borderTopWidth),
+        b: r.bottom - Number.parseFloat(cs.borderBottomWidth),
+      };
+      if (card.scrollHeight > card.clientHeight + 1)
+        out.push(`${what} scrolls (${card.scrollHeight} > ${card.clientHeight})`);
+      if (card.scrollWidth > card.clientWidth + 1)
+        out.push(`${what} scrolls sideways (${card.scrollWidth} > ${card.clientWidth})`);
+      for (const el of [card, ...card.querySelectorAll<HTMLElement>('*')]) {
+        if (!shown(el)) continue;
+        const texts = [...el.childNodes].filter(
+          (n): n is Text => n.nodeType === 3 && !!n.textContent?.trim(),
+        );
+        if (texts.length === 0) continue;
+        const words = (el.textContent ?? '').trim().slice(0, 32);
+        // Only a box that clips can cut its words; text that spills from one that doesn't (a
+        // number chip's glyphs, a button's 44 px hit area) is held by the rect check below.
+        const st = getComputedStyle(el);
+        if (st.display !== 'inline' && (st.overflowX !== 'visible' || st.overflowY !== 'visible')) {
+          if (el.scrollWidth > el.clientWidth + 1)
+            out.push(`${what} words wider than their box "${words}"`);
+          if (el.scrollHeight > el.clientHeight + 1)
+            out.push(`${what} words taller than their box "${words}"`);
+        }
+        for (const t of texts) {
+          const range = document.createRange();
+          range.selectNodeContents(t);
+          // A text rect is the font's whole em box, about 2 px taller than its 1.25 line: the
+          // last line's box may overhang the card's unpadded bottom by that much with every
+          // glyph inside (cut words show as a scroll above). Sideways there is no slack.
+          const slack = 2;
+          for (const q of range.getClientRects()) {
+            if (q.width === 0 && q.height === 0) continue;
+            if (
+              q.left < box.l - 0.5 ||
+              q.right > box.r + 0.5 ||
+              q.top < box.t - slack ||
+              q.bottom > box.b + slack
+            ) {
+              out.push(`${what} text leaves the card "${t.textContent?.trim().slice(0, 32)}"`);
+              break;
+            }
+          }
+        }
+      }
+    }
+    return out;
+  });
+}
+
 function overlaps(list: Part[]): string[] {
   const hit = (a: Box, b: Box) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
   const out: string[] = [];
@@ -240,6 +314,7 @@ async function check(page: Page, id: MachineId, label: string, problems: string[
   for (const o of overlaps(m.parts)) problems.push(`${label}: ${o}`);
   for (const s of m.small) problems.push(`${label}: card text ${s}`);
   for (const s of await unfit(page)) problems.push(`${label}: ${s}`);
+  for (const s of await cardText(page)) problems.push(`${label}: ${s}`);
   if (SHOTS)
     await page.screenshot({
       path: `${SHOTS}/${page.viewportSize()?.width}-${label.replace(/\W+/g, '-')}.png`,
@@ -312,6 +387,62 @@ for (const vp of PHONES) {
         await check(page, id, `${id} verdict`, problems);
         await page.evaluate(() => (window as G).__game.flow.closePuzzle());
       }
+      expect(problems).toEqual([]);
+    });
+
+    test(`every page of every arrival card fits, in play order, at ${vp.width}×${vp.height}`, async ({
+      page,
+    }) => {
+      // polish-11 (D-040 add. 12, A): each altar met as a player meets it (everything before it
+      // in play order solved, nothing taught out of order), so its "taught before, first in the
+      // hand" pages (Roof Array's Capacitor, Press Unit 4's Amplify) come up. Every page of the
+      // card is checked, not only the first.
+      await boot(page, vp.inset);
+      const problems: string[] = [];
+      const order = playOrder();
+      let pages = 0;
+      for (const [at, id] of order.entries()) {
+        await page.evaluate(
+          ({ solved, id }) => {
+            const g = (window as G).__game;
+            if (g.flow.state === 'puzzle') g.flow.closePuzzle();
+            g.save.update((d: G) => {
+              d.flags.hallIntro = true;
+              d.flags.dotTold = solved.length > 0;
+              d.settings.captionSpeed = 'instant';
+              d.progress.solved = solved;
+              d.puzzles = {};
+              d.codex.taught = {};
+            });
+            if (g.flow.state !== 'hall') g.flow.continueGame();
+            g.flow.openPuzzle(id);
+            g.fuse.hush();
+          },
+          { solved: order.slice(0, at) as unknown as string[], id },
+        );
+        await expect(page.locator('.lr-altar')).toBeVisible();
+        // Under load the card can come up a few frames after the altar.
+        await page
+          .locator('.lr-altar-tip:not([hidden]) .lr-info-next')
+          .first()
+          .waitFor({ timeout: 3_000 })
+          .catch(() => {});
+        for (let i = 0; i < 8; i++) {
+          await page.evaluate(() => (window as G).__game.fuse.hush());
+          const next = page.locator('.lr-altar-tip:not([hidden]) .lr-info-next');
+          if ((await next.count()) === 0) break;
+          const name = await page.evaluate(
+            () =>
+              document.querySelector('.lr-altar-tip :is(.lr-info-row, .lr-info-page) > b')
+                ?.textContent ?? '?',
+          );
+          await check(page, id, `${id} card ${i + 1} (${name.trim()})`, problems);
+          pages++;
+          await next.first().tap();
+          await waitFrames(page, 3);
+        }
+      }
+      expect(pages, 'arrival card pages checked').toBeGreaterThan(15);
       expect(problems).toEqual([]);
     });
 

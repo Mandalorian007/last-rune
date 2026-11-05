@@ -55,7 +55,8 @@ ${HEAD} .lr-altar-holding i {
   flex: none; width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 4px currentColor;
 }
 
-/* Slot rings over the canvas gems: held, taught, and the first visit's breathing tray. */
+/* Slot rings over the canvas gems: held, and the first visit's breathing tray. polish-11: an
+   arrival card no longer rings its tray gem (it read as picked up). */
 ${HEAD} .lr-altar-slot {
   position: absolute; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; display: none;
 }
@@ -66,8 +67,7 @@ ${HEAD} .lr-altar-slot {
 ${HEAD} .lr-altar-slot[data-held]:not([data-empty]) {
   display: block; width: var(--lr-held-d) !important; height: var(--lr-held-d) !important;
 }
-${HEAD}[data-first] .lr-altar-slot:not([data-empty]):not([data-held]),
-${HEAD} .lr-altar-slot[data-teach]:not([data-empty]):not([data-held]) {
+${HEAD}[data-first] .lr-altar-slot:not([data-empty]):not([data-held]) {
   display: block; box-shadow: 0 0 0 2px #ffd77a, 0 0 12px 2px rgba(255,205,110,0.6);
   animation: lr-col-breathe 1.6s ease-in-out infinite;
 }
@@ -123,6 +123,9 @@ ${LANE} > .lr-altar-tip b { margin-right: 4px; }
 ${LANE} > .lr-altar-tip .lr-info-eg {
   display: block; margin-top: 2px; font: 14px/1.3 ${SERIF}; color: #a8ccf5; white-space: normal;
 }
+/* polish-11: Amplify's second sentence runs on after the first (a line of its own cost the SE's
+   lane the line it lacked). */
+${LANE} > .lr-altar-tip .lr-info-eg[data-flow] { display: inline; margin-top: 0; }
 /* teach-4: the first Gate, Split or Capacitor card shows the gem as the codex draws it (the
    real gem material), turned as it sits here, with the charge going in and out. It floats
    beside the rule so the card stays the height of its words (SE lane: 163 px). */
@@ -162,9 +165,10 @@ ${LANE} > .lr-altar-tip .lr-info-pips { display: inline-flex; gap: 4px; margin-l
 ${LANE} > .lr-altar-tip .lr-info-pips i {
   display: block; width: 9px; height: 9px; box-sizing: border-box; border: 2px solid #e8c06a; border-radius: 50%;
 }
-/* The Capacitor's two strikes, each on its own line, never broken mid-way. */
+/* The Capacitor's two strikes, each on its own line. polish-11: a line may wrap (a nowrap line
+   ran off the SE's card). */
 ${LANE} > .lr-altar-tip .lr-info-strip { display: block; color: #a8ccf5; }
-${LANE} > .lr-altar-tip .lr-info-strip > span { display: block; white-space: nowrap; }
+${LANE} > .lr-altar-tip .lr-info-strip > span { display: block; white-space: normal; }
 /* teach-4: the gauge-dot line starts with the dot it explains. */
 ${LANE} > .lr-altar-hint .lr-need-lamp {
   display: inline-block; width: 10px; height: 10px; margin: 0 6px 0 0; border-radius: 50%; vertical-align: 0.05em;
@@ -217,6 +221,18 @@ ${LANE} > .lr-altar-tip[data-fig] .lr-info-foot .lr-info-next { padding: 0 8px; 
 /* A short lane: the picture shrinks so the words still fit without a scroll (altar-column). */
 ${LANE} > .lr-altar-tip[data-fig][data-tight] .lr-info-foot { padding-top: 1px; padding-bottom: 1px; margin-bottom: 1px; }
 ${LANE} > .lr-altar-tip[data-fig][data-tight] .lr-info-foot .lr-fig { zoom: 0.62; }
+/* polish-11: still too tall, the picture is the button's height and drops its number chips
+   (at that size they were under the 14 px floor); the gem and its bolts still show which piece. */
+${LANE} > .lr-altar-tip[data-fig][data-tighter] .lr-info-foot .lr-fig:not([data-small='true']) { zoom: 0.5; }
+${LANE} > .lr-altar-tip[data-fig][data-tighter] .lr-info-foot :is(.lr-fig-chip, .lr-fig-nogo) { display: none; }
+${LANE} > .lr-altar-tip[data-fig][data-tighter] { padding-top: 4px; }
+/* polish-11: a piece taught at another altar names itself in the head row ("Again" read as a
+   button). */
+${LANE} > .lr-altar-tip .lr-info-page > b { display: block; margin: 0; font-size: 14px; line-height: 1.2; }
+${LANE} > .lr-altar-tip:not([data-named]) .lr-info-page > b,
+${LANE} > .lr-altar-tip[data-named] .lr-info-row > b { display: none; }
+/* polish-11: a tight lane runs the Capacitor's two strikes on, not a line each. */
+${LANE} > .lr-altar-tip[data-tight] .lr-info-strip > span { display: inline; }
 ${LANE} > .lr-altar-tip .lr-info-page {
   flex: 1 1 auto; min-width: 0; margin: 0; white-space: normal; text-align: left;
   font: 13px/1.2 ${SERIF}; letter-spacing: 0; color: #c9b995;

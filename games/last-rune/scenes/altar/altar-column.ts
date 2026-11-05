@@ -155,8 +155,10 @@ export const columnMethods = {
 
   /**
    * Phones: the arrival card points at what it teaches. A fixed gem's page draws a gold line
-   * from the card to that gem on the board (which also pulses); a tray gem's page rings its
-   * tray tile. The line runs between the sockets (`leaderPath`); where it would cross a gauge
+   * from the card to that gem on the board (which also pulses). A tray gem's page marks nothing
+   * in the tray (polish-11, D-040 add. 12: its gold ring read as the gem already picked up, so
+   * Control Booth's decoy Capacitor looked recommended); the card's picture and name say which
+   * gem, and nothing is held until the player taps. The line runs between the sockets (`leaderPath`); where it would cross a gauge
    * or a Gives/Needs card it is left out and the ring alone marks the gem.
    */
   updateTeachPointer(this: AltarScene): void {
@@ -169,10 +171,6 @@ export const columnMethods = {
         ? this.teachPages()[Math.min(this.introPageIdx, this.introPages() - 1)]
         : undefined;
     const row = page?.kind === 'gem' ? page : undefined;
-    const trayGem = row && row.how !== 'fixed' ? row.gem : null;
-    L.tray.forEach((t, i) => {
-      this.slotEls[i]?.toggleAttribute('data-teach', t.gem === trayGem);
-    });
     const svg = this.leader;
     if (!svg) return;
     const at = row?.how === 'fixed' ? this.teachCellOf(row.gem) : undefined;
@@ -365,16 +363,18 @@ export const columnMethods = {
     // draws its picture smaller rather than scroll. card-fit: so does one whose head row is too
     // narrow for "New here" beside the picture and the button (an iPhone's 172 px column ran
     // "New" under "Got it"). Turning the page clears it (altar-info).
+    // polish-11: a reminder whose head row is still too narrow for its name puts the name back in
+    // its words; one still too tall (Press Unit 4's Amplify on an SE) draws its picture the
+    // button's height, without the number chips that size can't carry.
     const tip = this.tip;
     const page = tip.querySelector<HTMLElement>('.lr-info-foot .lr-info-page');
-    if (
-      tip.hasAttribute('data-fig') &&
-      !tip.hasAttribute('data-tight') &&
-      tip.offsetHeight > 0 &&
-      (tip.scrollHeight > tip.clientHeight + 1 ||
-        (!!page && page.scrollWidth > page.clientWidth + 1))
-    )
-      tip.toggleAttribute('data-tight', true);
+    const tall = tip.offsetHeight > 0 && tip.scrollHeight > tip.clientHeight + 1;
+    const wide = tip.offsetHeight > 0 && !!page && page.scrollWidth > page.clientWidth + 1;
+    if (tip.hasAttribute('data-fig') && (tall || wide)) {
+      if (!tip.hasAttribute('data-tight')) tip.toggleAttribute('data-tight', true);
+      else if (wide && tip.hasAttribute('data-named')) tip.removeAttribute('data-named');
+      else if (tall && !tip.hasAttribute('data-tighter')) tip.toggleAttribute('data-tighter', true);
+    }
     // A card taller than its region scrolls; until its end is in view it says there is more
     // (a fade and a ▾ over its foot) and takes touches, so the rest is a swipe away.
     for (const card of [this.tip, this.verdict, ...this.capEls]) {

@@ -134,11 +134,13 @@ export const FIRST_MISS_LINE = 'A miss costs nothing. Strike as often as you lik
  * miss resets for free. teach-6: it names the marks beside "Strike ×2" (blind review 8 read
  * them as "00"); the card's title shows the same marks. teach-8: "each lighting a mark" didn't
  * say what a mark was (blind review 10); it says the marks are the strikes.
+ * polish-11 (D-040 add. 12, C): "Strike ×2 ○○ ○○ = your two strikes" read as four strikes, so
+ * the marks show once, in the title, and the rule follows it after a colon: "Strike ×2 ○○: your
+ * two strikes, one tap sends both."
  */
 export function strikesRule(pulses: number): string {
   const n = pulses === 2 ? 'two' : String(pulses);
-  const marks = '○'.repeat(pulses);
-  return `${marks} = your ${n} strikes. One tap sends ${pulses === 2 ? 'both' : 'them all'}. A miss resets for free.`;
+  return `your ${n} strikes, one tap sends ${pulses === 2 ? 'both' : 'them all'}. A miss resets for free.`;
 }
 /**
  * teach-8 (D-040 add. 11, A): the multi-strike rule, said once in plain words, on its own page
@@ -153,28 +155,39 @@ export function eitherName(_pulses: number): string {
 }
 export const ONE_STRIKE_RULE =
   "Each strike is checked on its own. Exactly the gauge's number on one strike wakes it. Less does nothing; more trips it.";
+/**
+ * polish-11 (D-040 add. 12, A): the card's own form, under its title "On one strike". The title
+ * says "each strike on its own", so the card drops that sentence: with it the page ran a line
+ * past an SE's lane (Capacitor Bay). The codex and the a11y briefing keep `ONE_STRIKE_RULE`.
+ */
+export const ONE_STRIKE_CARD =
+  "Exactly the gauge's number wakes it. Less does nothing; more trips it.";
 export function eitherRule(_pulses: number): string {
-  return ONE_STRIKE_RULE;
+  return ONE_STRIKE_CARD;
 }
 /**
  * teach-5: the first Amplify card. Its picture shows 4 in, 8 out; the line under it says the
  * rest. teach-6: in words ("8 → 8" read as a typo). teach-8: "once per path" never said what a
  * path was (blind review 10; Furnace has two built-in Amplifies), so it says "once" and the
  * line under it says a second one doesn't double again.
+ * polish-11 (D-040 add. 12, C): "A second Amplify" left "second where?" and "does it pass the
+ * charge?" open; the card uses the rule's own words (codex `amplify.rule`, less "even split
+ * since", which the long-press card and the codex keep).
  */
 export const AMPLIFY_ONCE = 'Doubles the charge once.';
-export const AMPLIFY_AGAIN = "A second Amplify doesn't double again.";
+export const AMPLIFY_AGAIN = 'Charge already doubled passes through unchanged.';
 /**
- * teach-4: the Capacitor's two strikes, with this altar's charge (before FUSE's joke).
+ * teach-4: the Capacitor's two strikes (before FUSE's joke).
  * teach-6: each line says the whole strike (blind review 8: "Strike 1: stores 8 →" dangled).
  * teach-7: "stores", not "keeps" (blind review 9: jargon), the word the board's tag uses.
+ * polish-11 (D-040 add. 12, C): no numbers. "stores 8 … 8 + 8 = 16" read as if a Capacitor
+ * always sends 16 (Roof Array, The Last Rune); the lines say what it does with any charge, and
+ * no line forecasts this board before Strike (D-043).
  */
-export function capacitorStrip(charge: number): [string, string] {
-  return [
-    `Strike 1: stores ${charge}, sends nothing.`,
-    `Strike 2: sends ${charge} + ${charge} = ${charge * 2}.`,
-  ];
-}
+export const CAPACITOR_STRIP: readonly [string, string] = [
+  'Strike 1: stores, sends nothing.',
+  'Strike 2: sends stored + new.',
+];
 
 export const SLOT_ACTIONS = ['slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6'] as const;
 export const CYAN: RGBA = [0.25, 1.3, 1.8, 1];

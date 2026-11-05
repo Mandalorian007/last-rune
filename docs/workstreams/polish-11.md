@@ -19,3 +19,22 @@ Don't touch the gauge note wording ("on one strike"), the camera, or the dense-b
 - Don't run `BASELINE_UPDATE`; list the diffs. Commit to `ws/polish-11`, never merge. Log below.
 
 ## Log
+
+**2026-11-04, done (ws/polish-11).**
+1. Card overflow fixed with staged fit in `arrangeColumn`: `data-tight` (fig 0.62), then the name falls back into the text if the head slot is too narrow, then the new `data-tighter` (fig 0.5, chips and no-go marks hidden, less top padding). Text stays at its normal size, never below 14 px. The Capacitor strip wraps, and on tight cards the two strikes run on in one paragraph. Spec: altar-column `check()` now fails when a card scrolls, when a clipping box's scroll size exceeds its client size, or when a text rect leaves the card. A new per-phone test walks every arrival card page in play order (fresh `codex.taught`) on all four phones (>15 pages each).
+2. "Again" dropped. Reminder pages show the gem name in the head slot ("New here" stays for first sight); no label on the button row.
+3. Strikes page: "Strike ×2 ○○: your two strikes, one tap sends both. A miss resets for free." The marks appear once.
+4. Amplify card: "Doubles the charge once." + "Charge already doubled passes through unchanged." The 4→8→8 two-Amplify picture doesn't fit the SE card, so it was skipped.
+5. Capacitor card, no numbers: "Strike 1: stores, sends nothing." / "Strike 2: sends stored + new." (The brief's longer wording won't fit the SE in 3 lines.)
+6. Tray teach ring removed. Opening a card no longer marks any tray gem (`data-teach` toggle gone). mobile-teach asserts that no tray tile is ringed before a tap.
+7. Capacitor is stated as two-way. Codex rule: "Stores the first charge it gets; nothing comes out. Next strike, the new charge pushes both out, straight on. Works any way round." Chip: "Stores its first charge; next strike, lets out both. Any way round." Turn already says no turn is needed.
+Also: the "On one strike" arrival card uses a short form, "Exactly the gauge's number wakes it. Less does nothing; more trips it." (`ONE_STRIKE_CARD`). The codex and a11y keep `ONE_STRIKE_RULE`. The script.md rows are updated.
+
+Gates:
+- `pnpm check` green (611 unit tests); `check:boundaries` ok; `build` ok.
+- Targeted specs green (altar-column 16/16 after the dot-legend false-positive fix).
+- Full `pnpm test:e2e` (offset 641): 201 passed, 20 skipped, 0 failed, no flakes.
+
+Shots: `docs/design/screens/local/polish-11/<phone>/`. I checked the named shots on all phones; every card fits and Control Booth has no gold ring.
+
+Baseline, not updated: 18 diffs, all the same cause. The new Capacitor codex rule text ("…straight on. Works any way round.") in the rule strip on capacitor-bay, lift-shaft and control-booth (empty and solved) × desktop-720, desktop-1080 and ipad. Nothing else changed.

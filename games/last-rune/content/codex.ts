@@ -110,8 +110,11 @@ export const CODEX: Readonly<Record<GemKind, CodexEntry>> = {
     gem: 'capacitor',
     name: 'Capacitor',
     // teach-7: "stores" everywhere (blind review 9: "keeps" was jargon).
-    rule: 'Stores the first charge it gets; nothing comes out. Next strike, the new charge pushes both out together, straight on.',
-    chip: 'Stores its first charge; next strike, lets out both.',
+    // polish-11 (D-040 add. 12, C): it lies along its run on the board but stands upright in the
+    // tray and the Codex (as a Channel does); it says it works any way round, so the turn it is
+    // drawn at never reads as something to fix.
+    rule: 'Stores the first charge it gets; nothing comes out. Next strike, the new charge pushes both out, straight on. Works any way round.',
+    chip: 'Stores its first charge; next strike, lets out both. Any way round.',
     maths: 'Strike 1: stores 4. Strike 2: 4 + 4 → 8.',
   },
 };

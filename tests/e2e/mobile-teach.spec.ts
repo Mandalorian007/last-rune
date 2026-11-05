@@ -341,9 +341,12 @@ for (const vp of PHONES) {
               leader: document.querySelectorAll(
                 '.lr-teach-leader :is(.lr-leader-line, .lr-leader-ring)',
               ).length,
-              lit: [...document.querySelectorAll<HTMLElement>('.lr-altar-slot[data-teach]')].filter(
-                (s) => getComputedStyle(s).display !== 'none',
-              ).length,
+              // A ringed tray tile with nothing in hand (the first altar's breathing tray aside).
+              lit: [
+                ...document.querySelectorAll<HTMLElement>(
+                  '.lr-altar-head:not([data-first]) .lr-altar-slot:not([data-held])',
+                ),
+              ].filter((s) => getComputedStyle(s).display !== 'none').length,
             };
           });
           if (!g.next || !g.card) break;
@@ -357,14 +360,15 @@ for (const vp of PHONES) {
           const c = g.card;
           if (n.l < c.l - 0.5 || n.r > c.r + 0.5 || n.t < c.t - 0.5 || n.b > c.b + 0.5)
             problems.push(`${tag}: "${g.label}" pokes out of the card`);
-          // The card points at what it teaches: a line to a fixed gem, a lit tray tile for
-          // a gem the player places; and says which it is.
+          // The card points at what it teaches: a line to a fixed gem; and says which it is.
+          // polish-11 (D-040 add. 12): a tray gem's page rings nothing in the tray (the ring
+          // read as the gem already picked up); nothing is held until the player taps.
           if (g.how === 'fixed') {
             if (!g.leader) problems.push(`${tag}: nothing marks the fixed gem on the board`);
             if (!g.rule.startsWith(FIXED_NOTE))
               problems.push(`${tag}: a fixed gem's page says "${g.rule}"`);
           } else if (g.how === 'tray' || g.how === 'turns') {
-            if (g.how === 'tray' && !g.lit) problems.push(`${tag}: its tray tile is not lit`);
+            if (g.lit) problems.push(`${tag}: a tray tile is ringed before any tap`);
             if (g.leader) problems.push(`${tag}: a line points at the board for a tray gem`);
           }
           // The first lesson: "Bend is fixed; Channels are yours to place".
