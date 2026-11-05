@@ -37,6 +37,8 @@ import { strikeLabel } from './strike';
 const PILL_PIC_PX = 30;
 /** teach-overlay: the widest the phone card panel grows, CSS px (a readable line). */
 const PANEL_MAX_W = 400;
+/** Clear space between the panel's foot and Strike/FUSE, CSS px (mobile-moments asks ≥8). */
+const STRIKE_CLEAR_PX = 10;
 
 /** A box in design px. */
 interface Box {
@@ -575,12 +577,19 @@ export const columnMethods = {
       const q = el.getBoundingClientRect();
       if (q.height > 0 && q.left < right && q.right > left) ceil = Math.max(ceil, q.bottom);
     }
+    // Its foot keeps STRIKE_CLEAR_PX off Strike where it sits under it.
+    let floor = region.bottom - gap;
+    for (const el of document.querySelectorAll('[data-action="strike"]')) {
+      const q = el.getBoundingClientRect();
+      if (q.height > 0 && q.left < right && q.right > left && q.top >= region.top)
+        floor = Math.min(floor, q.top - STRIKE_CLEAR_PX);
+    }
     // The overlay (contain: layout) is the panel's containing block, not the viewport.
     const box = (tip.closest('.tc-overlay') ?? document.documentElement).getBoundingClientRect();
     const l = Math.round(left - box.left);
     const r = Math.round(box.right - right);
-    const b = Math.round(box.bottom - region.bottom + gap);
-    const hgt = Math.max(0, Math.round(region.bottom - gap - (ceil + gap)));
+    const b = Math.round(box.bottom - floor);
+    const hgt = Math.max(0, Math.round(floor - (ceil + gap)));
     const key = `${l},${r},${b},${hgt}`;
     if (key === tip.dataset.overBox) return;
     tip.dataset.overBox = key;
