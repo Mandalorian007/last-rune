@@ -417,3 +417,20 @@ User: "minimize review. Get phone ready for testing and I will try it. This is t
   - D-049 add. 1 · 2026-11-05 · PM, on the teach-overlay questions. (1) An open teach card may show while a different gem is in hand; the Holding pill names the gem in hand, so this relaxes D-040 add. 5 on phones. (2) FUSE stays quiet while a card pill is waiting, the same as the Rule tab. (3) The Rule tab shows on any short-lane phone. (4) Board taps fold the panel and still act; a short-lane verdict panel lets taps through. (5) Arrival cards follow D-045 play order, so Lift Shaft only shows the Capacitor card if it was not met first. · PM
 
 - **D-050** · 2026-11-05 · **Share embeds use the old itch cover art.** The user wanted the itch cover as the link preview for Discord and similar apps, with good basic embed support. The cover renderer cut by D-047 is back as `pnpm social`, framed wide: `games/last-rune/cover`, `scripts/cover` and `vite.cover.config.ts` render the same FUSE-by-candlelight scene with the title at 1200×630. They write `public/social.jpg` (og:image, about 116 KB) and a 180×180 `public/apple-touch-icon.png` cropped from the gem. Both files are our own procedural render, committed and shipped with the Pages build. `index.html` carries description, Open Graph (absolute URLs, image size and alt), `twitter:card=summary_large_image`, canonical and theme-color. theme-color is the game's dark background, not gold, because iOS Safari tints its bar with it. `scripts/cover/social-embed.test.ts` checks the tags and image sizes. Regenerate after art changes with `pnpm social`. · User
+- **D-051** · 2026-11-05 · **ThunderClap Engine gets its own public repo; The Last Rune stays on its in-repo engine.**
+  - The user asked for a public `thunderclap-engine` repo with:
+    - a clean, detailed README;
+    - the engine code ported over;
+    - a "Built with ThunderClap" section with a GIF and a blurb for The Last Rune.
+  - The user's words: "do not remove the engine from this project. Just port the code… this product will remain on the original engine."
+  - The user also said: "This game can be cited as the original inspiration that started work on the engine."
+  - What was done:
+    - `git subtree split` of `packages/engine` (29 commits, history kept) pushed to https://github.com/Mandalorian007/thunderclap-engine.
+    - New in that repo:
+      - standalone pnpm/Biome/tsconfig and CI (`pnpm check`);
+      - `examples/hello` (`pnpm example`);
+      - a 15 s gameplay GIF recorded from the production build: title, hall, Intake Desk, strike, solve.
+    - Checks pass standalone: check (351 unit tests) and e2e (274 tests).
+  - This is plan row 17's repo half: no npm publish and no tag.
+  - The engine here (`packages/engine`) is unchanged and remains The Last Rune's engine.
+  - Until the game switches to the new repo, the two copies are kept in step by hand. A change to the engine here is ported to the engine repo when it matters.
