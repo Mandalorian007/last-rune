@@ -160,13 +160,12 @@ export const handMethods = {
     this.ctx.sound.sfx.play('gemPlace', { gem: hand.kind, pan: this.panOf(cell) });
     if (existing) this.logRemove(existing.gem, cell);
     this.logPlace(cell, null);
-    // Phones (mobile-5-board): setting a gem down ends the hold, so the valid-socket rings
-    // clear and Turn turns the gem just placed; the next tap on the tray takes another.
-    if (this.view.layout.phone) {
-      this.hand = null;
-      // dense-board-4: setting the gem down folds its rule card behind the tab again.
-      if (this.ruleTab) this.infoPin = null;
-    }
+    // chain-place (user, 2026-11-05): phones keep the gem in hand while more remain, like
+    // desktop, so a run of Channels is tap, tap, tap. Turn still turns the gem just placed
+    // (lastPlaced wins in updateTurnButton) and the held copy follows its turn. `changed`
+    // ends the hold when the last one is down.
+    // dense-board-4: setting the gem down folds its rule card behind the tab again.
+    if (this.view.layout.phone && this.ruleTab) this.infoPin = null;
     this.changed(cell);
   },
 
@@ -254,6 +253,10 @@ export const handMethods = {
     this.rotateAt(cell, by);
     this.turned = true;
     const q = this.board.at(cell);
+    // chain-place (phones): Turn turns the gem just placed, and the next copy in hand takes
+    // that turn too, so a chain runs one way. Desktop turns the hand and the board separately.
+    const h = this.hand;
+    if (this.view.layout.phone && h && !h.from && q && h.kind === q.gem) h.rot = q.rot;
     if (q) this.announce(`${GEM_NAME[q.gem]} turned: ${sidesText(q.gem, q.rot)}.`);
   },
 

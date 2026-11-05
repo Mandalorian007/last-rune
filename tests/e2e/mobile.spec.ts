@@ -85,14 +85,33 @@ async function buildByTouch(page: Page, id: MachineId): Promise<number> {
   const turnBtn = page.locator('.lr-altar-turnbtn');
   let turns = 0;
   for (const g of p.design.intended) {
-    const slot = L.tray.find((s) => s.gem === g.gem)!;
-    await tapAt(page, slot.x, slot.y);
+    // D-048: the gem stays in hand after placing, so the tray is tapped only to switch gems
+    // (tapping the held one again would let it go).
+    const held = await page.evaluate(
+      () =>
+        (window as unknown as { __altarView: { held?: { kind: string } } }).__altarView.held?.kind,
+    );
+    if (held !== g.gem) {
+      const slot = L.tray.find((s) => s.gem === g.gem)!;
+      await tapAt(page, slot.x, slot.y);
+    }
     const pt = { x: 0, y: 0 };
     cellCenter(L, g.cell as Cell, pt);
     await tapAt(page, pt.x, pt.y);
     if (isRotational(g.gem)) {
       await expect(turnBtn).toBeVisible();
-      for (let i = 0; i < g.rot; i++) {
+      // The placed gem may start turned (the held copy follows the last Turn, D-048).
+      const rotAt = () =>
+        page.evaluate(
+          ({ x, y }) =>
+            (
+              window as unknown as {
+                __altarView: { board: { cell: { x: number; y: number }; rotTarget: number }[] };
+              }
+            ).__altarView.board.find((q) => q.cell.x === x && q.cell.y === y)?.rotTarget ?? -1,
+          g.cell,
+        );
+      for (let i = 0; i < 4 && ((Math.round(await rotAt()) % 4) + 4) % 4 !== (g.rot & 3); i++) {
         await turnBtn.tap();
         await waitFrames(page, 3);
         turns++;
