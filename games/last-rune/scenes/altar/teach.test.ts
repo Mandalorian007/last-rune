@@ -4,7 +4,8 @@ import { puzzleFor } from '../../content/puzzles';
 import { MACHINE_IDS } from '../../rules/types';
 import {
   AMPLIFY_AGAIN,
-  capacitorStrip,
+  CAPACITOR_STRIP,
+  eitherName,
   eitherRule,
   GOAL_RULE,
   ONE_STRIKE_RULE,
@@ -42,17 +43,27 @@ describe('arrival card pages (teach-4)', () => {
     // teach-6: "on strike 1 or 2" (teach-7) gets its own page after the strikes page.
     expect(pages.map((p) => p.kind)).toEqual(['strikes', 'either', 'gem']);
     // teach-5: one tap, two strikes, one after the other; a miss resets for free.
-    expect(strikesRule(2)).toMatch(/One tap sends both\./);
+    expect(strikesRule(2)).toMatch(/one tap sends both\./);
     expect(strikesRule(2)).toMatch(/miss resets for free/);
     // teach-6: it names the marks beside "Strike ×2".
     // teach-8: the marks by Strike are the player's strikes.
-    expect(strikesRule(2)).toMatch(/^\u25cb\u25cb = your two strikes\./);
+    // polish-11: the marks show once (in the title); the rule follows it after a colon.
+    expect(strikesRule(2)).toMatch(/^your two strikes, one tap sends both\./);
+    expect(strikesRule(2)).not.toMatch(/\u25cb/);
     // teach-8: the rule as the sim reads it (rules/sim.ts), in the gauge's words ("on one
     // strike"): each strike alone; exactly wakes it, more trips it. No amount (D-043).
-    expect(eitherRule(2)).toBe(ONE_STRIKE_RULE);
     expect(ONE_STRIKE_RULE).toMatch(/on one strike/);
     expect(ONE_STRIKE_RULE).not.toMatch(/\d/);
-    expect(eitherRule(3)).toBe(ONE_STRIKE_RULE);
+    // polish-11: the card says it under its title "On one strike", less the sentence the title
+    // says, so it fits an SE's lane; the codex and a11y keep the whole rule.
+    expect(eitherName(2)).toBe('On one strike');
+    expect(eitherRule(2)).toBe(
+      "Exactly the gauge's number wakes it. Less does nothing; more trips it.",
+    );
+    expect(ONE_STRIKE_RULE.endsWith(eitherRule(2).replace('wakes', 'on one strike wakes'))).toBe(
+      true,
+    );
+    expect(eitherRule(3)).toBe(eitherRule(2));
   });
 
   it('pictures Gate, Split, Amplify and Capacitor where each is first met, fixed on the board', () => {
@@ -69,17 +80,21 @@ describe('arrival card pages (teach-4)', () => {
     expect(hasPicture({ kind: 'gem', gem: 'bend', how: 'fixed' })).toBe(false);
   });
 
-  it("says what Strike does before the pieces, and the Capacitor's two strikes in numbers", () => {
+  it("says what Strike does before the pieces, and the Capacitor's two strikes", () => {
     expect(GOAL_RULE).toMatch(/Strike any time/);
     expect(GOAL_RULE).toMatch(/a miss costs nothing/);
     expect(GOAL_RULE).toMatch(/exactly/);
     // teach-6: each line says its whole strike (blind review 8: "stores 8 →" dangled).
-    expect(capacitorStrip(8)).toEqual([
-      'Strike 1: stores 8, sends nothing.',
-      'Strike 2: sends 8 + 8 = 16.',
+    // polish-11: no fixed numbers (they read as what every Capacitor sends; D-043).
+    expect(CAPACITOR_STRIP).toEqual([
+      'Strike 1: stores, sends nothing.',
+      'Strike 2: sends stored + new.',
     ]);
-    // teach-6: Amplify's second line in words ("8 → 8" read as a typo).
-    expect(AMPLIFY_AGAIN).toBe("A second Amplify doesn't double again.");
+    for (const line of CAPACITOR_STRIP) expect(line.replace(/^Strike \d:/, '')).not.toMatch(/\d/);
+    // teach-6: Amplify's second line in words ("8 → 8" read as a typo). polish-11: the rule's
+    // own words ("A second Amplify" left "second where?" open).
+    expect(AMPLIFY_AGAIN).toBe('Charge already doubled passes through unchanged.');
+    expect(CODEX.amplify.rule).toMatch(/passes through unchanged/);
     // The strip agrees with the codex: it holds the first charge and lets out both.
     expect(CODEX.capacitor.chip).toMatch(/lets out both/);
   });

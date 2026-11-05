@@ -15,13 +15,13 @@ import {
   YOURS_NOTE,
 } from '../../content/codex';
 import { gemNudge, TEACH_NUDGE } from '../../content/lines';
-import { isRotational, stormCharge } from '../../rules';
+import { isRotational } from '../../rules';
 import type { Cell, Dir, GemKind } from '../../rules/types';
 import { chipAt, diagramSvg, fizzleAt, GEM_DIAGRAMS, turnSide } from '../../ui/codex-diagram';
 import {
   AMPLIFY_AGAIN,
   AMPLIFY_ONCE,
-  capacitorStrip,
+  CAPACITOR_STRIP,
   eitherName,
   eitherRule,
   GEM_NAME,
@@ -381,25 +381,40 @@ export const infoMethods = {
       );
       // "New here" (and "1 of 3") over the button, top-right; the rule wraps round them, so
       // the card is no taller than its words (on an iPhone SE it fits between tray and FUSE).
-      const page = h(
-        'span',
-        { class: 'lr-info-page' },
-        // teach-8: a piece taught at another altar, first in the player's hand here.
-        pages[i]?.kind === 'gem' && pages[i].again ? 'Again' : 'New here',
-        n > 1 ? h('span', { class: 'lr-info-of' }, keepTogether(` ${i + 1} of ${n}`)) : null,
-      );
+      // polish-11 (D-040 add. 12, A): a piece taught at another altar, first in the player's
+      // hand here, says no "Again" (it read as a replay button, 4 of 4): its head row names the
+      // piece where "New here" goes, beside its picture, and the words below start with its
+      // rule (a line the SE's lane lacked). "2 of 3" still counts the pages.
+      const again = pages[i]?.kind === 'gem' && !!pages[i].again;
       // teach-5: a pictured page (Gate, Split, Amplify, Capacitor) leads with its picture, in a
       // head row with "New here" and the button, so the words below get the card's full width
       // (no "Power / the no- / arrow end" wraps beside a floated picture).
       const item = items[i]!;
       const fig = item.querySelector<HTMLElement>(':scope > .lr-fig');
+      // The head-row name is a copy: where the row is too narrow for it, the words keep their
+      // own (altar-column.ts arrangeColumn drops data-named).
+      const name = again && fig ? item.querySelector<HTMLElement>(':scope > b') : null;
+      const page = h(
+        'span',
+        { class: 'lr-info-page' },
+        name
+          ? h('b', { 'aria-hidden': 'true' }, name.textContent ?? '')
+          : again
+            ? null
+            : 'New here',
+        n > 1 ? h('span', { class: 'lr-info-of' }, keepTogether(` ${i + 1} of ${n}`)) : null,
+      );
       const foot = h('div', { class: 'lr-info-foot' }, fig, page, next);
       this.tip.toggleAttribute('data-fig', !!fig);
       this.tip.removeAttribute('data-tight');
+      this.tip.removeAttribute('data-tighter');
+      this.tip.toggleAttribute('data-named', !!name);
       this.tip.replaceChildren(foot, item);
     } else {
       this.tip.removeAttribute('data-fig');
       this.tip.removeAttribute('data-tight');
+      this.tip.removeAttribute('data-tighter');
+      this.tip.removeAttribute('data-named');
       this.tip.replaceChildren(...items);
     }
     // A card with a button is read and used, not a hover tooltip (the announcer reads the rest).
@@ -437,10 +452,11 @@ export const infoMethods = {
         { class: 'lr-info-pips', 'aria-hidden': 'true' },
         ...Array.from({ length: n }, () => h('i')),
       );
+      // polish-11: the marks once, in the title; the rule follows it after a colon.
       return h(
         'div',
         { class: 'lr-info-row', 'data-how': 'strikes' },
-        h('b', null, keepTogether(strikeLabel(n)), marks),
+        h('b', null, keepTogether(strikeLabel(n)), marks, ':'),
         ' ',
         rule(strikesRule(n)),
       );
@@ -458,8 +474,8 @@ export const infoMethods = {
     const built = (text: string) => (fixed ? `${FIXED_NOTE} ${text}` : text);
     const turn = p.how === 'turns' ? ' Turn to fit.' : '';
     if (fig && p.gem === 'capacitor') {
-      // The Capacitor's lesson is its two strikes, with this altar's own charge (teach-4).
-      const [one, two] = capacitorStrip(stormCharge(this.puzzle.storm.strength));
+      // The Capacitor's lesson is its two strikes (teach-4), said for any charge (polish-11).
+      const [one, two] = CAPACITOR_STRIP;
       // teach-8: on an altar that strikes once there is no strike 2; the card says what that means.
       if (this.puzzle.pulses <= 1) return row(p.how, GEM_NAME[p.gem], fig, rule(CAP_ONE_STRIKE));
       return row(
@@ -467,23 +483,18 @@ export const infoMethods = {
         GEM_NAME[p.gem],
         fig,
         rule(p.how === 'fixed' ? FIXED_NOTE : ''),
-        h(
-          'span',
-          { class: 'lr-info-strip' },
-          h('span', null, keepTogether(one)),
-          ' ',
-          h('span', null, keepTogether(two)),
-        ),
+        h('span', { class: 'lr-info-strip' }, h('span', null, one), ' ', h('span', null, two)),
       );
     }
     if (fig && p.gem === 'amplify') {
-      // teach-5: the picture says 4 → 8; the line under it says a second one doesn't double.
+      // teach-5: the picture says 4 → 8; the line under it says charge already doubled passes.
       return row(
         p.how,
         GEM_NAME[p.gem],
         fig,
         rule(built(AMPLIFY_ONCE)),
-        h('span', { class: 'lr-info-eg' }, keepTogether(AMPLIFY_AGAIN)),
+        document.createTextNode(' '),
+        h('span', { class: 'lr-info-eg', dataset: { flow: '' } }, AMPLIFY_AGAIN),
       );
     }
     if (fig && p.gem === 'gate') {
