@@ -86,3 +86,35 @@ One overlay, in CSS px, on every form factor. `ctx.ui` *is* the CSS-px overlay w
 - `pnpm baseline`: desktop-1080 passes; desktop-720 and iPad fail on rasterization only (above, left for the PM to judge or re-baseline).
 
 **Not done.** The v1.0 baselines are not regenerated (the brief says explain, not update). ws/camera items (`EngineCtx.device`, `setFill`, `fillBands`, `device-mode.ts`, the Camera) are untouched and still work.
+
+### 2026-11-04: merge with main (one-overlay agent)
+
+`git merge main` (merge, not rebase): 133518b. Both sides' behaviour is kept in every conflict.
+- `altar-circuit.ts`: both import sets kept. Main's teach-7 "stores N" chips are ported to `dpx()` positions, with `toFrameUnits(scalePxCss(px))` for the font and line height.
+- `altar-column.ts`, `altar-readout.ts`: imports conflicted only. The `dpx` import is kept alongside main's altar-defs imports (`ONE_STRIKE_RULE`).
+- `altar-phone-styles.ts`: uses main's polish-8 `clamp()` caption tail, under `${ph(':has(.lr-solve[data-phone])')} .tc-caption::after`.
+- `altar-place.ts`: main's dense-board-3 `rings()` up/down placement is kept. Its top and margin values are now `dpx()`.
+- `chrome-styles.ts`: the `.lr-hud` hide rule and polish-10's title-menu/links hide rule both use `ch(':has(.tc-panel-host[data-modal="true"])')`.
+- `mobile-strike.spec.ts`: main's teach-5 pips checks are kept, using the `.tc-overlay[data-phone]` assertion.
+
+Main code that still used the old model, now ported:
+- `title-scene.ts` `compact()` read `ctx.chrome`. It now reads `ctx.ui.layout.formFactor`.
+- Seven specs found the scaled root as `.tc-overlay:not([data-units="css"])`. They now use `.tc-layer[data-layer="hud"]`: held-gem, shots, dense-board, altar-column, glyph-truth-2, glyph-truth-3 and mobile-teach. dense-board's 14 px floor check reads the computed size directly.
+
+Nothing else needed porting. That covers the Loupe and its dense-board-4 leader (`position: fixed` client px in `body`), hud `data-under-menu` (client rects) and the held ring `--lr-held-d` (layout-layer CSS px).
+
+The grep for `legacyScale|createCssChrome|ctx.chrome|avoid(` finds nothing outside the CHANGELOG. Engine ARCHITECTURE.md now notes that the loupe sits outside the overlay units. A duplicated CHANGELOG line is removed.
+
+Gates:
+- `install --frozen-lockfile`, `check` (611 vitest), `check:boundaries` and `build`: all ok.
+- `test:e2e:engine`: 283 passed, 31 skipped.
+- `test:e2e`: 201 passed, 20 skipped, no flakes.
+- `test:e2e:desktop`: 5 + 2 passed.
+
+Baseline (no update): 37 passed, 92 failed.
+- desktop-1080 fails on 6 shots (capacitor-bay, control-booth and lift-shaft, each empty and solved, at 0.27–1.40%). The cause is main's own polish-11 Capacitor card copy (8ed49ca). It landed after main's last regeneration (8e5c110), so main fails these too. Cropped cards confirm the only change is the text.
+- desktop-720 (0.19–4.94%) and iPad (0.19–3.15%) fail on rasterization only, as logged before the merge.
+
+Diffs are in `docs/design/screens/local/one-overlay/baseline/`.
+
+Phone shots: `SHOTS=one-overlay` gave 17 passed and 1 skipped. I looked at the SE and Android shots at real size: the-last-rune, its aim shot, archive, the archive held shot, roof-array, capacitor-bay and menu. There are no overlaps, clipping or regressions. The shots are in `docs/design/screens/local/one-overlay/`.
