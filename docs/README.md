@@ -13,4 +13,4 @@ This folder tracks all work on **The Last Rune**. The project manager (Claude, P
 | [design/](design/) | Derived design specs: rules, progression, puzzles, art direction |
 | [workstreams/](workstreams/) | One brief + log per workstream/agent |
 | [research/](research/) | Research notes (itch.io, WebGPU support, etc.) |
-| [shipping-itch.md](shipping-itch.md) | How we package and ship to itch.io |
+| [shipping-itch.md](shipping-itch.md) | Retired (D-047): old itch.io runbook, kept for reference |

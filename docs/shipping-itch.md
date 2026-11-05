@@ -1,4 +1,6 @@
-# Shipping to itch.io
+# Shipping to itch.io (retired)
+
+> **Retired by D-047 (2026-11-04).** The Last Rune ships on GitHub Pages only. `pnpm package:itch`, itch-sim and `pnpm cover` were removed from the game. The engine still supports itch-style iframe embedding. This page is kept for reference if a later game goes to itch.
 
 This runbook covers shipping The Last Rune as a free HTML5 game with a tip jar. The evidence behind each setting is in [`docs/research/itch-webgpu.md`](research/itch-webgpu.md).
 

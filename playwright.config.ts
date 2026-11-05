@@ -5,17 +5,9 @@ import { defineConfig, devices } from '@playwright/test';
 // Servers (ports from tests/e2e/ports.ts; worktrees get their own offset):
 //   - vite preview of dist/ at http://localhost:4173 (top-level page)
 //   - vite dev at http://127.0.0.1:5175 (DEV-only handles for story e2e)
-//   - itch-sim (scripts/itch-sim) at http://localhost:8790, which embeds the same dist/ in a
-//     cross-site iframe from http://127.0.0.1:8791 with itch.io's exact iframe attributes.
+// Embedding in a cross-site iframe is an engine host check (packages/engine/e2e, D-047).
 
-import {
-  DEV_PORT,
-  DEV_URL,
-  ITCH_SIM_PORT,
-  ITCH_SIM_URL,
-  PREVIEW_PORT,
-  PREVIEW_URL,
-} from './tests/e2e/ports';
+import { DEV_PORT, DEV_URL, PREVIEW_PORT, PREVIEW_URL } from './tests/e2e/ports';
 
 const isCI = !!process.env.CI;
 
@@ -87,13 +79,6 @@ export default defineConfig({
       url: DEV_URL,
       reuseExistingServer: !isCI,
       timeout: 60_000,
-    },
-    {
-      // Serves dist/ lazily, so it is fine that the build above may still be running.
-      command: `node scripts/itch-sim/serve.mjs --port ${ITCH_SIM_PORT}`,
-      url: `${ITCH_SIM_URL}/`,
-      reuseExistingServer: !isCI,
-      timeout: 30_000,
     },
   ],
 });
