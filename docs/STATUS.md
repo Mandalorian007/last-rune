@@ -1,6 +1,8 @@
 # Status board
 
-_Last updated: 2026-11-04 by PM_
+_Last updated: 2026-11-05 by PM_
+
+**Launch checklist (2026-11-05):** v1.0.0 (desktop + iPad) shipped 2026-11-04. Left for the phone launch, v1.1.0: (1) the user re-tests on their iPhone the two Gate 2 fixes, D-048 chain placement and D-049 teach overlay (both live on Pages, CI green); (2) the PM fixes anything that blocks; (3) the PM tags `v1.1.0` and publishes the GitHub Release. Not blocking: dense boards on the smallest phones (ws/camera, parked; ws/one-overlay held). Merged worktrees are cleaned up.
 
 **D-047 (user, 2026-11-04):** itch.io cut. Pages is the release. The game's itch packager, itch-sim, itch-release spec and cover tooling are removed; the engine keeps the itch iframe option.
 
