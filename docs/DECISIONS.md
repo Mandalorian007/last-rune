@@ -442,3 +442,8 @@ User: "minimize review. Get phone ready for testing and I will try it. This is t
   - The Gate 2 phone check (D-046) no longer blocks. The next release, v1.1.0 (desktop, iPad, phones), ships on the npm engine. It is the first title on the published engine.
   - Gates: `pnpm check`, `pnpm build`, game e2e, desktop e2e, and `pnpm baseline` against the v1.0 baselines (desktop and iPad must look the same; any diff is explained or fixed).
   - From here on, engine fixes go upstream to Mandalorian007/thunderclap-engine (PR or issue, never a node_modules patch), and Last Rune takes them with `pnpm up @thunderclap-engine/engine`. The hand porting of D-051 ends.
+  - D-052 add. 1 · 2026-11-07 · PM, on merging ws/engine-npm (ed4fedc):
+    - (1) Phones keep the fill framing through the game-side `games/last-rune/game/screen-fit.ts`. It uses only the engine's public API (computeLetterbox, computeBackbuffer, createDeviceMode). Engine v1 alone would letterbox phones. It stays until upstream adds a fill/cover mode.
+    - (2) Baselines regenerated (`BASELINE_UPDATE=1`, 129 shots). desktop-720 and iPad differ by 0.2–4.9% from one-overlay's text and border rasterization. The desktop-1080 solve-card gauge now shows its red 100–125% zone, which matches the rules.
+    - (3) `pnpm-workspace.yaml` stays as `packages: [.]`.
+    - (4) Upstream asks filed on thunderclap-engine: a surface fill/cover mode, host-electron packaging and dev entry points, and a lower-specificity zoomed-select rule.
