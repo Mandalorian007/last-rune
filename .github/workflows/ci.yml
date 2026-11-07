@@ -1,5 +1,5 @@
 # Gate for main, as three jobs (D-041):
-#   engine:     @thunderclap/engine typecheck + lint + unit tests (packages/engine).
+#   engine:     @thunderclap-engine/engine typecheck + lint + unit tests (packages/engine).
 #   engine-e2e: engine platform e2e on the harness matrix (D-041 addendum 2).
 #   game:       game typecheck + lint + import-boundary check + unit tests, production build.
 #   desktop:    unsigned Electron builds of The Last Rune on Linux, macOS and Windows (non-blocking;

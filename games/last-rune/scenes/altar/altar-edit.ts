@@ -2,7 +2,7 @@
  * Edit mode input: pointer, touch gestures, keyboard and pad.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import { Gestures, type Rect } from '@thunderclap/engine/input';
+import { type Edges, Gestures } from '@thunderclap-engine/engine/input';
 import { isRotational } from '../../rules';
 import type { Cell } from '../../rules/types';
 import { DRAG_PX, HOLD_SECS, SLOT_ACTIONS } from './altar-defs';
@@ -70,7 +70,7 @@ export const editMethods = {
           const c1 = to(ph.colR, ph.laneTop);
           // polish-9: it leaves the Gives/Needs cards and the open hint or teach card in sight
           // too when it can (below the 3×3 and the finger, above the column's head).
-          const spare: Rect[] = [];
+          const spare: Edges[] = [];
           for (const el of [...this.needs, this.stormLabel, this.hint, this.tip]) {
             if (!el || el.hidden || !el.isConnected) continue;
             const r = el.getBoundingClientRect();

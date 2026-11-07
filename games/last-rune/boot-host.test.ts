@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { defaultHost, setDefaultHost } from '@thunderclap/engine/host';
-import type { ThunderclapBridge } from '@thunderclap/host-electron';
+import { defaultHost, setDefaultHost } from '@thunderclap-engine/engine/host';
+import type { ThunderclapBridge } from '@thunderclap-engine/host-electron';
 import { afterEach, describe, expect, it } from 'vitest';
 import { bootHost } from './boot-host';
 

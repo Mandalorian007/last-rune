@@ -2,7 +2,7 @@
  * Read-outs: the gauges' Needs cards, Strike's word, the Capacitor beats, the verdict, tags and the announcer.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import { h } from '@thunderclap/engine/ui';
+import { h } from '@thunderclap-engine/engine/ui';
 import type { BoltOutcome } from '../../game/flow';
 import { type SimResult, stormCharge } from '../../rules';
 import { getMachine } from '../../rules/progression';

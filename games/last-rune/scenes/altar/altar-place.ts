@@ -2,7 +2,7 @@
  * Where the altar's DOM goes: the title, verdict, labels and FUSE's card kept clear of the board and the buttons.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import type { Rect } from '@thunderclap/engine/ui';
+import type { Rect } from '@thunderclap-engine/engine/ui';
 import { dpx, dpxOf } from '../../ui/frame-units';
 import { boxesTouch, designBox } from './altar-defs';
 import type { AltarScene } from './altar-scene';

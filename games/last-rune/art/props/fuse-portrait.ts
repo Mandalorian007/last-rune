@@ -12,7 +12,7 @@
  *
  * Without a scene FUSE, `portrait.render()` animates a default idle/talk rig on its own clock.
  */
-import type { FullscreenPass, Renderer } from '@thunderclap/engine/render';
+import type { FullscreenPass, Renderer } from '@thunderclap-engine/engine/render';
 import { FUSE_PORTRAIT_WGSL, FUSE_UNIFORM_FLOATS } from '../../shaders/fuse-shaders';
 import { dpx } from '../../ui/frame-units';
 import type { FuseRigState } from './fuse';

@@ -5,7 +5,7 @@
  * `PuzzleDef`, so difficulty-fun can retune boards and trays freely. Geometry mirrors
  * `AltarSlab` (margin = 0.8 × pitch, front face = 0.42 × pitch).
  */
-import { snapToGrid } from '@thunderclap/engine/input';
+import { snapToGrid } from '@thunderclap-engine/engine/input';
 import { altarDims, type PuzzleDef } from '../../rules';
 import type { Cell, GemKind } from '../../rules/types';
 import { GEM_KINDS } from '../../rules/types';

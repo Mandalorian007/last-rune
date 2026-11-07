@@ -13,15 +13,15 @@
  * the save.
  */
 
-import type { Host } from '@thunderclap/engine/host';
-import type { StorageLike } from '@thunderclap/engine/save';
+import type { Host } from '@thunderclap-engine/engine/host';
+import type { StorageLike } from '@thunderclap-engine/engine/save';
 import {
   createSaveStore,
   type Infer,
   type Migrations,
   type SaveStore,
   s,
-} from '@thunderclap/engine/save';
+} from '@thunderclap-engine/engine/save';
 import { puzzleFor } from '../content/puzzles';
 import { type ProgressState, parseProgressState } from '../rules/progression';
 import { GEM_KINDS, type GemKind, MACHINE_IDS, type MachineId } from '../rules/types';

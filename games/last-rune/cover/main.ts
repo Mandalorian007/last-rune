@@ -8,7 +8,7 @@
  * One still frame after the stage's warmup, with `Math.random` seeded (FUSE picks his idle sway
  * and eye flicker phase from it), so the PNG is the same on every run.
  */
-import { initGpu } from '@thunderclap/engine/platform';
+import { initGpu } from '@thunderclap-engine/engine/platform';
 import { COVER } from './covers';
 import { COVER_H, COVER_W, CoverStage, paintCover } from './stage';
 

@@ -9,8 +9,8 @@
  * page.append(portraits.canvas('split', 200)); // a fresh <canvas>, 200 CSS px square
  * ```
  */
-import { PostStack } from '@thunderclap/engine/post';
-import { type Renderer, SnapshotRenderer } from '@thunderclap/engine/render';
+import { PostStack } from '@thunderclap-engine/engine/post';
+import { type Renderer, SnapshotRenderer } from '@thunderclap-engine/engine/render';
 import { GEM_KINDS, type GemKind } from '../rules/types';
 import { addGemLight, type GemInstance, GemRenderer } from './materials/gems';
 import { LIGHT_HEIGHT, LightSet } from './materials/lights';
@@ -45,7 +45,7 @@ export function createGemPortraits(main: Renderer): GemPortraits {
       // The altar's bloom and grade, without its room effects (mist, rays, vignette).
       r.post = new PostStack(r, {
         bloom: { enabled: true, intensity: 0.85, threshold: 1.4, scatter: 0.7, emissiveWeight: 1 },
-        fog: { enabled: false },
+        mist: { enabled: false },
         godRays: { enabled: false },
         vignette: { enabled: false },
         grade: {

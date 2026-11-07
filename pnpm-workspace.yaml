@@ -1,4 +1,6 @@
-# The root package is the game (Last Rune) and its tooling; the engine is a workspace package
-# the game depends on (D-041, docs/workstreams/workspace.md).
+# The game is the only package. The engine and the desktop shell come from npm
+# (@thunderclap-engine/engine, @thunderclap-engine/host-electron; D-052). This file stays so pnpm
+# treats this folder as the workspace root (a git worktree inside another checkout would
+# otherwise climb to that checkout's workspace).
 packages:
-  - packages/*
+  - .

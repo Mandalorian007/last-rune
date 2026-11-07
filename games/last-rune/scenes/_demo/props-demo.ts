@@ -10,19 +10,19 @@
  * (don't auto-cycle), `&nohud`, `&caption` (caption card with FUSE's portrait), `&calm`
  * (reduce flashes).
  */
-import { GameLoop, type Scene, SceneStack, type Time } from '@thunderclap/engine/core';
-import { flicker, ParticleSystem } from '@thunderclap/engine/fx';
-import type { GpuContext, Surface } from '@thunderclap/engine/platform';
-import { watchVisibility } from '@thunderclap/engine/platform';
-import { PostStack } from '@thunderclap/engine/post';
+import { GameLoop, type Scene, SceneStack, type Time } from '@thunderclap-engine/engine/core';
+import { flicker, ParticleSystem } from '@thunderclap-engine/engine/fx';
+import type { GpuContext, Surface } from '@thunderclap-engine/engine/platform';
+import { watchVisibility } from '@thunderclap-engine/engine/platform';
+import { PostStack } from '@thunderclap-engine/engine/post';
 import {
   type DrawParams,
   type Frame,
   gpuDiagnostics,
   type Material,
   Renderer,
-} from '@thunderclap/engine/render';
-import { createOverlay } from '@thunderclap/engine/ui';
+} from '@thunderclap-engine/engine/render';
+import { createOverlay } from '@thunderclap-engine/engine/ui';
 import { Alcove } from '../../art/props/alcove';
 import { type BoltMode, BoltRibbon, boltSegmentsFromPolyline } from '../../art/props/bolt';
 import { Fuse, type FuseMood } from '../../art/props/fuse';
@@ -291,7 +291,7 @@ export function startPropsDemo(surface: Surface, gpu: GpuContext): void {
   const renderer = new Renderer(gpu, { logicalWidth: W, logicalHeight: H });
   const post = new PostStack(renderer, {
     godRays: { x: 330, y: 450, bloomSource: 0.1, sourceIntensity: 0 },
-    fog: { density: 0.55 },
+    mist: { density: 0.55 },
   });
   renderer.post = post;
   surface.onResize(({ backbuffer }) => renderer.resize(backbuffer.width, backbuffer.height));
@@ -364,7 +364,7 @@ export function startPropsDemo(surface: Surface, gpu: GpuContext): void {
     update: (dt: number) => stack.update(dt),
     render: (alpha: number, time: Time) => {
       const frame = renderer.beginFrame(time.realTime, time.frameDt);
-      stack.render(frame, alpha);
+      stack.render(frame, renderer.camera, alpha);
       renderer.endFrame();
       diag.frames++;
       fpsAcc += time.frameDt;

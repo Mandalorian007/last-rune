@@ -3,8 +3,8 @@
  * night stone, a violet storm glow, the Last Rune as a big amethyst gem on a
  * plinth, two candles, rising embers. Title text and buttons are DOM.
  */
-import { flicker, ParticleEmitter, pulse } from '@thunderclap/engine/fx';
-import type { Frame } from '@thunderclap/engine/render';
+import { flicker, ParticleEmitter, pulse } from '@thunderclap-engine/engine/fx';
+import type { Frame } from '@thunderclap-engine/engine/render';
 import type { TitleView, TitleViewFrame, ViewContext } from '../views';
 import { CANDLE, GOLD, Painter, SOCKET_RGBA, STONE } from './shapes';
 

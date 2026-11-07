@@ -3,7 +3,7 @@
  * Procedural only: gradients and shadows, no images or fonts fetched. Scoped under `.tc-overlay`.
  */
 
-import { scaleFontSizes, toFrameUnits } from '@thunderclap/engine/ui';
+import { scaleFontSizes, toFrameUnits } from '@thunderclap-engine/engine/ui';
 import { CHROME_CSS } from './chrome-styles';
 import { PHONE_BASE_CSS, PHONE_ROOT_CSS } from './phone-base';
 

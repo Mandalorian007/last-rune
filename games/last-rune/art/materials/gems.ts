@@ -7,7 +7,13 @@
  *   gems.drawGems(frame, list);      // the crystals
  * Batching: each call is one instanced draw, whatever the count.
  */
-import type { DrawParams, Frame, Material, Renderer, RGBA } from '@thunderclap/engine/render';
+import type {
+  DrawParams,
+  Frame,
+  Material,
+  Renderer,
+  RGBA,
+} from '@thunderclap-engine/engine/render';
 import type { GemKind } from '../../rules/types';
 import { GLOW_WGSL, SHADOW_WGSL } from '../../shaders/candle-wgsl';
 import { GEM_WGSL } from '../../shaders/gem-wgsl';

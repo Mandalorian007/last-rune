@@ -8,7 +8,7 @@
  * speaks: a card up (verdict, gem or teach card, a live read-out) and FUSE waits; FUSE talking
  * and the how-to line and the plan read-outs wait.
  */
-import { h } from '@thunderclap/engine/ui';
+import { h } from '@thunderclap-engine/engine/ui';
 import { createGemPortraits } from '../../art/gem-portraits';
 import { isRotational } from '../../rules';
 import type { Cell } from '../../rules/types';

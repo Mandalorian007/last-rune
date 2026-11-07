@@ -8,8 +8,8 @@
  *
  *   ctx.views.hall = (vc) => new CathedralHallView(vc);
  */
-import type { ParticleSystem } from '@thunderclap/engine/fx';
-import type { Frame, Renderer } from '@thunderclap/engine/render';
+import type { ParticleSystem } from '@thunderclap-engine/engine/fx';
+import type { Frame, Renderer } from '@thunderclap-engine/engine/render';
 import type { MachineId } from '../rules/types';
 import type { HallFrame } from './hall/hall-frame';
 import type { HallModel } from './hall/hall-state';
@@ -99,7 +99,7 @@ export interface TitleViewFrame extends ViewFrame {
 }
 
 /**
- * The title's slice on an upright phone (a fill band's side crop, `FillWidthOptions`): at least
+ * The title's slice on an upright phone (a fill band's side crop, `FillBand`): at least
  * this much of the design's width, centred on the storm cell and FUSE's strolls.
  */
 export const TITLE_UPRIGHT = { minVisibleWidth: 740, focusX: 560 } as const;

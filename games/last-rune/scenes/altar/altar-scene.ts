@@ -19,8 +19,8 @@
  * Flow hooks: `savePlacements` on every change, `recordAttempt` on every strike,
  * `completePuzzle` on exact (swaps to the solve moment), `closePuzzle` on back.
  */
-import type { Gestures } from '@thunderclap/engine/input';
-import type { Frame } from '@thunderclap/engine/render';
+import type { Gestures } from '@thunderclap-engine/engine/input';
+import type { Frame } from '@thunderclap-engine/engine/render';
 import type { GemPortraits } from '../../art/gem-portraits';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import type { BoltSegment } from '../../art/props/bolt';
@@ -480,7 +480,8 @@ export class AltarScene implements GameScene {
   applyPost(): void {
     const post = this.ctx.post;
     post.set(POST_PRESETS.altar);
-    if (this.view.layout.phone) post.set({ fog: { enabled: false }, vignette: { enabled: false } });
+    if (this.view.layout.phone)
+      post.set({ mist: { enabled: false }, vignette: { enabled: false } });
   }
 
   /** The phone frame the layout was built for ('' off phones). */

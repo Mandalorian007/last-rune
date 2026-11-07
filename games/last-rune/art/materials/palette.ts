@@ -3,9 +3,9 @@
  * Documented with linear values and usage rules in `docs/design/art-direction.md`.
  *
  * Hex values are sRGB. Shaders work in linear space, so convert with `hex()` from
- * `@thunderclap/engine/render` (or use the pre-converted `LINEAR` table below).
+ * `@thunderclap-engine/engine/render` (or use the pre-converted `LINEAR` table below).
  */
-import { hex, type RGBA } from '@thunderclap/engine/render';
+import { hex, type RGBA } from '@thunderclap-engine/engine/render';
 import type { GemKind } from '../../rules/types';
 
 /** sRGB hex for every named colour. */

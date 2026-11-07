@@ -3,7 +3,7 @@
  * Apply with `post.set(POST_PRESETS.altar)`. Each preset sets every section, so switching
  * scenes never leaks settings from the previous one.
  */
-import type { PostSettingsPatch } from '@thunderclap/engine/post';
+import type { PostSettingsPatch } from '@thunderclap-engine/engine/post';
 
 export type PostPresetName = 'title' | 'hall' | 'altar' | 'codex' | 'journal' | 'ending';
 
@@ -12,7 +12,7 @@ const MIST: [number, number, number] = [0.1, 0.125, 0.19];
 export const POST_PRESETS: Readonly<Record<PostPresetName, PostSettingsPatch>> = {
   title: {
     bloom: { enabled: true, intensity: 1.1, threshold: 1.3, scatter: 0.8, emissiveWeight: 1 },
-    fog: {
+    mist: {
       enabled: true,
       color: MIST,
       density: 0.75,
@@ -43,7 +43,7 @@ export const POST_PRESETS: Readonly<Record<PostPresetName, PostSettingsPatch>> =
   },
   hall: {
     bloom: { enabled: true, intensity: 0.9, threshold: 1.3, scatter: 0.75, emissiveWeight: 1 },
-    fog: {
+    mist: {
       enabled: true,
       color: MIST,
       density: 0.7,
@@ -75,7 +75,7 @@ export const POST_PRESETS: Readonly<Record<PostPresetName, PostSettingsPatch>> =
   },
   altar: {
     bloom: { enabled: true, intensity: 0.85, threshold: 1.4, scatter: 0.7, emissiveWeight: 1 },
-    fog: {
+    mist: {
       enabled: true,
       color: MIST,
       density: 0.55,
@@ -106,7 +106,7 @@ export const POST_PRESETS: Readonly<Record<PostPresetName, PostSettingsPatch>> =
   },
   codex: {
     bloom: { enabled: true, intensity: 0.7, threshold: 1.5, scatter: 0.65, emissiveWeight: 0.9 },
-    fog: { enabled: false },
+    mist: { enabled: false },
     godRays: { enabled: false },
     vignette: {
       enabled: true,
@@ -127,7 +127,7 @@ export const POST_PRESETS: Readonly<Record<PostPresetName, PostSettingsPatch>> =
   },
   journal: {
     bloom: { enabled: true, intensity: 0.6, threshold: 1.5, scatter: 0.7, emissiveWeight: 0.9 },
-    fog: { enabled: false },
+    mist: { enabled: false },
     godRays: { enabled: false },
     vignette: {
       enabled: true,
@@ -148,7 +148,7 @@ export const POST_PRESETS: Readonly<Record<PostPresetName, PostSettingsPatch>> =
   },
   ending: {
     bloom: { enabled: true, intensity: 1.4, threshold: 1.1, scatter: 0.85, emissiveWeight: 1.1 },
-    fog: {
+    mist: {
       enabled: true,
       color: [0.22, 0.16, 0.08],
       density: 0.6,

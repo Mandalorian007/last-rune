@@ -10,8 +10,8 @@
  *   it; mobile-7-hall).
  */
 
-import type { CaptionCard, Corner, Rect } from '@thunderclap/engine/ui';
-import { cornerOrder, h, overlapArea } from '@thunderclap/engine/ui';
+import type { CaptionCard, Corner, Rect } from '@thunderclap-engine/engine/ui';
+import { cornerOrder, h, overlapArea } from '@thunderclap-engine/engine/ui';
 import { cardsOf, type FuseLine } from '../content/lines';
 
 export type PortraitFactory = () => Node;

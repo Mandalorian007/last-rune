@@ -10,8 +10,8 @@
  *   filled width (`hall-frame.ts`), and each door wears a plate saying what it is. The model's
  *   positions are world px; the pointer and the HUD convert through the frame.
  */
-import type { Frame } from '@thunderclap/engine/render';
-import type { Rect } from '@thunderclap/engine/ui';
+import type { Frame } from '@thunderclap-engine/engine/render';
+import type { Rect } from '@thunderclap-engine/engine/ui';
 import { type FuseLine, hallLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { progressOf } from '../../game/save';
@@ -81,7 +81,7 @@ export class HallScene implements GameScene {
     this.refresh();
     ctx.post.set({
       godRays: { x: 960, y: 540, intensity: 0.12, sourceIntensity: 0 },
-      fog: { density: 0.4 },
+      mist: { density: 0.4 },
     });
     ctx.setMood('hall');
     if (!ctx.save.get().flags.hallIntro) {

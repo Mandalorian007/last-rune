@@ -1,7 +1,7 @@
-import { computeFillWidth } from '@thunderclap/engine/platform';
 import { describe, expect, it } from 'vitest';
 import { solidMask } from '../../art/materials/stone';
 import { PUZZLES } from '../../content/puzzles';
+import { computeFill } from '../../game/screen-fit';
 import { altarDims } from '../../rules/model';
 import { GEM_KINDS } from '../../rules/types';
 import { trayRemaining } from '../../rules/validate';
@@ -68,7 +68,7 @@ describe('hugged slab (mobile-5-board)', () => {
     [915, 360],
   ] as const;
   const frames = PHONES.map(([w, h]) => {
-    const r = computeFillWidth(w, h, 1920, 1080, { minVisible: 860, focusY: 540 });
+    const r = computeFill(w, h, 1920, 1080, { minVisible: 860, focusY: 540 });
     // The board's frame from the altar's rail regions at this size (altar-chrome.ts).
     const frame = frameFromRegions(
       {

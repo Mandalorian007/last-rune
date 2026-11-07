@@ -1,6 +1,6 @@
 /** The altar scene's shared types, constants and small helpers (altar-scene.ts and its method modules). */
-import type { RGBA } from '@thunderclap/engine/render';
-import { h } from '@thunderclap/engine/ui';
+import type { RGBA } from '@thunderclap-engine/engine/render';
+import { h } from '@thunderclap-engine/engine/ui';
 import { GEM_COLOUR, pitch } from '../../art/props/palette';
 import type { Cell, GemKind, MachineId } from '../../rules/types';
 import { dpxOf, frameScale } from '../../ui/frame-units';

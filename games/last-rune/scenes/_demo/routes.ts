@@ -1,7 +1,7 @@
 // Dev routes (`?demo=audio|render|art|props`), loaded by main.ts in dev builds only. The GPU
 // demos boot the platform themselves and draw straight to the surface, without a GameCtx.
-import { boot } from '@thunderclap/engine/platform';
-import { installGpuErrorLogging } from '@thunderclap/engine/render';
+import { boot } from '@thunderclap-engine/engine/platform';
+import { installGpuErrorLogging } from '@thunderclap-engine/engine/render';
 
 /** Starts the demo `name` in `root`. False when `name` is not a demo (boot the game instead). */
 export async function startDemo(name: string | null, root: HTMLElement, title: string) {

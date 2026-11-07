@@ -2,26 +2,27 @@
  * GameCtx (C7): every system a scene may use, built once at boot.
  *
  * The engine's `createGame` (D-041) builds the noun-free half: surface, renderer, post,
- * particles, input, audio, overlay, host, device mode, fill bands, scene stack, loop and the
- * lifecycle. `createGameCtx` adds Last Rune's nouns to that same object: the sound bank, the
- * save, settings, graphics, FUSE, codex, HUD, the flow and the views.
+ * particles, input, audio, overlay, host, scene stack, loop and the lifecycle. `createGameCtx`
+ * adds Last Rune's nouns to that same object: the phone fill and device mode (game/screen-fit.ts;
+ * the engine dropped them in v1), the sound bank, the save, settings, graphics, FUSE, codex, HUD,
+ * the flow and the views.
  *
  * Scenes are `Scene<GameCtx, Frame>` on `ctx.stack` and get the ctx in `enter`.
  * Scene factories come in from main.ts (`SceneFactories`) so the ctx module
  * doesn't import scenes, and so rules-puzzles' altar scene can replace the
  * puzzle stub by swapping one factory.
  */
-import type { CreateGameOptions, EngineCtx } from '@thunderclap/engine';
-import { type AudioEngine, recipes } from '@thunderclap/engine/audio';
-import type { Scene } from '@thunderclap/engine/core';
+import type { CreateGameOptions, EngineCtx } from '@thunderclap-engine/engine';
+import { type AudioEngine, recipes } from '@thunderclap-engine/engine/audio';
+import type { Scene } from '@thunderclap-engine/engine/core';
 import {
+  type DeviceMode,
   deviceTraits,
-  type FillWidthOptions,
-  prefersReducedMotion,
+  isReducedMotion,
   watchReducedMotion,
-} from '@thunderclap/engine/platform';
-import type { Frame } from '@thunderclap/engine/render';
-import { applyTextScale } from '@thunderclap/engine/ui';
+} from '@thunderclap-engine/engine/platform';
+import type { Frame } from '@thunderclap-engine/engine/render';
+import { applyTextScale } from '@thunderclap-engine/engine/ui';
 import { createGemPortraits } from '../art/gem-portraits';
 import { cathedralHallView } from '../art/hall/hall-view';
 import { stormTitleView } from '../art/hall/title-view';
@@ -53,6 +54,7 @@ import { type Action, BINDINGS } from './actions';
 import { GameFlow, type SolveMoment } from './flow';
 import { GraphicsController } from './graphics';
 import { createGameSave, type GameSave, progressOf, repairSave, SAVE_GAME_ID } from './save';
+import { createScreenFit, type FillBand } from './screen-fit';
 import { SettingsController } from './settings';
 
 /** Each scene's phone rules, appended to the phone sheet in this order (ui/styles.ts). */
@@ -69,7 +71,7 @@ export const DESIGN_H = 1080;
  * candles; upright (chrome-polish-3) it fills its frame's height instead and crops the sides
  * about the storm cell and FUSE (the view draws the name over that part, `TITLE_UPRIGHT`).
  */
-const FILL_BANDS: Record<string, FillWidthOptions> = {
+const FILL_BANDS: Record<string, FillBand> = {
   // polish-8: centred low enough that FUSE (ground y 968) stands whole on wide phones; the view
   // draws the name lower there to match (title-view COMPACT_TITLE).
   title: { minVisible: 760, focusY: 600, ...TITLE_UPRIGHT },
@@ -109,6 +111,8 @@ export type LastRuneEngine = EngineCtx<Action, GameSave, GameCtx>;
 
 /** The engine ctx (`surface`, `renderer`, `ui`, `host`, `loop`, …) plus Last Rune's nouns. */
 export interface GameCtx extends LastRuneEngine {
+  /** Phone and touch modes on the overlay root (game/screen-fit.ts). */
+  readonly device: DeviceMode;
   /** Game sound bank, music moods and FUSE's voice (games/last-rune/audio). */
   readonly sound: GameAudio;
   readonly settings: SettingsController;
@@ -141,7 +145,7 @@ export function engineOptions(
     design: { width: DESIGN_W, height: DESIGN_H },
     post: {
       godRays: { x: DESIGN_W / 2, y: -60, bloomSource: 0.12, intensity: 0.3 },
-      fog: { density: 0.45 },
+      mist: { density: 0.45 },
     },
     particles: { capacity: 32768, floorY: 1040 },
     // The browser tab or itch's frame; saves live in its localStorage (v1.0 keys unchanged).
@@ -158,7 +162,6 @@ export function engineOptions(
       globalKeys: ['KeyC', 'KeyO', 'KeyJ'],
       buttonKeys: ['Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'],
     },
-    fillBands: FILL_BANDS,
     // Load timing (User Timing marks; read by scripts/perf/load.spec.ts, free at runtime).
     onGpuReady: () => performance.mark('lr:gpu-ready'),
   };
@@ -192,11 +195,14 @@ function isFallbackAdapter(adapter: GPUAdapter): boolean {
 
 /** Adds Last Rune's nouns to the engine ctx (the same object, so scenes see them). */
 export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): GameCtx {
-  const { surface, gpu, renderer, post, particles, input, audio, ui, host, device, save } = engine;
+  const { surface, gpu, renderer, post, particles, input, audio, ui, host, save } = engine;
+  // Phones fill the width with the scene's band (D-040); built before anything reads `device`.
+  const fit = createScreenFit(engine, FILL_BANDS);
+  const { device } = fit;
   const { stack, loop, hooks } = engine;
 
   // ── Graphics quality (Settings → Graphics; see game/graphics.ts) ───────
-  let reducedMotion = prefersReducedMotion();
+  let reducedMotion = isReducedMotion();
   let particleTier = 1;
   const applyParticles = () => {
     particles.spawnScale = (reducedMotion ? 0.25 : 1) * particleTier;
@@ -271,7 +277,7 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
         applyTextScale(ui.root, e.textScale / 100, (t) => ui.setTheme(t));
       },
     },
-    prefersReducedMotion(),
+    isReducedMotion(),
   );
   watchReducedMotion((r) => settings.setSystemReducedMotion(r));
 
@@ -299,7 +305,7 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
   const entering =
     <A extends unknown[]>(state: string, make: (...a: A) => GameScene) =>
     (...a: A) => {
-      engine.setFill(state);
+      fit.setFill(state);
       return make(...a);
     };
   const flow = new GameFlow<GameScene>(stack, save, {
@@ -363,11 +369,11 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
     return j.found.filter((p) => !j.read.includes(p)).length;
   };
   // Phones: FUSE's lane, the ☰ in its rail, the "turn sideways" card (ui/chrome.ts).
-  const gameChrome = createGameChrome({ ui, hud: hud.root, surface, device });
+  const gameChrome = createGameChrome({ ui, hud: hud.root, surface: fit, device });
   gameChrome.scene(flow.state);
-  engine.setFill(flow.state);
+  fit.setFill(flow.state);
   flow.onChange((state) => {
-    engine.setFill(state);
+    fit.setFill(state);
     gameChrome.scene(state);
     // Scenes own their caption avoid regions; leaving the altar must never strand one.
     if (state !== 'puzzle') fuse.keepClear(null);
@@ -430,6 +436,7 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
   };
 
   return Object.assign(engine, {
+    device,
     sound,
     settings,
     graphics,

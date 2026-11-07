@@ -246,12 +246,12 @@ async function info(page: Page) {
 async function breakdown(page: Page, measureMs: number): Promise<Record<string, Stats>> {
   const out: Record<string, Stats> = {};
   const variants: [string, string][] = [
-    ['no-fog', 'p.settings.fog.enabled = false'],
+    ['no-mist', 'p.settings.mist.enabled = false'],
     ['no-rays', 'p.settings.godRays.enabled = false'],
     ['no-bloom', 'p.settings.bloom.enabled = false; p.settings.godRays.bloomSource = 0'],
     [
       'no-post',
-      'p.settings.fog.enabled = false; p.settings.godRays.enabled = false; p.settings.bloom.enabled = false; p.settings.godRays.bloomSource = 0',
+      'p.settings.mist.enabled = false; p.settings.godRays.enabled = false; p.settings.bloom.enabled = false; p.settings.godRays.bloomSource = 0',
     ],
   ];
   for (const [name, code] of variants) {

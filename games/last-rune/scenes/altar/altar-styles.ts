@@ -2,7 +2,7 @@
  * Altar + solve-moment overlay styles (design px, 1920×1080). Kept with the scene so the
  * shared `ui/styles.ts` stays untouched; injected once per document.
  */
-import { scaleFontSizes } from '@thunderclap/engine/ui';
+import { scaleFontSizes } from '@thunderclap-engine/engine/ui';
 import { designSheet } from '../../ui/styles';
 import { ALTAR_CHROME_CSS } from './altar-chrome';
 import { ALTAR_COLUMN_CSS } from './altar-column-styles';

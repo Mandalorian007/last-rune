@@ -10,9 +10,9 @@
  * The scene rebuilds the altar from the saved placements (the altar scene saved them just
  * before `completePuzzle`), so it stands alone and works for any puzzle.
  */
-import type { EmitParams } from '@thunderclap/engine/fx';
-import type { Frame, RGBA } from '@thunderclap/engine/render';
-import { button, h } from '@thunderclap/engine/ui';
+import type { EmitParams } from '@thunderclap-engine/engine/fx';
+import type { Frame, RGBA } from '@thunderclap-engine/engine/render';
+import { button, h } from '@thunderclap-engine/engine/ui';
 import { createGemPortraits, type GemPortraits } from '../../art/gem-portraits';
 import type { GemInstance } from '../../art/materials/gems';
 import { POST_PRESETS } from '../../art/materials/post-presets';
@@ -129,7 +129,7 @@ export class SolveScene implements GameScene {
     this.postSnapshot = structuredClone(ctx.post.settings);
     ctx.post.set(POST_PRESETS.altar);
     // Phones light the altar evenly (as the altar scene does): no mist or vignette.
-    if (view.layout.phone) ctx.post.set({ fog: { enabled: false }, vignette: { enabled: false } });
+    if (view.layout.phone) ctx.post.set({ mist: { enabled: false }, vignette: { enabled: false } });
     this.bloomBase = ctx.post.settings.bloom.intensity;
     this.raysBase = ctx.post.settings.godRays.intensity;
     ctx.setMood(m.machine === 'the-last-rune' ? 'last-rune' : 'altar');

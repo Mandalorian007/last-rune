@@ -20,7 +20,7 @@ import {
   type Rect,
   type RegionName,
   resolveLayout,
-} from '@thunderclap/engine/ui';
+} from '@thunderclap-engine/engine/ui';
 import { placeWidgets, type RegionWidget } from '../../ui/chrome';
 import { CL } from '../../ui/chrome-styles';
 import { DESIGN_H, type PhoneFrame } from './layout';

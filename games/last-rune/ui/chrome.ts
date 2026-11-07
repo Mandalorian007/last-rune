@@ -12,8 +12,8 @@
  * the ending are landscape art; the title and the panels read upright) and the title's Full
  * screen button.
  */
-import type { HostFullscreen } from '@thunderclap/engine/host';
-import { type DeviceMode, PHONE_SCALE, type Surface } from '@thunderclap/engine/platform';
+import type { HostFullscreen } from '@thunderclap-engine/engine/host';
+import { type DeviceMode, PHONE_SCALE, type Surface } from '@thunderclap-engine/engine/platform';
 import {
   button,
   createRotateCard,
@@ -23,7 +23,7 @@ import {
   type RotateCard,
   type WidgetHandle,
   type WidgetOptions,
-} from '@thunderclap/engine/ui';
+} from '@thunderclap-engine/engine/ui';
 
 /**
  * Last Rune's region tracks on phones. Landscape: rails left and right (the ☰ at the top of the
@@ -286,7 +286,7 @@ export function fullscreenButton(fullscreen: HostFullscreen): {
   const win = window;
   let refused = /iPhone|iPod/.test(win.navigator.userAgent);
   const update = () => {
-    element.hidden = refused || !fullscreen.available() || fullscreen.active();
+    element.hidden = refused || !fullscreen.available() || fullscreen.active;
   };
   const element = button(
     'Full screen',

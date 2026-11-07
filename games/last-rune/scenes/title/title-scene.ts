@@ -8,9 +8,9 @@
  * open, and stops the moment the player starts.
  */
 
-import type { Frame } from '@thunderclap/engine/render';
-import type { Rect } from '@thunderclap/engine/ui';
-import { h, menuNav } from '@thunderclap/engine/ui';
+import type { Frame } from '@thunderclap-engine/engine/render';
+import type { Rect } from '@thunderclap-engine/engine/ui';
+import { h, menuNav } from '@thunderclap-engine/engine/ui';
 import { coffeeLink } from '../../content/ending';
 import { beatLine, type FuseLine, titleLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
@@ -52,7 +52,7 @@ export class TitleScene implements GameScene {
     this.placeChrome();
     ctx.post.set({
       godRays: { x: 960, y: 210, intensity: 0.28, sourceIntensity: 0 },
-      fog: { density: 0.4 },
+      mist: { density: 0.4 },
     });
     ctx.setMood('title');
   }

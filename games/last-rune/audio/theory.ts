@@ -3,7 +3,7 @@
  * the D major pentatonic (so any order of gems the bolt passes through is consonant), and
  * the music changes mode by tier rather than key. Pure data and maths.
  */
-import { midiToHz } from '@thunderclap/engine/audio';
+import { midiToHz } from '@thunderclap-engine/engine/audio';
 import type { GemKind } from '../rules/types';
 
 /** MIDI note of the tonic used for scale maths (D4). */

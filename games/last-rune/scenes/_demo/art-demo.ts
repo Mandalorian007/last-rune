@@ -8,11 +8,11 @@
  *   title  : gold embossed title and plates over the gem heap
  * Keys: H hud, P pause. `window.__art` exposes fps/frames/errors for headless checks.
  */
-import { GameLoop, type Time } from '@thunderclap/engine/core';
-import type { GpuContext, Surface } from '@thunderclap/engine/platform';
-import { watchReducedMotion, watchVisibility } from '@thunderclap/engine/platform';
-import { PostStack } from '@thunderclap/engine/post';
-import { type Frame, gpuDiagnostics, Renderer, type RGBA } from '@thunderclap/engine/render';
+import { GameLoop, type Time } from '@thunderclap-engine/engine/core';
+import type { GpuContext, Surface } from '@thunderclap-engine/engine/platform';
+import { watchReducedMotion, watchVisibility } from '@thunderclap-engine/engine/platform';
+import { PostStack } from '@thunderclap-engine/engine/post';
+import { type Frame, gpuDiagnostics, Renderer, type RGBA } from '@thunderclap-engine/engine/render';
 import { type CandleInstance, CandleRenderer } from '../../art/materials/candles';
 import { EmbossLabel, EmbossRenderer } from '../../art/materials/emboss';
 import {

@@ -2,7 +2,7 @@
  * The altar's DOM: built once per layout, refreshed as the board changes.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import { button, h, toFrameUnits } from '@thunderclap/engine/ui';
+import { button, h, toFrameUnits } from '@thunderclap-engine/engine/ui';
 import { GEM_COLOUR } from '../../art/props/palette';
 import { isRotational, stormCharge } from '../../rules';
 import { getMachine } from '../../rules/progression';

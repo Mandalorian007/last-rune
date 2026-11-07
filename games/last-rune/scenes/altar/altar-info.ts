@@ -2,7 +2,7 @@
  * Teaching: the info and arrival cards, FUSE's gem lines and nudges.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import { button, h } from '@thunderclap/engine/ui';
+import { button, h } from '@thunderclap-engine/engine/ui';
 import { createGemPortraits } from '../../art/gem-portraits';
 import {
   CAP_CHIP_ONE,

@@ -10,7 +10,7 @@ import type {
   Renderer,
   RGBA,
   Texture,
-} from '@thunderclap/engine/render';
+} from '@thunderclap-engine/engine/render';
 import {
   LIT_SURFACE_WGSL,
   SOCKET_RADIUS,
