@@ -96,7 +96,9 @@ const config = {
   icon,
   copyright: 'MIT License',
   directories: { output },
-  files: ['out/**/*', 'package.json'],
+  // Everything the app needs is in out/ (main, preload, renderer). The staged package.json has no
+  // dependencies, but electron-builder still collects the repo root's node_modules: exclude them.
+  files: ['out/**/*', 'package.json', '!**/node_modules/**'],
   asar: true,
   npmRebuild: false,
   nodeGypRebuild: false,

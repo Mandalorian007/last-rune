@@ -219,7 +219,7 @@ test('a gem in hand turns by ↻ before it is placed; dragging a placed gem off 
       ({ phase, x, y }) => {
         // biome-ignore lint/suspicious/noExplicitAny: dev handle
         const input = (window as any).__game.input;
-        const g = input.getGestures();
+        const g = input.gestures;
         input.pointerAt(x, y, 'touch');
         if (phase === 'down') {
           input.buttonDown(0);

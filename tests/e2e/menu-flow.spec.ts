@@ -15,7 +15,7 @@ const state = (page: Page) => page.evaluate(() => (window as G).__game.flow.stat
 const board = (page: Page) =>
   page.evaluate(() => {
     const g = (window as G).__game;
-    const altar = g.stack.list().find((s: G) => s.board && s.machine);
+    const altar = g.stack.scenes.find((s: G) => s.board && s.machine);
     return JSON.stringify(altar?.board.serialise() ?? null);
   });
 
