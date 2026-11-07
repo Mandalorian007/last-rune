@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The Last Rune's desktop e2e (tests/desktop/): builds the web game (dist/; E2E_SKIP_BUILD=1
-// reuses an existing one) and the shell's main process and preload (packages/host-electron/out/),
-// then runs the Electron-driver specs. `pnpm test:e2e:desktop` runs the shell's own smoke first.
+// reuses an existing one), then runs the Electron-driver specs on the npm shell
+// (@thunderclap-engine/host-electron, prebuilt, so there is nothing else to build).
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -20,7 +20,6 @@ const run = (cmd, args) => {
 if (!process.env.E2E_SKIP_BUILD || !existsSync(join(root, 'dist/index.html'))) {
   run('pnpm', ['build']);
 }
-run(process.execPath, [join(root, 'packages/host-electron/scripts/build.mjs'), '--no-renderer']);
 run('pnpm', [
   'exec',
   'playwright',

@@ -8,7 +8,7 @@
  * Everything is lit by the hall's light set, so the floor wakes with the machines: lamps brighten
  * with progress, and the puddles mirror lightning and each restored machine's warm glow.
  */
-import type { DrawParams, Frame, Material, Renderer } from '@thunderclap/engine/render';
+import type { DrawParams, Frame, Material, Renderer } from '@thunderclap-engine/engine/render';
 import {
   HALL_FLOOR_UNIFORM_FLOATS,
   HALL_FLOOR_WGSL,

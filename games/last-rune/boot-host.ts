@@ -6,14 +6,14 @@
  * usual web host.
  *
  * The Electron host is a dynamic import, so the web build loads none of it: the browser never
- * fetches that chunk. Nothing else in the game imports `@thunderclap/host-electron`; the rest
+ * fetches that chunk. Nothing else in the game imports `@thunderclap-engine/host-electron`; the rest
  * sees only `Host` (engine/host), e.g. `ctx.host.window` for the desktop-only Quit entry.
  */
-import { type Host, setDefaultHost } from '@thunderclap/engine/host';
+import { type Host, setDefaultHost } from '@thunderclap-engine/engine/host';
 
 export async function bootHost(): Promise<Host | undefined> {
   if (!('thunderclap' in window)) return undefined;
-  const { createElectronHost, inElectronShell } = await import('@thunderclap/host-electron');
+  const { createElectronHost, inElectronShell } = await import('@thunderclap-engine/host-electron');
   if (!inElectronShell()) return undefined;
   const host = createElectronHost();
   // Engine modules that fall back to the default host (links, the mixer) see this one too.

@@ -68,7 +68,7 @@ test('keyboard path title → settings → hall → altar, with axe and the stri
   await page.keyboard.press('Tab');
   expect(await focused(page)).toBe('button:Settings');
 
-  // Settings by keyboard, then Esc. (Focus trap and restore are the engine's: packages/engine
+  // Settings by keyboard, then Esc. (Focus trap and restore are the engine's: thunderclap-engine/packages/engine
   // e2e/ui.spec.ts.)
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'Settings' });
@@ -165,7 +165,7 @@ test('solve, journal and end card: axe, Esc and the end card Tab order', async (
   await expect.poll(() => flowState(page)).toBe('hall');
 
   // Journal, then Esc back to the hall. (Esc from a focused button is the engine's button-key
-  // behaviour: packages/engine e2e/ui.spec.ts.)
+  // behaviour: thunderclap-engine/packages/engine e2e/ui.spec.ts.)
   await page.waitForTimeout(500);
   await pressKey(page, 'KeyJ');
   await expect.poll(() => flowState(page)).toBe('journal');

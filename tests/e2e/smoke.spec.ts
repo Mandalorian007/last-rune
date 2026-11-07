@@ -75,4 +75,4 @@ test.describe('production build', () => {
 });
 
 // The itch.io embed (cross-site iframe, WebGPU, localStorage, fullscreen, click-to-launch) is an
-// engine host check now: packages/engine/e2e/host.spec.ts on its itch-iframe row.
+// engine host check now: thunderclap-engine/packages/engine/e2e/host.spec.ts on its itch-iframe row.

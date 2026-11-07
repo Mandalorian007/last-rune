@@ -7,8 +7,9 @@
  *   word before it (ui/hud.ts `doors`).
  * - A plate under the open ☰ list steps out rather than show a cut name (polish-10).
  */
+import { P as PHONE } from '../../ui/phone-base';
 
-const P = '.tc-overlay[data-phone]:not(#lr-none) .lr-doors';
+const P = `${PHONE} .lr-doors`;
 
 export const DOOR_PLATE_CSS = /* css */ `
 ${P} .lr-door { min-width: min-content; }

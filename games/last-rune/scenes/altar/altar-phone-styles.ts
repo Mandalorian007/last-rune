@@ -4,7 +4,7 @@
  * tray counts, cards, FUSE's lane, Strike) is on the chrome's CSS-px regions
  * (altar-column-styles.ts, altar-chrome.ts). Injected first in the altar sheet (altar-styles.ts).
  */
-import { cpx, P, T, tpx } from '../../ui/phone-base';
+import { cpx, P, ph, T, tpx } from '../../ui/phone-base';
 
 /** The phone altar root. */
 const A = `${P} .lr-altar[data-phone]`;
@@ -57,7 +57,7 @@ ${P} .lr-solve[data-phone] {
 ${P} .lr-solve[data-phone] .lr-solve-card { padding: ${cpx(5)} ${cpx(9)} ${cpx(6)}; }
 ${P} .lr-solve[data-phone] .lr-page-note { margin: 0 ${cpx(6)}; padding: ${cpx(4)} ${cpx(9)}; }
 ${P} .lr-solve[data-phone] .lr-page-note b { white-space: nowrap; margin-bottom: ${cpx(1)}; }
-${P}:has(.lr-solve[data-phone]) .tc-caption {
+${ph(':has(.lr-solve[data-phone])')} .tc-caption {
   left: var(--lr-scap-l) !important; right: auto !important; top: auto !important; bottom: ${cpx(3)} !important;
   max-width: min(calc(var(--lr-scap-w) + var(--tc-bar, 0px) - ${cpx(3)}), var(--tc-third)) !important;
 }
@@ -103,11 +103,11 @@ ${P} .lr-solve[data-phone] .lr-solve-continue {
 }
 /* FUSE's line: beside him, fully on screen, its tail at his face; it steps out rather than
    touch the card (solve-scene updateCrowd). */
-${P}:has(.lr-solve[data-phone]) .tc-caption {
+${ph(':has(.lr-solve[data-phone])')} .tc-caption {
   bottom: ${cpx(8)} !important; overflow: visible;
   max-width: min(calc(var(--lr-scap-w) + var(--tc-bar, 0px) - ${cpx(12)}), var(--tc-third)) !important;
 }
-${P}:has(.lr-solve[data-phone]) .tc-caption::after {
+${ph(':has(.lr-solve[data-phone])')} .tc-caption::after {
   /* polish-8 (20-solve, Android): when his face sits higher than a one-line caption is tall,
      the unclamped tail floated above the line as a stray dark diamond under the card. Keep it
      on the caption's own edge. */
@@ -116,14 +116,14 @@ ${P}:has(.lr-solve[data-phone]) .tc-caption::after {
   width: ${cpx(8)}; height: ${cpx(8)}; background: inherit; border: 1px solid var(--tc-color-border);
   border-width: 0 0 1px 1px; transform: rotate(45deg); pointer-events: none;
 }
-${P}:has(.lr-solve[data-phone][data-crowd]) .tc-caption { visibility: hidden; }
+${ph(':has(.lr-solve[data-phone][data-crowd])')} .tc-caption { visibility: hidden; }
 /* The solve card reaches from the column to 12 px inside the screen's edge (the canvas fills
    the width, so there is no free right bar; Strike and the menu are gone while it shows). */
 ${P} .lr-solve[data-phone] {
   top: calc(${CT} + ${cpx(12)});
   width: calc(1920px - var(--lr-col-l) + var(--tc-bar, 0px) - ${cpx(12)});
 }
-${P}:has(.lr-solve[data-phone]) .tc-caption { bottom: calc(${CB} + ${cpx(8)}) !important; }
+${ph(':has(.lr-solve[data-phone])')} .tc-caption { bottom: calc(${CB} + ${cpx(8)}) !important; }
 
 ${A} .lr-altar-turnmark { display: none !important; }
 

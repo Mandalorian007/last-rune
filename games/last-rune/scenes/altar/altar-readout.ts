@@ -2,10 +2,11 @@
  * Read-outs: the gauges' Needs cards, Strike's word, the Capacitor beats, the verdict, tags and the announcer.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import { h } from '@thunderclap/engine/ui';
+import { h } from '@thunderclap-engine/engine/ui';
 import type { BoltOutcome } from '../../game/flow';
 import { type SimResult, stormCharge } from '../../rules';
 import { getMachine } from '../../rules/progression';
+import { dpx } from '../../ui/frame-units';
 import {
   listText,
   ONE_STRIKE_RULE,
@@ -133,7 +134,7 @@ export const readoutMethods = {
           'data-side': side,
           'aria-hidden': 'true',
           ...(live ? {} : { 'data-plan': '' }),
-          style: { left: `${x}px`, top: `${y}px` },
+          style: { left: dpx(x), top: dpx(y) },
         },
         ...lines,
       );
@@ -286,7 +287,7 @@ export const readoutMethods = {
     text: string,
     tone: 'bad' | 'info' = 'bad',
   ): HTMLElement {
-    const el = h('div', { class: 'lr-altar-tag', style: { left: `${x}px`, top: `${y}px` } }, text);
+    const el = h('div', { class: 'lr-altar-tag', style: { left: dpx(x), top: dpx(y) } }, text);
     if (tone === 'info') el.dataset.tone = 'info';
     this.dom.append(el);
     this.tags.push(el);

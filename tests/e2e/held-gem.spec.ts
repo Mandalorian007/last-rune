@@ -50,7 +50,7 @@ async function open(page: Page, id: MachineId, placements: unknown[]) {
 
 /** Design px (1920 wide) to CSS px. */
 async function toCss(page: Page) {
-  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const k = ob.width / 1920;
   return (x: number, y: number) => ({ x: ob.x + x * k, y: ob.y + y * k, k });
 }

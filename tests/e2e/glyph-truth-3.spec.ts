@@ -38,7 +38,7 @@ async function bendLumas(page: Page): Promise<BendShot[]> {
         size: b.g.size,
       })),
   );
-  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const png = await page.screenshot();
   return page.evaluate(
     async ({ b64, bends, ob, vw }) => {
@@ -172,7 +172,7 @@ test.describe('the held tray slot on a phone (SE)', () => {
         await next.tap({ timeout: 2000 }).catch(() => {});
       }
       const L = await page.evaluate(() => (window as G).__altarLayout);
-      const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+      const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
       const k = ob.width / 1920;
       const problems: string[] = [];
       for (const slot of L.tray as { gem: string; x: number; y: number }[]) {

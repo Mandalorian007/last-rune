@@ -2,9 +2,9 @@
  * Settings panel: volumes (engine/audio mixer, persisted in its own slot),
  * reduced motion, reduce flashes, caption speed, save export/import, reset progress (confirm).
  */
-import type { AudioEngine, BusName } from '@thunderclap/engine/audio';
-import type { Host } from '@thunderclap/engine/host';
-import { button, h, type Overlay, slider } from '@thunderclap/engine/ui';
+import type { AudioEngine, BusName } from '@thunderclap-engine/engine/audio';
+import type { Host } from '@thunderclap-engine/engine/host';
+import { button, h, type Overlay, slider } from '@thunderclap-engine/engine/ui';
 import type { GameSave } from '../game/save';
 import type {
   CaptionSpeed,

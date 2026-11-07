@@ -11,7 +11,7 @@
  * Pure DOM plus FUSE's procedural portrait. Waits come from the ending's scene clock, so
  * skip/exit cancel it through `live()`.
  */
-import { h } from '@thunderclap/engine/ui';
+import { h } from '@thunderclap-engine/engine/ui';
 import type { FusePortrait } from '../../art/props/fuse-portrait';
 import {
   type ChannelId,

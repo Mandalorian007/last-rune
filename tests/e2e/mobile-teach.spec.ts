@@ -141,7 +141,7 @@ for (const vp of PHONES) {
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
-        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+        const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
         const k = ob.width / 1920;
         const pz = puzzleFor(id);
         const half = pz.design.intended.slice(0, Math.floor(pz.design.intended.length / 2));
@@ -182,7 +182,7 @@ for (const vp of PHONES) {
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
-        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+        const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
         const k = ob.width / 1920;
         const pz = puzzleFor(id);
         const half = pz.design.intended.slice(0, Math.floor(pz.design.intended.length / 2));
@@ -207,7 +207,7 @@ for (const vp of PHONES) {
               };
             };
             const app = document
-              .querySelector('.tc-overlay:not([data-units="css"])')!
+              .querySelector('.tc-layer[data-layer="hud"]')!
               .getBoundingClientRect();
             const others = [
               ...document.querySelectorAll<HTMLElement>(
@@ -337,11 +337,7 @@ for (const vp of PHONES) {
               card: seen(tip),
               next: seen(document.querySelector('.lr-altar-tip .lr-info-next')),
               hint: seen(document.querySelector('.lr-altar-hint')),
-              fuse: seen(
-                document.querySelector(
-                  '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
-                ),
-              ),
+              fuse: seen(document.querySelector('.tc-caption')),
               label: document.querySelector('.lr-altar-tip .lr-info-next')?.textContent ?? '',
               page: document.querySelector('.lr-altar-tip .lr-info-page')?.textContent ?? '',
               how:
@@ -408,7 +404,7 @@ for (const vp of PHONES) {
             const L = await page.evaluate(
               () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
             );
-            const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+            const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
             const k = ob.width / 1920;
             const x = L.left + L.margin + L.pitch * (f.cell.x + 0.5);
             const y = L.top + L.margin + L.pitch * (f.cell.y + 0.5);
@@ -517,7 +513,7 @@ test.describe('the dot legend (se)', () => {
     const L = await page.evaluate(
       () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
     );
-    const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+    const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
     const k = ob.width / 1920;
     const slot = L.tray[0]!;
     await page.touchscreen.tap(ob.x + slot.x * k, ob.y + slot.y * k);

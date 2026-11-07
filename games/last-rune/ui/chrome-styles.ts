@@ -1,18 +1,24 @@
 /**
  * Phone chrome in CSS px (ws/port-chrome, D-041 Phase 2). On phones the menus, panels, HUD
- * and FUSE's docked caption live in the engine's CSS-px overlay (`ctx.chrome`, ui/chrome.ts),
- * laid out by regions; these rules style them there. Plain px are CSS px; every `font-size`
- * follows Settings → Text size and floors at 12 px (`scaleFontSizes`, styles.ts).
+ * and FUSE's docked caption lay out over the whole screen in the overlay's region, panel and
+ * toast layers (`ctx.ui.layout`, ui/chrome.ts); these rules style them there. This sheet is not
+ * rewritten to design px: plain px are CSS px; every `font-size` follows Settings → Text size
+ * and floors at 12 px (`scaleFontSizes`, styles.ts).
  *
  * World-anchored phone rules (the altar, the hall's door plates and Next ring, the journal's
- * book, the ending) stay on the scaled overlay in ui/phone-base.ts and the scenes' *-phone-styles.ts.
+ * book, the ending) are on the frame's layers in ui/phone-base.ts and the scenes'
+ * *-phone-styles.ts (`P`).
  */
 
-/** The CSS-px overlay on a phone, ranked above every `.tc-overlay .class` rule. */
-export const C = '.tc-overlay[data-units="css"][data-form-factor^="phone"]:not(#lr-none)';
-/** Either overlay off phones: phone-only controls (✕, segmented toggles) hide there. */
-const CP = '.tc-overlay[data-units="css"][data-form-factor="phone-portrait"]:not(#lr-none)';
-export const CL = '.tc-overlay[data-units="css"][data-form-factor="phone-landscape"]:not(#lr-none)';
+/** The layers that lay out over the whole screen: regions, panels, toasts. */
+const REGION_LAYERS = ':is([data-layer="layout"], [data-layer="panels"], [data-layer="toasts"])';
+const ROOT = '.tc-overlay[data-units="css"][data-form-factor^="phone"]:not(#lr-none)';
+/** The region, panel and toast layers on a phone, ranked above every `.tc-overlay .class` rule. */
+export const C = `${ROOT} > ${REGION_LAYERS}`;
+/** `C`, with `cond` on the overlay root (e.g. a `:has()` that may match in another layer). */
+export const ch = (cond: string) => `${ROOT}${cond} > ${REGION_LAYERS}`;
+const CP = `.tc-overlay[data-units="css"][data-form-factor="phone-portrait"]:not(#lr-none) > ${REGION_LAYERS}`;
+export const CL = `.tc-overlay[data-units="css"][data-form-factor="phone-landscape"]:not(#lr-none) > ${REGION_LAYERS}`;
 const OFF = '.tc-overlay:not([data-phone]):not([data-form-factor^="phone"])';
 
 export const CHROME_CSS = /* css */ `
@@ -447,10 +453,10 @@ ${C} .lr-codex-spread { border-radius: 4px; box-shadow: 0 0 0 1px #1c0d06, 0 3px
 ${C} .lr-codex-spread::after { left: calc(50% - 14px); width: 28px; }
 
 /* While a panel is open, the ☰ steps back. */
-${C}:has(.tc-panel-host[data-modal="true"]) .lr-hud { visibility: hidden; }
+${ch(':has(.tc-panel-host[data-modal="true"])')} .lr-hud { visibility: hidden; }
 /* polish-10: and the title's buttons and links: on an upright phone Settings stood over Play,
    and a ghost "Pl" showed through its lower edge. */
-${C}:has(.tc-panel-host[data-modal="true"]) :is(.lr-title-menu, .lr-title-links) { visibility: hidden; }
+${ch(':has(.tc-panel-host[data-modal="true"])')} :is(.lr-title-menu, .lr-title-links) { visibility: hidden; }
 
 /* Settings on an upright phone: the tabs get their own row under the title, and each tab
    becomes one column with each choice under its label. */

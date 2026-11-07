@@ -12,17 +12,34 @@
  * scenes/<scene>/<scene>-phone-styles.ts (game/ctx.ts hands them to `ensureGameStyles`, which
  * appends them to this sheet), the ending's in scenes/ending/ending-phone-styles.ts.
  *
- * Sizes are written in CSS px through `cpx(n)` (n CSS px in design px) or `tpx(n)` (the same,
- * following Settings → Text size), so they hold on every phone. Overrides use `P`, which
- * outranks any scene stylesheet whatever the load order.
+ * These sheets are written in design px (they pass through `toFrameUnits`, ui/styles.ts): on the
+ * frame's layers one px is one design px of the canvas. Sizes that must hold on every phone are
+ * written in CSS px through `cpx(n)` or `tpx(n)` (the same, following Settings → Text size).
+ * Overrides use `P`, which outranks any scene stylesheet whatever the load order.
  */
 
-/** n CSS px, as a design-px length (phones only; the variable is unset elsewhere). */
-export const cpx = (n: number) => `calc(var(--tc-css-px, 1px) * ${n})`;
+/**
+ * One CSS px, set on a phone's overlay root by an un-rewritten rule (`PHONE_ROOT_CSS`). The
+ * fallback is rewritten to one design px, so `cpx` off phones is design px as before.
+ */
+const CSS_PX = '--lr-css-px';
+/** n CSS px (n design px off phones). */
+export const cpx = (n: number) => `calc(var(${CSS_PX}, 1px) * ${n})`;
 /** n CSS px of text, grown by Settings → Text size. */
-export const tpx = (n: number) => `calc(var(--tc-css-px, 1px) * ${n} * var(--tc-text-scale, 1))`;
-/** Phone root selector, ranked above every `.tc-overlay .class` rule. */
-export const P = '.tc-overlay[data-phone]:not(#lr-none)';
+export const tpx = (n: number) => `calc(var(${CSS_PX}, 1px) * ${n} * var(--tc-text-scale, 1))`;
+/** The phone overlay root (for `:has()` over the whole overlay; prefer `P` or `ph`). */
+export const PR = '.tc-overlay[data-phone]:not(#lr-none)';
+/** The frame's layers: the world-anchored DOM and FUSE's corner card. */
+const FRAME_LAYERS = ':is([data-layer="hud"], [data-layer="captions"])';
+/**
+ * The frame's layers on a phone, ranked above every `.tc-overlay .class` rule. The regions,
+ * panels and toasts are styled by ui/chrome-styles.ts (`C`) instead.
+ */
+export const P = `${PR} > ${FRAME_LAYERS}`;
+/** `P`, with `cond` on the overlay root (e.g. `:has(.lr-ending)`, which may be in another layer). */
+export const ph = (cond: string) => `${PR}${cond} > ${FRAME_LAYERS}`;
+/** Un-rewritten: what `cpx` means on a phone. */
+export const PHONE_ROOT_CSS = `${PR} { ${CSS_PX}: 1px; }\n`;
 /** Touch root selector, same rank. */
 export const T = '.tc-overlay[data-touch]:not(#lr-none)';
 /** The visible band's top and bottom edges when the art fills the width (D-040; 0 otherwise). */
@@ -41,8 +58,8 @@ ${P} kbd { display: none !important; }
 /* ── Phone hit areas ───────────────────────────────────────────────────────
    Every button and link gets an invisible target at least 44 CSS px each way, centred on it.
    :where() keeps this rule weaker than any scene rule that positions the control itself. */
-:where(.tc-overlay[data-phone]) :where(button, a[href], [role="button"], summary) { position: relative; }
-:where(.tc-overlay[data-phone]) :where(button, a[href], [role="button"], summary)::before {
+:where(${P}) :where(button, a[href], [role="button"], summary) { position: relative; }
+:where(${P}) :where(button, a[href], [role="button"], summary)::before {
   content: ''; position: absolute; pointer-events: auto;
   top: min(0px, calc(50% - var(--tc-tap-min) / 2)); bottom: min(0px, calc(50% - var(--tc-tap-min) / 2));
   left: min(0px, calc(50% - var(--tc-tap-min) / 2)); right: min(0px, calc(50% - var(--tc-tap-min) / 2));

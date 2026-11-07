@@ -101,7 +101,7 @@ async function panelProblems(page: Page, id: MachineId): Promise<string[]> {
       const hit = (a: Box, b: Box) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
       const L = (window as unknown as { __altarLayout: AltarLayout }).__altarLayout;
       const ov = document
-        .querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!
+        .querySelector<HTMLElement>('.tc-layer[data-layer="hud"]')!
         .getBoundingClientRect();
       const k = ov.width / 1920;
       for (let y = 0; y < L.rows; y++)
@@ -157,7 +157,7 @@ async function emptySocket(page: Page, id: MachineId) {
     ({ taken }) => {
       const L = (window as unknown as { __altarLayout: AltarLayout }).__altarLayout;
       const ov = document
-        .querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!
+        .querySelector<HTMLElement>('.tc-layer[data-layer="hud"]')!
         .getBoundingClientRect();
       const k = ov.width / 1920;
       for (let y = 0; y < L.rows; y++)
@@ -259,7 +259,7 @@ for (const vp of SHOT_PHONES) {
       const L = await page.evaluate(
         () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
       );
-      const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+      const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
       const k = ob.width / 1920;
       const s0 = L.tray[0]!;
       await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);

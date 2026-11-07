@@ -2,7 +2,7 @@
  * Teaching: the info and arrival cards, FUSE's gem lines and nudges.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import { button, h } from '@thunderclap/engine/ui';
+import { button, h } from '@thunderclap-engine/engine/ui';
 import { createGemPortraits } from '../../art/gem-portraits';
 import {
   CAP_CHIP_ONE,
@@ -18,6 +18,7 @@ import { gemNudge, TEACH_NUDGE } from '../../content/lines';
 import { isRotational } from '../../rules';
 import type { Cell, Dir, GemKind } from '../../rules/types';
 import { chipAt, diagramSvg, fizzleAt, GEM_DIAGRAMS, turnSide } from '../../ui/codex-diagram';
+import { dpx } from '../../ui/frame-units';
 import {
   AMPLIFY_AGAIN,
   AMPLIFY_ONCE,
@@ -434,7 +435,7 @@ export const infoMethods = {
     // Bottom edge just above the tray slots (translate -100%), clear of the board's sockets.
     const s0 = L.tray[0];
     const size = s0?.size ?? 92;
-    this.tip.style.top = `${L.trayY - size * 0.62}px`;
+    this.tip.style.top = dpx(L.trayY - size * 0.62);
     this.tip.hidden = false;
     this.tipSlotX = slotX;
     this.placeTip(L);

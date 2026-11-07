@@ -16,8 +16,14 @@
  * bolt.done                  // finished (incl. over/under tails); bolt.clear() to remove
  * ```
  */
-import type { ParticleSystem } from '@thunderclap/engine/fx';
-import type { DrawParams, Frame, Material, Renderer, RGBA } from '@thunderclap/engine/render';
+import type { ParticleSystem } from '@thunderclap-engine/engine/fx';
+import type {
+  DrawParams,
+  Frame,
+  Material,
+  Renderer,
+  RGBA,
+} from '@thunderclap-engine/engine/render';
 import type { Cell, GemKind } from '../../rules/types';
 import { BOLT_MATERIAL_WGSL, BOLT_UNIFORM_FLOATS } from '../../shaders/bolt-shaders';
 import { GEM_COLOUR, pitch } from './palette';

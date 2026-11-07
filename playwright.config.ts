@@ -5,7 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
 // Servers (ports from tests/e2e/ports.ts; worktrees get their own offset):
 //   - vite preview of dist/ at http://localhost:4173 (top-level page)
 //   - vite dev at http://127.0.0.1:5175 (DEV-only handles for story e2e)
-// Embedding in a cross-site iframe is an engine host check (packages/engine/e2e, D-047).
+// Embedding in a cross-site iframe is an engine host check (thunderclap-engine/packages/engine/e2e, D-047).
 
 import { DEV_PORT, DEV_URL, PREVIEW_PORT, PREVIEW_URL } from './tests/e2e/ports';
 

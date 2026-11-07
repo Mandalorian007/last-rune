@@ -96,7 +96,7 @@ test('Undo, Clear and Turn are disabled when a tap would do nothing; Turn names 
   const L = await page.evaluate(
     () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
   );
-  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const k = ob.width / 1920;
   const hold = async (gem: string) => {
     const s = L.tray.find((t) => t.gem === gem)!;

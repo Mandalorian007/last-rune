@@ -8,7 +8,7 @@
  * played locally: the only network touches are the player clicking the invite (D-013)
  * or the Ko-fi link (D-034): plain links, new tab, no widgets.
  */
-import { safeExternalUrl } from '@thunderclap/engine/platform';
+import { safeExternalUrl } from '@thunderclap-engine/engine/platform';
 import { wordCount } from './lines';
 
 /** The ThunderClap Gaming invite. If empty, the ending hides the Join button. */

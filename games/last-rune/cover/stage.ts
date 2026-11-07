@@ -7,8 +7,8 @@
  * A card works in "world" px (the game's 1920×1080 design space, so the game's views and props
  * draw where they always do) and picks what the frame shows with `shot`.
  */
-import { ParticleSystem } from '@thunderclap/engine/fx';
-import { type PostSettingsPatch, PostStack } from '@thunderclap/engine/post';
+import { ParticleSystem } from '@thunderclap-engine/engine/fx';
+import { type PostSettingsPatch, PostStack } from '@thunderclap-engine/engine/post';
 import {
   type Camera,
   type DrawParams,
@@ -16,7 +16,7 @@ import {
   type Material,
   type Renderer,
   SnapshotRenderer,
-} from '@thunderclap/engine/render';
+} from '@thunderclap-engine/engine/render';
 import { EmbossLabel, EmbossRenderer } from '../art/materials/emboss';
 import { LightSet } from '../art/materials/lights';
 import { pitch } from '../art/props/palette';
@@ -112,7 +112,9 @@ class TitleMark {
       height: TITLE_LABEL.height,
       tracking: TITLE_LABEL.tracking,
     });
-    this.halo = r.createSpriteMaterial(r.textureFromSource(haloCanvas(), 'cover-halo'), 'halo', {
+    this.halo = r.createSpriteMaterial({
+      texture: r.textureFromSource(haloCanvas(), 'cover-halo'),
+      label: 'halo',
       blend: 'alpha',
     });
   }

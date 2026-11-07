@@ -1,4 +1,4 @@
-import { validateSpec } from '@thunderclap/engine/audio';
+import { validateSpec } from '@thunderclap-engine/engine/audio';
 import { describe, expect, it } from 'vitest';
 import { GEM_KINDS } from '../rules/types';
 import { analyze, problems } from './analyze';

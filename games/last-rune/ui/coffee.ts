@@ -4,13 +4,13 @@
  * player's action. No third-party widget, script, iframe or remote image; the cup icon is
  * drawn here as inline SVG.
  */
-import type { Host } from '@thunderclap/engine/host';
+import type { Host } from '@thunderclap-engine/engine/host';
 import {
   type ExternalLink,
   type ExternalLinkLabels,
   externalLink,
   h,
-} from '@thunderclap/engine/ui';
+} from '@thunderclap-engine/engine/ui';
 import { type EndingButton, LINK_COPY_TEXT } from '../content/ending';
 
 const SVG = 'http://www.w3.org/2000/svg';

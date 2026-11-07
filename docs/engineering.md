@@ -2,26 +2,26 @@
 
 ## Tooling (D-006)
 - **pnpm** (version pinned in `package.json#packageManager`). Never use npm or yarn, and never commit `package-lock.json`.
-- **pnpm workspace** (D-041, `pnpm-workspace.yaml`). The root package (`last-rune`) is the game plus all tooling (Vite, Playwright, scripts, `dist/`). The engine is `packages/engine` (`@thunderclap/engine`), which the root depends on as `workspace:*`. The game imports it only through the package's exports map (`@thunderclap/engine/render`, `/ui`, …); `pnpm check:boundaries` fails on anything else. The engine has its own `tsconfig.json`, `vitest.config.ts` and scripts; run them with `pnpm --filter @thunderclap/engine <script>`.
-- **TypeScript 7**, strict, `noEmit` (Vite bundles). Three projects: `packages/engine/tsconfig.json` (the engine alone), `tsconfig.json` (browser: games and unit tests, plus the engine sources they import) and `tsconfig.node.json` (configs, scripts, e2e).
+- **One package** (D-052). The root package (`last-rune`) is the game plus all tooling (Vite, Playwright, scripts, `dist/`). The engine is the npm package `@thunderclap-engine/engine` (`^1.1.0`) and the desktop shell `@thunderclap-engine/host-electron` (`^0.1.0`), developed and tested in https://github.com/Mandalorian007/thunderclap-engine. The game imports them only through their exports maps (`@thunderclap-engine/engine/render`, `/ui`, …); `pnpm check:boundaries` fails on anything else. Never patch `node_modules` or copy engine code in; log a gap as an upstream ask. `pnpm-workspace.yaml` lists only `.`: it keeps a worktree nested in the main checkout its own workspace root.
+- **TypeScript 7**, strict, `noEmit` (Vite bundles). Two projects: `tsconfig.json` (browser: games and unit tests, against the engine's published `.d.ts`) and `tsconfig.node.json` (configs, scripts, e2e).
 - **Vite 8** dev server and build (`base: './'` for itch).
 - **Vitest 5** for unit tests, colocated as `*.test.ts`.
-- **Playwright** for browser/e2e smoke and the automated playtest (`tests/e2e/`). The engine has its own Playwright project (`packages/engine/playwright.config.ts`), which runs platform specs on a noun-free harness page across a viewport, device and itch-iframe matrix (D-041 addendum 2). Game specs test product only.
+- **Playwright** for browser/e2e smoke and the automated playtest (`tests/e2e/`). Platform specs (viewport, device and iframe matrix on a noun-free harness) belong to the engine repo (D-041 addendum 2). Game specs test product only.
 - **Biome** for lint and format (2-space indent, single quotes, width 100). Auto-format is on (D-024): a checked-in Claude Code hook (`.claude/settings.json`) runs `biome check --write` on every file an agent edits, and `pnpm fix` does the whole repo. CI stays strict (`pnpm check` fails on unformatted code), so run `pnpm fix` before committing anything edited outside an agent.
 
 ## Commands
 ```
 pnpm install
 pnpm dev            # local dev server
-pnpm check          # check:engine + check:game  ← must pass before any merge
-pnpm check:engine   # engine only: typecheck + lint + unit tests (packages/engine)
-pnpm check:game     # game: typecheck + lint (whole repo) + check:boundaries + game unit tests
+pnpm check          # typecheck + lint + check:boundaries + unit tests  ← must pass before any merge
 pnpm check:boundaries  # import-boundary check (scripts/check-boundaries.mjs)
 pnpm fix            # format + safe lint fixes + organize imports, whole repo
 pnpm build          # typecheck + production build to dist/
 pnpm test:e2e       # Playwright (ports in tests/e2e/ports.ts; worktrees auto-offset, or E2E_PORT_OFFSET)
-pnpm test:e2e:engine  # engine e2e: harness smoke on the viewport/device/iframe matrix (packages/engine/e2e)
-pnpm package:itch   # build + zip for itch upload
+pnpm baseline       # screenshot diff against the v1.0 set (BASELINE_UPDATE=1 rewrites it)
+pnpm desktop:dev    # the npm Electron shell around a Vite dev server
+pnpm desktop:build  # after pnpm build: unsigned desktop app into dist/desktop/ (scripts/desktop/build.mjs)
+pnpm test:e2e:desktop  # Electron-driver specs (tests/desktop/) on the npm shell
 ```
 
 ## Branching and worktrees
@@ -51,7 +51,7 @@ megapixel on an M4. Measure with the harness in `scripts/perf/` (see its README)
 after any visual change that adds full-screen work.
 
 **GPU timing.** When the adapter has `timestamp-query`, the renderer samples per-pass GPU
-time every `timingEvery` frames (`packages/engine/src/render/gpu-timer.ts`; `renderer.timing.source ===
+time every `timingEvery` frames (`thunderclap-engine/packages/engine/src/render/gpu-timer.ts`; `renderer.timing.source ===
 'timestamp'`). Otherwise it falls back to submit→`onSubmittedWorkDone` latency (`'queue'`).
 That latency includes waiting behind the compositor and other GPU clients, so it can read
 several times the real cost. Quote timestamp numbers.
@@ -75,7 +75,7 @@ Time to first title frame is ~0.1–0.16 s (production build). The audio pre-ren
 first click takes ~1–1.9 s and yields every 8 ms, so the title keeps animating. Input is never
 blocked for more than ~90 ms, the length of the longest single-sound synthesis task.
 
-- **Draws:** keep each scene ≤ 24 draw calls (merge by material; see `packages/engine/src/render`).
+- **Draws:** keep each scene ≤ 24 draw calls (merge by material; see `thunderclap-engine/packages/engine/src/render`).
 - **Lights:** `MAX_LIGHTS = 16` per light set. `lightBudget.max` (in `art/materials/lights.ts`)
   can cap it lower; no tier does today.
 - **Particles:** 32768 capacity per system. Spawning scales by `spawnScale`
@@ -107,7 +107,7 @@ Auto switches to Low for the session when the adapter is a software fallback
 for 4 s. It reads nothing else about the adapter. The DOM UI is always native resolution.
 
 **Phones (D-039, mobile-perf).** On a handheld (coarse pointer and a screen whose short side
-is ≤ 600 CSS px; `deviceTraits()` in `packages/engine/src/platform/environment.ts`) Auto starts on Low
+is ≤ 600 CSS px; `deviceTraits()` in `thunderclap-engine/packages/engine/src/platform/environment.ts`) Auto starts on Low
 (`autoReason` `handheld`). Tablets and desktops are unchanged. On Low with dynamic resolution
 (Auto→Low, or Low), if the scale sits at its 0.6 floor over budget **and** the median frame
 interval is over 20 ms for 4 s, the game caps itself at a steady 30 fps for the session

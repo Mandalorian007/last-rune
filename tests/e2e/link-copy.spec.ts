@@ -9,7 +9,7 @@ import { DEV_URL, trackProblems } from './helpers';
 // browser blocks the new tab. Covers the product: each Copy link copies its own URL, with Last
 // Rune's wording, placement and arrow-key order. How copying and opening work (refused or
 // missing clipboard, execCommand fallback, a blocked pad open, itch's iframe, nothing opening on
-// its own) is the engine's host, tested once in packages/engine/e2e/host.spec.ts (D-041).
+// its own) is the engine's host, tested once in thunderclap-engine/packages/engine/e2e/host.spec.ts (D-041).
 //
 // LINK_COPY_SHOTS=<dir> also saves first-time-player screenshots of each state.
 

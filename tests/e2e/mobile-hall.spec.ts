@@ -152,14 +152,10 @@ for (const vp of PHONES) {
       problems.push(...clashes(boxes).map((s) => `first visit: ${s}`));
       problems.push(...(await offBand(page, boxes)).map((s) => `first visit: ${s}`));
       // FUSE's welcome: a tail toward him, and off the Start here door and its plate.
-      await expect(
-        page.locator('.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]'),
-      ).toBeVisible();
+      await expect(page.locator('.tc-caption')).toBeVisible();
       await waitFrames(page, 3);
       const welcome = await page.evaluate(() => {
-        const cap = document.querySelector<HTMLElement>(
-          '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
-        )!;
+        const cap = document.querySelector<HTMLElement>('.tc-caption')!;
         const c = cap.getBoundingClientRect();
         const out: string[] = [];
         if (!cap.dataset.tail) out.push("FUSE's card has no tail");
@@ -233,14 +229,10 @@ for (const vp of PHONES) {
       // FUSE speaking in the hall: a tail; never over an open door or its plate.
       // An ambient line, as the hall says one when idle (the scene's own placement).
       await page.evaluate(() => (window as G).__game.stack.top.ambient());
-      await expect(
-        page.locator('.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]'),
-      ).toBeVisible();
+      await expect(page.locator('.tc-caption')).toBeVisible();
       await waitFrames(page, 4);
       const ambient = await page.evaluate(() => {
-        const cap = document.querySelector<HTMLElement>(
-          '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
-        )!;
+        const cap = document.querySelector<HTMLElement>('.tc-caption')!;
         const c = cap.getBoundingClientRect();
         const out: string[] = [];
         if (!cap.dataset.tail) out.push("FUSE's card has no tail");
@@ -264,9 +256,7 @@ for (const vp of PHONES) {
             id ? x.id === id : x.status === 'locked' && !x.floor,
           );
           const f = st.frame;
-          const ov = document
-            .querySelector('.tc-overlay:not([data-units="css"])')!
-            .getBoundingClientRect();
+          const ov = document.querySelector('.tc-layer[data-layer="hud"]')!.getBoundingClientRect();
           const k = ov.width / 1920;
           return {
             id: a.id as string,
@@ -295,9 +285,7 @@ for (const vp of PHONES) {
         const where = async () =>
           page.evaluate(() => {
             const f = document.querySelector<HTMLElement>('.lr-card-fuse');
-            const c = document.querySelector<HTMLElement>(
-              '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
-            );
+            const c = document.querySelector<HTMLElement>('.tc-caption');
             const inCard = !!f && !f.hidden && f.offsetParent !== null;
             const inCap = !!c && c.offsetParent !== null && getComputedStyle(c).opacity !== '0';
             return inCard && !inCap ? 'card' : inCap && !inCard ? 'caption' : 'none';
@@ -315,16 +303,9 @@ for (const vp of PHONES) {
               problems.push(`${id}: the card covers ${b.n}`);
           problems.push(...(await offBand(page, [c])).map((s) => `${id}: ${s}`));
         }
-        if (said === 'card')
-          await expect(
-            page.locator(
-              '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
-            ),
-          ).toBeHidden();
+        if (said === 'card') await expect(page.locator('.tc-caption')).toBeHidden();
         else {
-          const cap = await page
-            .locator('.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]')
-            .boundingBox();
+          const cap = await page.locator('.tc-caption').boundingBox();
           const cb = await card.boundingBox();
           const bx = (n: string, r: { x: number; y: number; width: number; height: number }) => ({
             n,
@@ -354,10 +335,8 @@ for (const vp of PHONES) {
             note.getBoundingClientRect().height > 0
               ? Number.parseFloat(getComputedStyle(note).fontSize)
               : 0,
-          // Design px on the legacy overlay; CSS px on the chrome overlay.
-          scale: note.closest('[data-units="css"]')
-            ? 1
-            : document.querySelector('.tc-overlay')!.getBoundingClientRect().width / 1920,
+          // Computed sizes are CSS px (one overlay, no transform; ws/one-overlay).
+          scale: 1,
         };
       });
       if (!menu.panel) problems.push('the open menu has no panel');

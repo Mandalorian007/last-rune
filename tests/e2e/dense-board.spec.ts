@@ -113,7 +113,7 @@ async function open(page: Page, id: MachineId): Promise<{ L: AltarLayout; cssPx:
 
 /** Client px of a design-px point, through the scaled overlay. */
 async function toClient(page: Page) {
-  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const k = ob.width / 1920;
   return (x: number, y: number) => ({ x: ob.x + x * k, y: ob.y + y * k });
 }
@@ -175,10 +175,8 @@ for (const vp of PHONES) {
           expect(pitch, `${vp.name} ${id} pitch floor (CSS px)`).toBeGreaterThanOrEqual(floor);
         // dense-board-4: a dense board's ×N badges and Gives/Needs cards meet the 14 px floor.
         if (L.phone?.dense) {
-          // Rendered size (CSS px): the computed size times its overlay's scale.
+          // Rendered size: the computed size is CSS px (one overlay, no transform; ws/one-overlay).
           const small = await page.evaluate(() => {
-            const ov = document.querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!;
-            const k = ov.getBoundingClientRect().width / (ov.offsetWidth || 1);
             return [
               ...document.querySelectorAll<HTMLElement>(
                 '.lr-altar-count, .lr-altar-count *, .lr-altar-need, .lr-altar-need *',
@@ -191,9 +189,7 @@ for (const vp of PHONES) {
               )
               .map((e) => ({
                 text: e.textContent?.trim().slice(0, 20),
-                px:
-                  Number.parseFloat(getComputedStyle(e).fontSize) *
-                  (e.closest('.tc-overlay[data-units="css"]') ? 1 : k),
+                px: Number.parseFloat(getComputedStyle(e).fontSize),
               }))
               .filter((q) => q.px < 13.95);
           });
@@ -423,7 +419,7 @@ for (const vp of PHONES) {
           !taken.has(`${q.cell.x + 1},${q.cell.y + 1}`),
       )!;
       expect(g, 'a socket with an open lower-right neighbour').toBeTruthy();
-      const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+      const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
       const k = ob.width / 1920;
       // Dismiss whatever card is up so taps reach the board, then pick the gem up.
       await page.evaluate(() => (window as G).__game.fuse.hush());

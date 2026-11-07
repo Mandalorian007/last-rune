@@ -125,7 +125,7 @@ function bars(page: Page) {
 const HALL_TO_SCREEN = `
   const st = window.__game.stack.top.state;
   const f = st.frame;
-  const ov = document.querySelector('.tc-overlay:not([data-units="css"])').getBoundingClientRect();
+  const ov = document.querySelector('.tc-layer[data-layer="hud"]').getBoundingClientRect();
   const k = ov.width / 1920;
   const sx = (x) => ov.left + (960 + (x - 960 - f.camX) * f.zoom) * k;
   const sy = (y) => ov.top + (540 + (y - 540 - f.camY) * f.zoom) * k;
@@ -211,10 +211,7 @@ for (const vp of PHONES) {
           new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true }),
         ),
       );
-      await expect(page.locator('.tc-overlay:not([data-units="css"])')).toHaveAttribute(
-        'data-phone',
-        '',
-      );
+      await expect(page.locator('.tc-overlay')).toHaveAttribute('data-phone', '');
       await waitFrames(page, 6);
       const problems: string[] = [];
 
@@ -242,16 +239,10 @@ for (const vp of PHONES) {
         g.fuse.hush();
         g.stack.top.chat?.();
       });
-      await expect(
-        page.locator('.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]'),
-      ).toBeVisible();
+      await expect(page.locator('.tc-caption')).toBeVisible();
       await page.waitForTimeout(400);
       const cover = await page.evaluate(() => {
-        const c = document
-          .querySelector(
-            '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]',
-          )!
-          .getBoundingClientRect();
+        const c = document.querySelector('.tc-caption')!.getBoundingClientRect();
         const out: string[] = [];
         for (const sel of ['.lr-title', '.lr-title-menu']) {
           const r = document.querySelector(sel)!.getBoundingClientRect();
@@ -401,9 +392,7 @@ for (const vp of PHONES) {
       // FUSE's plate under the book (its ends at design px 712 and 1792), clear of both leaves
       // (they end at design y 780) and of the plate's line.
       const turns = await page.evaluate(() => {
-        const o = document
-          .querySelector('.tc-overlay:not([data-units="css"])')!
-          .getBoundingClientRect();
+        const o = document.querySelector('.tc-layer[data-layer="hud"]')!.getBoundingClientRect();
         const k = o.width / 1920;
         const words = document.querySelector('.lr-j-plate-text, .lr-j-plate')!;
         const range = document.createRange();
@@ -435,9 +424,7 @@ for (const vp of PHONES) {
       }
       // ...and the quill in the inkwell keeps clear of the page list.
       const quill = await page.evaluate(() => {
-        const o = document
-          .querySelector('.tc-overlay:not([data-units="css"])')!
-          .getBoundingClientRect();
+        const o = document.querySelector('.tc-layer[data-layer="hud"]')!.getBoundingClientRect();
         const k = o.width / 1920;
         const q = (window as G).__game.stack.top.quillBox();
         const hits: string[] = [];
@@ -511,16 +498,10 @@ for (const vp of PHONES) {
         g.flow.newGame();
       });
       await page.waitForFunction(() => (window as G).__game.flow.state === 'hall');
-      await expect(
-        page.locator('.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]'),
-      ).toBeVisible({ timeout: 5000 });
-      await expect(
-        page.locator('.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]'),
-      ).toContainText(welcome);
+      await expect(page.locator('.tc-caption')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('.tc-caption')).toContainText(welcome);
       await waitFrames(page, 4);
-      const cap = (await page
-        .locator('.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]')
-        .boundingBox())!;
+      const cap = (await page.locator('.tc-caption').boundingBox())!;
       for (const sel of ['.lr-hall-next', '.lr-hall-next-tag']) {
         const b = await page.locator(sel).boundingBox();
         if (b && meets(cap, b)) problems.push(`hall welcome: FUSE's card covers ${sel}`);
@@ -546,17 +527,8 @@ for (const vp of PHONES) {
       });
       await page.waitForFunction(() => (window as G).__game.flow.state === 'hall');
       await page.waitForTimeout(600);
-      const said = await page
-        .locator('.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]')
-        .isVisible();
-      if (
-        said &&
-        (
-          (await page
-            .locator('.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]')
-            .textContent()) ?? ''
-        ).includes(welcome)
-      )
+      const said = await page.locator('.tc-caption').isVisible();
+      if (said && ((await page.locator('.tc-caption').textContent()) ?? '').includes(welcome))
         problems.push('hall: the welcome played on a save with progress');
       await page.evaluate(() => (window as G).__game.fuse.hush());
 
@@ -810,9 +782,7 @@ for (const vp of PHONES) {
         const st = (window as G).__game.stack.top.state;
         const a = st.model.alcoves.find((x: G) => x.status === 'locked');
         const f = st.frame;
-        const ov = document
-          .querySelector('.tc-overlay:not([data-units="css"])')!
-          .getBoundingClientRect();
+        const ov = document.querySelector('.tc-layer[data-layer="hud"]')!.getBoundingClientRect();
         const k = ov.width / 1920;
         return {
           name: a.name as string,

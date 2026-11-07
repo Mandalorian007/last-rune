@@ -10,7 +10,7 @@ import {
   pluck,
   rng,
   type SoundSpec,
-} from '@thunderclap/engine/audio';
+} from '@thunderclap-engine/engine/audio';
 import { type GemVoice, rateForSemis } from './theory';
 
 /** Hold envelope for loop layers (the loop fold hides the 5 ms attack). */

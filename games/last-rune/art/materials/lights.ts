@@ -2,7 +2,7 @@
  * LightSet: the scene's 2D point lights (warm candles at the edges, cool gems in the centre).
  * Rebuild it every frame (`begin` → `add…` → `apply` to each lit material). No allocation.
  */
-import type { Material } from '@thunderclap/engine/render';
+import type { Material } from '@thunderclap-engine/engine/render';
 import { LIGHT_SET_FLOATS, MAX_LIGHTS } from '../../shaders/lights-wgsl';
 import { LINEAR } from './palette';
 

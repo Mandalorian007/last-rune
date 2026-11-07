@@ -1,6 +1,6 @@
 /**
  * The Last Rune in the desktop shell (D-042, ws/last-rune-desktop): the production build
- * (dist/) served by the ThunderClap Electron shell (packages/host-electron, unpackaged, with
+ * (dist/) served by the ThunderClap Electron shell (@thunderclap-engine/host-electron from npm, unpackaged, with
  * `TC_RENDERER_DIR`), driven by Playwright's Electron driver with real input only.
  *
  * - Title → hall → intake-desk → solve, with the save written to the shell's localStorage.
@@ -31,10 +31,12 @@ import { cursorKeys, nextGem, turnKeys } from '../e2e/altar-keys';
 import { pressKey, readSave, trackProblems, waitFrames } from '../e2e/helpers';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
-const shell = join(root, 'packages/host-electron');
+const rootRequire = createRequire(join(root, 'package.json'));
+/** The npm shell's folder: its package.json `main` is the shell's main process (out/main.mjs). */
+const shell = dirname(rootRequire.resolve('@thunderclap-engine/host-electron/package.json'));
 const SHOTS = join(root, 'docs/design/screens/local');
-/** The Electron binary the shell's `electron` devDependency downloaded. */
-const electronBin = createRequire(join(shell, 'package.json'))('electron') as unknown as string;
+/** The Electron binary the root `electron` devDependency downloaded. */
+const electronBin = rootRequire('electron') as unknown as string;
 const MACHINE: MachineId = 'intake-desk';
 
 let userData = '';

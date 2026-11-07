@@ -9,7 +9,8 @@
  * bar); a tap opens them as a short list, picking one or tapping elsewhere closes it. The ☰
  * carries the journal's "new pages" dot. Off phones the ☰ is hidden (CSS) and nothing changes.
  */
-import { h, NO_RESTORE_FOCUS_ATTR, type Rect } from '@thunderclap/engine/ui';
+import { h, NO_RESTORE_FOCUS_ATTR, type Rect } from '@thunderclap-engine/engine/ui';
+import { dpx } from './frame-units';
 import { type Bounds, clampInto, cost, type Obstacle, pickSpot } from './place';
 
 /** A door's plate on a phone (mobile-5-chrome): screen design px, centre x and plate top. */
@@ -122,7 +123,15 @@ export class Hud {
   private doorKey = '';
   private offOutside: (() => void) | null = null;
 
-  constructor(layer: HTMLElement, actions: HudActions) {
+  /**
+   * `layer`: the overlay's frame layer (`ui.layers.hud`); `scale`: CSS px per design px there
+   * (`ui.scale`). Positions are design px (`dpx`).
+   */
+  constructor(
+    layer: HTMLElement,
+    actions: HudActions,
+    private readonly scale: () => number = () => 1,
+  ) {
     const btn = (label: string, key: string, fn: () => void) =>
       h(
         'button',
@@ -221,13 +230,13 @@ export class Hud {
     const top = at.y - at.h / 2;
     this.nextRing.toggleAttribute('data-round', at.round === true);
     Object.assign(this.nextRing.style, {
-      left: `${at.x - at.w / 2}px`,
-      top: `${top}px`,
-      width: `${at.w}px`,
-      height: `${at.h}px`,
+      left: dpx(at.x - at.w / 2),
+      top: dpx(top),
+      width: dpx(at.w),
+      height: dpx(at.h),
     });
-    this.nextTag.style.left = `${at.x}px`;
-    this.nextTag.style.setProperty('--lr-next-top', `${top}px`);
+    this.nextTag.style.left = dpx(at.x);
+    this.nextTag.style.setProperty('--lr-next-top', dpx(top));
     this.nextTag.textContent = at.label;
     this.placeTag();
   }
@@ -243,7 +252,7 @@ export class Hud {
     if (!at?.bounds || this.doorLayer.hidden || tag.hidden) {
       tag.removeAttribute('data-side');
       tag.style.top = tag.style.transform = '';
-      if (at) tag.style.left = `${at.x}px`;
+      if (at) tag.style.left = dpx(at.x);
       return;
     }
     const g = at.gap ?? 6;
@@ -260,8 +269,8 @@ export class Hud {
     tag.style.transform = 'none';
     for (const side of sides) {
       tag.dataset.side = side;
-      const w = tag.offsetWidth;
-      const hh = tag.offsetHeight;
+      const w = tag.offsetWidth / this.k;
+      const hh = tag.offsetHeight / this.k;
       const want: Rect =
         side === 'above'
           ? { x: at.x - w / 2, y: ring.y - hh - g * 0.5, width: w, height: hh }
@@ -278,8 +287,13 @@ export class Hud {
     }
     if (!best) return;
     tag.dataset.side = best.side;
-    tag.style.left = `${Math.round(best.rect.x)}px`;
-    tag.style.top = `${Math.round(best.rect.y)}px`;
+    tag.style.left = dpx(Math.round(best.rect.x));
+    tag.style.top = dpx(Math.round(best.rect.y));
+  }
+
+  /** CSS px per design px on the frame. */
+  private get k(): number {
+    return this.scale() || 1;
   }
 
   /** An element's box in the HUD layer, design px (its transform included); null if not shown. */
@@ -288,7 +302,7 @@ export class Hud {
     const r = el.getBoundingClientRect();
     if (!layer || r.width === 0) return null;
     const L = layer.getBoundingClientRect();
-    const k = L.width / (layer.offsetWidth || 1920) || 1;
+    const k = this.k;
     return {
       x: (r.left - L.left) / k,
       y: (r.top - L.top) / k,
@@ -331,9 +345,9 @@ export class Hud {
     this.doorLayer.replaceChildren(
       ...list.map((d) => {
         const el = h('div', { class: 'lr-door', dataset: { status: d.status, door: d.id } });
-        el.style.left = `${Math.round(d.x)}px`;
-        el.style.top = `${Math.round(d.y)}px`;
-        el.style.setProperty('--lr-door-max', `${Math.round(d.maxWidth)}px`);
+        el.style.left = dpx(Math.round(d.x));
+        el.style.top = dpx(Math.round(d.y));
+        el.style.setProperty('--lr-door-max', dpx(Math.round(d.maxWidth)));
         if (d.status === 'locked') el.append(lockIcon(doc));
         if (d.status === 'solved') el.append(h('span', { class: 'lr-door-tick' }, '\u2713'));
         // A short last word (Conveyor A, Cell II, Unit 4) never stands alone on a line: it
@@ -360,7 +374,12 @@ export class Hud {
    */
   private spreadPlates(list: readonly DoorPlate[]): void {
     const els = [...this.doorLayer.querySelectorAll<HTMLElement>('.lr-door')];
-    const items = els.map((el, i) => ({ el, x: list[i]!.x, y: list[i]!.y, w: el.offsetWidth }));
+    const items = els.map((el, i) => ({
+      el,
+      x: list[i]!.x,
+      y: list[i]!.y,
+      w: el.offsetWidth / this.k,
+    }));
     const rows = new Map<number, typeof items>();
     for (const it of items) {
       const k = Math.round(it.y / 8);
@@ -381,7 +400,7 @@ export class Hud {
           b.x += over / 2;
         }
       }
-      for (const it of row) it.el.style.left = `${Math.round(it.x)}px`;
+      for (const it of row) it.el.style.left = dpx(Math.round(it.x));
     }
   }
 
@@ -500,16 +519,21 @@ export class Hud {
       ? this.doorLayer.querySelector<HTMLElement>(`[data-door="${at.door}"]`)
       : null;
     if (own && !this.doorLayer.hidden && !at.above) {
-      y = Math.max(y, own.offsetTop + own.offsetHeight + 8);
+      y = Math.max(y, (own.offsetTop + own.offsetHeight) / this.k + 8);
     }
     this.nameplate.toggleAttribute('data-above', at.above === true);
-    this.nameplate.style.top = `${y}px`;
+    this.nameplate.style.top = dpx(y);
     this.nameplate.hidden = false;
     // Keep the whole plate on screen: doors at the wall's ends would push it off the edge.
-    const half = this.nameplate.offsetWidth / 2;
-    const room = (this.nameplate.parentElement?.clientWidth ?? 0) || 1920;
+    const half = this.nameplate.offsetWidth / this.k / 2;
+    const room = (this.nameplate.parentElement?.clientWidth ?? 0) / this.k || 1920;
     const x = half > 0 ? Math.min(Math.max(at.x, half + 12), room - half - 12) : at.x;
-    this.nameplate.style.left = `${Math.round(x)}px`;
+    this.nameplate.style.left = dpx(Math.round(x));
+  }
+
+  /** The door card's box on the frame (design px), or null while it is hidden. */
+  plateBox(): Rect | null {
+    return this.nameplate.hidden ? null : this.box(this.nameplate);
   }
 
   /** Phones: FUSE's word on the door whose card is showing, inside that card. */
@@ -542,8 +566,8 @@ export class Hud {
     const ownBox = own ? this.box(own) : null;
     // The door and its plate together: the card never covers its own plate.
     const d = ownBox ? union(door, ownBox) : door;
-    const w = card.offsetWidth;
-    const hh = card.offsetHeight;
+    const w = card.offsetWidth / this.k;
+    const hh = card.offsetHeight / this.k;
     const g = Math.max(6, (b.bottom - b.top) * 0.012);
     const cx = d.x + d.width / 2;
     const cy = d.y + d.height / 2;
@@ -603,8 +627,8 @@ export class Hud {
       this.placeCard(at, door, b);
       return;
     }
-    card.style.left = `${Math.round(best.rect.x)}px`;
-    card.style.top = `${Math.round(best.rect.y)}px`;
+    card.style.left = dpx(Math.round(best.rect.x));
+    card.style.top = dpx(Math.round(best.rect.y));
   }
 }
 

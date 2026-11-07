@@ -27,7 +27,7 @@
  *
  * Pure apart from the `GraphicsTargets` it drives (unit-tested with fakes).
  */
-import { DynamicResolution } from '@thunderclap/engine/render';
+import { DynamicResolution } from '@thunderclap-engine/engine/render';
 import type { GraphicsPref } from './settings';
 
 export type GraphicsTier = 'high' | 'low';

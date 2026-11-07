@@ -1,26 +1,26 @@
 /**
  * The phone altar on layout regions (D-041 Phase 2, ws/port-altar-2).
  *
- * In landscape on a phone the altar sets its own tracks on `ctx.chrome` (`layout.setForms`):
+ * In landscape on a phone the altar sets its own tracks on `ctx.ui.layout` (`setForms`):
  * a left rail (Back at the top, Undo and Clear a third of the way down, Turn at the foot), the
  * open `fill` the board is fitted to, and a right rail (the HUD's ☰ at the top, Strike at the
  * foot). The rail buttons are widgets in CSS px; the board's frame (`PhoneFrame`) is read off
  * the same resolved regions, so the board can never run under a rail and the socket pitch is
  * what the rails leave (part 1's 50 / 58 CSS px columns, so the pitch is unchanged).
  *
- * The tray, the gem card and the hint lane stay on the scaled overlay beside the board: the
+ * The tray, the gem card and the hint lane stay on the frame beside the board: the
  * tray's gems are drawn and hit-tested on the canvas in design px, and the lane hangs under
  * them, so they move with the board's fit rather than with a region.
  */
 import {
-  type CssChrome,
   defaultForms,
   type FormSpec,
   type LayoutState,
+  type Overlay,
   type Rect,
   type RegionName,
   resolveLayout,
-} from '@thunderclap/engine/ui';
+} from '@thunderclap-engine/engine/ui';
 import { placeWidgets, type RegionWidget } from '../../ui/chrome';
 import { CL } from '../../ui/chrome-styles';
 import { DESIGN_H, type PhoneFrame } from './layout';
@@ -70,7 +70,7 @@ export function frameFromRegions(
   };
 }
 
-/** The altar's regions at a chrome size (the engine's own resolver, so they match the DOM). */
+/** The altar's regions at an overlay size (the engine's own resolver, so they match the DOM). */
 export function altarRegions(width: number, height: number, safeArea?: LayoutState['safeArea']) {
   return resolveLayout('phone-landscape', ALTAR_FORM, width, height, safeArea).regions;
 }
@@ -79,10 +79,10 @@ export function altarRegions(width: number, height: number, safeArea?: LayoutSta
  * The board's frame for this device: from the altar's regions at the chrome's size (the altar
  * and its solve moment fit the board the same way). Null off phones.
  */
-export function altarFrame(d: FrameDevice, chrome: CssChrome | null): PhoneFrame | null {
+export function altarFrame(d: FrameDevice, ui: Pick<Overlay, 'layout'> | null): PhoneFrame | null {
   if (!d.phone) return null;
-  const st = chrome?.layout.state;
-  // No chrome (unit tests): the rails at their set widths.
+  const st = ui?.layout.state;
+  // No overlay (unit tests): the rails at their set widths.
   if (!st || st.width === 0) return frameFromRegions(d, altarRegions(1000, 400), 1000);
   return frameFromRegions(d, altarRegions(st.width, st.height, st.safeArea), st.width);
 }
@@ -141,12 +141,12 @@ export function columnTracks(
 }
 
 /**
- * Puts the altar's tracks on the chrome and its rail buttons, column and cards in their regions
- * while the CSS-px chrome is live (`placeWidgets`); off phones they stay in the scaled overlay.
+ * Puts the altar's tracks on the layout and its rail buttons, column and cards in their regions
+ * on a phone (`placeWidgets`); off phones they stay on the frame.
  * Returns the undo for the scene's exit and relayouts.
  */
 export function placeAltarChrome(
-  chrome: CssChrome | null,
+  ui: Pick<Overlay, 'layout'> | null,
   d: FrameDevice,
   rails: {
     back: HTMLElement;
@@ -157,9 +157,9 @@ export function placeAltarChrome(
   },
   col: AltarColumn | null,
 ): () => void {
-  if (!chrome) return () => {};
-  const tracks = col ? columnTracks(chrome.layout.state, d, col) : null;
-  chrome.layout.setForms({ 'phone-landscape': altarForm(tracks) });
+  if (!ui) return () => {};
+  const tracks = col ? columnTracks(ui.layout.state, d, col) : null;
+  ui.layout.setForms({ 'phone-landscape': altarForm(tracks) });
   const at = (el: HTMLElement, region: RegionName, order: number, id: string): RegionWidget => ({
     el,
     place: { 'phone-landscape': region, default: 'hidden' },
@@ -177,16 +177,16 @@ export function placeAltarChrome(
     widgets.push(at(col.head, 'top', 0, 'lr-altar-head'));
     widgets.push(at(col.cards, 'cardLane', -1, 'lr-altar-cards'));
   }
-  const off = placeWidgets(chrome, widgets);
+  const off = placeWidgets(ui, widgets);
   // FUSE's line docks under the cards; off phones it goes back to its corner.
   const cap =
     col && tracks
-      ? chrome.layout.dockCaption(col.caption, { 'phone-landscape': 'cardLane', default: 'hidden' })
+      ? ui.layout.dockCaption(col.caption, { 'phone-landscape': 'cardLane', default: 'hidden' })
       : null;
   return () => {
     cap?.remove();
     off();
-    chrome.layout.setForms(null);
+    ui.layout.setForms(null);
   };
 }
 

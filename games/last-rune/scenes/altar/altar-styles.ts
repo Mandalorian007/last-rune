@@ -2,7 +2,8 @@
  * Altar + solve-moment overlay styles (design px, 1920×1080). Kept with the scene so the
  * shared `ui/styles.ts` stays untouched; injected once per document.
  */
-import { scaleFontSizes } from '@thunderclap/engine/ui';
+import { scaleFontSizes } from '@thunderclap-engine/engine/ui';
+import { designSheet } from '../../ui/styles';
 import { ALTAR_CHROME_CSS } from './altar-chrome';
 import { ALTAR_COLUMN_CSS } from './altar-column-styles';
 import { ALTAR_PHONE_CSS } from './altar-phone-styles';
@@ -353,8 +354,9 @@ export function ensureAltarStyles(doc: Document = document): void {
   injected.add(doc);
   const el = doc.createElement('style');
   el.dataset.lr = 'altar';
-  el.textContent = scaleFontSizes(
-    ALTAR_PHONE_CSS + CSS + STRIKE_CSS + ALTAR_CHROME_CSS + ALTAR_COLUMN_CSS,
-  );
+  // The board's sheets are design px on the frame; the rails and the column are CSS px.
+  el.textContent =
+    designSheet(ALTAR_PHONE_CSS + CSS + STRIKE_CSS) +
+    scaleFontSizes(ALTAR_CHROME_CSS + ALTAR_COLUMN_CSS);
   doc.head.append(el);
 }

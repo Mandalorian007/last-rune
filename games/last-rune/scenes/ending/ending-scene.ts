@@ -12,10 +12,10 @@
  * Directed by an async script over scene-time waits. A generation token makes
  * skip / exit cancel it cleanly. Skippable only after the first viewing.
  */
-import type { Voice } from '@thunderclap/engine/audio';
-import type { PostSettingsPatch } from '@thunderclap/engine/post';
-import type { DrawParams, Frame, Material, RGBA } from '@thunderclap/engine/render';
-import { externalLink, h, menuNav } from '@thunderclap/engine/ui';
+import type { Voice } from '@thunderclap-engine/engine/audio';
+import type { PostSettingsPatch } from '@thunderclap-engine/engine/post';
+import type { DrawParams, Frame, Material, RGBA } from '@thunderclap-engine/engine/render';
+import { externalLink, h, menuNav } from '@thunderclap-engine/engine/ui';
 import { POST_PRESETS } from '../../art/materials/post-presets';
 import { Fuse as FuseProp } from '../../art/props/fuse';
 import { createFusePortrait, type FusePortrait } from '../../art/props/fuse-portrait';
@@ -27,6 +27,7 @@ import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
 import { progressOf } from '../../game/save';
 import { coffeeLinkWidget, linkLabels } from '../../ui/coffee';
+import { dpx } from '../../ui/frame-units';
 import { deriveHall } from '../hall/hall-state';
 import { DeskArt } from '../journal/desk-art';
 import { PAPER, PROP } from '../journal/desk-wgsl';
@@ -150,7 +151,7 @@ const BEYOND_CORE: RGBA = [1.0, 0.92, 0.74, 1];
 const DUSK_POST = {
   bloom: { intensity: 0.7, threshold: 1.4 },
   godRays: { intensity: 0.28 },
-  fog: { density: 0.22 },
+  mist: { density: 0.22 },
   vignette: { intensity: 0.7 },
   grade: { exposure: 0.92 },
 } as const;
@@ -161,7 +162,7 @@ const DUSK_POST = {
 const DOOR_POST = {
   bloom: { intensity: 0.5, threshold: 1.75 },
   godRays: { intensity: 0.12 },
-  fog: { density: 0.14 },
+  mist: { density: 0.14 },
   grade: { exposure: 0.88 },
 } as const;
 /** FUSE goes through: the light swells back up into the white-out. */
@@ -171,7 +172,7 @@ const THROUGH_POST_CALM = { bloom: { intensity: 0.6, threshold: 1.55 } };
 const FLOOD_POST = {
   bloom: { intensity: 0.75, threshold: 1.4 },
   godRays: { intensity: 0.4 },
-  fog: { density: 0.3 },
+  mist: { density: 0.3 },
   vignette: { intensity: 0.55 },
   grade: { exposure: 0.95 },
 } as const;
@@ -179,7 +180,7 @@ const FLOOD_POST = {
 const FLOOD_POST_CALM = { ...FLOOD_POST, bloom: { intensity: 0.55, threshold: 1.6 } } as const;
 /** Beyond the door: the light is the whole screen. Fog and rays ease to nothing under it. */
 const BEYOND_POST = {
-  fog: { density: 0 },
+  mist: { density: 0 },
   godRays: { intensity: 0 },
   vignette: { intensity: 0.45 },
 } as const;
@@ -212,7 +213,10 @@ const FLOOD_PHONE_GAIN = 0.45;
 /** Fog and rays come back from nothing when the gold floods in. */
 /** Phone end card (mobile-4-chrome): each Copy button names the link it copies. */
 const END_COPY_PHONE = { join: 'Copy invite link', coffee: 'Copy Ko-fi link' } as const;
-const FLOOD_FROM = { fog: { enabled: true, density: 0 }, godRays: { enabled: true, intensity: 0 } };
+const FLOOD_FROM = {
+  mist: { enabled: true, density: 0 },
+  godRays: { enabled: true, intensity: 0 },
+};
 
 /** A scalar eased from `from` to `to` over `dur` seconds of scene time. Allocation-free. */
 class Tween {
@@ -361,10 +365,10 @@ export class EndingScene implements GameScene {
     const C = this.clip;
     const page = clipPage(C);
     const s = this.noteEl.style;
-    s.left = `${Math.round(page.x - page.w / 2)}px`;
-    s.top = `${Math.round(page.y - page.h / 2)}px`;
-    s.width = `${page.w}px`;
-    s.height = `${page.h}px`;
+    s.left = dpx(Math.round(page.x - page.w / 2));
+    s.top = dpx(Math.round(page.y - page.h / 2));
+    s.width = dpx(page.w);
+    s.height = dpx(page.h);
     s.transform = `rotate(${C.rot}rad)`;
   }
 

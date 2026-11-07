@@ -61,7 +61,7 @@ type G = any;
 test.skip(!DIR, 'SHOTS=<dir> to take screenshots');
 test.setTimeout(900_000);
 
-const CAPTION = '.tc-overlay:not([data-units="css"]) .tc-caption, .tc-caption[data-docked]';
+const CAPTION = '.tc-caption';
 
 /** A shot taken once the layout has stopped moving, on the page's own frames. */
 async function snap(page: Page, folder: string, name: string, sel = '#app *') {
@@ -179,7 +179,7 @@ async function holdOne(page: Page, id: MachineId, placed: unknown[]) {
   const L = await page.evaluate(
     () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
   );
-  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const k = ob.width / 1920;
   const pz = puzzleFor(id);
   const slot = L.tray.find((s) => trayRemaining(pz, placed as never, s.gem) > 0);
@@ -204,7 +204,7 @@ async function holdKind(page: Page, id: MachineId, placed: unknown[], gem: strin
   const L = await page.evaluate(
     () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
   );
-  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const k = ob.width / 1920;
   const slot = L.tray.find(
     (s) => s.gem === gem && trayRemaining(puzzleFor(id), placed as never, s.gem) > 0,
@@ -225,7 +225,7 @@ async function aimOne(page: Page, id: MachineId, placed: readonly unknown[]) {
   const L = await page.evaluate(
     () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
   );
-  const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+  const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
   const k = ob.width / 1920;
   const view = page.viewportSize()!;
   const pz = puzzleFor(id);
@@ -442,7 +442,7 @@ for (const vp of PHONES) {
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
-        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+        const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
         const k = ob.width / 1920;
         const pt = { x: 0, y: 0 };
         cellCenter(L, first.cell as Cell, pt);
@@ -613,7 +613,7 @@ test.describe('desktop', () => {
       const L = await page.evaluate(
         () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
       );
-      const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+      const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
       const k = ob.width / 1920;
       const slot = L.tray.find((s) => trayRemaining(puzzleFor(id), half as never, s.gem) > 0);
       if (slot) {

@@ -2,7 +2,8 @@
  * Where the altar's DOM goes: the title, verdict, labels and FUSE's card kept clear of the board and the buttons.
  * Methods of `AltarScene` (altar-scene.ts), assigned to its prototype.
  */
-import type { Rect } from '@thunderclap/engine/ui';
+import type { Rect } from '@thunderclap-engine/engine/ui';
+import { dpx, dpxOf } from '../../ui/frame-units';
 import { boxesTouch, designBox } from './altar-defs';
 import type { AltarScene } from './altar-scene';
 import {
@@ -25,7 +26,7 @@ export const placeMethods = {
     const cap = ui.root.querySelector<HTMLElement>('.tc-caption:not([hidden])');
     const r = cap?.getBoundingClientRect();
     if (!r || r.width === 0) return CAPTION_LANE.x;
-    const o = ui.root.getBoundingClientRect();
+    const o = ui.layers.hud.getBoundingClientRect();
     const top = (r.top - o.top) / ui.scale;
     const left = (r.left - o.left) / ui.scale;
     if (top > 1080 || (r.bottom - o.top) / ui.scale < L.trayY - 200 || left < TRAY_CENTER_X)
@@ -41,7 +42,7 @@ export const placeMethods = {
     const L = this.view.layout;
     // Phones: the caption has its own bubble in the bottom band (phoneCaption).
     if (L.phone) {
-      this.ctx.fuse.avoid(null);
+      this.ctx.fuse.keepClear(null);
       return;
     }
     const regions: Rect[] = [];
@@ -67,7 +68,7 @@ export const placeMethods = {
     // (bigger text makes the card taller, and it can reach a label beside an east machine).
     if (this.dom.isConnected) {
       const ui = this.ctx.ui;
-      const o = ui.root.getBoundingClientRect();
+      const o = ui.layers.hud.getBoundingClientRect();
       const els = [
         this.hint,
         ...(this.verdict.hidden ? [] : [this.verdict]),
@@ -91,7 +92,7 @@ export const placeMethods = {
         });
       }
     }
-    this.ctx.fuse.avoid(regions);
+    this.ctx.fuse.keepClear(regions);
   },
 
   /**
@@ -107,7 +108,7 @@ export const placeMethods = {
       this.fitPhone(L.phone);
       return;
     }
-    const origin = ui.root.getBoundingClientRect().left;
+    const origin = ui.layers.hud.getBoundingClientRect().left;
     const toDesign = (px: number) => (px - origin) / ui.scale;
     let hudRight = 0;
     for (const b of ui.root.querySelectorAll<HTMLElement>('.lr-hud:not([hidden]) button')) {
@@ -120,13 +121,13 @@ export const placeMethods = {
     const hi = Math.min(actionsLeft - 16, L.titleX + half);
     const room = Math.max(200, hi - lo);
     const place = (el: HTMLElement, maxW: number) => {
-      el.style.maxWidth = `${Math.round(maxW)}px`;
-      const w = el.offsetWidth;
+      el.style.maxWidth = dpx(Math.round(maxW));
+      const w = el.offsetWidth / ui.scale;
       const x =
         lo + w / 2 > hi - w / 2
           ? (lo + hi) / 2
           : Math.min(Math.max(L.titleX, lo + w / 2), hi - w / 2);
-      el.style.left = `${Math.round(x)}px`;
+      el.style.left = dpx(Math.round(x));
     };
     place(this.titleEl, room);
     const verdictW = Math.min(L.titleMax, room);
@@ -138,8 +139,8 @@ export const placeMethods = {
       this.clearOfActions(this.stormLabel);
     }
     // The verdict sits under the title, however many lines the title took.
-    const titleBottom = this.titleEl.offsetTop + this.titleEl.offsetHeight;
-    this.verdict.style.top = `${Math.max(96, titleBottom + 6)}px`;
+    const titleBottom = (this.titleEl.offsetTop + this.titleEl.offsetHeight) / ui.scale;
+    this.verdict.style.top = dpx(Math.max(96, titleBottom + 6));
     this.verdict.removeAttribute('data-docked');
     if (!this.verdict.hidden) this.clearRootMark(lo, hi);
     this.avoidTray();
@@ -158,7 +159,7 @@ export const placeMethods = {
     v.removeAttribute('data-narrow');
     v.style.top = '';
     this.placePhoneLabels(band);
-    this.ctx.fuse.avoid(null);
+    this.ctx.fuse.keepClear(null);
   },
 
   /**
@@ -170,7 +171,7 @@ export const placeMethods = {
   placePhoneLabels(this: AltarScene, band: PhoneBand): void {
     const L = this.view.layout;
     const k = this.ctx.ui.scale;
-    const ox = this.ctx.ui.root.getBoundingClientRect();
+    const ox = this.ctx.ui.layers.hud.getBoundingClientRect();
     const box = (el: HTMLElement) => {
       const r = el.getBoundingClientRect();
       return {
@@ -209,12 +210,12 @@ export const placeMethods = {
         el.dataset.align = 'below';
         // port-altar-3: the card is as wide as its words (two lines, never spilling); it
         // slides along under its gauge to stay off the left rail and out of the column.
-        el.style.left = `${lb.x}px`;
-        el.style.top = `${lb.y}px`;
+        el.style.left = dpx(lb.x);
+        el.style.top = dpx(lb.y);
         // Off the bottom of the screen: up over the gauge's top instead.
         if (box(el).b > band.visB - band.edge) {
           el.dataset.align = 'above';
-          el.style.top = `${Math.round(gauge(sp).t)}px`;
+          el.style.top = dpx(Math.round(gauge(sp).t));
         }
         const b0 = box(el);
         // Off the sockets: a card under an east gauge starts right of the sockets' edge, one
@@ -230,9 +231,9 @@ export const placeMethods = {
         const shift = hi < lo ? lo : Math.min(hi, Math.max(lo, want));
         el.style.removeProperty('--lr-notch');
         if (shift) {
-          el.style.marginLeft = `${Math.round(shift)}px`;
+          el.style.marginLeft = dpx(Math.round(shift));
           // The notch stays under the gauge.
-          el.style.setProperty('--lr-notch', `${Math.round((b0.r - b0.l) / 2 - shift)}px`);
+          el.style.setProperty('--lr-notch', dpx(Math.round((b0.r - b0.l) / 2 - shift)));
         }
         // Squeezed back over the sockets (no room before the column): down past them, or
         // (dense-board-3) up over the gauge past them, whichever leaves the card nearer its
@@ -260,18 +261,18 @@ export const placeMethods = {
           const upOk = g.t - h - lift >= band.visT + band.edge;
           if (upOk && (!downOk || lift < under)) {
             el.dataset.align = 'above';
-            el.style.top = `${Math.round(g.t - lift)}px`;
-          } else if (downOk) el.style.marginTop = `${Math.ceil(under)}px`;
+            el.style.top = dpx(Math.round(g.t - lift));
+          } else if (downOk) el.style.marginTop = dpx(Math.ceil(under));
         }
         placed.push(box(el));
         continue;
       }
       el.dataset.align = lb.align === 'up' ? 'up' : 'down';
-      el.style.top = `${lb.y}px`;
+      el.style.top = dpx(lb.y);
       const own = gauge(sp);
       const opts = [...new Set([lb.x, lb.alt ?? lb.x])].map((x) => {
         el.toggleAttribute('data-left', x < sp.x);
-        el.style.left = `${x}px`;
+        el.style.left = dpx(x);
         const b = box(el);
         const cost =
           (b.l < minX || b.r > maxX ? 100 : 0) +
@@ -305,9 +306,9 @@ export const placeMethods = {
     free.forEach(({ el, sp, opts }, i) => {
       const x = opts[best[i]!]!.x;
       el.toggleAttribute('data-left', x < sp.x);
-      el.style.left = `${x}px`;
+      el.style.left = dpx(x);
       const t = box(el).t;
-      if (t < topMin) el.style.marginTop = `${Math.ceil(topMin - t)}px`;
+      if (t < topMin) el.style.marginTop = dpx(Math.ceil(topMin - t));
     });
   },
 
@@ -323,7 +324,7 @@ export const placeMethods = {
     el.style.removeProperty('--lr-notch');
     // Runs while the DOM is still being built (setStrikeRow), before `dom` is attached.
     if ((side !== 1 && side !== 3) || !this.dom?.isConnected) return;
-    const w = el.offsetWidth;
+    const w = el.offsetWidth / this.ctx.ui.scale;
     const x = L.storm.label.x;
     const gap = 6;
     let shift = 0;
@@ -336,8 +337,8 @@ export const placeMethods = {
       shift = Math.max(0, edge - (x - w / 2));
     }
     if (shift === 0) return;
-    el.style.marginLeft = `${Math.round(shift)}px`;
-    el.style.setProperty('--lr-notch', `${Math.round(w / 2 - shift)}px`);
+    el.style.marginLeft = dpx(Math.round(shift));
+    el.style.setProperty('--lr-notch', dpx(Math.round(w / 2 - shift)));
   },
 
   /**
@@ -370,10 +371,11 @@ export const placeMethods = {
     };
     if (!covers()) return;
     const v = this.verdict;
-    const w = v.offsetWidth;
+    const k = this.ctx.ui.scale;
+    const w = v.offsetWidth / k;
     const x0 = v.style.left;
     for (const x of [lo + w / 2, hi - w / 2]) {
-      v.style.left = `${Math.round(x)}px`;
+      v.style.left = dpx(Math.round(x));
       if (!covers()) return;
     }
     // Docked: under the last row of sockets, above the tray gems, a little wider so the
@@ -387,17 +389,17 @@ export const placeMethods = {
     const narrow0 = v.hasAttribute('data-narrow');
     v.toggleAttribute('data-docked', true);
     v.removeAttribute('data-narrow');
-    v.style.maxWidth = `${Math.round(Math.min(780, L.right - L.left))}px`;
+    v.style.maxWidth = dpx(Math.round(Math.min(780, L.right - L.left)));
     // Centred under the board, but kept out of the caption lane, so FUSE's card keeps its
     // bottom-right corner instead of moving over FUSE.
-    const dw = v.offsetWidth;
+    const dw = v.offsetWidth / k;
     const cx = Math.max(
       16 + dw / 2,
       Math.min((L.left + L.right) / 2, CAPTION_LANE.x - 12 - dw / 2),
     );
-    v.style.left = `${Math.round(cx)}px`;
-    v.style.top = `${Math.round(top)}px`;
-    if (top + v.offsetHeight <= floor && !covers()) return;
+    v.style.left = dpx(Math.round(cx));
+    v.style.top = dpx(Math.round(top));
+    if (top + v.offsetHeight / k <= floor && !covers()) return;
     // No room under the board: keep the usual place (better than covering the tray).
     v.removeAttribute('data-docked');
     v.toggleAttribute('data-narrow', narrow0);
@@ -430,16 +432,16 @@ export const placeMethods = {
   ): boolean {
     const at = (y: number, low: boolean) => {
       tag.toggleAttribute('data-below', low);
-      tag.style.top = `${Math.round(y)}px`;
+      tag.style.top = dpx(Math.round(y));
     };
     const L = this.view.layout;
     if (L.phone) {
       // Phones: by its red socket, slid along to stay over the slab (never over the storm or
       // a card), then above or below whichever is clear.
-      const x0 = Number.parseFloat(tag.style.left) || 0;
-      const w = tag.offsetWidth;
+      const x0 = dpxOf(tag.style.left);
+      const w = tag.offsetWidth / this.ctx.ui.scale;
       const x = Math.min(Math.max(x0, L.left + w / 2), Math.max(L.left + w / 2, L.right - w / 2));
-      tag.style.left = `${Math.round(x)}px`;
+      tag.style.left = dpx(Math.round(x));
       const labels = [this.stormLabel, ...this.needs].filter((e): e is HTMLElement => !!e);
       const ok = () => {
         const r = tag.getBoundingClientRect();
@@ -475,7 +477,7 @@ export const placeMethods = {
       !this.overlapsVerdict(tag) &&
       !others.some((o) => boxesTouch(tag, o, 2));
     if (clear()) return true;
-    const step = tag.offsetHeight + 6;
+    const step = tag.offsetHeight / this.ctx.ui.scale + 6;
     const tries: [number, boolean][] = [
       [below, true],
       [below + step, true],
@@ -483,7 +485,7 @@ export const placeMethods = {
     ];
     // Off the top edge the cell sits under the verdict: hang just below the whole box.
     const vBottom =
-      (Number.parseFloat(this.verdict.style.top) || 0) + this.verdict.offsetHeight + 8;
+      dpxOf(this.verdict.style.top) + this.verdict.offsetHeight / this.ctx.ui.scale + 8;
     if (vBottom - below <= this.view.layout.pitch) tries.push([vBottom, true]);
     for (const [y, low] of tries) {
       at(y, low);
@@ -505,6 +507,6 @@ export const placeMethods = {
     const r = el.getBoundingClientRect();
     const gap = 8 * this.ctx.ui.scale;
     if (r.right <= a.left || r.left >= a.right || r.top >= a.bottom + gap) return;
-    el.style.marginTop = `${Math.ceil((a.bottom + gap - r.top) / this.ctx.ui.scale)}px`;
+    el.style.marginTop = dpx(Math.ceil((a.bottom + gap - r.top) / this.ctx.ui.scale));
   },
 };

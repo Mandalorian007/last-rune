@@ -6,11 +6,11 @@
  * Keys: 1 bloom · 2 fog · 3 god rays · 4 vignette · 5 grade · P pause · H hud.
  * Click / tap: spark burst. URL `&sparks=20000` sets the ambient particle target.
  */
-import { GameLoop, type Scene, SceneStack, type Time } from '@thunderclap/engine/core';
-import { flicker, ParticleEmitter, ParticleSystem, pulse } from '@thunderclap/engine/fx';
-import type { GpuContext, Surface } from '@thunderclap/engine/platform';
-import { watchReducedMotion, watchVisibility } from '@thunderclap/engine/platform';
-import { PostStack } from '@thunderclap/engine/post';
+import { GameLoop, type Scene, SceneStack, type Time } from '@thunderclap-engine/engine/core';
+import { flicker, ParticleEmitter, ParticleSystem, pulse } from '@thunderclap-engine/engine/fx';
+import type { GpuContext, Surface } from '@thunderclap-engine/engine/platform';
+import { watchReducedMotion, watchVisibility } from '@thunderclap-engine/engine/platform';
+import { PostStack } from '@thunderclap-engine/engine/post';
 import {
   type DrawParams,
   type Frame,
@@ -19,7 +19,7 @@ import {
   type Material,
   Renderer,
   type RGBA,
-} from '@thunderclap/engine/render';
+} from '@thunderclap-engine/engine/render';
 import {
   GLOW_WGSL,
   LIT_STONE_FLOATS,
@@ -330,7 +330,7 @@ export interface DemoDiagnostics {
   stats: Renderer['stats'];
   sparkTarget: number;
   burst(x: number, y: number): void;
-  toggle(pass: 'bloom' | 'fog' | 'godRays' | 'vignette' | 'grade'): boolean;
+  toggle(pass: 'bloom' | 'mist' | 'godRays' | 'vignette' | 'grade'): boolean;
 }
 
 export function startRenderDemo(surface: Surface, gpu: GpuContext): void {
@@ -340,7 +340,7 @@ export function startRenderDemo(surface: Surface, gpu: GpuContext): void {
   const renderer = new Renderer(gpu, { logicalWidth: W, logicalHeight: H });
   const post = new PostStack(renderer, {
     godRays: { x: W / 2, y: -60, bloomSource: 0.12 },
-    fog: { density: 0.7 },
+    mist: { density: 0.7 },
   });
   renderer.post = post;
   surface.onResize(({ backbuffer }) => renderer.resize(backbuffer.width, backbuffer.height));
@@ -377,7 +377,7 @@ export function startRenderDemo(surface: Surface, gpu: GpuContext): void {
     update: (dt: number) => stack.update(dt),
     render: (alpha: number, time: Time) => {
       const frame = renderer.beginFrame(time.realTime, time.frameDt);
-      stack.render(frame, alpha);
+      stack.render(frame, renderer.camera, alpha);
       renderer.endFrame();
       diag.frames++;
       fpsAcc += time.frameDt;
@@ -391,7 +391,7 @@ export function startRenderDemo(surface: Surface, gpu: GpuContext): void {
         hud.textContent =
           `${diag.fps.toFixed(0)} fps  ${renderer.stats.drawCalls} draws  ${renderer.stats.instances} inst\n` +
           `sparks ~${sparkTarget}  gpu errors ${gpuDiagnostics.errorCount}\n` +
-          `1 bloom ${on(s.bloom.enabled)} 2 fog ${on(s.fog.enabled)} 3 rays ${on(s.godRays.enabled)}\n` +
+          `1 bloom ${on(s.bloom.enabled)} 2 fog ${on(s.mist.enabled)} 3 rays ${on(s.godRays.enabled)}\n` +
           `4 vignette ${on(s.vignette.enabled)} 5 grade ${on(s.grade.enabled)}  P pause${loop.paused ? 'd' : ''}  H hud\n` +
           'click: spark burst';
       }
@@ -408,9 +408,9 @@ export function startRenderDemo(surface: Surface, gpu: GpuContext): void {
     surface.clientToLogical(e.clientX, e.clientY, pt);
     scene.burst(pt.x, pt.y);
   });
-  const keys: Record<string, 'bloom' | 'fog' | 'godRays' | 'vignette' | 'grade'> = {
+  const keys: Record<string, 'bloom' | 'mist' | 'godRays' | 'vignette' | 'grade'> = {
     '1': 'bloom',
-    '2': 'fog',
+    '2': 'mist',
     '3': 'godRays',
     '4': 'vignette',
     '5': 'grade',

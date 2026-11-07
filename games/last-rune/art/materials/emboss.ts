@@ -18,7 +18,7 @@ import type {
   Renderer,
   RGBA,
   Texture,
-} from '@thunderclap/engine/render';
+} from '@thunderclap-engine/engine/render';
 import { EMBOSS_WGSL } from '../../shaders/emboss-wgsl';
 import { LIGHT_SET_FLOATS, type LightSet } from './lights';
 import { LINEAR } from './palette';

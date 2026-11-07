@@ -89,7 +89,7 @@ async function parts(page: Page, blocked: Cell[]): Promise<{ parts: Part[]; smal
   return page.evaluate((blocked) => {
     const L = (window as unknown as { __altarLayout: AltarLayout }).__altarLayout;
     const ov = document
-      .querySelector<HTMLElement>('.tc-overlay:not([data-units="css"])')!
+      .querySelector<HTMLElement>('.tc-layer[data-layer="hud"]')!
       .getBoundingClientRect();
     const k = ov.width / 1920;
     const X = (x: number) => ov.left + x * k;
@@ -387,7 +387,7 @@ for (const vp of PHONES) {
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
-        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+        const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
         const k = ob.width / 1920;
         const s0 = L.tray[0]!;
         await page.touchscreen.tap(ob.x + s0.x * k, ob.y + s0.y * k);
@@ -504,7 +504,7 @@ for (const vp of PHONES) {
         const L = await page.evaluate(
           () => (window as unknown as { __altarLayout: AltarLayout }).__altarLayout,
         );
-        const ob = (await page.locator('.tc-overlay:not([data-units="css"])').boundingBox())!;
+        const ob = (await page.locator('.tc-layer[data-layer="hud"]').boundingBox())!;
         const k = ob.width / 1920;
         for (const s of L.tray) {
           if (trayRemaining(pz, half as never, s.gem) <= 0) continue;

@@ -10,9 +10,9 @@
  * The scene rebuilds the altar from the saved placements (the altar scene saved them just
  * before `completePuzzle`), so it stands alone and works for any puzzle.
  */
-import type { EmitParams } from '@thunderclap/engine/fx';
-import type { Frame, RGBA } from '@thunderclap/engine/render';
-import { button, h } from '@thunderclap/engine/ui';
+import type { EmitParams } from '@thunderclap-engine/engine/fx';
+import type { Frame, RGBA } from '@thunderclap-engine/engine/render';
+import { button, h } from '@thunderclap-engine/engine/ui';
 import { createGemPortraits, type GemPortraits } from '../../art/gem-portraits';
 import type { GemInstance } from '../../art/materials/gems';
 import { POST_PRESETS } from '../../art/materials/post-presets';
@@ -24,6 +24,7 @@ import type { GameCtx, GameScene } from '../../game/ctx';
 import type { SolveMoment } from '../../game/flow';
 import { type Placement, simulate } from '../../rules';
 import { capabilityLabel, getMachine, socketColour } from '../../rules/progression';
+import { dpx } from '../../ui/frame-units';
 import { CSS_PALETTE } from '../../ui/styles';
 import { ensureAltarStyles } from './altar-styles';
 import { AltarView, GOLD } from './altar-view';
@@ -128,7 +129,7 @@ export class SolveScene implements GameScene {
     this.postSnapshot = structuredClone(ctx.post.settings);
     ctx.post.set(POST_PRESETS.altar);
     // Phones light the altar evenly (as the altar scene does): no mist or vignette.
-    if (view.layout.phone) ctx.post.set({ fog: { enabled: false }, vignette: { enabled: false } });
+    if (view.layout.phone) ctx.post.set({ mist: { enabled: false }, vignette: { enabled: false } });
     this.bloomBase = ctx.post.settings.bloom.intensity;
     this.raysBase = ctx.post.settings.godRays.intensity;
     ctx.setMood(m.machine === 'the-last-rune' ? 'last-rune' : 'altar');
@@ -273,15 +274,15 @@ export class SolveScene implements GameScene {
       : h('div', { class: 'lr-solve' }, card, this.pageEl, this.contEl);
     if (band) {
       this.dom.dataset.phone = '';
-      this.dom.style.setProperty('--lr-col-l', `${band.colL}px`);
-      this.dom.style.setProperty('--lr-col-w', `${band.colR - band.colL}px`);
+      this.dom.style.setProperty('--lr-col-l', dpx(band.colL));
+      this.dom.style.setProperty('--lr-col-w', dpx(band.colR - band.colL));
       const st = this.ctx.ui.root.style;
       const capL = Math.round(band.colL + 50 * band.cssPx);
-      st.setProperty('--lr-scap-l', `${capL}px`);
-      st.setProperty('--lr-scap-w', `${1920 - capL}px`);
+      st.setProperty('--lr-scap-l', dpx(capL));
+      st.setProperty('--lr-scap-w', dpx(1920 - capL));
       // The bubble's tail points at FUSE's face (altar-view lifts him clear of the edge).
       const f = this.view.fuse;
-      st.setProperty('--lr-scap-face', `${Math.round(1080 - f.y + 1.5 * f.scale)}px`);
+      st.setProperty('--lr-scap-face', dpx(Math.round(1080 - f.y + 1.5 * f.scale)));
     }
     this.ctx.ui.layers.hud.append(this.dom);
   }

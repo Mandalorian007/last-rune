@@ -1,7 +1,7 @@
 // Entry point: the engine's createGame mounts the letterboxed canvas, brings up WebGPU and
 // wires the noun-free systems (fatal screens for no WebGPU or a lost device included); the game
 // adds its nouns and boots into the title. Dev routes: `?demo=audio|render|art|props`, `?nogpu`.
-import { createGame } from '@thunderclap/engine';
+import { createGame } from '@thunderclap-engine/engine';
 import { bootHost } from './boot-host';
 import {
   createGameCtx,

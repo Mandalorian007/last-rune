@@ -10,13 +10,14 @@
  *   filled width (`hall-frame.ts`), and each door wears a plate saying what it is. The model's
  *   positions are world px; the pointer and the HUD convert through the frame.
  */
-import type { Frame } from '@thunderclap/engine/render';
-import type { Rect } from '@thunderclap/engine/ui';
+import type { Frame } from '@thunderclap-engine/engine/render';
+import type { Rect } from '@thunderclap-engine/engine/ui';
 import { type FuseLine, hallLines } from '../../content/lines';
 import type { GameCtx, GameScene } from '../../game/ctx';
 import { progressOf } from '../../game/save';
 import { type ProgressState, storyTier } from '../../rules/progression';
 import type { MachineId } from '../../rules/types';
+import { isPhone } from '../../ui/chrome';
 import { CSS_PALETTE } from '../../ui/styles';
 import type { HallView, HallViewFrame } from '../views';
 import {
@@ -46,7 +47,7 @@ import {
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 const DWELL = 0.35;
-/** The phone ☰ column at the right edge, CSS px, when there is no CSS-px chrome to measure. */
+/** The phone ☰ column at the right edge, CSS px, before the layout has measured. */
 const MENU_COLUMN = 64;
 const AMBIENT_EVERY = 75;
 
@@ -80,7 +81,7 @@ export class HallScene implements GameScene {
     this.refresh();
     ctx.post.set({
       godRays: { x: 960, y: 540, intensity: 0.12, sourceIntensity: 0 },
-      fog: { density: 0.4 },
+      mist: { density: 0.4 },
     });
     ctx.setMood('hall');
     if (!ctx.save.get().flags.hallIntro) {
@@ -109,7 +110,7 @@ export class HallScene implements GameScene {
     this.ctx.hud.plate(null);
     this.ctx.hud.suggest(null);
     this.ctx.hud.doors(null);
-    this.ctx.fuse.avoid(null);
+    this.ctx.fuse.keepClear(null);
     this.ctx.fuse.pointAt(null);
     const cam = this.ctx.renderer.camera;
     cam.x = cam.y = 0;
@@ -271,8 +272,8 @@ export class HallScene implements GameScene {
     if (device.phone) {
       const r = surface.rect;
       const k = r.width / 1920 || 1;
-      // The ☰ rail (the chrome's right region, its width from the layout) stays clear of doors.
-      const st = this.ctx.chrome?.active ? this.ctx.chrome.layout.state : null;
+      // The ☰ rail (the layout's right region) stays clear of doors.
+      const st = isPhone(this.ctx.ui) ? this.ctx.ui.layout.state : null;
       const rail = st?.regions.right;
       const railCss = rail && rail.width > 0 ? st.width - rail.x : MENU_COLUMN;
       const reserve = Math.max(0, railCss * device.cssPx - device.bar);
@@ -490,6 +491,10 @@ export class HallScene implements GameScene {
         regions.push(t, t, t, t);
       }
     }
+    // The door card he is talking about (phones, when his word did not fit on it): never under
+    // his caption. Weighted over any door, since covering it hides what he is explaining.
+    const card = phone ? this.ctx.hud.plateBox() : null;
+    if (card) for (let i = 0; i < 8; i++) regions.push(card);
     let corner: 'bottom-left' | 'bottom-right' | undefined;
     const me = phone ? this.fuseSpot() : null;
     if (me) {
@@ -497,7 +502,7 @@ export class HallScene implements GameScene {
       regions.push({ x: me.x - w / 2, y: me.y - me.h, width: w, height: me.h });
       corner = me.x < 960 ? 'bottom-left' : 'bottom-right';
     }
-    this.ctx.fuse.avoid(regions);
+    this.ctx.fuse.keepClear(regions);
     void this.ctx.fuse.say(line, { ...opts, corner });
   }
 }

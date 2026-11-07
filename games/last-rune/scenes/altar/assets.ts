@@ -3,8 +3,8 @@
  * session (puzzles open and close often; baking stone and compiling materials each time
  * would hitch). Per-puzzle things (the slab, sized to the board) are cached by shape.
  */
-import type { ParticleSystem } from '@thunderclap/engine/fx';
-import type { Renderer } from '@thunderclap/engine/render';
+import type { ParticleSystem } from '@thunderclap-engine/engine/fx';
+import type { Renderer } from '@thunderclap-engine/engine/render';
 import { CandleRenderer } from '../../art/materials/candles';
 import { GemRenderer } from '../../art/materials/gems';
 import {

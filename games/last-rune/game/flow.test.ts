@@ -1,4 +1,4 @@
-import { MemoryStorage } from '@thunderclap/engine/save';
+import { MemoryStorage } from '@thunderclap-engine/engine/save';
 import { describe, expect, it } from 'vitest';
 import { MACHINE_IDS, type MachineId } from '../rules/types';
 import { GameFlow, type SolveMoment } from './flow';

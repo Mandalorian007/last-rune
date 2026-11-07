@@ -8,10 +8,11 @@
  * speaks: a card up (verdict, gem or teach card, a live read-out) and FUSE waits; FUSE talking
  * and the how-to line and the plan read-outs wait.
  */
-import { h } from '@thunderclap/engine/ui';
+import { h } from '@thunderclap-engine/engine/ui';
 import { createGemPortraits } from '../../art/gem-portraits';
 import { isRotational } from '../../rules';
 import type { Cell } from '../../rules/types';
+import { dpx } from '../../ui/frame-units';
 import {
   CARD_IDLE_SECS,
   eitherName,
@@ -122,13 +123,14 @@ export const columnMethods = {
   /**
    * Phones: the head's slots and counts over the gems the canvas draws at `L.tray`. The gems
    * are lit, lifted and animated on the canvas, so they stay there; the head converts the same
-   * design-px spots to its own CSS px through the scaled overlay's box, whenever either moves.
+   * design-px spots to its own CSS px through the frame's box (the HUD layer), whenever either
+   * moves.
    */
   placeHead(this: AltarScene): void {
     const head = this.head;
     if (!head?.isConnected) return;
     const L = this.view.layout;
-    const o = this.ctx.ui.root.getBoundingClientRect();
+    const o = this.ctx.ui.layers.hud.getBoundingClientRect();
     const hr = head.getBoundingClientRect();
     if (o.width <= 0 || hr.width <= 0) return;
     const k = o.width / 1920;
@@ -280,13 +282,14 @@ export const columnMethods = {
     this.tipRight = right;
     // Narrower than the gap if it must be (a phone's caption is wide); wraps to more lines.
     const room = right - FUSE_LANE.x;
+    const k = this.ctx.ui.scale;
     this.tip.style.maxWidth = '';
-    if (this.tip.offsetWidth > room) this.tip.style.maxWidth = `${Math.max(320, room)}px`;
+    if (this.tip.offsetWidth / k > room) this.tip.style.maxWidth = dpx(Math.max(320, room));
     const slotX = this.tipSlotX;
-    const x = trayTipX(slotX ?? TRAY_CENTER_X, this.tip.offsetWidth, right);
-    this.tip.style.left = `${x}px`;
+    const x = trayTipX(slotX ?? TRAY_CENTER_X, this.tip.offsetWidth / k, right);
+    this.tip.style.left = dpx(x);
     // The notch points at the slot; the card for a board gem or the arrival has none.
-    if (slotX !== null) this.tip.style.setProperty('--lr-tip-dx', `${slotX - x}px`);
+    if (slotX !== null) this.tip.style.setProperty('--lr-tip-dx', dpx(slotX - x));
   },
 
   /**
@@ -308,8 +311,8 @@ export const columnMethods = {
     if (this.turnBadge.hidden === show) this.turnBadge.hidden = !show;
     if (!show || !held) return;
     const r = this.view.layout.gemSize * 0.5;
-    this.turnBadge.style.left = `${held.x + r}px`;
-    this.turnBadge.style.top = `${held.y - r}px`;
+    this.turnBadge.style.left = dpx(held.x + r);
+    this.turnBadge.style.top = dpx(held.y - r);
     const keys = this.keyboard ? 'R / Q' : 'R / Scroll';
     if (this.turnBadge.dataset.keys !== keys) {
       this.turnBadge.dataset.keys = keys;
@@ -410,7 +413,7 @@ export const columnMethods = {
     lane.toggleAttribute('data-fuse', talking);
     if (talking) {
       // The tail points down at FUSE, who stands in the foot row under the line.
-      const o = this.ctx.ui.root.getBoundingClientRect();
+      const o = this.ctx.ui.layers.hud.getBoundingClientRect();
       const r = cap.element.getBoundingClientRect();
       const k = o.width / 1920;
       const tail = Math.round(
@@ -557,7 +560,7 @@ export const columnMethods = {
     const right = region.right - gap;
     // Wider than the column where the board leaves room: left to the slab's edge, its props
     // and the gauges' notes (whichever reaches furthest right), at most PANEL_MAX_W wide.
-    const o = this.ctx.ui.root.getBoundingClientRect();
+    const o = this.ctx.ui.layers.hud.getBoundingClientRect();
     const k = o.width / 1920;
     const L = this.view.layout;
     let edge = L.right;
@@ -707,8 +710,8 @@ export const columnMethods = {
       );
     if (!show) return;
     const r = L.gemSize * 0.5;
-    this.turnMark.style.left = `${Math.round(pt.x + r)}px`;
-    this.turnMark.style.top = `${Math.round(pt.y - r)}px`;
+    this.turnMark.style.left = dpx(Math.round(pt.x + r));
+    this.turnMark.style.top = dpx(Math.round(pt.y - r));
   },
 
   turnTapped(this: AltarScene): void {
