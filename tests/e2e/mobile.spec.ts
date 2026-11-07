@@ -134,7 +134,7 @@ test('intake desk by touch alone: tap gems onto sockets, tap Strike, tap Continu
   await boot(page, []);
   await openAltar(page, 'intake-desk');
   // Touch words, no key caps. (The data-touch and data-phone flags behind them are the engine's
-  // device mode: packages/engine/e2e/ui.spec.ts.)
+  // device mode: thunderclap-engine/packages/engine/e2e/ui.spec.ts.)
   await expect(page.locator('.lr-altar-hint')).toContainText('Tap');
   await expect(page.locator('[data-action="undo"] kbd')).toBeHidden();
 
@@ -243,7 +243,7 @@ test('a gem in hand turns by ↻ before it is placed; dragging a placed gem off 
 });
 
 // The upright turn-sideways card is the engine's rotate card, verified on every phone in
-// packages/engine/e2e/ui.spec.ts; the game only supplies its words (ui/phone-chrome.ts).
+// thunderclap-engine/packages/engine/e2e/ui.spec.ts; the game only supplies its words (ui/phone-chrome.ts).
 
 test('the Last Rune at 667×375: a finger drag from the tray shows the loupe and lands on the meant socket', async ({
   page,

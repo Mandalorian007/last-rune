@@ -15,7 +15,7 @@ pnpm build      # production build → dist/
 ```
 
 ## Layout
-- `packages/engine/`: the ThunderClap engine, `@thunderclap/engine` (no game-specific code; see its `ARCHITECTURE.md`)
+- The ThunderClap engine comes from npm: `@thunderclap-engine/engine`, plus `@thunderclap-engine/host-electron` for the desktop app (source: https://github.com/Mandalorian007/thunderclap-engine)
 - `games/last-rune/`: the game: rules, content, scenes, procedural art, shaders
 - `docs/`: plan, status, decisions, design specs, architecture
 

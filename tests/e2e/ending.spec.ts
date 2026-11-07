@@ -28,7 +28,7 @@ test('the ending plays to the end card with the ThunderClap Gaming and Ko-fi lin
   // game time can run several times slower than the clock. The game has no speed-up hook, so
   // the budgets are sized for that: generous, and only spent when the machine is slow.
   test.setTimeout(600_000);
-  // That a link opens only on a click is an engine host check (packages/engine/e2e/host.spec.ts);
+  // That a link opens only on a click is an engine host check (thunderclap-engine/packages/engine/e2e/host.spec.ts);
   // here the ending itself never navigates or phones out.
   const problems = trackProblems(page);
   const offsite: string[] = [];

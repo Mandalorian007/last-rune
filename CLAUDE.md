@@ -6,7 +6,7 @@ Non-negotiables:
 - **Intuitiveness matters (D-027).** New players must get the goal, the target and each piece without a manual. Visuals must match the rules exactly. Clear, clean, intuitive UI/UX beats features. Screenshot your work as a first-time player would see it. Save screenshots to `docs/design/screens/local/`, which git ignores; don't commit images (see docs/design/screens/README.md).
 - **pnpm only** (never npm/yarn). `pnpm check` and `pnpm build` must pass before you report done.
 - TypeScript strict. Biome formats and lints (`pnpm format`).
-- `packages/engine/` (`@thunderclap/engine`) has zero game nouns and never imports the game (`pnpm check:boundaries`). The engine tests platform capability; the game tests product only (D-041 addendum 2); `games/last-rune/rules/` is pure TS (no DOM/GPU).
+- The engine and the desktop shell are npm packages (D-052): `@thunderclap-engine/engine` and `@thunderclap-engine/host-electron`, developed in the separate thunderclap-engine repo. Import them only through their public entry points (`pnpm check:boundaries`); never patch `node_modules` or vendor engine code. Engine gaps go upstream (log them in your workstream file). The engine tests platform capability; the game tests product only (D-041 addendum 2); `games/last-rune/rules/` is pure TS (no DOM/GPU).
 - Public repo: no secrets, tokens, personal emails, or external runtime network calls. Storage is `localStorage` only.
 - All art and audio are procedural. No third-party asset files without a PM-approved DECISIONS entry.
 - Worktree agents commit to their own branch and never merge to `main`; the PM merges.

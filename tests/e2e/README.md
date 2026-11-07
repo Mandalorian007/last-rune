@@ -16,7 +16,7 @@ Ports come from `tests/e2e/ports.ts`. Inside a `.claude/worktrees/` checkout the
 | `http://localhost:4173` | `vite preview` of `dist/` (top-level page) |
 | `http://127.0.0.1:5175` | `vite dev` (DEV-only handles for story e2e) |
 
-The cross-site iframe embed (an itch.io-style host) is an engine platform check: `packages/engine/e2e/host.spec.ts`.
+The cross-site iframe embed (an itch.io-style host) is an engine platform check: `thunderclap-engine/packages/engine/e2e/host.spec.ts`.
 
 ## WebGPU in headless Chromium
 

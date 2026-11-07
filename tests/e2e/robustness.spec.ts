@@ -74,7 +74,7 @@ async function buildIntake(page: Page) {
 }
 
 // Resize/DPR mid-scene, the hidden-tab pause and GPU device loss are the engine's now: its
-// e2e harness (packages/engine/e2e/surface.spec.ts, lifecycle.spec.ts) proves them on every
+// e2e harness (thunderclap-engine/packages/engine/e2e/surface.spec.ts, lifecycle.spec.ts) proves them on every
 // matrix row. Play time not counting while hidden is a game/flow unit test.
 
 // One shape is enough here: the game's notice and fresh start. The engine save tests recover

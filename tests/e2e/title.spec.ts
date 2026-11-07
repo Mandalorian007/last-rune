@@ -84,7 +84,7 @@ test('FUSE chatters on the title, clear of the menu, and stops when the player s
 
 test('the title offers a quiet Ko-fi link (D-034)', async ({ page }) => {
   test.setTimeout(60_000);
-  // That the link opens only on a click is an engine host check (packages/engine/e2e/host.spec.ts).
+  // That the link opens only on a click is an engine host check (thunderclap-engine/packages/engine/e2e/host.spec.ts).
   const problems = trackProblems(page);
   await page.goto(DEV_URL);
   await page.waitForFunction(

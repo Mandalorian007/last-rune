@@ -4,7 +4,7 @@
  * applied from the test side before the page loads.
  *
  * - **Clock.** Playwright's fake clock replaces `performance.now`, `Date`, timers and
- *   `requestAnimationFrame`, so the game loop (packages/engine/src/core/loop.ts) only runs when a spec calls
+ *   `requestAnimationFrame`, so the game loop (thunderclap-engine/packages/engine/src/core/loop.ts) only runs when a spec calls
  *   `advance()`. Each frame is exactly 16 ms of sim time and every shader `time` uniform, caption
  *   timer and scene fade lands on the same value every run.
  * - **Randomness.** `Math.random` is a seeded PRNG (mulberry32), reset on every page load:

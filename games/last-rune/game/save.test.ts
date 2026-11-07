@@ -101,7 +101,7 @@ describe('save schema v1', () => {
   });
 
   // Storage round-trips, memory fallback and corrupt-save backups are engine save tests
-  // (packages/engine/src/save, host/web.test.ts); this one keeps the game's fields whole.
+  // (thunderclap-engine/packages/engine/src/save, host/web.test.ts); this one keeps the game's fields whole.
   it('export/import round-trips placements and settings', () => {
     const a = createGameSave(opts(new MemoryStorage()));
     a.update((d) => {

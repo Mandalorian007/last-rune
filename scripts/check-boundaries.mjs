@@ -99,7 +99,7 @@ for (const file of files) {
   const isRules = /[/\\]games[/\\][^/\\]+[/\\]rules[/\\]/.test(file);
   for (const { spec, line } of importsOf(readFileSync(file, 'utf8'))) {
     const bare = spec.split('?')[0];
-    if (bare === '@engine' || bare.startsWith('@engine/') || bare.startsWith('@thunderclap/')) {
+    if (bare === '@engine' || bare.startsWith('@engine/') || /^@thunderclap\//.test(bare)) {
       report(file, line, spec, 'old name; import from @thunderclap-engine/<package>');
       continue;
     }
