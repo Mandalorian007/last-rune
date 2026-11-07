@@ -4,7 +4,7 @@ _Last updated: 2026-11-05 by PM_
 
 **Launch checklist (2026-11-05):** v1.0.0 (desktop + iPad) shipped 2026-11-04. Left for the phone launch, v1.1.0: (1) the user re-tests on their iPhone the two Gate 2 fixes, D-048 chain placement and D-049 teach overlay (both live on Pages, CI green); (2) the PM fixes anything that blocks; (3) the PM tags `v1.1.0` and publishes the GitHub Release. Not blocking: dense boards on the smallest phones (ws/camera, parked; ws/one-overlay held). Merged worktrees are cleaned up.
 
-**Engine migration (D-052) ✅ merged 2026-11-07 (ed4fedc):** The Last Rune runs on `@thunderclap-engine/engine@^1.1.0` and `@thunderclap-engine/host-electron@^0.1.0` from npm. `packages/` is gone. Results: check 602 ✅, build ✅, e2e 213 ✅ (altar-column:349 flaked once and passes alone), desktop e2e 2 ✅, mac desktop build ✅. Baselines regenerated (D-052 add. 1). Next: CI green → tag v1.1.0 (all platforms), the first title on the published engine.
+**Engine migration (D-052) ✅ merged 2026-11-07 (ed4fedc):** The Last Rune runs on `@thunderclap-engine/engine@^1.1.0` and `@thunderclap-engine/host-electron@^0.1.0` from npm. `packages/` is gone. Results: check 602 ✅, build ✅, e2e 213 ✅ (altar-column:349 flaked once and passes alone), desktop e2e 2 ✅, mac desktop build ✅. Baselines regenerated (D-052 add. 1). CI and Pages green on 5439935; version set to 1.1.0 (f48c626). The live Pages build is already 1.1. Waiting on the user to run the `v1.1.0` tag/Release and the 3 upstream issues: auto mode blocked both as public actions.
 
 **D-047 (user, 2026-11-04):** itch.io cut. Pages is the release. The game's itch packager, itch-sim, itch-release spec and cover tooling are removed; the engine keeps the itch iframe option.
 
