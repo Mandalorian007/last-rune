@@ -2,7 +2,7 @@
 
 ```sh
 pnpm exec playwright install chromium   # once per machine
-pnpm test:e2e                           # builds, starts vite preview + itch-sim, runs tests
+pnpm test:e2e                           # builds, starts vite preview + vite dev, runs tests
 E2E_SKIP_BUILD=1 pnpm test:e2e          # reuse the existing dist/
 pnpm exec playwright test --headed      # watch it
 ```
@@ -14,7 +14,9 @@ pnpm exec playwright test --headed      # watch it
 Ports come from `tests/e2e/ports.ts`. Inside a `.claude/worktrees/` checkout they shift by a stable per-worktree offset (or set `E2E_PORT_OFFSET`), so parallel agents never reuse each other's servers.
 
 | `http://localhost:4173` | `vite preview` of `dist/` (top-level page) |
-| `http://localhost:8790` | `scripts/itch-sim`: itch-like page embedding `dist/` in a cross-site iframe from `http://127.0.0.1:8791/html/0000000/` with itch.io's exact `allow` attribute |
+| `http://127.0.0.1:5175` | `vite dev` (DEV-only handles for story e2e) |
+
+The cross-site iframe embed (an itch.io-style host) is an engine platform check: `packages/engine/e2e/host.spec.ts`.
 
 ## WebGPU in headless Chromium
 

@@ -1,10 +1,11 @@
 /**
- * Cover stage (ws/cover-art, ws/cover-final): an offscreen engine renderer for the itch cover,
- * drawing a game scene at twice itch's cover size, framed by the camera, with the game's embossed
- * gold title on top. A capture hands back a bitmap that the page scales into the 630×500 canvas.
+ * Social card stage (D-050; from the itch cover tooling, D-043 add. 1): an offscreen engine
+ * renderer drawing a game scene at twice the share-image size, framed by the camera, with the
+ * game's embossed gold title on top. A capture hands back a bitmap that the page scales into the
+ * 1200×630 canvas (the Open Graph / Discord / X large-image size, 1.91:1).
  *
- * A cover works in "world" px (the game's 1920×1080 design space, so the game's views and
- * props draw where they always do) and picks what the 630×500 frame shows with `shot`.
+ * A card works in "world" px (the game's 1920×1080 design space, so the game's views and props
+ * draw where they always do) and picks what the frame shows with `shot`.
  */
 import { ParticleSystem } from '@thunderclap/engine/fx';
 import { type PostSettingsPatch, PostStack } from '@thunderclap/engine/post';
@@ -20,22 +21,22 @@ import { EmbossLabel, EmbossRenderer } from '../art/materials/emboss';
 import { LightSet } from '../art/materials/lights';
 import { pitch } from '../art/props/palette';
 
-/** itch.io's cover size, and the factor we render above it (downscaled for clean edges). */
-export const COVER_W = 630;
-export const COVER_H = 500;
+/** The share-image size (og:image), and the factor we render above it (downscaled for clean edges). */
+export const COVER_W = 1200;
+export const COVER_H = 630;
 export const SUPERSAMPLE = 2;
 /** The renderer's logical (and pixel) size: screen px of the supersampled cover. */
 export const RW = COVER_W * SUPERSAMPLE;
 export const RH = COVER_H * SUPERSAMPLE;
 
-/** What the cover frame shows, in world px: its centre and width (height follows 630:500). */
+/** What the frame shows, in world px: its centre and width (height follows COVER_W:COVER_H). */
 export interface Shot {
   cx: number;
   cy: number;
   width: number;
 }
 
-/** Where the title sits, in cover px (630×500): its centre and the width of the word mark. */
+/** Where the title sits, in card px (COVER_W×COVER_H): its centre and the width of the word mark. */
 export interface TitlePlace {
   x: number;
   y: number;
@@ -211,7 +212,7 @@ export class CoverStage {
   }
 }
 
-/** Paint a captured frame into a cover canvas (630×500) plus the optional tagline. */
+/** Paint a captured frame into a card canvas (COVER_W×COVER_H) plus the optional tagline. */
 export function paintCover(g: CanvasRenderingContext2D, bmp: ImageBitmap, def: CoverDef): void {
   const w = g.canvas.width;
   const h = g.canvas.height;

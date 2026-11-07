@@ -1,13 +1,12 @@
 /**
- * The itch cover page (D-043 addendum 1): the fuse-portrait cover rendered by the game's engine
- * into a 630×500 canvas, with a 315×250 copy at itch's browse-grid size and a PNG download.
- * Not part of the game or the Pages build: `pnpm cover` builds it with vite.cover.config.ts
- * into build/cover-image/ and saves the PNGs (scripts/cover/). Dev:
- * `pnpm exec vite -c vite.cover.config.ts`.
+ * The social card page (D-050): the fuse-portrait scene rendered by the game's engine into a
+ * 1200×630 canvas (og:image for Discord, iMessage, Slack, X), plus a 180×180 home-screen icon cut
+ * from the same frame. Not part of the game bundle: `pnpm social` builds it with
+ * vite.cover.config.ts into build/cover-image/ and saves public/social.jpg and
+ * public/apple-touch-icon.png (scripts/cover/). Dev: `pnpm exec vite -c vite.cover.config.ts`.
  *
- * The cover is a still: one frame, drawn once after the stage's warmup, with `Math.random`
- * seeded (FUSE picks his idle sway and eye flicker phase from it), so the PNG is the same on
- * every run.
+ * One still frame after the stage's warmup, with `Math.random` seeded (FUSE picks his idle sway
+ * and eye flicker phase from it), so the PNG is the same on every run.
  */
 import { initGpu } from '@thunderclap/engine/platform';
 import { COVER } from './covers';
@@ -15,7 +14,7 @@ import { COVER_H, COVER_W, CoverStage, paintCover } from './stage';
 
 declare global {
   interface Window {
-    /** For scripts/cover: whether the cover has painted, and any error. */
+    /** For scripts/cover: whether the card has painted, and any error. */
     __cover?: { painted: boolean; error?: string };
   }
 }
@@ -31,8 +30,7 @@ function seededRandom(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const SEED = 8;
-Math.random = seededRandom(SEED);
+Math.random = seededRandom(8);
 
 const statusEl = document.getElementById('status') as HTMLElement;
 const state: NonNullable<Window['__cover']> = { painted: false };
@@ -41,17 +39,6 @@ window.__cover = state;
 function fail(msg: string): void {
   state.error = msg;
   statusEl.textContent = msg;
-}
-
-function download(canvas: HTMLCanvasElement, name: string): void {
-  canvas.toBlob((blob) => {
-    if (!blob) return;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }, 'image/png');
 }
 
 async function start(): Promise<void> {
@@ -66,32 +53,40 @@ async function start(): Promise<void> {
   device.lost.then((info) => fail(`GPU device lost: ${info.message}`));
 
   const full = document.getElementById('full') as HTMLCanvasElement;
-  const thumb = document.getElementById('thumb') as HTMLCanvasElement;
+  const icon = document.getElementById('icon') as HTMLCanvasElement;
   full.width = COVER_W;
   full.height = COVER_H;
-  const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
-  thumb.width = Math.round((COVER_W / 2) * dpr);
-  thumb.height = Math.round((COVER_H / 2) * dpr);
+  icon.width = icon.height = 180;
   const g = full.getContext('2d');
-  const t = thumb.getContext('2d');
-  if (!g || !t) {
+  const ig = icon.getContext('2d');
+  if (!g || !ig) {
     fail('This page needs a 2D canvas.');
     return;
   }
-  (document.getElementById('download') as HTMLButtonElement).addEventListener('click', () =>
-    download(full, 'last-rune-itch-cover.png'),
-  );
 
   const stage = new CoverStage(device, format, COVER);
   stage.update(1 / 60);
   const bmp = stage.capture();
   paintCover(g, bmp, COVER);
+  // The icon: the gem alone, from the untitled frame (bitmap px are SUPERSAMPLE × card px).
+  const k = bmp.width / COVER_W;
+  const c = gemOnCard();
+  const side = 230;
+  ig.imageSmoothingEnabled = true;
+  ig.imageSmoothingQuality = 'high';
+  ig.drawImage(bmp, (c.x - side / 2) * k, (c.y - side / 2) * k, side * k, side * k, 0, 0, 180, 180);
   bmp.close();
-  t.imageSmoothingEnabled = true;
-  t.imageSmoothingQuality = 'high';
-  t.drawImage(full, 0, 0, thumb.width, thumb.height);
   statusEl.textContent = '';
   state.painted = true;
 }
 
-start().catch((e: unknown) => fail(`Cover page failed: ${(e as Error).message ?? String(e)}`));
+/** Where the cover's gem lands on the card, from the shot (world → card px). */
+function gemOnCard(): { x: number; y: number } {
+  const s = COVER.shot ?? { cx: 960, cy: 540, width: 1360 };
+  const z = COVER_W / s.width;
+  return { x: COVER_W / 2 + (760 - s.cx) * z, y: COVER_H / 2 + (720 - s.cy) * z };
+}
+
+start().catch((e: unknown) =>
+  fail(`Social card page failed: ${(e as Error).message ?? String(e)}`),
+);

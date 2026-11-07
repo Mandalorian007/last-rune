@@ -31,6 +31,19 @@ export interface Press {
 export const HOLD_SECS = 0.45;
 /** Touch: how long the held gem's card stays up after the pick (no hover to keep it). */
 export const TOUCH_CARD_SECS = 2.5;
+/**
+ * teach-overlay: phones fold the arrival card (and close a pinned rule card) after this many
+ * seconds with no touch on it. Dev builds read `window.__lrCardIdle` first (e2e holds cards open).
+ */
+export const CARD_IDLE_SECS = 4;
+
+/**
+ * teach-overlay: a phone's card lane shorter than this (CSS px) is short: the held gem's card
+ * waits behind the Rule tab and a verdict or legend cut short stands over the column. The four
+ * full-height phones' lanes are taller; an iPhone in a browser with its bars on screen (852×270)
+ * is not.
+ */
+export const SHORT_LANE_PX = 130;
 export const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** Where a gem on the info card is: hovered in the tray, on the board, fixed, or newly turnable. */

@@ -250,7 +250,8 @@ export const infoMethods = {
     // dense-board-4: a slim column never flashes it; its card waits behind the Rule tab.
     const cardOff =
       (this.touch && !this.keyboard && this.time - this.handAt > TOUCH_CARD_SECS) ||
-      !!L.phone?.slim;
+      !!L.phone?.slim ||
+      this.shortLane;
     if (slot < 0 && this.hand && !this.hand.from && !strike && !overPlaced && !cardOff) {
       slot = L.tray.findIndex((t) => t.gem === this.hand!.kind);
     }
@@ -271,15 +272,18 @@ export const infoMethods = {
     const news = this.introRows();
     const pages = L.phone ? this.teachPages() : [];
     const onPage = pages[introAt];
-    // teach-4: a goal, strikes or ring page names no gem, so a gem in hand takes the card.
-    const teachUp =
-      this.introLeft > 0 && !strike && !(L.phone && this.hand && onPage?.kind !== 'gem');
+    // teach-overlay: on a phone the arrival card is a panel over the column, open until it folds
+    // to its pill (a tap on the board or tray, or a few idle seconds); open, it is the card, gem
+    // in hand or not (the player opened it). Folded, the held gem's chip may use the lane.
+    const teachUp = L.phone
+      ? this.introLeft > 0 && !strike && !this.cardMin
+      : this.introLeft > 0 && !strike;
     const source = pickInfo({
       pin: !!pin,
       phone: !!L.phone,
       teachUp,
       teachGems: L.phone ? (onPage?.kind === 'gem' ? [onPage.gem] : []) : news.map((r) => r.gem),
-      held: this.hand?.kind ?? null,
+      held: L.phone && teachUp ? null : (this.hand?.kind ?? null),
       slot: s?.gem ?? null,
       board: focus && onBoard ? onBoard.gem : null,
     });

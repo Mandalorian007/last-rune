@@ -10,6 +10,7 @@ import {
 } from '../../games/last-rune/scenes/altar/layout';
 import { LOCK_PIP, SOCKET_RADIUS } from '../../games/last-rune/shaders/stone-wgsl';
 import { DEV_URL, readSave, waitFrames } from './helpers';
+import { SHORT_PHONE } from './phones';
 
 // dense-board (D-040 addendum 8): on a phone the densest boards take the room. The Last Rune's
 // sockets are at least a set pitch apart on each realistic phone; every socket's hit area is its
@@ -24,6 +25,9 @@ const PHONES = [
   { name: 'iphone', width: 844, height: 340, inset: 47, rune: 35 },
   { name: 'promax', width: 932, height: 380, inset: 59, rune: 40 },
   { name: 'android', width: 915, height: 360, inset: 0, rune: 38 },
+  // teach-overlay: the short phone (a browser's bars on screen); its floors as measured
+  // 2026-11-05 (the board did not change for it: these hold it there).
+  { ...SHORT_PHONE, rune: 26 },
 ] as const;
 
 /** The dense boards, and Splitter Mill (its orb once covered a socket). */
@@ -54,6 +58,7 @@ const FLOOR: Record<string, Partial<Record<MachineId, number>>> = {
   iphone: { archive: 46.5, 'control-booth': 47.5, 'lift-shaft': 38, 'capacitor-bay': 41 },
   promax: { archive: 51.5, 'control-booth': 51, 'lift-shaft': 43.5, 'capacitor-bay': 46.5 },
   android: { archive: 48.5, 'control-booth': 48.5, 'lift-shaft': 40.5, 'capacitor-bay': 44 },
+  short: { archive: 36, 'control-booth': 38.5, 'lift-shaft': 28.5, 'capacitor-bay': 30.5 },
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: dev handle
@@ -151,7 +156,7 @@ for (const vp of PHONES) {
       viewport: { width: vp.width, height: vp.height },
       isMobile: true,
       hasTouch: true,
-      deviceScaleFactor: 1,
+      deviceScaleFactor: 'dpr' in vp ? vp.dpr : 1,
     });
 
     test(`dense boards ${vp.name}: pitch, hit areas, pips, orb, loupe`, async ({ page }) => {

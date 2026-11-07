@@ -1,8 +1,8 @@
 /**
- * The itch cover (D-043 addendum 1): #8 of the ws/cover-art candidates, "fuse-portrait". FUSE by
+ * The social card (D-050), first made as the itch cover (D-043 addendum 1): "fuse-portrait". FUSE by
  * candlelight with his eye on a glowing Amplify gem, under the gold title and the tagline. A
  * still life built from the game's own props and lit the way the game lights them. See stage.ts
- * for how the cover is framed and titled. `pnpm cover` renders it to build/.
+ * for how it is framed and titled. `pnpm social` renders it to public/social.jpg.
  */
 import { hallKit } from '../art/hall/hall-view';
 import type { CandleInstance } from '../art/materials/candles';
@@ -102,8 +102,9 @@ export const COVER: CoverDef = {
   id: 'fuse-portrait',
   pitch: 'FUSE by candlelight, eye on a glowing gem: the friendly face of the puzzle',
   post: { ...POST_PRESETS.hall, godRays: { enabled: false } },
-  shot: { cx: 960, cy: 700, width: 900 },
-  title: { x: 315, y: 66, width: 540 },
-  tagline: { text: 'A gem-circuit puzzle', x: 315, y: 128, size: 15 },
+  // 1.91:1: the itch frame's height (≈714 world px) kept, widened to show more of the hall.
+  shot: { cx: 960, cy: 690, width: 1300 },
+  title: { x: 600, y: 82, width: 700 },
+  tagline: { text: 'A gem-circuit puzzle', x: 600, y: 160, size: 22 },
   create: fusePortrait,
 };

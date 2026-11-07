@@ -129,11 +129,11 @@ test.describe('phone', () => {
   const P = puzzleFor(ID);
   const HALF = P.design.intended.slice(0, Math.floor(P.design.intended.length / 2));
 
-  test('the first altar: paging the teach card keeps the gem in hand; setting it down ends the hold', async ({
+  test('the first altar: paging the teach card keeps the gem in hand; placing keeps it while more remain', async ({
     page,
   }) => {
-    // polish-10 (blind review 10, Android): "the first gem drops the hold". On phones the hold
-    // ends by design when a gem is set down (mobile-5-board); the teach card must never end it.
+    // polish-10: the teach card must never end the hold. chain-place (user, 2026-11-05): on
+    // phones, as on desktop, the gem stays in hand after placing while more remain.
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(DEV_URL);
     await page.waitForFunction(() => (window as G).__game?.flow.state === 'title', null, {
@@ -165,13 +165,20 @@ test.describe('phone', () => {
       expect(await page.evaluate(() => !!(window as G).__altarView.held)).toBe(true);
       await expect(page.locator('.lr-altar-holding')).toBeVisible();
     }
-    // Set it down: the hold ends (the next tap on the tray takes another).
-    const first = puzzleFor('intake-desk').design.intended[0]!;
-    const c = css(
-      L.left + L.margin + L.pitch * (first.cell.x + 0.5),
-      L.top + L.margin + L.pitch * (first.cell.y + 0.5),
-    );
-    await page.touchscreen.tap(c.x, c.y);
+    // Set two down in a row: the Channel stays in hand (chain placement).
+    const [first, second] = puzzleFor('intake-desk').design.intended;
+    for (const p of [first!, second!]) {
+      const c = css(
+        L.left + L.margin + L.pitch * (p.cell.x + 0.5),
+        L.top + L.margin + L.pitch * (p.cell.y + 0.5),
+      );
+      await page.touchscreen.tap(c.x, c.y);
+      await waitFrames(page, 4);
+    }
+    expect(await page.evaluate(() => (window as G).__altarView.held?.kind)).toBe('channel');
+    await expect(page.locator('.lr-altar-holding')).toBeVisible();
+    // Tapping the held slot again lets go.
+    await page.touchscreen.tap(slot.x, slot.y);
     await page.waitForFunction(() => !(window as G).__altarView?.held);
     await expect(page.locator('.lr-altar-holding')).toBeHidden();
   });

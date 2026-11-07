@@ -1,8 +1,8 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
-// itch.io serves the zip from a nested CDN path inside an iframe:
-// every asset URL must be relative (base: './').
+// GitHub Pages serves the game from a sub-path (/last-rune/), and the Electron shell loads it
+// from disk: every asset URL must be relative (base: './').
 export default defineConfig({
   base: './',
   resolve: {

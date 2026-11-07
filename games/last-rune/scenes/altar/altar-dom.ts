@@ -176,6 +176,12 @@ export const domMethods = {
     });
     // The info card is read through the announcer (on focus), not as a live tooltip.
     this.tip = h('div', { class: 'lr-altar-tip', 'aria-hidden': 'true', hidden: true });
+    // teach-overlay: a touch on the open arrival panel (a page turn, a tap on its words) keeps it
+    // open; one on a pinned gem card closes it, as a tap anywhere else does (altar-edit).
+    this.tip.addEventListener('pointerdown', () => {
+      this.cardAt = this.time;
+      if (this.tip.dataset.source !== 'intro' && this.infoPin) this.infoPin = null;
+    });
     this.turnBadge = h(
       'div',
       { class: 'lr-altar-turn', 'aria-hidden': 'true', hidden: true },
@@ -316,6 +322,7 @@ export const domMethods = {
     this.dom.toggleAttribute('data-phone', !!band);
     this.dom.toggleAttribute('data-dense', !!band?.dense);
     let col: AltarColumn | null = null;
+    this.cardPill = null;
     if (band) {
       // port-altar-3: the column right of the board is a region on the CSS-px chrome
       // (altar-chrome.ts). Its head holds the title and the tray's slots and counts, over the
@@ -325,8 +332,9 @@ export const domMethods = {
       delete this.verdict.dataset.narrow;
       this.lane = h('div', { class: 'lr-altar-lane' }, this.tip, this.verdict, this.hint);
       this.ruleTab = null;
-      if (band.slim) {
-        // dense-board-4: the slim column folds the held gem's card behind a tab (arrangeColumn).
+      {
+        // dense-board-4: the slim column folds the held gem's card behind a tab (arrangeColumn);
+        // teach-overlay: so does a short lane (updateRuleTab), so every phone column has one.
         const tab = button(
           h('span', null, h('b', { 'aria-hidden': 'true' }, '?'), ' Rule'),
           (e) => {
@@ -339,6 +347,19 @@ export const domMethods = {
         this.ruleTab = tab;
         this.lane.prepend(tab);
       }
+      // teach-overlay: the folded arrival card (one pill: the Rule tab waits while it stands).
+      const pill = button(
+        '',
+        (e) => {
+          (e.currentTarget as HTMLElement).blur();
+          this.cardPillTapped();
+        },
+        { className: 'lr-card-pill' },
+      );
+      pill.hidden = true;
+      this.cardPill = pill;
+      this.cardPillKey = '';
+      this.lane.prepend(pill);
       this.slotEls = L.tray.map(() => h('div', { class: 'lr-altar-slot', 'aria-hidden': 'true' }));
       this.head = h(
         'div',

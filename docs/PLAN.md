@@ -1,6 +1,6 @@
 # Plan
 
-**Goal:** ship *The Last Rune*: free browser game, 16 machines, about 1 hour, WebGPU, itch.io with a tip jar. Built from [design/pitch-v0.3.md](design/pitch-v0.3.md).
+**Goal:** ship *The Last Rune*: free browser game, 16 machines, about 1 hour, WebGPU, released on GitHub Pages (itch.io cut, D-047). Built from [design/pitch-v0.3.md](design/pitch-v0.3.md).
 **Target:** no fixed date (user direction, D-011). Milestones are sequential gates, finished when their exit criteria are met. Quality over speed.
 
 ## Hard constraints
@@ -9,7 +9,7 @@
 - **Procedural art.** All visuals come from code (shaders, SDF, generated textures); no external art (D-001). Audio is procedural too (WebAudio synthesis).
 - **Browser-only storage.** Saves use `localStorage`. No backend, no Fly.io (D-004).
 - **Public repo.** No secrets, tokens or personal data. Discord invite URL lives in one config constant.
-- Must run as a static zip inside the itch.io iframe (see [shipping-itch.md](shipping-itch.md)).
+- Static build served from the GitHub Pages sub-path (relative asset URLs). Cross-site iframe embedding stays an engine platform option (D-047).
 
 ## Milestones
 
@@ -30,8 +30,8 @@
 | M3 | Content complete (wave 3) | ✅ done | All 16 machines playable at the altar; dressed hall with distinct machine silhouettes; Journal, FUSE lines, Ending and Discord door; audio; storm/mist/candles |
 | M3α | **Alpha release: GitHub Pages** | ✅ alpha-1 (2026-11-02) | Pages already deploys on every push (D-023). Alpha = labelled run (`alpha-1`), `VITE_RELEASE_LABEL` on the title, GitHub pre-release, playtest link to the user |
 | M4 | Polish + playtest | ⏳ | Solver-driven full-run playtest, perf pass (incl. integrated GPU), a11y pass, difficulty-fun phase 2, bug bash, user feedback items closed |
-| M5 | **Release: GitHub Pages v1.0** (PM's finish line; desktop + iPad per D-041) | 🟡 Phase 0 | Polished build live on Pages, GitHub Release + `v1.0.0` tag, itch zip + page copy + devlog draft prepared for the user |
-| — | itch.io launch (manual, with user) | ⏳ | User uploads with PM's runbook; not an agent task (D-012) |
+| M5 | **Release: GitHub Pages v1.0** (PM's finish line; desktop + iPad per D-041) | 🟡 Phase 0 | Polished build live on Pages, GitHub Release + `v1.0.0` tag |
+| — | ~~itch.io launch~~ | ✂️ cut (D-047) | Pages is the release; the engine keeps the itch iframe as an option |
 
 ## Fun and difficulty (continuous, D-021)
 A standing **difficulty-fun** workstream owns the difficulty curve from wave 2 through M4: a difficulty model and novice bot, a target curve, puzzle retunes, a dev puzzle viewer, then a playtest loop (local-only metrics, FUSE hint ladder) after the alpha. Exit criteria for M4 include: user playtest confirms the curve feels right, no puzzle is an outlier against its target, and the finale is the hardest and most satisfying.
@@ -81,16 +81,17 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 9z7 | Polish 11: arrival cards fit on the SE (spec catches overflow), drop "Again", "○○" once, Amplify card wording, Capacitor card without fixed numbers, no gold ring on the Control Booth decoy, Capacitor orientation consistent (D-040 add. 12) | ws/polish-11 | 2 | G2 r11 | ✅ merged |
 | 9p | Teach 5: "Strike ×2" + pips, diagram-above-text cards, Amplify diagram, Needs-dot legend, solve/ending/menu/title minors (D-040 add. 8) | ws/teach-5 | 2 | G2 r7 | ✅ merged |
 | 9q | Glyph truth 2: Split/Gate inlets at board size, Channels along their run, one tray orientation, disabled Turn/Undo/Clear, one lock badge (D-040 add. 8) | ws/glyph-truth-2 | 2 | G2 r7 | ✅ merged (Channel-across-run was a render bug; `rest-turn.ts`) |
-| G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 7: 7/7/7/7 (D-040 add. 8) → 9o–9s ✅; ❌ blind review 8: 8/7.5/7.5/7.5 (D-040 add. 9) → 9t–9x ✅; ❌ blind review 9: 7/7.5/7.5/7 (D-040 add. 10) → 9y–9z2 ✅; ❌ blind review 10: 7/7/7/7 (D-040 add. 11) → 9z3–9z6 ✅; ❌ blind review 11: 7/7/7/7 (D-040 add. 12) → 9z7 ✅. PM call: Phase 3 brought forward (one-overlay → camera), then blind review 12; real-phone retest whenever the user is ready |
-| 9.5 | One overlay: `ctx.ui` in CSS px on every form factor; delete `createCssChrome`, `legacyScale`, `avoid()`; desktop/iPad baselines unchanged. **Phase 3 entry condition** (D-044) | ws/one-overlay | 3 (entry) | 9c | 🔄 running; held from main until blind review 7 is compiled |
-| 10 | Camera + math: matrix `Camera`, `fitRect` fed by `layout.freeRect`; delete `EngineCtx.device`, `fillBands`, `setFill(key)`, `device-mode.ts` (D-044) | ws/camera | 3 | 9.5, G2 | ⏳ |
+| G2 | Gate 2: PM D-040 blind phone review ≥ 8/10 → user real-phone retest → Last Rune 1.1 → engine 0.2.0 | — | 2 | 9b | ❌ blind review 7: 7/7/7/7 (D-040 add. 8) → 9o–9s ✅; ❌ blind review 8: 8/7.5/7.5/7.5 (D-040 add. 9) → 9t–9x ✅; ❌ blind review 9: 7/7.5/7.5/7 (D-040 add. 10) → 9y–9z2 ✅; ❌ blind review 10: 7/7/7/7 (D-040 add. 11) → 9z3–9z6 ✅; ❌ blind review 11: 7/7/7/7 (D-040 add. 12) → 9z7 ✅. PM call: Phase 3 brought forward (one-overlay → camera), then blind review 12; real-phone retest whenever the user is ready → **D-046 (user): blind reviews stop; Gate 2 = user real-phone test of the Pages build.** 🔄 user testing: chain place (D-048) ✅, teach overlay (D-049) ✅. Then engine 0.2.0 extract, next game |
+| 9.5 | One overlay: `ctx.ui` in CSS px on every form factor; delete `createCssChrome`, `legacyScale`, `avoid()`; desktop/iPad baselines unchanged. **Phase 3 entry condition** (D-044) | ws/one-overlay | 3 (entry) | 9c | 🔄 running; held from main until blind review 7 is compiled → up to date with main (133518b/b817c5e; e2e 201, engine 283, desktop 7 ✅). **Held (D-046)** until after the user phone test: desktop-720/iPad rasterization diffs (sharper text, ≤1 px edges). Decide at the engine-0.2.0 extract |
+| 10 | Camera + math: matrix `Camera`, `fitRect` fed by `layout.freeRect`; delete `EngineCtx.device`, `fillBands`, `setFill(key)`, `device-mode.ts` (D-044) | ws/camera | 3 | 9.5 | ⏸ parked (D-046): reopen only if the user finds dense phone boards unplayable |
 | 11 | Transforms + layer/depth sort | ws/transforms | 3 | 9 | ⏳ |
 | 12 | `Renderer.render(frame, camera, target)`; `Host.requestFrame`; `GameLoop` takes its frame source from the host (D-044) | ws/render-call | 3 | 10, 11 | ⏳ |
 | 13 | Port game shaders to camera block | ws/port-shaders | 3 | 12 | ⏳ |
 | 14 | `?demo=mesh` | ws/demo-3d | 3 | 13 | ⏳ |
 | 15 | host-electron package + builds | ws/host-electron | 4 | 3 | ✅ merged (D-042) |
 | 16 | Last Rune desktop boot + e2e | ws/last-rune-desktop | 4 | 15 | ✅ merged; Gate 4 needs CI artefacts on 3 OSes + a run on the user's machine |
-| 17 | Extract engine repo, publish engine-v1.0.0 | engine repo | 5 | 13, 16, Forgewilds ws 1 (no Forgewilds engine work before Gate 3, D-044) | ⏳ |
+| 17 | Extract engine repo, publish engine-v1.0.0 | engine repo | 5 | 13, 16, Forgewilds ws 1 (no Forgewilds engine work before Gate 3, D-044) | 🟡 repo up (D-051): github.com/Mandalorian007/thunderclap-engine, history kept, README + example + GIF; Last Rune stays on its in-repo engine; publish/v1.0.0 ⏳ |
+| 17b | Last Rune on the npm engine (D-052): first title on `@thunderclap-engine/engine` | ws/engine-npm | 5 | 9.5, 17 | 🔄 running |
 
 ## Waves (Last Rune waves 1–5; up to 10 top-level agents from D-041)
 
@@ -101,7 +102,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 3 Content complete | altar-scene, hall-art, story-scenes | ✅ merged |
 | 4 Alpha + verify | hall-floor ✅, altar-clarity ✅, full-run ✅ (keyboard e2e through all 16 + playtest report), engine-cleanup ✅, engine-adoption ✅, then the playtest fixes before alpha: caption-layout ✅, altar-polish ✅; release label on title ✅; then the M3α pre-release | ✅ merged |
 | 5 Polish | perf-tiers ✅, a11y ✅, polish-1 ✅, first-altar ✅, onboarding-2 ✅, title-fuse ✅, split-rotate ✅, turn-2 ✅, turn-clarity ✅, capacitor-clarity ✅, codex-2 ✅, ending-2 + Ko-fi ✅, link-copy ✅, candle-light ✅, difficulty-2 ✅ (D-037), bug-bash ✅, perf-low ✅, finish-1 ✅, screens pruned ✅; remaining: user playtest check, minor backlog | ✅ polish round 2: tidy-2, newcomer-2, newcomer-3; ✅ ending-3 (D-038); ✅ tidy-3 (last minor items); ✅ lore-1 (make the twist land); 🟡 phones (D-039): mobile-perf ✅, mobile-ui ✅ but unplayable on a real phone → mobile-2 ✅ (PM blind review 6/10) → mobile-3 ✅ board / chrome ✅ / ending ✅ → gate review 1 6.25/10 ✗ → mobile-4 ✅ board / ✅ chrome → gate review 2 6.25/10 ✗ → mobile-5 ✅ board / ✅ moments / ✅ chrome → gate review 3 6.1/10 ✗ → mobile-6 ✅ zoom / ✅ board / ✅ moments / ✅ chrome → integration ✅ → gate review 4 ❌ 6.4 → mobile-7 ✅ zoom / 🟡 teach / ✅ strike / ✅ hall / ✅ ending → D-041: gate review 5 cancelled; phones move to Last Rune 1.1 on the engine layout model (Phase 2, D-040 gate there); user playtest when ready |
-| 6 Ship | v1.0.0 release, tags, itch kit | ⏳ |
+| 6 Ship | v1.0.0 release on Pages (itch kit cut, D-047) | ✅ |
 
 ## User feedback backlog
 Each item stays here until it is verified in a merged build. The owning workstream is in brackets.

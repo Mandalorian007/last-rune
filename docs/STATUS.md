@@ -1,6 +1,20 @@
 # Status board
 
-_Last updated: 2026-11-04 by PM_
+_Last updated: 2026-11-05 by PM_
+
+**Launch checklist (2026-11-05):** v1.0.0 (desktop + iPad) shipped 2026-11-04. Left for the phone launch, v1.1.0: (1) the user re-tests on their iPhone the two Gate 2 fixes, D-048 chain placement and D-049 teach overlay (both live on Pages, CI green); (2) the PM fixes anything that blocks; (3) the PM tags `v1.1.0` and publishes the GitHub Release. Not blocking: dense boards on the smallest phones (ws/camera, parked; ws/one-overlay held). Merged worktrees are cleaned up.
+
+**Engine migration (D-052, 2026-11-07, user):** the user dropped the phone check and asked for the migration now. The Last Rune becomes the first title on the published `@thunderclap-engine/engine`. ws/engine-npm (🔄) is built on ws/one-overlay: merge main, swap to npm, delete `packages/engine` + `packages/host-electron`, fix the 69 tsc errors (renames plus the removed `device`/`setFill` layout), and pass the gates. Then the PM merges, tags v1.1.0 (all platforms) and updates the engine README's Built-with entry.
+
+**D-047 (user, 2026-11-04):** itch.io cut. Pages is the release. The game's itch packager, itch-sim, itch-release spec and cover tooling are removed; the engine keeps the itch iframe option.
+
+**Gate 2 feedback (2026-11-05, user's iPhone in Brave):** (1) phones placed one gem per pick. D-048 restores chain placement, matching desktop (merged by the PM). (2) The teach card was squeezed and scrolled in a short browser viewport. D-049: the card opens over the tray, folds to a pill after 4 s idle and reopens on a tap; a short 852×270 browser-viewport profile was added to the phone specs (merged; full e2e 213 ✅).
+
+**Share embeds (D-050, 2026-11-05):** the itch cover art, framed wide (1200×630), is the link preview for Discord, iMessage, Slack and X; regenerate with `pnpm social`.
+
+**Engine repo (D-051, 2026-11-05):** https://github.com/Mandalorian007/thunderclap-engine is public. It is a standalone copy of `packages/engine` with its history, a README (The Last Rune is listed as the game that started the engine, with a GIF), `examples/hello` and CI. This game stays on its in-repo engine.
+
+**Now (D-046, user):** review minimised. The phone build is live at https://mandalorian007.github.io/last-rune/ (main, through polish-11; e2e 195 ✅, engine 274 ✅, desktop 7 ✅). Waiting on the user's real-phone test, which is Gate 2. Blind review 12 is cancelled, ws/camera is parked, and ws/one-overlay is held on its branch. Next: fix the blockers the user hits, then extract the engine (0.2.0) and start the next game.
 
 **Gate 2 (2026-11-04):** blind review 6 scored 7 / 7 / 7 / 7 (D-040 add. 7), so it failed again (up from 6.6). Layout majors are gone. solve-truth, chrome-polish-4, teach-4 ✅ merged. glyph-truth ✅ merged. D-043 (user): no live readout, Strike is a free test → strike-free; menu-flow cleanup; cover-art (8 covers at /cover-image/). menu-flow, strike-free ✅ merged. strike-free-2, cover-final ✅ merged. Full e2e on main green (game 164, engine 274, desktop 2). Baselines regenerated. **Blind review 7: 7 / 7 / 7 / 7 ✗** (D-040 add. 8): dense boards too small (1 blocker), "Strike (2 left)" reads as lives, cramped Split/Gate cards, orientation on the board. → dense-board ✅, teach-5 ✅, glyph-truth-2 ✅, dense-board-2 ✅, card-fit ✅; blind review 8: SE 8, iPhone 7.5, Pro Max 7.5, Android 7.5, no blockers (D-040 add. 9) → teach-6, glyph-truth-3, dense-board-3, polish-8 ✅ merged; fit-9 ✅ merged. Full e2e on main green (game 189 + 20 skipped, engine 274, desktop 5+2; mobile-budget passed on retry). Baselines regenerated (3bbbffb). **Blind review 9: 7 / 7.5 / 7.5 / 7 ✗** (D-040 add. 10): held Split orientation unreadable, "in either strike" ambiguous (all four), Split/Gate arrows, Gate worded two ways, Amplify once-per-path unseen, dense boards at landscape ceiling (→ Phase 3 camera). → held-gem, teach-7, polish-9 ✅ merged; full e2e green (game 195 + 20 skipped, engine 274, desktop 5+2), baselines regenerated (81f4b48). **Blind review 10: 7 / 7 / 7 / 7 ✗** (D-040 add. 11): review-9 fixes held; multi-strike wording (3rd phrase to fail), codex port/arrow on two-way gems (regression), pieces met without a lesson, dense boards (right column is the unused lever). → teach-8, glyph-truth-4, dense-board-4, polish-10 ✅ merged. Blind review 11: 7/7/7/7 (D-040 add. 12). polish-11 ✅ merged (cards fit on every phone; "Again" dropped). PM call: Phase 3 brought forward. Dense boards are the remaining major and only the camera fixes them, so one-overlay (rebase) → ws/camera, then blind review 12. Real-phone retest is open to the user at any point.
 
@@ -128,7 +142,6 @@ _Last updated: 2026-11-04 by PM_
 | mobile-perf | ws/mobile-perf | ✅ merged | D-039: support matrix in docs/design/mobile.md (iOS 26+ Safari, Android 12+ Chrome on Qualcomm/Mali); handhelds start Auto→Low (hall GPU 13.9→5.5 ms p50 emulated ×4); steady-30 fallback when Low can't hold 60; iOS interruptions recover, audio re-arms on tap, pause on pagehide/freeze; lifecycle flush via watchLifecycle; memory ~120 MB steady, nothing cut; desktop unchanged. PM: keep default iOS audio session (silent switch mutes), steady-30 also on weak desktops OK, Reload on device loss stays |
 
 ## Blocked / needs user
-- itch.io launch is manual with the user after M5 (D-012)
 - GitHub Pages enabled (source: GitHub Actions). Every push to main deploys to https://mandalorian007.github.io/last-rune/ (D-023); `gh workflow run pages.yml -f label=alpha-1` stamps a release label. At M3α, show `VITE_RELEASE_LABEL` on the title screen.
 
 ## Risks

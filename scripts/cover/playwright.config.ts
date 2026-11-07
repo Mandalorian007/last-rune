@@ -4,9 +4,9 @@ import { defineConfig } from '@playwright/test';
 import base from '../../playwright.config';
 import { COVER_PORT } from '../../tests/e2e/ports';
 
-// The itch cover (D-043 addendum 1). Not part of `pnpm test:e2e`.
+// The social card (D-050). Not part of `pnpm test:e2e`.
 //
-//   pnpm cover   # → build/last-rune-itch-cover.png (630×500) and -thumb.png (315×250)
+//   pnpm social   # → public/social.jpg (1200×630) and public/apple-touch-icon.png (180×180)
 //
 // Builds games/last-rune/cover/ with vite.cover.config.ts into build/cover-image/, serves it on
 // its own port and saves what the page paints (cover.spec.ts). WebGPU flags from the e2e config.
@@ -26,9 +26,8 @@ export default defineConfig({
   use: {
     trace: 'off',
     screenshot: 'off',
-    // 1× pixels: the page's thumbnail canvas is then exactly 315×250.
     deviceScaleFactor: 1,
-    viewport: { width: 1280, height: 720 },
+    viewport: { width: 1280, height: 1000 },
     colorScheme: 'dark',
     launchOptions: { args },
   },

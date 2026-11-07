@@ -2,8 +2,7 @@
 import { expect, test } from '@playwright/test';
 import { nonBlackFraction, PREVIEW_URL, probeWebGPU, trackProblems, waitForBoot } from './helpers';
 
-// Smoke tests for the production build (vite preview of dist/) and for the itch.io embed
-// (scripts/itch-sim). Several tests depend on engine-render's WebGPU boot; until it merges,
+// Smoke tests for the production build (vite preview of dist/). Several tests depend on engine-render's WebGPU boot; until it merges,
 // engine-render boot is merged; all tests are strict.
 
 test.describe('production build', () => {
@@ -76,5 +75,4 @@ test.describe('production build', () => {
 });
 
 // The itch.io embed (cross-site iframe, WebGPU, localStorage, fullscreen, click-to-launch) is an
-// engine host check now: packages/engine/e2e/host.spec.ts on its itch-iframe row. The built game
-// inside itch-sim is itch-release.spec.ts.
+// engine host check now: packages/engine/e2e/host.spec.ts on its itch-iframe row.
