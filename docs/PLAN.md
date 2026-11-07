@@ -91,6 +91,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 15 | host-electron package + builds | ws/host-electron | 4 | 3 | ✅ merged (D-042) |
 | 16 | Last Rune desktop boot + e2e | ws/last-rune-desktop | 4 | 15 | ✅ merged; Gate 4 needs CI artefacts on 3 OSes + a run on the user's machine |
 | 17 | Extract engine repo, publish engine-v1.0.0 | engine repo | 5 | 13, 16, Forgewilds ws 1 (no Forgewilds engine work before Gate 3, D-044) | 🟡 repo up (D-051): github.com/Mandalorian007/thunderclap-engine, history kept, README + example + GIF; Last Rune stays on its in-repo engine; publish/v1.0.0 ⏳ |
+| 17b | Last Rune on the npm engine (D-052): first title on `@thunderclap-engine/engine` | ws/engine-npm | 5 | 9.5, 17 | 🔄 running |
 
 ## Waves (Last Rune waves 1–5; up to 10 top-level agents from D-041)
 

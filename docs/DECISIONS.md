@@ -434,3 +434,11 @@ User: "minimize review. Get phone ready for testing and I will try it. This is t
   - This is plan row 17's repo half: no npm publish and no tag.
   - The engine here (`packages/engine`) is unchanged and remains The Last Rune's engine.
   - Until the game switches to the new repo, the two copies are kept in step by hand. A change to the engine here is ported to the engine repo when it matters.
+
+- **D-052** · 2026-11-07 · **The Last Rune moves onto the published ThunderClap engine (reverses D-051's "stays on its in-repo engine").**
+  - The user: "Ignore the phone check. Coordinate the migration I would like this to be the first title on the game [engine]."
+  - The game depends on `@thunderclap-engine/engine@^1.1.0` and `@thunderclap-engine/host-electron` from npm. `packages/engine` and `packages/host-electron` are deleted from this repo, along with their scripts and CI jobs.
+  - The work is ws/engine-npm, built on ws/one-overlay (which already removed `ctx.chrome`/`CssChrome`/`avoid()`/`setRect`). Upstream also removed `ctx.device`, `setFill`, `computeFillWidth` and `fillBands`; the game frames `ui.layout.freeRect` with `renderer.camera.fitRect` instead.
+  - The Gate 2 phone check (D-046) no longer blocks. The next release, v1.1.0 (desktop, iPad, phones), ships on the npm engine. It is the first title on the published engine.
+  - Gates: `pnpm check`, `pnpm build`, game e2e, desktop e2e, and `pnpm baseline` against the v1.0 baselines (desktop and iPad must look the same; any diff is explained or fixed).
+  - From here on, engine fixes go upstream to Mandalorian007/thunderclap-engine (PR or issue, never a node_modules patch), and Last Rune takes them with `pnpm up @thunderclap-engine/engine`. The hand porting of D-051 ends.
