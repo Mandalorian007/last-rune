@@ -82,7 +82,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # The web game (dist/), then the desktop app around it in dist/desktop/
-      # (scripts/desktop/build.mjs stages the npm shell's out/ with dist/ and runs electron-builder).
+      # (the procedural icon, then host-electron's `thunderclap-desktop package` with the
+      # `thunderclap.desktop` identity in package.json).
       - run: pnpm build
 
       - run: pnpm desktop:build ${{ matrix.target }}

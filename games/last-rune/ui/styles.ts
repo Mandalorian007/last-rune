@@ -372,9 +372,7 @@ const CSS = /* css */ `
 .tc-overlay .lr-settings section { display: flex; flex-direction: column; gap: 6px; }
 .tc-overlay .lr-settings h3 { margin: 6px 0 0; font-size: 26px; letter-spacing: 2px; text-transform: uppercase; color: var(--tc-color-accent); }
 .tc-overlay .lr-settings label.lr-field { display: flex; justify-content: space-between; align-items: center; gap: 20px; font-size: 26px; }
-/* Specificity (0,5,1): outranks engine v1's zoomed-select rule (font, padding, border from theme tokens
-   over the zoom), so the select keeps the design px it had on v1.0 (D-052). */
-.tc-overlay .tc-layer .tc-panel .lr-settings.lr-settings select {
+.tc-overlay .lr-settings select {
   font: inherit; font-size: 24px; min-height: 46px; padding: 0 14px; border-radius: 8px; color: var(--tc-color-text);
   background: var(--tc-color-surface-alt); border: 2px solid var(--tc-color-border);
 }
