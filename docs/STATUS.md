@@ -1,6 +1,8 @@
 # Status board
 
-_Last updated: 2026-11-05 by PM_
+_Last updated: 2026-11-08 by PM_
+
+**Engine 1.2.1 refinement (D-052 add. 2, 2026-11-08) 🔄:** upstream fixed all three asks (engine #1–#3 closed; engine 1.2.1, host-electron 0.2.0). ws/engine-1-2 bumps the deps and deletes our workarounds (screen-fit.ts → engine cover fit, the select specificity hack, the desktop build/dev/shell scripts → `thunderclap-desktop`). The `v1.1.0` tag and Release wait for this merge so 1.1.0 ships on engine 1.2.1.
 
 **Launch checklist (2026-11-05):** v1.0.0 (desktop + iPad) shipped 2026-11-04. Left for the phone launch, v1.1.0: (1) the user re-tests on their iPhone the two Gate 2 fixes, D-048 chain placement and D-049 teach overlay (both live on Pages, CI green); (2) the PM fixes anything that blocks; (3) the PM tags `v1.1.0` and publishes the GitHub Release. Not blocking: dense boards on the smallest phones (ws/camera, parked; ws/one-overlay held). Merged worktrees are cleaned up.
 
