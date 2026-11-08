@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The Last Rune's desktop app icon, drawn from code (CLAUDE.md: all art is procedural; there is
-// no image file in the repo). `pnpm desktop:build` runs this first and hands the PNG to
-// electron-builder, which makes the macOS .icns, the Windows .ico and the Linux icon from it.
+// no image file in the repo). `pnpm desktop:build` runs this first; `thunderclap-desktop package` hands the PNG
+// (package.json `thunderclap.desktop.icon`) to electron-builder, which makes the macOS .icns, the Windows .ico and the Linux icon from it.
 //
 //   node scripts/desktop/icon.mjs [out.png] [--size 1024]
 //

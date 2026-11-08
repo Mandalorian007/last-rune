@@ -14,9 +14,8 @@ games/last-rune/
   art/                  # procedural generators: stone, gems, FUSE, parchment
   shaders/              # WGSL: storm cell, gem refraction, etc.
   boot-host.ts          # the one file that imports @thunderclap-engine/host-electron (dynamic)
-  game/screen-fit.ts    # phone fill bands + device mode, which engine v1 dropped (D-040, D-052)
   main.ts
-scripts/desktop/        # desktop:dev / desktop:build / test:e2e:desktop around the npm shell
+scripts/desktop/        # procedural app icon + test:e2e:desktop; dev/package via host-electron's thunderclap-desktop bin
 ```
 
 ## Rules
@@ -62,6 +61,6 @@ A small, documented surface (`@thunderclap-engine/engine/render`; its README and
 `Scene<Ctx, Frame>` in `@thunderclap-engine/engine/core`: `enter(ctx)`, `exit()`, `pause()`, `resume()`, `update(dt)` (fixed 60 Hz), `render(frame, camera, alpha)` (v1), `transparent` flag (overlays render over the scene below). `SceneStack` ops (`push/pop/replace/clear`) are deferred while updating/rendering. One shared game `Ctx` holds `renderer`, `post`, `surface`, `particles` + engine-systems' `input`, `audio`, `ui`, `save`. Template: `games/last-rune/scenes/_demo/render-demo.ts`. Draw order = submission order (no depth); scenes order their own draws.
 
 ## Runtime shape
-- Logical design space **1920×1080**, letterboxed 16:9 into whatever the iframe gives us (itch embed 960×540 + fullscreen). Render at device pixel ratio, capped for perf.
+- Logical design space **1920×1080**, letterboxed 16:9 into whatever the iframe gives us (itch embed 960×540 + fullscreen). Phones cover the screen instead, cropped to a per-scene band (the engine's `surface.fit` cover mode with `belowScale: PHONE_SCALE`; `FILL_BANDS` in game/ctx.ts, D-040). Render at device pixel ratio, capped for perf.
 - World is drawn in WebGPU; text and UI are DOM overlay (D-009).
 - Fixed-step simulation, variable render. Respect `prefers-reduced-motion` (trim particles, shake, flicker).

@@ -2,7 +2,7 @@
 
 ## Tooling (D-006)
 - **pnpm** (version pinned in `package.json#packageManager`). Never use npm or yarn, and never commit `package-lock.json`.
-- **One package** (D-052). The root package (`last-rune`) is the game plus all tooling (Vite, Playwright, scripts, `dist/`). The engine is the npm package `@thunderclap-engine/engine` (`^1.1.0`) and the desktop shell `@thunderclap-engine/host-electron` (`^0.1.0`), developed and tested in https://github.com/Mandalorian007/thunderclap-engine. The game imports them only through their exports maps (`@thunderclap-engine/engine/render`, `/ui`, …); `pnpm check:boundaries` fails on anything else. Never patch `node_modules` or copy engine code in; log a gap as an upstream ask. `pnpm-workspace.yaml` lists only `.`: it keeps a worktree nested in the main checkout its own workspace root.
+- **One package** (D-052). The root package (`last-rune`) is the game plus all tooling (Vite, Playwright, scripts, `dist/`). The engine is the npm package `@thunderclap-engine/engine` (`^1.2.1`) and the desktop shell `@thunderclap-engine/host-electron` (`^0.2.0`), developed and tested in https://github.com/Mandalorian007/thunderclap-engine. The game imports them only through their exports maps (`@thunderclap-engine/engine/render`, `/ui`, …); `pnpm check:boundaries` fails on anything else. Never patch `node_modules` or copy engine code in; log a gap as an upstream ask. `pnpm-workspace.yaml` lists only `.`: it keeps a worktree nested in the main checkout its own workspace root.
 - **TypeScript 7**, strict, `noEmit` (Vite bundles). Two projects: `tsconfig.json` (browser: games and unit tests, against the engine's published `.d.ts`) and `tsconfig.node.json` (configs, scripts, e2e).
 - **Vite 8** dev server and build (`base: './'` for itch).
 - **Vitest 5** for unit tests, colocated as `*.test.ts`.
@@ -19,8 +19,8 @@ pnpm fix            # format + safe lint fixes + organize imports, whole repo
 pnpm build          # typecheck + production build to dist/
 pnpm test:e2e       # Playwright (ports in tests/e2e/ports.ts; worktrees auto-offset, or E2E_PORT_OFFSET)
 pnpm baseline       # screenshot diff against the v1.0 set (BASELINE_UPDATE=1 rewrites it)
-pnpm desktop:dev    # the npm Electron shell around a Vite dev server
-pnpm desktop:build  # after pnpm build: unsigned desktop app into dist/desktop/ (scripts/desktop/build.mjs)
+pnpm desktop:dev    # thunderclap-desktop dev: the npm Electron shell around a Vite dev server
+pnpm desktop:build  # after pnpm build: unsigned desktop app into dist/desktop/ (icon, then thunderclap-desktop package; identity in package.json `thunderclap.desktop`)
 pnpm test:e2e:desktop  # Electron-driver specs (tests/desktop/) on the npm shell
 ```
 

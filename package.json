@@ -14,8 +14,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:desktop": "node scripts/desktop/e2e.mjs",
-    "desktop:dev": "node scripts/desktop/dev.mjs",
-    "desktop:build": "node scripts/desktop/build.mjs",
+    "desktop:dev": "thunderclap-desktop dev",
+    "desktop:build": "node scripts/desktop/icon.mjs && thunderclap-desktop package",
     "desktop:icon": "node scripts/desktop/icon.mjs",
     "baseline": "playwright test -c scripts/baseline/playwright.config.ts",
     "audio:check": "node scripts/audio-check.mjs",
@@ -28,8 +28,8 @@
     "social": "playwright test -c scripts/cover/playwright.config.ts"
   },
   "dependencies": {
-    "@thunderclap-engine/engine": "^1.1.0",
-    "@thunderclap-engine/host-electron": "^0.1.0"
+    "@thunderclap-engine/engine": "^1.2.1",
+    "@thunderclap-engine/host-electron": "^0.2.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
@@ -44,6 +44,13 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
+  },
+  "thunderclap": {
+    "desktop": {
+      "productName": "The Last Rune",
+      "appId": "com.thunderclap.lastrune",
+      "icon": "build/desktop/icon.png"
+    }
   },
   "packageManager": "pnpm@10.27.0",
   "engines": {

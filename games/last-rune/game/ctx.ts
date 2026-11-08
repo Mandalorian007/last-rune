@@ -3,8 +3,8 @@
  *
  * The engine's `createGame` (D-041) builds the noun-free half: surface, renderer, post,
  * particles, input, audio, overlay, host, scene stack, loop and the lifecycle. `createGameCtx`
- * adds Last Rune's nouns to that same object: the phone fill and device mode (game/screen-fit.ts;
- * the engine dropped them in v1), the sound bank, the save, settings, graphics, FUSE, codex, HUD,
+ * adds Last Rune's nouns to that same object: the per-scene phone cover band (the engine's
+ * `Surface.setFit`) and device mode, the sound bank, the save, settings, graphics, FUSE, codex, HUD,
  * the flow and the views.
  *
  * Scenes are `Scene<GameCtx, Frame>` on `ctx.stack` and get the ctx in `enter`.
@@ -16,9 +16,13 @@ import type { CreateGameOptions, EngineCtx } from '@thunderclap-engine/engine';
 import { type AudioEngine, recipes } from '@thunderclap-engine/engine/audio';
 import type { Scene } from '@thunderclap-engine/engine/core';
 import {
+  type CoverOptions,
+  createDeviceMode,
   type DeviceMode,
   deviceTraits,
   isReducedMotion,
+  PHONE_SCALE,
+  type SurfaceFit,
   watchReducedMotion,
 } from '@thunderclap-engine/engine/platform';
 import type { Frame } from '@thunderclap-engine/engine/render';
@@ -54,7 +58,6 @@ import { type Action, BINDINGS } from './actions';
 import { GameFlow, type SolveMoment } from './flow';
 import { GraphicsController } from './graphics';
 import { createGameSave, type GameSave, progressOf, repairSave, SAVE_GAME_ID } from './save';
-import { createScreenFit, type FillBand } from './screen-fit';
 import { SettingsController } from './settings';
 
 /** Each scene's phone rules, appended to the phone sheet in this order (ui/styles.ts). */
@@ -71,22 +74,33 @@ export const DESIGN_H = 1080;
  * candles; upright (chrome-polish-3) it fills its frame's height instead and crops the sides
  * about the storm cell and FUSE (the view draws the name over that part, `TITLE_UPRIGHT`).
  */
-const FILL_BANDS: Record<string, FillBand> = {
+const band = (minVisibleHeight: number, focusY: number, upright?: CoverOptions): CoverOptions => ({
+  minVisibleHeight,
+  focusY,
+  // Upright: keep the whole design width (the letterbox) unless the scene crops the sides.
+  minVisibleWidth: DESIGN_W,
+  ...upright,
+  // Desktop and tablets (the contain fit's scale at least PHONE_SCALE) always letterbox.
+  belowScale: PHONE_SCALE,
+});
+const FILL_BANDS: Record<string, CoverOptions> = {
   // polish-8: centred low enough that FUSE (ground y 968) stands whole on wide phones; the view
   // draws the name lower there to match (title-view COMPACT_TITLE).
-  title: { minVisible: 760, focusY: 600, ...TITLE_UPRIGHT },
-  hall: { minVisible: 667, focusY: 544 },
+  title: band(760, 600, TITLE_UPRIGHT),
+  hall: band(667, 544),
   // The journal (chrome-polish-3): as wide as the head (y 34) and FUSE's plate (to y 1001)
   // allow; what bars remain are the desk's own dark wood (ui/chrome.ts DESK_BARS).
-  journal: { minVisible: 1000, focusY: 528 },
+  journal: band(1000, 528),
   // The altar (mobile-5-board): the board and its column lay out inside the visible band
   // (layout.ts phoneLayout), so wide phones trade dead side bars for a bigger board.
-  puzzle: { minVisible: 860, focusY: 540 },
-  solve: { minVisible: 860, focusY: 540 },
+  puzzle: band(860, 540),
+  solve: band(860, 540),
   // The ending (mobile-6-chrome): full width like its hangout, so no scene of it has side
   // bars; the rune, FUSE and the clipboard's phone rest spot stay inside the band.
-  ending: { minVisible: 860, focusY: 540 },
+  ending: band(860, 540),
 };
+/** A flow state's fit: its cover band on phones, else the letterbox. */
+const fitFor = (state: string): SurfaceFit => FILL_BANDS[state] ?? 'contain';
 
 export type GameScene = Scene<GameCtx, Frame>;
 
@@ -111,7 +125,7 @@ export type LastRuneEngine = EngineCtx<Action, GameSave, GameCtx>;
 
 /** The engine ctx (`surface`, `renderer`, `ui`, `host`, `loop`, …) plus Last Rune's nouns. */
 export interface GameCtx extends LastRuneEngine {
-  /** Phone and touch modes on the overlay root (game/screen-fit.ts). */
+  /** Phone and touch modes, `data-phone` / `data-touch` / `--tc-crop-*` on the overlay root. */
   readonly device: DeviceMode;
   /** Game sound bank, music moods and FUSE's voice (games/last-rune/audio). */
   readonly sound: GameAudio;
@@ -143,6 +157,9 @@ export function engineOptions(
     title: opts.title,
     forceUnsupported: opts.forceUnsupported,
     design: { width: DESIGN_W, height: DESIGN_H },
+    // Phones cover the screen, cropped to the scene's band (D-040); the flow switches the band
+    // per scene (`surface.setFit`), starting with the title's.
+    surface: { fit: fitFor('title') },
     post: {
       godRays: { x: DESIGN_W / 2, y: -60, bloomSource: 0.12, intensity: 0.3 },
       mist: { density: 0.45 },
@@ -197,8 +214,30 @@ function isFallbackAdapter(adapter: GPUAdapter): boolean {
 export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): GameCtx {
   const { surface, gpu, renderer, post, particles, input, audio, ui, host, save } = engine;
   // Phones fill the width with the scene's band (D-040); built before anything reads `device`.
-  const fit = createScreenFit(engine, FILL_BANDS);
-  const { device } = fit;
+  const device = createDeviceMode(ui.root);
+  const syncDevice = () => {
+    const r = surface.rect;
+    const ch = surface.root.clientHeight;
+    device.setScale(ui.scale, r.x, {
+      fitScale: surface.fitRect.scale,
+      top: Math.max(0, -r.y),
+      bottom: Math.max(0, r.y + r.height - ch),
+    });
+    // A covered scene that still leaves slim bars (very wide phones) fades its side edges into
+    // them, so the art ends softly instead of at a hard letterbox line.
+    const soft = r.height > ch + 1 && r.x > 0;
+    surface.canvas.style.maskImage = soft
+      ? 'linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent)'
+      : '';
+  };
+  surface.onResize(syncDevice);
+  let fitKey = '';
+  const setFill = (state: string) => {
+    if (state === fitKey) return;
+    fitKey = state;
+    surface.setFit?.(fitFor(state));
+    syncDevice();
+  };
   const { stack, loop, hooks } = engine;
 
   // ── Graphics quality (Settings → Graphics; see game/graphics.ts) ───────
@@ -305,7 +344,7 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
   const entering =
     <A extends unknown[]>(state: string, make: (...a: A) => GameScene) =>
     (...a: A) => {
-      fit.setFill(state);
+      setFill(state);
       return make(...a);
     };
   const flow = new GameFlow<GameScene>(stack, save, {
@@ -369,11 +408,11 @@ export function createGameCtx(engine: LastRuneEngine, scenes: SceneFactories): G
     return j.found.filter((p) => !j.read.includes(p)).length;
   };
   // Phones: FUSE's lane, the ☰ in its rail, the "turn sideways" card (ui/chrome.ts).
-  const gameChrome = createGameChrome({ ui, hud: hud.root, surface: fit, device });
+  const gameChrome = createGameChrome({ ui, hud: hud.root, surface, device });
   gameChrome.scene(flow.state);
-  fit.setFill(flow.state);
+  setFill(flow.state);
   flow.onChange((state) => {
-    fit.setFill(state);
+    setFill(state);
     gameChrome.scene(state);
     // Scenes own their caption avoid regions; leaving the altar must never strand one.
     if (state !== 'puzzle') fuse.keepClear(null);

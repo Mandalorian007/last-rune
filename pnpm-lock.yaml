@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@thunderclap-engine/engine':
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^1.2.1
+        version: 1.2.1
       '@thunderclap-engine/host-electron':
-        specifier: ^0.1.0
-        version: 0.1.0(@thunderclap-engine/engine@1.1.0)(electron@45.2.2)
+        specifier: ^0.2.0
+        version: 0.2.0(@thunderclap-engine/engine@1.2.1)(electron-builder@26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0)))(electron@45.2.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.14.0
@@ -35,7 +35,7 @@ importers:
         version: 45.2.2
       electron-builder:
         specifier: ^26.18.0
-        version: 26.18.0(electron-builder-squirrel-windows@26.18.0)
+        version: 26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0))
       happy-dom:
         specifier: ^21.0.4
         version: 21.0.4
@@ -475,17 +475,24 @@ packages:
     resolution: {integrity: sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==}
     engines: {node: '>=10'}
 
-  '@thunderclap-engine/engine@1.1.0':
-    resolution: {integrity: sha512-Ir4yS2C2AzoTFhfC/EsMaWrIo2vrkVDgCZm+Q5fChTvKgLsIzoIm1N0FaczqT/1FBcEgcuKpzkwGycpzhFx1/A==}
+  '@thunderclap-engine/engine@1.2.1':
+    resolution: {integrity: sha512-kxGSHoZBkO9hWeGP4gxwvvoxzt7mIFu4aUIrXALKQRphMkGWBlJAkelaxt1F39/0PFmwy6HRtVeGsAkg+u7k3A==}
     engines: {node: '>=22'}
 
-  '@thunderclap-engine/host-electron@0.1.0':
-    resolution: {integrity: sha512-w0aRvefEfbIl7Ay5oGRNzAEgPO5eNdXqC3bvQILn8e8VHl7y3Rnrkcy/nvHn8Oic5VkuDc8C/scAIQWBcc9AHQ==}
+  '@thunderclap-engine/host-electron@0.2.0':
+    resolution: {integrity: sha512-/XNt+gx5WuKrPPHOolWMz6jmRiYbSjfykzjXRPQmMPYExf9qwLB6OcYJksK2GWCN+QzbLXAyFiKj9uvdoihRJA==}
+    hasBin: true
     peerDependencies:
       '@thunderclap-engine/engine': ^1.0.0
       electron: '>=45.0.0'
+      electron-builder: '>=26.0.0'
+      vite: '>=7.0.0'
     peerDependenciesMeta:
       electron:
+        optional: true
+      electron-builder:
+        optional: true
+      vite:
         optional: true
 
   '@types/cacheable-request@6.0.3':
@@ -2188,13 +2195,15 @@ snapshots:
     dependencies:
       defer-to-connect: 2.0.1
 
-  '@thunderclap-engine/engine@1.1.0': {}
+  '@thunderclap-engine/engine@1.2.1': {}
 
-  '@thunderclap-engine/host-electron@0.1.0(@thunderclap-engine/engine@1.1.0)(electron@45.2.2)':
+  '@thunderclap-engine/host-electron@0.2.0(@thunderclap-engine/engine@1.2.1)(electron-builder@26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0)))(electron@45.2.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))':
     dependencies:
-      '@thunderclap-engine/engine': 1.1.0
+      '@thunderclap-engine/engine': 1.2.1
     optionalDependencies:
       electron: 45.2.2
+      electron-builder: 26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0))
+      vite: 8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
 
   '@types/cacheable-request@6.0.3':
     dependencies:
@@ -2338,7 +2347,7 @@ snapshots:
     dependencies:
       color-convert: 2.0.1
 
-  app-builder-lib@26.18.0(dmg-builder@26.18.0)(electron-builder-squirrel-windows@26.18.0):
+  app-builder-lib@26.18.0(dmg-builder@26.18.0)(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0)):
     dependencies:
       '@electron/asar': 3.4.1
       '@electron/fuses': 1.8.0
@@ -2359,7 +2368,7 @@ snapshots:
       chromium-pickle-js: 0.2.0
       ci-info: 4.3.1
       debug: 4.4.3
-      dmg-builder: 26.18.0(electron-builder-squirrel-windows@26.18.0)
+      dmg-builder: 26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0))
       dotenv: 16.6.1
       dotenv-expand: 11.0.7
       ejs: 3.1.10
@@ -2574,9 +2583,9 @@ snapshots:
       minimatch: 3.1.5
       p-limit: 3.1.0
 
-  dmg-builder@26.18.0(electron-builder-squirrel-windows@26.18.0):
+  dmg-builder@26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0)):
     dependencies:
-      app-builder-lib: 26.18.0(dmg-builder@26.18.0)(electron-builder-squirrel-windows@26.18.0)
+      app-builder-lib: 26.18.0(dmg-builder@26.18.0)(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0))
       builder-util: 26.16.0
       fs-extra: 10.1.0
       js-yaml: 4.3.2
@@ -2606,21 +2615,21 @@ snapshots:
 
   electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0):
     dependencies:
-      app-builder-lib: 26.18.0(dmg-builder@26.18.0)(electron-builder-squirrel-windows@26.18.0)
+      app-builder-lib: 26.18.0(dmg-builder@26.18.0)(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0))
       builder-util: 26.16.0
       electron-winstaller: 5.4.0
     transitivePeerDependencies:
       - dmg-builder
       - supports-color
 
-  electron-builder@26.18.0(electron-builder-squirrel-windows@26.18.0):
+  electron-builder@26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0)):
     dependencies:
-      app-builder-lib: 26.18.0(dmg-builder@26.18.0)(electron-builder-squirrel-windows@26.18.0)
+      app-builder-lib: 26.18.0(dmg-builder@26.18.0)(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0))
       builder-util: 26.16.0
       builder-util-runtime: 9.7.0
       chalk: 4.1.2
       ci-info: 4.4.0
-      dmg-builder: 26.18.0(electron-builder-squirrel-windows@26.18.0)
+      dmg-builder: 26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0))
       fs-extra: 10.1.0
       lazy-val: 1.0.5
       simple-update-notifier: 2.0.0

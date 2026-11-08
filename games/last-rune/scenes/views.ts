@@ -99,7 +99,7 @@ export interface TitleViewFrame extends ViewFrame {
 }
 
 /**
- * The title's slice on an upright phone (a fill band's side crop, `FillBand`): at least
+ * The title's slice on an upright phone (the cover band's side crop, the engine's `CoverOptions`): at least
  * this much of the design's width, centred on the storm cell and FUSE's strolls.
  */
 export const TITLE_UPRIGHT = { minVisibleWidth: 740, focusX: 560 } as const;
