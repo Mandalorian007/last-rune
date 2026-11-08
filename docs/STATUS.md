@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-08 by PM_
 
-**Engine 1.2.1 refinement (D-052 add. 2, 2026-11-08) 🔄:** upstream fixed all three asks (engine #1–#3 closed; engine 1.2.1, host-electron 0.2.0). ws/engine-1-2 bumps the deps and deletes our workarounds (screen-fit.ts → engine cover fit, the select specificity hack, the desktop build/dev/shell scripts → `thunderclap-desktop`). The `v1.1.0` tag and Release wait for this merge so 1.1.0 ships on engine 1.2.1.
+**Engine 1.2.1 refinement (D-052 add. 2, 2026-11-08) ✅ merged:** upstream fixed all three asks (engine #1–#3 closed). On engine ^1.2.1 / host-electron ^0.2.0: screen-fit.ts → engine cover fit (same bands, `belowScale: PHONE_SCALE`; upright non-title scenes keep full width); select hack → plain rule; desktop build/dev/shell scripts → `thunderclap-desktop` (identity unchanged; icon pre-step kept; e2e.mjs kept). Gates: check 602 ✅, build ✅, e2e 213 ✅ (0 flaky), baseline 129/129 unchanged (no regen), desktop e2e 2 ✅, mac dir build ✅. Follow-ups (not blocking): opt-in `moments iphone` shot script is stale (times out); optional upstream pre-package hook for the icon step. Next: user runs `build/ship.sh` to tag and release v1.1.0.
 
 **Launch checklist (2026-11-05):** v1.0.0 (desktop + iPad) shipped 2026-11-04. Left for the phone launch, v1.1.0: (1) the user re-tests on their iPhone the two Gate 2 fixes, D-048 chain placement and D-049 teach overlay (both live on Pages, CI green); (2) the PM fixes anything that blocks; (3) the PM tags `v1.1.0` and publishes the GitHub Release. Not blocking: dense boards on the smallest phones (ws/camera, parked; ws/one-overlay held). Merged worktrees are cleaned up.
 
