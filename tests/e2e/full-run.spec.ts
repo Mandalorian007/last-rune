@@ -29,6 +29,22 @@ import { PREVIEW_URL, pressKey, readSave, trackProblems, waitFrames } from './he
 const PLAYTEST_OUT = process.env.PLAYTEST_OUT ? resolve(process.env.PLAYTEST_OUT) : null;
 
 /**
+ * FULL_RUN_DEVICE=ipad|phone plays the same run in a touch device's window (harden-app: zero
+ * console errors on desktop, iPad and a phone). Keys still drive it. Default: desktop 1280×720.
+ */
+const DEVICES = {
+  desktop: { viewport: { width: 1280, height: 720 } },
+  ipad: { viewport: { width: 1180, height: 820 }, hasTouch: true, deviceScaleFactor: 2 },
+  phone: {
+    viewport: { width: 844, height: 390 },
+    hasTouch: true,
+    isMobile: true,
+    deviceScaleFactor: 3,
+  },
+} as const;
+const DEVICE = DEVICES[(process.env.FULL_RUN_DEVICE ?? 'desktop') as keyof typeof DEVICES];
+
+/**
  * The play order: walk the hall front to back and restore the first open machine each time,
  * the way a player who follows the glow would. Derived from the rules so it tracks the graph.
  */
@@ -403,7 +419,8 @@ test.describe.configure({ mode: 'serial' });
 test.describe('full run (prod build, keyboard only)', () => {
   test.beforeAll(async ({ browser }) => {
     if (PLAYTEST_OUT) mkdirSync(PLAYTEST_OUT, { recursive: true });
-    context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    if (!DEVICE) throw new Error(`FULL_RUN_DEVICE: one of ${Object.keys(DEVICES).join(', ')}`);
+    context = await browser.newContext(DEVICE);
     page = await context.newPage();
     await page.addInitScript(installFrameRecorder);
     problems = trackProblems(page);

@@ -3,6 +3,7 @@
 // adds its nouns and boots into the title. Dev routes: `?demo=audio|render|art|props`, `?nogpu`.
 import { createGame } from '@thunderclap-engine/engine';
 import { bootHost } from './boot-host';
+import { type CrashGuard, installCrashGuard } from './game/crash';
 import {
   createGameCtx,
   engineOptions,
@@ -33,9 +34,14 @@ const SCENES: SceneFactories = {
   ending: (moment) => new EndingScene(moment),
 };
 
+let guard: CrashGuard | undefined;
+
 async function main(): Promise<void> {
   const root = document.getElementById('app');
   if (!root) throw new Error('#app missing');
+  // Uncaught errors from here on get a calm "Something went wrong" card (game/crash.ts).
+  let flush: () => boolean = () => false;
+  guard = installCrashGuard({ root, title: TITLE, flush: () => flush() });
   const qs = new URLSearchParams(location.search);
   if (import.meta.env.DEV && qs.has('demo')) {
     const { startDemo } = await import('./scenes/_demo/routes');
@@ -51,6 +57,7 @@ async function main(): Promise<void> {
   });
   if (!engine) return;
   const ctx = createGameCtx(engine, SCENES);
+  flush = () => ctx.save.flush();
   startGame(ctx);
   if (import.meta.env.DEV) {
     // Dev/e2e handle: `window.__game.flow.state`, `__game.save.get()`.
@@ -60,4 +67,5 @@ async function main(): Promise<void> {
 
 main().catch((err) => {
   console.error('[boot] failed', err);
+  guard?.report(err, { fatal: true });
 });
