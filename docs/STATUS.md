@@ -1,6 +1,8 @@
 # Status board
 
-_Last updated: 2026-11-08 by PM_
+_Last updated: 2026-11-09 by PM_
+
+**Hardening (D-053) 🔄:** ws/harden-tests (layout warnings to zero, flake, stale shot script) and ws/harden-app (no-WebGPU, storage, errors, network, Pages subpath, input edges) running. Engine bugs → thunderclap-engine issues. Ships as v1.1.1.
 
 **Engine 1.2.1 refinement (D-052 add. 2, 2026-11-08) ✅ merged:** upstream fixed all three asks (engine #1–#3 closed). On engine ^1.2.1 / host-electron ^0.2.0: screen-fit.ts → engine cover fit (same bands, `belowScale: PHONE_SCALE`; upright non-title scenes keep full width); select hack → plain rule; desktop build/dev/shell scripts → `thunderclap-desktop` (identity unchanged; icon pre-step kept; e2e.mjs kept). Gates: check 602 ✅, build ✅, e2e 213 ✅ (0 flaky), baseline 129/129 unchanged (no regen), desktop e2e 2 ✅, mac dir build ✅. Follow-ups (not blocking): opt-in `moments iphone` shot script is stale (times out); optional upstream pre-package hook for the icon step. **v1.1.0 released 2026-11-08** (tag on a6dd2fb, CI + Pages green): https://github.com/Mandalorian007/last-rune/releases/tag/v1.1.0
 
