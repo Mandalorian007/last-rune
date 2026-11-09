@@ -142,7 +142,11 @@ test('losing the GPU mid-run says so, offers Reload, and Reload continues the ga
 test('a boot that throws shows a Reload card instead of a blank page', async ({ page }) => {
   await page.addInitScript(() => {
     const real = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, id: string, ...rest: unknown[]) {
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+      id: string,
+      ...rest: unknown[]
+    ) {
       if (id === 'webgpu') throw new Error('test: context creation crashed');
       // biome-ignore lint/suspicious/noExplicitAny: forwarding the overloads
       return (real as any).call(this, id, ...rest);
