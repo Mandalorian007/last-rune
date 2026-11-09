@@ -427,6 +427,8 @@ test.describe('full run (prod build, keyboard only)', () => {
     page.on('console', (m) => {
       if (m.type() === 'warning' || m.type() === 'error')
         consoleLog.push(`${m.type()}: ${m.text()}`);
+      // harden-tests: this run's own context is outside the fixtures' [layout] guard.
+      if (m.type() === 'warning' && m.text().startsWith('[layout]')) problems.push(m.text());
     });
   });
 
