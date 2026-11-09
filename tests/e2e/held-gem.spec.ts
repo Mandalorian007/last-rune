@@ -1,7 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import type { Cell, MachineId } from '../../games/last-rune/rules/types';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // held-gem (blind review 9; D-040 add. 10, findings A and E). A: the gem in hand stays vivid in

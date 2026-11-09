@@ -1,5 +1,5 @@
 /// <reference types="@webgpu/types" />
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, pressKey, trackProblems, waitFrames } from './helpers';
 
 // menu-flow (D-043): every panel closes with Esc (or its ✕ / Back) to where it was opened,

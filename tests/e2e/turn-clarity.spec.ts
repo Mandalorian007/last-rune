@@ -1,8 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import type { Cell, MachineId } from '../../games/last-rune/rules/types';
 import { cellCenter, computeLayout } from '../../games/last-rune/scenes/altar/layout';
 import { cursorKeys } from './altar-keys';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, readSave, waitFrames } from './helpers';
 
 // One input rule at the altar (docs/design/altar-ux.md "Controls"): a click picks up and sets

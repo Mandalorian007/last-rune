@@ -1,8 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
 import { LINES, wordCount } from '../../games/last-rune/content/lines';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { MACHINE_IDS } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, settled, waitFrames } from './helpers';
 
 // mobile-2: the phone layout's hard budgets, on every altar, at the two tightest real phone

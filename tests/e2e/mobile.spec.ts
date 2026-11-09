@@ -1,8 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { isRotational } from '../../games/last-rune/rules';
 import { type Cell, MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import { type AltarLayout, cellCenter } from '../../games/last-rune/scenes/altar/layout';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, readSave, trackProblems, waitFrames } from './helpers';
 
 // Phones (D-039): every altar action works by finger alone, turning included (the ↻ Turn

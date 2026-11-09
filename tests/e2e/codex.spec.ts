@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, trackProblems } from './helpers';
 
 // Codex unlock-on-sight (codex-2): a gem's page opens the first time the player sees it at an

@@ -1,7 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { MACHINE_IDS } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-5-moments (D-040 addendum 3): the altar's moments show one thing at a time, on four

@@ -1,9 +1,9 @@
-import { expect, type Page, test } from '@playwright/test';
 import { FIXED_NOTE, FIXED_NOTE_FULL, YOURS_NOTE } from '../../games/last-rune/content/codex';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { MACHINE_IDS } from '../../games/last-rune/rules/types';
 import { trayRemaining } from '../../games/last-rune/rules/validate';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-7-teach (D-040 addendum 5): every word and look matches what is on screen.

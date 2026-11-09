@@ -1,8 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import type { MachineId } from '../../games/last-rune/rules/types';
 import { type AltarLayout, TRAY_GLYPH_HALF } from '../../games/last-rune/scenes/altar/layout';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // glyph-truth (D-027):

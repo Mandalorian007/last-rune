@@ -1,9 +1,9 @@
-import { expect, type Page, test } from '@playwright/test';
 import { type GemKind, MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import type { AltarLayout } from '../../games/last-rune/scenes/altar/layout';
 import { GEM_WGSL } from '../../games/last-rune/shaders/gem-wgsl';
 import { GEM_DIAGRAMS } from '../../games/last-rune/ui/codex-diagram';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // glyph-truth-2 (D-027, D-040 addendum 8, blind review 7):

@@ -1,5 +1,5 @@
 /// <reference types="@webgpu/types" />
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { nonBlackFraction, PREVIEW_URL, probeWebGPU, trackProblems, waitForBoot } from './helpers';
 
 // Smoke tests for the production build (vite preview of dist/). Several tests depend on engine-render's WebGPU boot; until it merges,

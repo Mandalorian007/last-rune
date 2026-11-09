@@ -1,7 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { GEM_KINDS, MACHINE_IDS } from '../../games/last-rune/rules/types';
 import { cellCenter, computeLayout } from '../../games/last-rune/scenes/altar/layout';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, strikeToVerdict, trackProblems, waitFrames } from './helpers';
 
 // bug-bash: what must fit on a 1280×720 screen at every text size (D-027: a first-time

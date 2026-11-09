@@ -1,5 +1,5 @@
 /// <reference types="@webgpu/types" />
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { trackProblems } from './helpers';
 import { DEV_URL } from './ports';
 

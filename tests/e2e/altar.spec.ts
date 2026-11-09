@@ -1,10 +1,10 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { isRotational, type Placement } from '../../games/last-rune/rules';
 import { initialState, solveMachine } from '../../games/last-rune/rules/progression';
 import { GEM_KINDS, type MachineId } from '../../games/last-rune/rules/types';
 import { deriveHall, firstFocus, focusOrder } from '../../games/last-rune/scenes/hall/hall-state';
 import { cursorKeys } from './altar-keys';
+import { expect, type Page, test } from './fixtures';
 import { PREVIEW_URL, trackProblems, waitForBoot } from './helpers';
 
 // Plays the first two altars of the production build by keyboard only, the way a pad or

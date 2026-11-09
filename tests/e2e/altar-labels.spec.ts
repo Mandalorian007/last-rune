@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
 import { machineLine } from '../../games/last-rune/content/lines';
 import { auditAltar, playOrder } from './altar-audit';
+import { expect, test } from './fixtures';
 import { DEV_URL, settled } from './helpers';
 
 /** What the audit measures. */

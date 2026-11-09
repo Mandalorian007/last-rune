@@ -1,4 +1,3 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import {
@@ -9,6 +8,7 @@ import {
   orbExtent,
 } from '../../games/last-rune/scenes/altar/layout';
 import { LOCK_PIP, SOCKET_RADIUS } from '../../games/last-rune/shaders/stone-wgsl';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, readSave, waitFrames } from './helpers';
 import { SHORT_PHONE } from './phones';
 
@@ -350,6 +350,9 @@ for (const vp of PHONES) {
           }
           await waitFrames(page, 3);
           await expect(loupe).toHaveAttribute('data-on', '');
+          // harden-tests: the loupe can come on a tick before the aim snaps to a socket (under
+          // load the last moves land in a later tick), so wait for the aimed cell itself.
+          await expect(page.locator('.lr-altar')).toHaveAttribute('data-loupe', /^\d+,\d+$/);
           const cell = await page.locator('.lr-altar').getAttribute('data-loupe');
           const [ax, ay] = (cell ?? '').split(',').map(Number);
           const lb = (await loupe.boundingBox())!;

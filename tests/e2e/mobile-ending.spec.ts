@@ -1,5 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
 import { MACHINE_IDS } from '../../games/last-rune/rules/types';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-3-ending (D-040): the ending on the four realistic phone viewports (browser bars

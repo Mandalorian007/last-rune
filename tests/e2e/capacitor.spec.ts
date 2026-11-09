@@ -1,6 +1,6 @@
-import { expect, type Page, test } from '@playwright/test';
 import type { MachineId } from '../../games/last-rune/rules/types';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL } from './helpers';
 
 // capacitor-clarity: a two-strike altar says so before Strike, the Capacitor reads out what it

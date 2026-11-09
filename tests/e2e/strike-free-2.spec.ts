@@ -7,10 +7,10 @@
  * SHOTS=<dir> saves what the checks saw to docs/design/screens/local/<dir>/<phone>/ (git-ignored).
  */
 import { mkdirSync } from 'node:fs';
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import type { MachineId } from '../../games/last-rune/rules/types';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, settled, waitFrames } from './helpers';
 
 // biome-ignore lint/suspicious/noExplicitAny: dev handle

@@ -1,5 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
 import { hallLines } from '../../games/last-rune/content/lines';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-3-chrome: the title, hall and menus at the four realistic phone viewports (D-040):

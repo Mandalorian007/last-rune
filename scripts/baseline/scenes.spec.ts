@@ -4,9 +4,10 @@
  * (stage.ts), drives the game through the DEV-only `window.__game` handle, runs a fixed amount
  * of game time and takes one shot. File names are `<scene>.png` per project folder.
  */
-import { expect, type Page, test } from '@playwright/test';
+
 import { pagesFound } from '../../games/last-rune/content/journal';
 import { MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
+import { expect, type Page, test } from '../../tests/e2e/fixtures';
 import {
   advance,
   advanceTo,

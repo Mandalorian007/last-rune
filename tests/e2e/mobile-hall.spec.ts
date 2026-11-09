@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-7-hall (gate review 4, D-040 addendum 5): the hall, its menu and the title on phones.
