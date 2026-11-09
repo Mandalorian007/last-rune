@@ -93,7 +93,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 17 | Extract engine repo, publish engine-v1.0.0 | engine repo | 5 | 13, 16, Forgewilds ws 1 (no Forgewilds engine work before Gate 3, D-044) | 🟡 repo up (D-051): github.com/Mandalorian007/thunderclap-engine, history kept, README + example + GIF; Last Rune stays on its in-repo engine; publish/v1.0.0 ⏳ |
 | 17b | Last Rune on the npm engine (D-052): first title on `@thunderclap-engine/engine` | ws/engine-npm | 5 | 9.5, 17 | ✅ merged ed4fedc; v1.1.0 next |
 | 17c | Engine 1.2.1 refinement (D-052 add. 2): drop screen-fit, select hack, desktop scripts for upstream fixes | ws/engine-1-2 | 5 | 17b | ✅ merged; v1.1.0 released 2026-11-08 |
-| 17d | First-release hardening (D-053): tests + app | ws/harden-tests, ws/harden-app | 5 | 17c | 🔄 agents running; v1.1.1 after merge |
+| 17d | First-release hardening (D-053): tests + app | ws/harden-tests, ws/harden-app | 5 | 17c | ✅ merged; v1.1.1 |
 
 ## Waves (Last Rune waves 1–5; up to 10 top-level agents from D-041)
 

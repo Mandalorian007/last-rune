@@ -1,7 +1,7 @@
 {
   "name": "last-rune",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "description": "The Last Rune — a gem-circuit puzzle game for the browser (WebGPU). First game on the ThunderClap engine (@thunderclap-engine/engine from npm).",
   "license": "MIT",
