@@ -24,13 +24,15 @@ const SERIF = 'var(--tc-font-body, serif)';
 
 export const ALTAR_COLUMN_CSS = /* css */ `
 /* ── port-altar-3: the column on regions ──────────────────────────────────── */
-${CL} .tc-region[data-region="top"]:has(> .lr-altar-head) { padding: 0; overflow: visible; }
-${HEAD} { position: relative; flex: 1 1 auto; align-self: stretch; pointer-events: none; }
+/* The head keeps inside the region's pad (the layout measures it there; harden-tests); its
+   slots are placed off its own box (placeHead), and the title reaches back out over the pad. */
+${CL} .tc-region[data-region="top"]:has(> .lr-altar-head) { overflow: visible; }
+${HEAD} { position: relative; flex: 1 1 auto; align-self: stretch; pointer-events: none; --lr-head-out: calc(-1 * var(--tc-region-pad, 0px)); }
 ${HEAD} kbd { display: none !important; }
 
 /* The title, one line over the tray; "Holding X" under it while a gem is in hand. */
 ${HEAD} .lr-altar-title {
-  position: absolute; left: 0; right: 0; top: 3px; transform: none; max-width: none !important;
+  position: absolute; left: var(--lr-head-out); right: var(--lr-head-out); top: calc(3px + var(--lr-head-out)); transform: none; max-width: none !important;
   display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.1; text-align: center;
 }
 ${HEAD} .lr-altar-title h2 {
@@ -48,7 +50,7 @@ ${HEAD} .lr-altar-holding {
 ${HEAD} .lr-altar-holding[hidden] { display: none; }
 /* dense-board-4: the slim strip is ~100 px; its title (and "Holding Capacitor") may reach a
    little past the strip into the open stone either side, and the pill packs tighter. */
-${HEAD}[data-slim] .lr-altar-title { left: -14px; right: -14px; }
+${HEAD}[data-slim] .lr-altar-title { left: calc(var(--lr-head-out) - 14px); right: calc(var(--lr-head-out) - 14px); }
 ${HEAD}[data-slim] .lr-altar-holding { gap: 4px; padding: 0 6px 0 4px; }
 ${HEAD} .lr-altar-holding b { color: #fff6dd; font-weight: 700; }
 ${HEAD} .lr-altar-holding i {

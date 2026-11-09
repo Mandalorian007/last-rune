@@ -1,5 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
 import { titleLines } from '../../games/last-rune/content/lines';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, trackProblems } from './helpers';
 
 // The title screen while nobody presses anything: FUSE chatters (titleLines, ~every 12–20 s),

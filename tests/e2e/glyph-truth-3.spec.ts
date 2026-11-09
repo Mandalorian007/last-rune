@@ -1,7 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { GEM_WGSL } from '../../games/last-rune/shaders/gem-wgsl';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // glyph-truth-3 (D-027, D-040 addendum 9 d, blind review 8): a lit Bend read as a T on the

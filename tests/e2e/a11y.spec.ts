@@ -1,9 +1,9 @@
 /// <reference types="@webgpu/types" />
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { initialState } from '../../games/last-rune/rules/progression';
 import { deriveHall, focusOrder } from '../../games/last-rune/scenes/hall/hall-state';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, PREVIEW_URL, pressKey, trackProblems, waitForBoot } from './helpers';
 
 // Accessibility (docs/design/a11y-audit.md): axe on every screen, the keyboard focus path,

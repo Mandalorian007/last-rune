@@ -1,7 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import type { MachineId } from '../../games/last-rune/rules/types';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // mobile-7-strike (D-040 addendum 5), on four phones (browser bars showing, the iPhone's notch

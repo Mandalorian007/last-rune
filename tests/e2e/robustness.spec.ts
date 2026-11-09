@@ -1,11 +1,11 @@
 /// <reference types="@webgpu/types" />
 import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { isRotational, type Placement } from '../../games/last-rune/rules';
 import { GEM_KINDS } from '../../games/last-rune/rules/types';
 import { cursorKeys } from './altar-keys';
+import { expect, type Page, test } from './fixtures';
 import {
   PREVIEW_URL,
   pressKey,

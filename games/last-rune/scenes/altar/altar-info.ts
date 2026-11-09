@@ -244,14 +244,15 @@ export const infoMethods = {
     let key = '';
     // With a gem in hand over one of the player's gems, the card is that gem's: R turns it.
     const overPlaced = !strike && this.overPlaced();
-    let slot = strike ? -1 : this.hoverSlot;
     // A finger has no hover: the held gem's card shows for a moment after the pick, then
     // steps aside so the gem in hand (and its turn) stays in sight above the tray.
     // dense-board-4: a slim column never flashes it; its card waits behind the Rule tab.
+    const fold = !!L.phone?.slim || this.shortLane;
     const cardOff =
-      (this.touch && !this.keyboard && this.time - this.handAt > TOUCH_CARD_SECS) ||
-      !!L.phone?.slim ||
-      this.shortLane;
+      (this.touch && !this.keyboard && this.time - this.handAt > TOUCH_CARD_SECS) || fold;
+    // harden-tests: nor while the finger is still down on a tray gem (its press reads as a
+    // hover), where the folded lane squeezed the card to a few px for those frames.
+    let slot = strike || (fold && this.touch && !this.keyboard) ? -1 : this.hoverSlot;
     if (slot < 0 && this.hand && !this.hand.from && !strike && !overPlaced && !cardOff) {
       slot = L.tray.findIndex((t) => t.gem === this.hand!.kind);
     }

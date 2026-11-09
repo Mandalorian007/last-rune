@@ -1,6 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { pagesFound, pagesUnlockedBy } from '../../games/last-rune/content/journal';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { isRotational, type Placement } from '../../games/last-rune/rules';
@@ -14,6 +13,7 @@ import {
 import { GEM_KINDS, type MachineId } from '../../games/last-rune/rules/types';
 import { deriveHall, focusOrder } from '../../games/last-rune/scenes/hall/hall-state';
 import { cursorKeys, nextGem, turnKeys } from './altar-keys';
+import { type BrowserContext, expect, type Page, test } from './fixtures';
 import { PREVIEW_URL, pressKey, readSave, trackProblems, waitFrames } from './helpers';
 
 // Full run of the production build with real input only: title → hall → all 16 machines, in

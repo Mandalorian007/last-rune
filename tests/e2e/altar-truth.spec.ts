@@ -1,7 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import type { MachineId } from '../../games/last-rune/rules/types';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL } from './helpers';
 
 // altar-truth: what the altar shows before Strike matches one rule. No charge numbers sit on the

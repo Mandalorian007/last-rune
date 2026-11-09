@@ -1,8 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import type { MachineId } from '../../games/last-rune/rules/types';
 import { solvedLook } from '../../games/last-rune/scenes/altar/solved-board';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // solve-truth (D-027): the solve moment shows exactly the board the player built. Gate 6 found

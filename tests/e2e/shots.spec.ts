@@ -13,12 +13,12 @@
  * its own board fresh, so first-appearance teaching shows (D-040 addendum 3).
  */
 import { mkdirSync } from 'node:fs';
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { type Cell, MACHINE_IDS, type MachineId } from '../../games/last-rune/rules/types';
 import { trayRemaining } from '../../games/last-rune/rules/validate';
 import { type AltarLayout, cellCenter } from '../../games/last-rune/scenes/altar/layout';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, settled, waitFrames } from './helpers';
 
 const DIR = process.env.SHOTS ?? '';
@@ -447,7 +447,11 @@ for (const vp of PHONES) {
         const pt = { x: 0, y: 0 };
         cellCenter(L, first.cell as Cell, pt);
         await page.touchscreen.tap(ob.x + pt.x * k, ob.y + pt.y * k);
-        await page.waitForFunction(() => !(window as G).__altarView?.held);
+        // D-048: phones chain-place, so the gem stays in hand while more remain. Wait on the
+        // board taking it, not on an empty hand.
+        await page.waitForFunction(
+          () => (window as G).__game.flow.placementsFor('intake-desk').length === 1,
+        );
         await shot(page, '14-intake-desk-first-gem');
       }
 

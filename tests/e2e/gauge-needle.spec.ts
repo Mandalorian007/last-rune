@@ -1,9 +1,9 @@
-import { expect, type Page, test } from '@playwright/test';
 import { puzzleFor } from '../../games/last-rune/content/puzzles';
 import { simulate } from '../../games/last-rune/rules';
 import { fromAscii } from '../../games/last-rune/rules/ascii';
 import type { MachineId } from '../../games/last-rune/rules/types';
 import { playOrder } from './altar-audit';
+import { expect, type Page, test } from './fixtures';
 import { DEV_URL, waitFrames } from './helpers';
 
 // polish-9 (D-040 add. 10): a gauge's needle is a meter that tells the truth. Before Strike it

@@ -1,8 +1,8 @@
 /// <reference types="@webgpu/types" />
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { DISCORD_INVITE_URL, KOFI_URL, LINK_COPY_TEXT } from '../../games/last-rune/content/ending';
+import { type BrowserContext, expect, type Page, test } from './fixtures';
 import { DEV_URL, trackProblems } from './helpers';
 
 // Copy link beside every outbound link (title Ko-fi; end card Join and Ko-fi), for when a
