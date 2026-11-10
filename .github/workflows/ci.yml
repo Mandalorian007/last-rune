@@ -54,7 +54,7 @@ jobs:
     # Unsigned desktop builds of The Last Rune in the Electron shell (D-042; ws/host-electron,
     # ws/last-rune-desktop, D-052), one per OS, as artefacts. Non-blocking until Gate 4. Build-time
     # downloads only (the Electron and packaging-tool binaries); no signing material is used or
-    # needed. The app icon is drawn by scripts/desktop/icon.mjs during the build.
+    # needed. The app icon is drawn by scripts/desktop/icon.mjs, the `thunderclap.desktop.prePackage` step.
     name: desktop build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     continue-on-error: true

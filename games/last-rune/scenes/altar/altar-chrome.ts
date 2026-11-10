@@ -166,20 +166,17 @@ export function placeAltarChrome(
     order,
     id,
   });
-  // The column's widgets go in first: each `add` lays out at once, and until `top` holds the
-  // head the empty column track collapses, so Strike, added before it, would be measured in a
-  // `bottom` only the rail wide (a spurious "[layout] … overflows" warning).
-  const widgets: RegionWidget[] =
-    col && tracks
-      ? [at(col.head, 'top', 0, 'lr-altar-head'), at(col.cards, 'cardLane', -1, 'lr-altar-cards')]
-      : [];
-  widgets.push(
+  const widgets: RegionWidget[] = [
     at(rails.back, 'left', 0, 'lr-altar-back'),
     at(rails.undo, 'left', 1, 'lr-altar-undo'),
     at(rails.clear, 'left', 2, 'lr-altar-clear'),
     at(rails.turn, 'left', 3, 'lr-altar-turn'),
     at(rails.strike, tracks ? 'bottom' : 'right', 9, 'lr-altar-strike'),
-  );
+  ];
+  if (col && tracks) {
+    widgets.push(at(col.head, 'top', 0, 'lr-altar-head'));
+    widgets.push(at(col.cards, 'cardLane', -1, 'lr-altar-cards'));
+  }
   const off = placeWidgets(ui, widgets);
   // FUSE's line docks under the cards; off phones it goes back to its corner.
   const cap =

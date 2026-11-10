@@ -1,9 +1,8 @@
 // Entry point: the engine's createGame mounts the letterboxed canvas, brings up WebGPU and
 // wires the noun-free systems (fatal screens for no WebGPU or a lost device included); the game
 // adds its nouns and boots into the title. Dev routes: `?demo=audio|render|art|props`, `?nogpu`.
-import { createGame } from '@thunderclap-engine/engine';
+import { type CrashScreen, createGame, installCrashScreen } from '@thunderclap-engine/engine';
 import { bootHost } from './boot-host';
-import { type CrashGuard, installCrashGuard } from './game/crash';
 import {
   createGameCtx,
   engineOptions,
@@ -34,14 +33,16 @@ const SCENES: SceneFactories = {
   ending: (moment) => new EndingScene(moment),
 };
 
-let guard: CrashGuard | undefined;
+let crash: CrashScreen | undefined;
 
 async function main(): Promise<void> {
   const root = document.getElementById('app');
   if (!root) throw new Error('#app missing');
-  // Uncaught errors from here on get a calm "Something went wrong" card (game/crash.ts).
+  // Uncaught errors from here on get the engine's calm "Something went wrong" card. Installed
+  // before `createGame` (not `createGame({ crash })`) so a throw in the host pick, the demo routes
+  // or the game's own ctx setup is a boot failure too (Reload only). It flushes the save first.
   let flush: () => boolean = () => false;
-  guard = installCrashGuard({ root, title: TITLE, flush: () => flush() });
+  crash = installCrashScreen({ root, title: TITLE, flush: () => flush() });
   const qs = new URLSearchParams(location.search);
   if (import.meta.env.DEV && qs.has('demo')) {
     const { startDemo } = await import('./scenes/_demo/routes');
@@ -59,6 +60,10 @@ async function main(): Promise<void> {
   const ctx = createGameCtx(engine, SCENES);
   flush = () => ctx.save.flush();
   startGame(ctx);
+  // e2e handle in every build (tests/e2e/fixtures.ts): the overlay's current layout overflows.
+  // The engine only warns about them in dev, so the guard asks instead of reading the console.
+  (window as unknown as { __lrOverflows: () => unknown }).__lrOverflows = () =>
+    engine.ui.layout.overflows();
   if (import.meta.env.DEV) {
     // Dev/e2e handle: `window.__game.flow.state`, `__game.save.get()`.
     (window as unknown as { __game: GameCtx }).__game = ctx;
@@ -67,5 +72,5 @@ async function main(): Promise<void> {
 
 main().catch((err) => {
   console.error('[boot] failed', err);
-  guard?.report(err, { fatal: true });
+  crash?.report(err, { fatal: true });
 });

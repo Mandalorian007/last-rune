@@ -165,7 +165,10 @@ export function placeWidgets(
   const sync = (on: boolean) => {
     unplace();
     if (!on) return;
-    handles = widgets.map((w) => ui.layout.add(w.el, { place: w.place, order: w.order, id: w.id }));
+    // One layout for the whole set (the overflow check judges the finished layout either way).
+    handles = ui.layout.batch(() =>
+      widgets.map((w) => ui.layout.add(w.el, { place: w.place, order: w.order, id: w.id })),
+    );
   };
   sync(isPhone(ui));
   const off = onPhoneChange(ui, sync);

@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@thunderclap-engine/engine':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.3.0
+        version: 1.3.0
       '@thunderclap-engine/host-electron':
-        specifier: ^0.2.0
-        version: 0.2.0(@thunderclap-engine/engine@1.2.1)(electron-builder@26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0)))(electron@45.2.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+        specifier: ^0.3.0
+        version: 0.3.0(@thunderclap-engine/engine@1.3.0)(electron-builder@26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0)))(electron@45.2.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.14.0
@@ -475,12 +475,12 @@ packages:
     resolution: {integrity: sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==}
     engines: {node: '>=10'}
 
-  '@thunderclap-engine/engine@1.2.1':
-    resolution: {integrity: sha512-kxGSHoZBkO9hWeGP4gxwvvoxzt7mIFu4aUIrXALKQRphMkGWBlJAkelaxt1F39/0PFmwy6HRtVeGsAkg+u7k3A==}
+  '@thunderclap-engine/engine@1.3.0':
+    resolution: {integrity: sha512-v5UnIQFvU1qRH6r9kSTwFfLxNW21+0Vrr9TlAQ9CcDFWzvMeHFRnNyMMQjyLOXg1g3SsEbExakYXtUsnJX5UTA==}
     engines: {node: '>=22'}
 
-  '@thunderclap-engine/host-electron@0.2.0':
-    resolution: {integrity: sha512-/XNt+gx5WuKrPPHOolWMz6jmRiYbSjfykzjXRPQmMPYExf9qwLB6OcYJksK2GWCN+QzbLXAyFiKj9uvdoihRJA==}
+  '@thunderclap-engine/host-electron@0.3.0':
+    resolution: {integrity: sha512-p5okx+g5UyaBqOOsqtLHqq0HvfUCb7hTNGUjSmpCavnnKQJboJi6FZS+6wCe+fnFz/0zTkYsMeWbMD3lRJyYfQ==}
     hasBin: true
     peerDependencies:
       '@thunderclap-engine/engine': ^1.0.0
@@ -2195,11 +2195,11 @@ snapshots:
     dependencies:
       defer-to-connect: 2.0.1
 
-  '@thunderclap-engine/engine@1.2.1': {}
+  '@thunderclap-engine/engine@1.3.0': {}
 
-  '@thunderclap-engine/host-electron@0.2.0(@thunderclap-engine/engine@1.2.1)(electron-builder@26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0)))(electron@45.2.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))':
+  '@thunderclap-engine/host-electron@0.3.0(@thunderclap-engine/engine@1.3.0)(electron-builder@26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0)))(electron@45.2.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))':
     dependencies:
-      '@thunderclap-engine/engine': 1.2.1
+      '@thunderclap-engine/engine': 1.3.0
     optionalDependencies:
       electron: 45.2.2
       electron-builder: 26.18.0(electron-builder-squirrel-windows@26.18.0(dmg-builder@26.18.0))

@@ -6,7 +6,7 @@
 - **TypeScript 7**, strict, `noEmit` (Vite bundles). Two projects: `tsconfig.json` (browser: games and unit tests, against the engine's published `.d.ts`) and `tsconfig.node.json` (configs, scripts, e2e).
 - **Vite 8** dev server and build (`base: './'` for itch).
 - **Vitest 5** for unit tests, colocated as `*.test.ts`.
-- **Playwright** for browser/e2e smoke and the automated playtest (`tests/e2e/`). Platform specs (viewport, device and iframe matrix on a noun-free harness) belong to the engine repo (D-041 addendum 2). Game specs test product only.
+- **Playwright** for browser/e2e smoke and the automated playtest (`tests/e2e/`). Platform specs (viewport, device and iframe matrix on a noun-free harness) belong to the engine repo (D-041 addendum 2). Game specs test product only. `tests/e2e/fixtures.ts` fails any test whose pages end it with a layout overflow: it reads the engine's `layout.overflows()` through `window.__lrOverflows` (main.ts, every build), since the `[layout]` console warning is dev-only.
 - **Biome** for lint and format (2-space indent, single quotes, width 100). Auto-format is on (D-024): a checked-in Claude Code hook (`.claude/settings.json`) runs `biome check --write` on every file an agent edits, and `pnpm fix` does the whole repo. CI stays strict (`pnpm check` fails on unformatted code), so run `pnpm fix` before committing anything edited outside an agent.
 
 ## Commands
@@ -20,7 +20,7 @@ pnpm build          # typecheck + production build to dist/
 pnpm test:e2e       # Playwright (ports in tests/e2e/ports.ts; worktrees auto-offset, or E2E_PORT_OFFSET)
 pnpm baseline       # screenshot diff against the v1.0 set (BASELINE_UPDATE=1 rewrites it)
 pnpm desktop:dev    # thunderclap-desktop dev: the npm Electron shell around a Vite dev server
-pnpm desktop:build  # after pnpm build: unsigned desktop app into dist/desktop/ (icon, then thunderclap-desktop package; identity in package.json `thunderclap.desktop`)
+pnpm desktop:build  # after pnpm build: unsigned desktop app into dist/desktop/ (thunderclap-desktop package; its `prePackage` step draws the icon; identity in package.json `thunderclap.desktop`)
 pnpm test:e2e:desktop  # Electron-driver specs (tests/desktop/) on the npm shell
 ```
 

@@ -1,6 +1,6 @@
 # Architecture
 
-Based on pitch §6, reshaped by D-041 and D-052. The repo is one package: the game and its tooling. The engine is the npm package `@thunderclap-engine/engine` (`^1.1.0`) and the desktop shell is `@thunderclap-engine/host-electron` (`^0.1.0`); both live in https://github.com/Mandalorian007/thunderclap-engine, which owns their contracts (`packages/engine/ARCHITECTURE.md` there), CHANGELOG, API reports (`api/*.api.txt`) and platform e2e.
+Based on pitch §6, reshaped by D-041 and D-052. The repo is one package: the game and its tooling. The engine is the npm package `@thunderclap-engine/engine` (`^1.3.0`) and the desktop shell is `@thunderclap-engine/host-electron` (`^0.3.0`); both live in https://github.com/Mandalorian007/thunderclap-engine, which owns their contracts (`packages/engine/ARCHITECTURE.md` there), CHANGELOG, API reports (`api/*.api.txt`) and platform e2e.
 
 ```
 node_modules/@thunderclap-engine/engine   # from npm. Knows NOTHING about gems/machines/FUSE.
@@ -63,4 +63,5 @@ A small, documented surface (`@thunderclap-engine/engine/render`; its README and
 ## Runtime shape
 - Logical design space **1920×1080**, letterboxed 16:9 into whatever the iframe gives us (itch embed 960×540 + fullscreen). Phones cover the screen instead, cropped to a per-scene band (the engine's `surface.fit` cover mode with `belowScale: PHONE_SCALE`; `FILL_BANDS` in game/ctx.ts, D-040). Render at device pixel ratio, capped for perf.
 - World is drawn in WebGPU; text and UI are DOM overlay (D-009).
+- Errors: main.ts installs the engine's crash screen (`installCrashScreen`, before `createGame` so the host pick and the game's ctx setup count as boot). It flushes the save first, then shows "Something went wrong" with Reload (and Keep playing once the game runs). No WebGPU, a throwing canvas context and a lost device get the engine's own screens.
 - Fixed-step simulation, variable render. Respect `prefers-reduced-motion` (trim particles, shake, flicker).

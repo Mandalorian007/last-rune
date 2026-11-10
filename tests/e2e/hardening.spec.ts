@@ -139,7 +139,7 @@ test('losing the GPU mid-run says so, offers Reload, and Reload continues the ga
   expect(problems.filter((p) => !p.includes('[gpu] device lost'))).toEqual([]);
 });
 
-test('a boot that throws shows a Reload card instead of a blank page', async ({ page }) => {
+test('a canvas context that throws shows the WebGPU screen, not a blank page', async ({ page }) => {
   await page.addInitScript(() => {
     const real = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (
@@ -151,6 +151,22 @@ test('a boot that throws shows a Reload card instead of a blank page', async ({ 
       // biome-ignore lint/suspicious/noExplicitAny: forwarding the overloads
       return (real as any).call(this, id, ...rest);
     } as typeof real;
+  });
+  const problems = trackProblems(page);
+  await page.goto(PREVIEW_URL);
+  await waitForBoot(page);
+  const card = page.locator('.engine-msg');
+  await expect(card).toContainText('WebGPU is not available');
+  await expect(page.locator('#app canvas')).toHaveCount(0);
+  await shot(page, 'no-context');
+  expect(problems).toEqual([]);
+});
+
+test('a boot that throws shows a Reload card instead of a blank page', async ({ page }) => {
+  await page.addInitScript(() => {
+    GPUCanvasContext.prototype.configure = () => {
+      throw new Error('test: configure crashed');
+    };
   });
   const problems = trackProblems(page);
   await page.goto(PREVIEW_URL);
