@@ -34,3 +34,59 @@ Every upstream ask from D-053 hardening (thunderclap-engine #4–#10) is fixed i
 Never patch node_modules. Log any new engine gap under **Upstream asks** here.
 
 ## Log
+
+### 2026-11-10: done (branch `ws/engine-1-3`)
+
+**What changed**
+- Deps: `@thunderclap-engine/engine` `^1.3.0` (installed 1.3.0), `@thunderclap-engine/host-electron` `^0.3.0` (0.3.0).
+- **Crash screen (#5, #6, #7).** `game/crash.ts` and `crash.test.ts` are deleted. main.ts installs the engine's
+  `installCrashScreen({ root, title, flush })`. It flushes `ctx.save.flush()` first and says "progress saved" only when that
+  returns true. It offers Reload, plus Keep playing once the game runs, and keeps the same noise filters (the engine's are a
+  port of ours). `main().catch` reports with `{ fatal: true }`, so Reload is the only button.
+  - It uses `installCrashScreen` rather than `createGame({ crash })` because `createGame({ crash })` only covers throws inside
+    `createGame`. Our boot also runs `bootHost()` (the Electron host import), the dev demo routes and `createGameCtx`/`startGame`
+    outside it. A throw there would get no card, and the engine gives the game no handle to report it as fatal. Our save is the
+    engine's `save` (`createGameSave` is a `createSaveStore`, and its `flush()` returns a boolean). With `createGame({ crash })`,
+    the engine's default flush would therefore have been enough; the flush passed here is the same call.
+  - **Restyle:** none needed. The old card was already the engine's `showMessageScreen` with the engine's CSS, which was drawn from
+    Last Rune's palette (gold on night blue, serif). The card the player sees is unchanged, and so are the unsupported and
+    device-lost screens.
+  - `tests/e2e/hardening.spec.ts`: a throwing `getContext('webgpu')` now gets the unsupported screen ("WebGPU is not available",
+    no canvas). A new boot-throw case stubs `GPUCanvasContext.prototype.configure` to throw: "Something went wrong", Reload
+    only. The uncaught-error case is unchanged ("Your progress is saved", Keep playing, the hall still plays).
+- **Layout guard (#8).** `tests/e2e/fixtures.ts` now reads `layout.overflows()` at the end of every test on every open page,
+  through `window.__lrOverflows` (main.ts, set in every build because the preview is a production build; read-only). The
+  `[layout]` console listener stays for dev pages, so a mid-test warning still fails the test too. The production bundle
+  compiles the overflow warning out (`warnOverflows ?? false`), so players' consoles get no `[layout]` overflow text.
+  - **Proof it isn't a no-op:** I set the phone Strike to `min-width: 900px !important` and turned the console listener off, so
+    only the `overflows()` path could fail. Then I ran `hardening › phone › turning the phone…`. It failed with
+    `844px: lr-altar-strike (900×58) overflows bottom (224×58)`. Both changes are reverted (not in any commit).
+- **Layout workarounds (#9, #10), both removed:**
+  - `altar-chrome.ts`: the widgets go back to their natural order (rails, then head and cards), without the add-ordering
+    comment. `placeWidgets` (ui/chrome.ts) wraps the adds in `layout.batch` so there is one layout per set.
+  - `altar-column-styles.ts`: the `top` region holding the head gets `padding: 0` again, and `--lr-head-out` is gone (title
+    `left/right: 0; top: 3px`, slim `-14px`). This is pixel-identical: the head now fills the region edge, so the title sits
+    where `-pad` put it. `placeHead` positions the slots from the head's own rect, so they don't move.
+- **Desktop (#4).** `thunderclap.desktop.prePackage` is `node scripts/desktop/icon.mjs`, and `desktop:build` is
+  `thunderclap-desktop package`.
+- Docs: `docs/engineering.md` covers the desktop:build line and the e2e layout guard. `docs/architecture.md` has the dep
+  versions (it still said ^1.1.0/^0.1.0) and an Errors line. The CI desktop comment is updated too.
+
+**Gates**
+- `pnpm check`: green (unit 604 passed, 2 skipped; the crash tests went upstream with the code).
+- `pnpm build`: green.
+- `pnpm test:e2e`: 224 passed, 20 skipped (the opt-in `SHOTS` specs), 0 flaky. Zero `[layout]` lines in the log.
+- `pnpm baseline`: 129/129 passed with no `BASELINE_UPDATE`, so **no baselines were regenerated**. The largest diffs were
+  ipad/solve-card at 0.06% and desktop-1080/title at 0.009% (animation noise, the same as engine-1-2). The rest were at most 0.004%.
+- `pnpm test:e2e:desktop`: 2 passed.
+- `pnpm desktop:build --mac --dir`: the log shows `prePackage: node scripts/desktop/icon.mjs`, which drew the icon, then
+  `dist/desktop/mac-arm64/The Last Rune.app` (`CFBundleIdentifier` com.thunderclap.lastrune, `icon.icns`).
+
+**Upstream asks**
+- New (small): the crash screen is either inside `createGame` (`crash`) or fully game-owned (`installCrashScreen`). A game whose
+  boot continues after `createGame` resolves cannot report its own setup throw as fatal through the `crash` option. Possible fix:
+  expose the screen (e.g. `ctx.crash.report`), or let `installCrashScreen`'s handle be passed into `createGame({ crash })` so it
+  wires the save flush itself.
+- Note, not an ask: the engine's `[layout] <id>: no "<region>" region …; hidden` warning is not gated by `warnOverflows`, so it
+  can still reach a production console on a misconfigured form. Last Rune never triggers it (it would fail the dev-page
+  listener).
