@@ -12,9 +12,15 @@
  * doesn't import scenes, and so rules-puzzles' altar scene can replace the
  * puzzle stub by swapping one factory.
  */
-import type { CreateGameOptions, EngineCtx } from '@thunderclap-engine/engine';
+import type {
+  CreateGameOptions,
+  EngineCtx,
+  KitParticleFields,
+  ParticleService,
+} from '@thunderclap-engine/engine';
 import { type AudioEngine, recipes } from '@thunderclap-engine/engine/audio';
 import type { Scene } from '@thunderclap-engine/engine/core';
+import { withParticles } from '@thunderclap-engine/engine/kit';
 import {
   type CoverOptions,
   createDeviceMode,
@@ -121,7 +127,7 @@ export interface SceneFactories {
 }
 
 /** The engine ctx Last Rune boots: its actions, its save, scenes typed against `GameCtx`. */
-export type LastRuneEngine = EngineCtx<Action, GameSave, GameCtx>;
+export type LastRuneEngine = EngineCtx<Action, GameSave, GameCtx> & KitParticleFields;
 
 /** The engine ctx (`surface`, `renderer`, `ui`, `host`, `loop`, …) plus Last Rune's nouns. */
 export interface GameCtx extends LastRuneEngine {
@@ -151,7 +157,7 @@ export interface GameCtx extends LastRuneEngine {
 export function engineOptions(
   root: HTMLElement,
   opts: { title: string; forceUnsupported?: boolean },
-): CreateGameOptions<Action, GameSave> {
+): CreateGameOptions<Action, GameSave> & { particles: ParticleService } {
   return {
     root,
     title: opts.title,
@@ -164,7 +170,7 @@ export function engineOptions(
       godRays: { x: DESIGN_W / 2, y: -60, bloomSource: 0.12, intensity: 0.3 },
       mist: { density: 0.45 },
     },
-    particles: { capacity: 32768, floorY: 1040 },
+    particles: withParticles({ capacity: 32768, floorY: 1040 }),
     // The browser tab or itch's frame; saves live in its localStorage (v1.0 keys unchanged).
     save: (host) => createGameSave({ host }),
     mixerKey: SAVE_GAME_ID,

@@ -1,6 +1,8 @@
 # Status board
 
-_Last updated: 2026-11-10 by PM_
+_Last updated: 2026-11-18 by PM_
+
+**Codex portraits on WebKit + engine 2.x (2026-11-18) ✅:** on iPad/Safari the Codex gem portraits were half black or blank. The cause was the engine's `SnapshotRenderer` (WebKit's same-task `transferToImageBitmap`). It's fixed upstream in engine 2.0.2. Moving to 2.x surfaced a second engine bug: a fullscreen pass destroyed before the next frame failed the submit, which broke 8 e2e tests. That's fixed upstream in 2.0.3 (`WarmTarget.live`). The game is now on `@thunderclap-engine/engine@^2.0.3` and host-electron `^0.3.1`, `gem-portraits.ts` is back on `SnapshotRenderer`, and particles moved to `withParticles`. Details are in `workstreams/bug-bash.md`.
 
 **Launch build (D-054) ✅ — v1.2.0 released 2026-11-10** on engine 1.3.0 / host-electron 0.3.0 (upstream #4–#10 fixed). ws/engine-1-3 ✅ merged (61ee11e): crash.ts → engine `installCrashScreen` (same card, save-first); e2e layout guard → `layout.overflows()` via `__lrOverflows` (proven non-no-op); add-order and padding workarounds dropped (`layout.batch`), no pixel change; desktop icon via `prePackage`. Gates: check 604 ✅, build ✅, e2e 224 ✅ 0 flaky, baseline 129/129 (no regen), desktop e2e 2 ✅, mac dir build ✅. Analytics: user to decide before launch (not in 1.2.0). Upstream (small, not blocking): a game-reportable fatal through `createGame({ crash })`; the `no "<region>" region` warning isn't gated by `warnOverflows`.
 

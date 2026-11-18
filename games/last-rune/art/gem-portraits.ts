@@ -1,13 +1,8 @@
 /**
  * Gem portraits for the Codex: each gem drawn by the real altar gem material
  * (`shaders/gem-wgsl.ts`, same cut, colour and glyph, rotation 0 as in rules.md §4) on dark
- * stone, with the altar's bloom. Baked once into a sheet on a second `Renderer` (offscreen, on
- * the game's GPU device), then copied into a small 2D canvas per Codex page.
- *
- * Not the engine's `SnapshotRenderer.capture`: its synchronous `transferToImageBitmap()` on a
- * WebGPU OffscreenCanvas comes back blank on WebKit (all black on macOS Safari 27, top half
- * black on iPad). A same-task `drawImage` of the WebGPU canvas into a 2D canvas is complete on
- * WebKit and Chromium alike. Engine gap logged in docs/workstreams/bug-bash.md.
+ * stone, with the altar's bloom. Baked once into a sheet on a `SnapshotRenderer` that shares
+ * the game's GPU device, then copied into a small 2D canvas per Codex page.
  *
  * ```ts
  * const portraits = createGemPortraits(renderer);
@@ -15,7 +10,7 @@
  * ```
  */
 import { PostStack } from '@thunderclap-engine/engine/post';
-import { Renderer } from '@thunderclap-engine/engine/render';
+import { type Renderer, SnapshotRenderer } from '@thunderclap-engine/engine/render';
 import { GEM_KINDS, type GemKind } from '../rules/types';
 import { addGemLight, type GemInstance, GemRenderer } from './materials/gems';
 import { LIGHT_HEIGHT, LightSet } from './materials/lights';
@@ -35,23 +30,18 @@ export interface GemPortraits {
 }
 
 export function createGemPortraits(main: Renderer): GemPortraits {
-  let sheet: OffscreenCanvas | null = null;
+  let sheet: ImageBitmap | null = null;
   let failed = false;
 
-  const bake = (): OffscreenCanvas | null => {
+  const bake = (): ImageBitmap | null => {
     if (sheet || failed) return sheet;
     try {
-      const w = PORTRAIT_PX * GEM_KINDS.length;
-      const h = PORTRAIT_PX;
-      const gpuCanvas = new OffscreenCanvas(w, h);
-      const context = gpuCanvas.getContext('webgpu');
-      if (!context) throw new Error('no webgpu context on OffscreenCanvas');
-      context.configure({ device: main.device, format: main.format, alphaMode: 'opaque' });
-      const r = new Renderer(
-        { device: main.device, context, format: main.format },
-        { logicalWidth: w, logicalHeight: h, initialInstances: 64 },
-      );
-      r.resize(w, h);
+      const n = GEM_KINDS.length;
+      const shot = new SnapshotRenderer(main.device, main.format, {
+        width: PORTRAIT_PX * n,
+        height: PORTRAIT_PX,
+      });
+      const r = shot.renderer;
       // The altar's bloom and grade, without its room effects (mist, rays, vignette).
       r.post = new PostStack(r, {
         bloom: { enabled: true, intensity: 0.85, threshold: 1.4, scatter: 0.7, emissiveWeight: 1 },
@@ -93,20 +83,13 @@ export function createGemPortraits(main: Renderer): GemPortraits {
         addGemLight(lights, g, 0.8);
       }
       gems.light(lights);
-      const frame = r.beginFrame(1.5, 1 / 60);
-      frame.clear(STONE[0], STONE[1], STONE[2]);
-      gems.drawUnder(frame, list);
-      gems.drawGems(frame, list);
-      r.endFrame();
-      // Copy out in this same task, while the frame is the canvas's current image.
-      const out = new OffscreenCanvas(w, h);
-      const g = out.getContext('2d');
-      if (!g) throw new Error('no 2d context for the portrait sheet');
-      g.drawImage(gpuCanvas, 0, 0);
-      sheet = out;
+      sheet = shot.capture((frame) => {
+        frame.clear(STONE[0], STONE[1], STONE[2]);
+        gems.drawUnder(frame, list);
+        gems.drawGems(frame, list);
+      }, 1.5);
       gems.destroy();
-      r.destroy();
-      context.unconfigure();
+      shot.destroy();
     } catch (e) {
       console.warn('gem portraits unavailable:', e);
       failed = true;
@@ -131,6 +114,7 @@ export function createGemPortraits(main: Renderer): GemPortraits {
       return c;
     },
     destroy() {
+      sheet?.close();
       sheet = null;
     },
   };

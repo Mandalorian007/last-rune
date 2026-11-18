@@ -28,8 +28,8 @@
     "social": "playwright test -c scripts/cover/playwright.config.ts"
   },
   "dependencies": {
-    "@thunderclap-engine/engine": "^1.3.0",
-    "@thunderclap-engine/host-electron": "^0.3.0"
+    "@thunderclap-engine/engine": "^2.0.3",
+    "@thunderclap-engine/host-electron": "^0.3.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
