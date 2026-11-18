@@ -250,7 +250,9 @@ ${P} .lr-end-card :is(a.lr-end-join, a.lr-end-coffee) { justify-content: center;
   ${P} .lr-end-safety { top: calc(${CT} + ${cpx(74)}); padding-top: ${cpx(3)}; padding-bottom: ${cpx(4)}; }
   ${P} .lr-end-card { top: calc(${CT} + ${cpx(136)}); gap: ${cpx(5)} ${cpx(8)}; padding-top: ${cpx(6)}; padding-bottom: ${cpx(6)}; }
 }
-${P} .lr-end-links .tc-link-copy { position: static; margin: 0; justify-content: center; }
+/* Relative, not static: a static Copy in this display:contents grid wins hit-testing over the
+   whole card, so taps on Join and Ko-fi landed on Copy and never opened (bug-bash 2026-11-18). */
+${P} .lr-end-links .tc-link-copy { position: relative; left: auto; margin: 0; justify-content: center; }
 ${P} .lr-end-card a.lr-end-coffee { border-radius: ${cpx(10)}; }
 ${P} .lr-end-card .tc-link-fallback { grid-column: 1 / -1; }
 ${P} .lr-end-footer {

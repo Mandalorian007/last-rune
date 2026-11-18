@@ -279,6 +279,47 @@ test.describe('Copy link', () => {
     expect(page.url()).toBe(DEV_URL);
     expect(problems).toEqual([]);
   });
+
+  // Bug-bash 2026-11-18: on the phone end card a Copy button took every tap, so Join and Ko-fi
+  // never opened (Copy still worked). Each control must be the one hit at its own centre, and a
+  // tap on each link must open its page.
+  test('phone end card: tapping Join and Ko-fi opens them', async ({ context, page }) => {
+    test.setTimeout(90_000);
+    const problems = trackProblems(page);
+    await page.setViewportSize({ width: 956, height: 440 });
+    // The new tabs load a stub, never the real sites.
+    for (const u of [DISCORD_INVITE_URL, KOFI_URL])
+      await context.route(u, (r) => r.fulfill({ contentType: 'text/html', body: 'stub' }));
+    await prepare(context, page, {});
+    await gotoEndCard(page);
+    await expect(page.locator('[data-phone]').first()).toBeAttached();
+    const hits = await page.evaluate(() =>
+      [
+        'a.lr-end-join',
+        '[data-action="ending-join-copy"]',
+        'a.lr-end-coffee',
+        '[data-action="ending-coffee-copy"]',
+      ].map((s) => {
+        const el = document.querySelector(s);
+        if (!el) return `${s}: missing`;
+        const r = el.getBoundingClientRect();
+        const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return el.contains(top) ? 'ok' : `${s}: covered by ${top?.outerHTML.slice(0, 60)}`;
+      }),
+    );
+    expect(hits).toEqual(['ok', 'ok', 'ok', 'ok']);
+    for (const [sel, url] of [
+      ['a.lr-end-join', DISCORD_INVITE_URL],
+      ['a.lr-end-coffee', KOFI_URL],
+    ] as const) {
+      const popup = page.waitForEvent('popup');
+      await page.locator(sel).click();
+      const p = await popup;
+      expect(p.url()).toBe(url);
+      await p.close();
+    }
+    expect(problems).toEqual([]);
+  });
 });
 
 // First-time-player screenshots of every state (only with LINK_COPY_SHOTS set).

@@ -97,6 +97,13 @@ All of these are covered in `tests/e2e/robustness.spec.ts` (12 tests, including 
 
 **Open for the PM:** items 13–17 above. None of them blocks release.
 
+## 2026-11-18: phone end-card Join / Ko-fi links don't open
+
+- **Report:** on a phone (landscape), the end card's Join ThunderClap Gaming and Buy ThunderSoap a coffee did nothing; the Copy buttons worked. The title-page Ko-fi link was fine.
+- **Cause:** `ending-phone-styles.ts` lays the card out as a 2-column grid with the `.tc-link` wrappers as `display: contents` and set the Copy buttons to `position: static`. In that combination the last Copy button (Ko-fi) won hit-testing at every point on the card (`elementFromPoint` at each link's centre returned it). So link taps never reached the anchors, and "Copy invite link" actually copied the Ko-fi URL.
+- **Fix:** Copy is `position: relative; left: auto` on phones (`left: auto` cancels the desktop `left: 100%`). The layout is pixel-identical.
+- **Test:** `link-copy.spec.ts` › `phone end card: tapping Join and Ko-fi opens them` (956×440). It hit-tests all four controls and taps both links, with the external hosts stubbed. It fails on the old CSS.
+
 ## 2026-11-18: Codex gem portraits black on Safari / iPad
 
 - **Report:** on the user's iPad (Brave on iOS, so WebKit), the top half of every Codex gem portrait was solid black. The gem was cut off at about 51% down the cell.
