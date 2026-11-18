@@ -96,3 +96,11 @@ All of these are covered in `tests/e2e/robustness.spec.ts` (12 tests, including 
 **Full run:** the keyboard-only `full-run.spec.ts` covers all 16 machines at 1280×720 against the prod build. It logged zero console warnings or errors, zero audit problems, and every strike ran at about 60 fps. The run's data is in `screens/local/fullrun/metrics.json`, which refreshed the Keys column.
 
 **Open for the PM:** items 13–17 above. None of them blocks release.
+
+## 2026-11-18: Codex gem portraits black on Safari / iPad
+
+- **Report:** on the user's iPad (Brave on iOS, so WebKit), the top half of every Codex gem portrait was solid black. The gem was cut off at about 51% down the cell.
+- **Cause:** the engine's `SnapshotRenderer.capture()` calls `OffscreenCanvas.transferToImageBitmap()` in the same task as the WebGPU submit. On WebKit that bitmap comes back incomplete: all black on macOS Safari 27, top ~half black on iPad. Reproduced in Safari with a probe page. Playwright's WebKit has no WebGPU, so CI can't see this.
+- **Strategies tested in Safari 27:** sync `transferToImageBitmap` gave a blank image. Three alternatives gave a complete one: `onSubmittedWorkDone()` before the transfer, `createImageBitmap(canvas)`, and a same-task `drawImage(canvas)` into a 2D canvas.
+- **Fix (game):** `art/gem-portraits.ts` builds its own offscreen `Renderer` through the public API and copies the frame with a same-task `drawImage` into a 2D `OffscreenCanvas`. Chromium Codex baselines are unchanged (0 px).
+- **Engine gap (upstream):** `SnapshotRenderer.capture()` should copy via `drawImage` into a 2D canvas, or go async (`createImageBitmap`), instead of `transferToImageBitmap`. Once that ships, gem-portraits can go back to `SnapshotRenderer`.
