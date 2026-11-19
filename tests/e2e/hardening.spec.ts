@@ -139,6 +139,42 @@ test('losing the GPU mid-run says so, offers Reload, and Reload continues the ga
   expect(problems.filter((p) => !p.includes('[gpu] device lost'))).toEqual([]);
 });
 
+// Bug report 2026-11-18 (iPad): coming back to a tab that sat in the background almost always
+// showed "Something went wrong". WebKit had left the WebGPU canvas unconfigured, so the next
+// frame's getCurrentTexture threw InvalidStateError. Here every WebGPU canvas is unconfigured
+// under a running game: it must keep drawing with no crash card and no page error.
+test('a canvas left unconfigured (iPad back from the background) keeps playing, no crash card', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const list: GPUCanvasContext[] = [];
+    (window as unknown as { __gpuContexts: GPUCanvasContext[] }).__gpuContexts = list;
+    const real = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+      id: string,
+      ...rest: unknown[]
+    ) {
+      // biome-ignore lint/suspicious/noExplicitAny: forwarding the overloads
+      const ctx = (real as any).call(this, id, ...rest);
+      if (id === 'webgpu' && ctx) list.push(ctx);
+      return ctx;
+    } as typeof real;
+  });
+  const problems = trackProblems(page);
+  await toTitle(page);
+  const count = await page.evaluate(() => {
+    const list = (window as unknown as { __gpuContexts: GPUCanvasContext[] }).__gpuContexts;
+    for (const c of list) c.unconfigure();
+    return list.length;
+  });
+  expect(count).toBeGreaterThan(0);
+  await waitFrames(page, 20);
+  await expect(page.locator('.engine-msg')).toHaveCount(0);
+  await expect(page.locator('.lr-title-menu').first()).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
 test('a canvas context that throws shows the WebGPU screen, not a blank page', async ({ page }) => {
   await page.addInitScript(() => {
     const real = HTMLCanvasElement.prototype.getContext;

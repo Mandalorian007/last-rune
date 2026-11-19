@@ -53,7 +53,20 @@ export function createFusePortrait(
   const ctx = canvas.getContext('webgpu');
   if (!ctx) throw new Error('fuse-portrait: no webgpu canvas context');
   const format = navigator.gpu.getPreferredCanvasFormat();
-  ctx.configure({ device: renderer.device, format, alphaMode: 'premultiplied' });
+  const configure = () =>
+    ctx.configure({ device: renderer.device, format, alphaMode: 'premultiplied' });
+  configure();
+  // WebKit (iPad, a tab back from the background) can leave the canvas unconfigured, and
+  // `getCurrentTexture` then throws `InvalidStateError` every frame: configure it again, once.
+  const currentTexture = (): GPUTexture => {
+    try {
+      return ctx.getCurrentTexture();
+    } catch (err) {
+      if ((err as { name?: unknown } | null)?.name !== 'InvalidStateError') throw err;
+      configure();
+      return ctx.getCurrentTexture();
+    }
+  };
 
   const pass: FullscreenPass = renderer.createFullscreenPass({
     label: 'fuse-portrait',
@@ -116,7 +129,7 @@ export function createFusePortrait(
       u[v + 3] = 0.12;
       pass.setUniforms(u);
       const enc = renderer.device.createCommandEncoder({ label: 'fuse-portrait' });
-      pass.encode(enc, ctx.getCurrentTexture().createView(), { clear: { r: 0, g: 0, b: 0, a: 0 } });
+      pass.encode(enc, currentTexture().createView(), { clear: { r: 0, g: 0, b: 0, a: 0 } });
       renderer.device.queue.submit([enc.finish()]);
     },
     snapshot() {
