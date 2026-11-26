@@ -95,6 +95,7 @@ Source: [engine/refactor-plan.md](engine/refactor-plan.md) (the user's plan). Up
 | 17c | Engine 1.2.1 refinement (D-052 add. 2): drop screen-fit, select hack, desktop scripts for upstream fixes | ws/engine-1-2 | 5 | 17b | ✅ merged; v1.1.0 released 2026-11-08 |
 | 17d | First-release hardening (D-053): tests + app | ws/harden-tests, ws/harden-app | 5 | 17c | ✅ v1.1.1 released 2026-11-09 |
 | 17e | Engine 2.x + WebKit Codex portraits: upstream `SnapshotRenderer` (2.0.2) and warm-on-destroy (2.0.3) fixes; game on `^2.0.3` | bug-bash | 5 | 17d | ✅ merged 2026-11-18 |
+| 17f | Patch release: iPad background-tab crash (engine 2.0.4), phone end-card links, engine release-gate fixes (2.0.5 pending) | bug-bash | 5 | 17e | ✅ v1.2.1 released 2026-11-26 |
 
 ## Waves (Last Rune waves 1–5; up to 10 top-level agents from D-041)
 

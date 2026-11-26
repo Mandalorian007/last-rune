@@ -1,6 +1,8 @@
 # Status board
 
-_Last updated: 2026-11-18 by PM_
+_Last updated: 2026-11-26 by PM_
+
+**v1.2.1 released 2026-11-26** (engine 2.0.4): the three 2026-11-18 fixes below (Codex portraits on WebKit, phone end-card links, iPad crash card after a background tab). Engine fixes for the local release-gate failures (particle depth collision no longer tunnels on slow frames, plus test fixes) are on engine `main` (13a74c3), not yet tagged as 2.0.5. Two full Mac runs each had about 5 parallel-load flakes, all different and all passing alone. Cutting with `--skip-checks` waits on the user. The game doesn't use depth collision, so 1.2.1 doesn't need 2.0.5. Housekeeping: merged engine worktrees and branches removed, stale `vite preview` stopped. Open with the user: the engine's CI `e2e` job (SwiftShader, no GPU on GitHub runners) has never passed. Engine `docs/releasing.md` explains why.
 
 **iPad "Something went wrong" after a background tab (2026-11-18) ✅:** on iPad, coming back to the game's tab almost always showed the crash card. WebKit can leave a running page's WebGPU canvas unconfigured, and the next frame's `getCurrentTexture` then threw `InvalidStateError: canvas is not configured`. Reproduced on WebKit by unconfiguring the canvas, which gives exactly that card. Fixed upstream in engine 2.0.4: `Renderer.endFrame` configures the canvas again and presents. The game's own FUSE caption-portrait canvas got the same guard (`fuse-portrait.ts`). The new e2e `a canvas left unconfigured (iPad back from the background) keeps playing, no crash card` fails on 2.0.3. Not reproduced on a real iPad yet: what makes WebKit drop the configuration is inferred, not observed.
 
